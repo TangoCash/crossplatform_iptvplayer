@@ -128,7 +128,7 @@ class TvnVod(CBaseHostClass):
     def getDefaultPlatform(self):
         if '_tv_' == config.plugins.iptvplayer.TVNdevice.value:
             return 'Samsung'
-        return "Android2"
+        return "Android4"
         
     def getBaseUrl(self, pl):
         url = self.platforms[pl]['base_url'] + '/?platform=%s&terminal=%s&format=json&authKey=%s&v=%s&' % (self.platforms[pl]['platform'], self.platforms[pl]['terminal'],  self.platforms[pl]['authKey'], self.platforms[pl]['api'] )

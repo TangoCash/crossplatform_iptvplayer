@@ -314,7 +314,7 @@ class PierwszaTVApi:
         
     def doLogin(self, login, password):
         logged = False
-        loginUrl = self.MAIN_URL + 'account/login'
+        loginUrl = self.MAIN_URL + 'account/log-in'
         
         params = dict(self.http_params)
         params['load_cookie'] = False
