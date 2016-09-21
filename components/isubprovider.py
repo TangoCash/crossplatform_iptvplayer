@@ -508,6 +508,7 @@ class CBaseSubProviderClass:
     def converFileToUtf8(self, inFile, outFile, lang=''):
         printDBG('CBaseSubProviderClass.converFileToUtf8 inFile[%s] outFile[%s]' % (inFile, outFile))
         # detect encoding
+        encoding = ''
         cmd = '%s "%s"' % (GetUchardetPath(), inFile)
         ret = self.iptv_execute(cmd)
         if ret['sts'] and 0 == ret['code']:

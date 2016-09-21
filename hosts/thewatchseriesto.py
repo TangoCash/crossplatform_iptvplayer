@@ -43,16 +43,17 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://watch-series.to/'
+    return 'http://the-watch-series.to/'
 
 class TheWatchseriesTo(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL      = 'http://watch-series.to/'
+    DOMAIN        = 'the-watch-series.to'
+    MAIN_URL      = 'http://%s/' % DOMAIN
     SEARCH_URL    = MAIN_URL + 'search/'
-    DEFAULT_ICON  = "http://watch-series.to/templates/default/images/apple-touch-icon.png"
+    DEFAULT_ICON  = "http://%s/templates/default/images/apple-touch-icon.png" % DOMAIN
     
     MAIN_CAT_TAB = [{'icon':DEFAULT_ICON, 'category':'list_series',     'title': _('Series list'),           'url':MAIN_URL+'series'},
                     {'icon':DEFAULT_ICON, 'category':'episodes',        'title': _('Popular Episodes'),      'url':MAIN_URL+'new'},

@@ -7,7 +7,6 @@ from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostC
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
 ###################################################
@@ -407,6 +406,8 @@ class Laola1TV(CBaseHostClass):
                 url  = self.cm.ph.getSearchGroups(data, 'url="([^"]+?)"')[0]
                 url = url + '?hdnea=' + auth
                 
+                if myip != '':
+                    url = strwithmeta(url, {'X-Forwarded-For':myip})
                 tmp = getDirectM3U8Playlist(url, checkExt=False)
                 for item in tmp:
                     item['need_resolve'] = 0

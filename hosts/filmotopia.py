@@ -82,16 +82,6 @@ class Filmotopia(CBaseHostClass):
         if not mainUrl.startswith('https://'):
             url = url.replace('https://', 'http://')
         return url
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("Filmotopia.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
         
     def listMoviesTab(self, cItem, category):
         printDBG("Filmotopia.listMoviesTab")
@@ -180,6 +170,7 @@ class Filmotopia(CBaseHostClass):
             tmp = item.split('<button class="download-button">')
             linksUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data="([^"]+?)"')[0]
             linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(linksUrl)
+            if '' == linksUrl: linksUrl = self.cm.ph.getSearchGroups(item, '''['"](http[^'^"]+?openload[^'^"]+?)['"]''')[0]
             if '' == linksUrl: continue
             episodeTitle = self.cleanHtmlStr( tmp[0] )
             if 0 == len(self.seriesCache.get(season, [])):
@@ -212,7 +203,7 @@ class Filmotopia(CBaseHostClass):
         urlTab = []
         
         if cItem.get('direct', False):
-            urlTab.append({'name':'videomega.tv', 'url':cItem['url'], 'need_resolve':1})
+            urlTab.append({'name':'link', 'url':cItem['url'], 'need_resolve':1})
         else:
             sts, data = self.cm.getPage(cItem['url'])
             if not sts: return urlTab
@@ -225,6 +216,8 @@ class Filmotopia(CBaseHostClass):
                     data = self.cm.ph.getSearchGroups(data, 'ref="([^"]+?)"')[0]
                     linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(data)
                     urlTab.append({'name':'videomega.tv', 'url':linksUrl, 'need_resolve':1})
+            elif url.startswith('http://') or url.startswith('https://'):
+                urlTab.append({'name':'link', 'url':url, 'need_resolve':1})
         
         return urlTab
         

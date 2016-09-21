@@ -19,6 +19,7 @@ import urllib
 import base64
 try:    import json
 except Exception: import simplejson as json
+from urlparse import urlparse
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -49,6 +50,8 @@ def gettytul():
     return 'http://filmovita.com/'
 
 class Filmovita(CBaseHostClass):
+    USER_AGENT = 'curl/7' #'Mozilla/5.0'
+    HEADER = {'User-Agent': USER_AGENT, 'Accept': 'text/html'}
     MAIN_URL    = 'http://filmovita.com/'
     SRCH_URL    = MAIN_URL + 'szukaj'
     DEFAULT_ICON_URL = 'http://skini.filmovita.com/grafika/logo.png'
@@ -65,7 +68,9 @@ class Filmovita(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'Filmovita', 'cookie':'filmovita.cookie'})
+        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.seriesCache = {}
+        self.linksCache = {}
         
     def _getFullUrl(self, url, series=False):
         if 'proxy-german.de' in url:
@@ -82,7 +87,7 @@ class Filmovita(CBaseHostClass):
             url = url.replace('https://', 'http://')
         return url
         
-    def getPage(self, url, params={}, post_data=None):
+    def _getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0'}
         params.update({'header':HTTP_HEADER})        
         printDBG(url)
@@ -90,7 +95,18 @@ class Filmovita(CBaseHostClass):
         params['header']['Referer'] = proxy
         url = proxy
         return self.cm.getPage(url, params, post_data)
-
+        
+    def getPage(self, baseUrl, params={}, post_data=None):
+        if params == {}: params = dict(self.defaultParams)
+        params['cloudflare_params'] = {'domain':'filmovita.com', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self.getFullUrl}
+        return self.cm.getPageCFProtection(baseUrl, params, post_data)
+        
+    def getIconUrl(self, url):
+        url = self.getFullUrl(url)
+        if url == '': return ''
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
+        
     def listsTab(self, tab, cItem, type='dir'):
         printDBG("Filmovita.listsTab")
         for item in tab:
@@ -103,7 +119,7 @@ class Filmovita(CBaseHostClass):
         
     def listGenres(self, cItem, category):
         printDBG("Filmovita.listGenres")
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return 
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="sub-menu">', '</ul>', False)[1]
         data = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)</a>').findall(data)
@@ -122,7 +138,7 @@ class Filmovita(CBaseHostClass):
         if page > 1:
             url += 'page/%d/' % page
             
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return 
         
         if ('/page/%d/' % (page + 1)) in data:
@@ -140,7 +156,7 @@ class Filmovita(CBaseHostClass):
             title  = tmp[0]
             desc   = tmp[1]
             params = dict(cItem)
-            params.update( {'title': self.cleanHtmlStr( title ), 'url':self._getFullUrl(url), 'desc': self.cleanHtmlStr( desc ), 'icon':self._getFullUrl(icon)} )
+            params.update( {'title': self.cleanHtmlStr( title ), 'url':self.getFullUrl(url), 'desc': self.cleanHtmlStr( desc ), 'icon':self.getFullUrl(icon)} )
             self.addVideo(params)
         
         if nextPage:
@@ -150,7 +166,7 @@ class Filmovita(CBaseHostClass):
             
     def listSeries(self, cItem, category):
         printDBG("Filmotopia.listSeries")
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         self.seriesCache = {}
@@ -202,12 +218,106 @@ class Filmovita(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         pass
         
+    def _getKode(self, kode):
+        kode = self.cm.ph.getSearchGroups(kode, 'kode="(.+[^\\\])";')[0]
+        kode = kode.replace('\\"', '"')
+        kode = kode.replace("\\'", "'")
+        kode = kode.replace('\\\\', '\\')
+        printDBG("=======================================")
+        printDBG(kode)
+        printDBG("---------------------------------------")
+        return kode
+        
+    def _decodeUrl(self, data):
+        baseUrl = ''
+        kode = self.cm.ph.getSearchGroups(data, r'var kode="(.+?[^\\])"')[0]
+        kode = kode.replace('\\"', '"')
+        kode = kode.replace('\\\\', '\\')
+        while True:
+            marker = kode.split('";')[-1]
+            printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            printDBG(kode)
+            printDBG("+++++++++++++++++++++++++++++++++++++++")
+            printDBG(".......................................")
+            printDBG(marker)
+            printDBG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            if 'kode[i]-3' in marker or 'kode[i])-3' in marker:
+                kode = self._getKode(kode)
+                kode = kode[:-1].split(' ')
+                try:
+                    for item in kode:
+                        baseUrl += chr(int(item)-3)
+                except Exception:
+                    printExc()
+                    break
+            elif "x+='@'" in marker:
+                kode = self._getKode(kode)
+                i = 0
+                while i < len(kode):
+                    if kode[i] == '|' and kode[i+1] == '|':
+                        baseUrl += '@'
+                    else:
+                        baseUrl += kode[i]
+                    i += 2
+            elif 'reverse()' in marker:
+                kode = self._getKode(kode)
+                baseUrl = kode[::-1]
+            elif 'kode.length?kode.charAt' in marker:
+                kode = self._getKode(kode)
+                i = 0
+                try:
+                    while i < (len(kode) - 1):
+                        baseUrl += kode[i+1] + kode[i]
+                        i += 2
+                    if i < len(kode):
+                        baseUrl += kode[-1]
+                except Exception:
+                    printExc()
+                    break
+            if 'kode=' in baseUrl:
+                kode = baseUrl
+                baseUrl = ''
+                continue
+            else:
+                baseUrl = baseUrl.replace('\\"', '"')
+                baseUrl = self.cm.ph.getSearchGroups(baseUrl, 'src="(http[^"]+?)"', 1, True)[0]
+                break
+        return baseUrl
+        
     def getLinksForVideo(self, cItem):
         printDBG("Filmovita.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
+        if cItem['url'] in self.linksCache:
+            return self.linksCache[cItem['url']]
+        else: self.linksCache = {}
+        
         sts, mainData = self.getPage(cItem['url'])
         if not sts: return urlTab
+        
+        if 'cookie_refresher' in mainData:
+            refresher   = self.cm.ph.getSearchGroups(mainData, 'cookie_refresher\s*?=\s*?"([^"]+?)"')[0]
+            moviePath   = urlparse(cItem['url']).path
+            cookieValue = self.cm.getCookieHeader(self.COOKIE_FILE)
+            cookieValue += ' %s=%s; ' % (refresher, moviePath)
+            HEADER = dict(self.HEADER)
+            HEADER['Cookie'] = cookieValue
+            sts, mainData = self.cm.getPage(cItem['url'], {'header':HEADER})
+            if not sts: return []
+            printDBG(mainData)
+            data = self.cm.ph.getDataBeetwenMarkers(mainData, 'id="tabs"', '</div>', True)[1]
+            data = re.compile('<a[^>]+?data-funct="([^"]+?)"[^>]*?>([^<]+?)</a>').findall(data)
+            for item in data:
+                linkEnkoderName = item[0]
+                linkHostingName = item[1]
+                tmp = self.cm.ph.getDataBeetwenMarkers(mainData, linkEnkoderName+'()', '</script>', True)[1]
+                printDBG(tmp)
+                baseUrl = self._decodeUrl(tmp)
+                if baseUrl.startswith('http://') or baseUrl.startswith('https://'):
+                    urlTab.append({'name':self.cleanHtmlStr( linkHostingName) , 'url':baseUrl, 'need_resolve':1})
+            if len(urlTab):
+                self.linksCache[cItem['url']] = urlTab
+            return urlTab
         
         m1 = '<div class="entry-content">'
         m2 = '<div class="content">'
@@ -223,10 +333,10 @@ class Filmovita(CBaseHostClass):
         tab = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)<', re.IGNORECASE).findall(tmp)
         if len(tab): linksUrlTab.extend(tab)
         for item in linksUrlTab:
-            linksUrl = self._getFullUrl( item[0] )
+            linksUrl = self.getFullUrl( item[0] )
             if 1 == self.up.checkHostSupport(linksUrl): 
                 if 'videomega.tv/validatehash.php?' in linksUrl:
-                    sts, data = self.cm.getPage(linksUrl, {'header':{'Referer':cItem['url'], 'User-Agent':'Mozilla/5.0'}})
+                    sts, data = self.getPage(linksUrl, {'header':{'Referer':cItem['url'], 'User-Agent':'Mozilla/5.0'}})
                     if sts:
                         data = self.cm.ph.getSearchGroups(data, 'ref="([^"]+?)"')[0]
                         linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(data)
@@ -264,7 +374,7 @@ class Filmovita(CBaseHostClass):
         else:
             linksUrl = self.cm.ph.getSearchGroups(mainData, '''["']([^'^"]+?/links/[^'^"]+?)["']''')[0] 
             if linksUrl != '':
-                sts, data = self.getPage(self._getFullUrl(linksUrl))
+                sts, data = self.getPage(self.getFullUrl(linksUrl))
                 if not sts: return urlTab
                 data = self.cm.ph.getDataBeetwenMarkers(data, '<body>', '</body>', False)[1]
                 data = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)</a>').findall(data)
@@ -279,72 +389,12 @@ class Filmovita(CBaseHostClass):
     def getVideoLinks(self, baseUrl):
         printDBG("Filmovita.getVideoLinks [%s]" % baseUrl)
         urlTab = []
-
-        def _getKode(kode):
-            kode = self.cm.ph.getSearchGroups(kode, 'kode="(.+[^\\\])";')[0]
-            kode = kode.replace('\\"', '"')
-            kode = kode.replace("\\'", "'")
-            kode = kode.replace('\\\\', '\\')
-            printDBG("=======================================")
-            printDBG(kode)
-            printDBG("---------------------------------------")
-            return kode
+        
         if 'filmovita.com' in baseUrl or 'serijex.com' in baseUrl:
             sts, data = self.getPage(baseUrl)
             if not sts: return []
-            baseUrl = ''
-            kode = self.cm.ph.getSearchGroups(data, 'var kode="(.+?)";var')[0]
-            kode = kode.replace('\\"', '"')
-            kode = kode.replace('\\\\', '\\')
-            while True:
-                marker = kode.split('";')[-1]
-                printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-                printDBG(kode)
-                printDBG("+++++++++++++++++++++++++++++++++++++++")
-                printDBG(".......................................")
-                printDBG(marker)
-                printDBG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                if 'kode[i]-3' in marker:
-                    kode = _getKode(kode)
-                    kode = kode[:-1].split(' ')
-                    try:
-                        for item in kode:
-                            baseUrl += chr(int(item)-3)
-                    except Exception:
-                        printExc()
-                        break
-                elif "x+='@'" in marker:
-                    kode = _getKode(kode)
-                    i = 0
-                    while i < len(kode):
-                        if kode[i] == '|' and kode[i+1] == '|':
-                            baseUrl += '@'
-                        else:
-                            baseUrl += kode[i]
-                        i += 2
-                elif 'reverse()' in marker:
-                    kode = _getKode(kode)
-                    baseUrl = kode[::-1]
-                elif 'kode.length?kode.charAt' in marker:
-                    kode = _getKode(kode)
-                    i = 0
-                    try:
-                        while i < (len(kode) - 1):
-                            baseUrl += kode[i+1] + kode[i]
-                            i += 2
-                        if i < len(kode):
-                            baseUrl += kode[-1]
-                    except Exception:
-                        printExc()
-                        break
-                if 'kode=' in baseUrl:
-                    kode = baseUrl
-                    baseUrl = ''
-                    continue
-                else:
-                    baseUrl = baseUrl.replace('\\"', '"')
-                    baseUrl = self.cm.ph.getSearchGroups(baseUrl, 'src="(http[^"]+?)"', 1, True)[0]
-                    break
+            
+            baseUrl = self._decodeUrl(data)
                 
             if '' == baseUrl:
                 enigmav = self.cm.ph.getSearchGroups(data, '''data-enigmav=['"]([^'^"]+?)['"]''')[0]
@@ -369,6 +419,7 @@ class Filmovita(CBaseHostClass):
         printDBG('handleService start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
+        self.linksCache = {}
 
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
@@ -406,9 +457,6 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, Filmovita(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('filmovitalogo.png')])
     
     def getLinksForVideo(self, Index = 0, selItem = None):
         retCode = RetHost.ERROR
@@ -462,7 +510,7 @@ class IPTVHost(CHostBase):
             
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
+        icon        =  self.host.getIconUrl( cItem.get('icon', '') )
         
         return CDisplayListItem(name = title,
                                     description = description,
@@ -473,27 +521,3 @@ class IPTVHost(CHostBase):
                                     possibleTypesOfSearch = possibleTypesOfSearch)
     # end converItem
 
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

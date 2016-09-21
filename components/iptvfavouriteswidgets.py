@@ -103,7 +103,7 @@ class IPTVFavouritesAddItemWidget(Screen):
             options.append((item['title'], item['group_id']))
         if self.canAddNewGroup: options.append((_("Add new group of favourites"), None))
         if len(options): self.session.openWithCallback(self.addFavouriteToGroup, ChoiceBox, title=_("Select favourite group"), list=options)
-        else: self.session.open(MessageBox, _("There is no favourites groups."), type=MessageBox.TYPE_INFO, timeout=10 )
+        else: self.session.openWithCallback(self.iptvDoFinish, MessageBox, _("There are no other favourite groups"), type=MessageBox.TYPE_INFO, timeout=10 )
         
     def addFavouriteToGroup(self, retArg):
         if retArg and 2 == len(retArg):
@@ -116,7 +116,7 @@ class IPTVFavouritesAddItemWidget(Screen):
                     self.result = True
                     self.iptvDoFinish()
                     return
-                else: self.session.open(MessageBox, self.favourites.getLastError(), type=MessageBox.TYPE_ERROR, timeout=10)
+                else: self.session.openWithCallback(self.iptvDoFinish, MessageBox, self.favourites.getLastError(), type=MessageBox.TYPE_ERROR, timeout=10)
             else: # addn new group
                 self.session.openWithCallback( self.addNewFavouriteGroup, IPTVFavouritesAddNewGroupWidget, self.favourites)
         else: self.iptvDoFinish()
@@ -140,21 +140,21 @@ class IPTVFavouritesMainWidget(Screen):
     skin = """
         <screen name="IPTVFavouritesMainWidget" position="center,center" title="%s" size="%d,%d">
          <ePixmap position="5,9"   zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
-         <ePixmap position="180,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
-         <ePixmap position="400,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
+         <ePixmap position="335,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
+         <ePixmap position="665,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
          
-         <widget name="label_red"     position="45,9"  size="175,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-         <widget name="label_yellow"  position="220,9" size="175,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-         <widget name="label_green"   position="440,9" size="175,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-         
+         <widget name="label_red"     position="45,9"  size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
+         <widget name="label_green"   position="375,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
+         <widget name="label_yellow"  position="705,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
+
          <widget name="list"  position="5,80"  zPosition="2" size="%d,%d" scrollbarMode="showOnDemand" transparent="1"  backgroundColor="#00000000" enableWrapAround="1" />
          <widget name="title" position="5,47"  zPosition="1" size="%d,23" font="Regular;20"            transparent="1"  backgroundColor="#00000000"/>
         </screen>""" %(
             _("Favourites manager"),
             sz_w, sz_h, # size
             GetIconDir("red.png"),
-            GetIconDir("yellow.png"),
             GetIconDir("green.png"),
+            GetIconDir("yellow.png"),
             sz_w - 10, sz_h - 105, # size list
             sz_w - 135, # size title
             )
@@ -318,6 +318,7 @@ class IPTVFavouritesMainWidget(Screen):
             self._changeMode()
         
     def keyGreen(self):
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> keyGreen 1")
         if ":groups:" == self.menu: 
             self.session.openWithCallback( self._groupAdded, IPTVFavouritesAddNewGroupWidget, self.favourites)
         else:

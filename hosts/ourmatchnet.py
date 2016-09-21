@@ -56,6 +56,7 @@ class OurmatchNet(CBaseHostClass):
     DEFAULT_ICON  = "http://ourmatch.net/wp-content/themes/OurMatch/images/logo.png"
     
     MAIN_CAT_TAB = [{'category':'list_items',      'title': _('Home'),              'url':MAIN_URL,                     'icon':DEFAULT_ICON},
+                    {'category':'trending',        'title': _('Trending'),          'url':MAIN_URL,                     'icon':DEFAULT_ICON},
                     {'category':'popular',         'title': _('Popular'),           'url':MAIN_URL,                     'icon':DEFAULT_ICON},
                     {'category':'allleagues',      'title': _('All Leagues'),       'url':MAIN_URL,                     'icon':DEFAULT_ICON},
                     {'category':'seasons',         'title': _('Previous Seasons'),  'url':MAIN_URL+'previous-seasons/', 'icon':DEFAULT_ICON},
@@ -66,7 +67,7 @@ class OurmatchNet(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'ourmatch.net', 'cookie':'ourmatchnet.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        self.cache = {'popular':[], 'allleagues':[]}
+        self.cache = {'popular':[], 'trending':[], 'allleagues':[]}
         self.cache2 = {}
         
     def _getFullUrl(self, url):
@@ -104,19 +105,20 @@ class OurmatchNet(CBaseHostClass):
             
     def fillCache(self, cItem):
         printDBG("OurmatchNet.fillCache [%s]" % cItem)
-        self.cache = {'popular':[], 'allleagues':[]}
+        self.cache = {'popular':[], 'trending':[], 'allleagues':[]}
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<ul id="popular-leagues-list">', '</ul>')[1]
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li ', '</li>')
-        for item in tmp:
-            url = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"]+?)['"]''')[0]
-            if '' == url: continue
-            title = self.cleanHtmlStr(item)
-            self.cache['popular'].append({'title':title, 'url':url})
+        for marker in [('<li class="popular-leagues-list">', '</ul>', 'popular'), ('<li class="trending-competitions">', '</ul>', 'trending')]:
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, marker[0], marker[1])[1]
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li ', '</li>')
+            for item in tmp:
+                url = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"]+?)['"]''')[0]
+                if '' == url: continue
+                title = self.cleanHtmlStr(item)
+                self.cache[marker[2]].append({'title':title, 'url':url})
             
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="division">', '</div>')
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li class="header">', '</ul>')
         for division in tmp:
             division = division.split('<ul class="regions">')
             if 2 != len(division): continue
@@ -140,6 +142,15 @@ class OurmatchNet(CBaseHostClass):
         params = dict(cItem)
         params['category'] = category
         self.listsTab(tab, params)
+        
+    def listTrending(self, cItem):
+        printDBG("OurmatchNet.listTrending [%s]" % cItem)
+        tab = self.cache.get('trending', [])
+        if 0 == len(tab): self.fillCache(cItem)
+        tab = self.cache.get('trending', [])
+        
+        params = dict(cItem)
+        self.listsTab(tab, params, 'video')
         
     def listLeagues(self, cItem, category):
         printDBG("OurmatchNet.listLeagues [%s]" % cItem)
@@ -254,7 +265,7 @@ class OurmatchNet(CBaseHostClass):
         urlTab = [] #{'name':'', 'url':cItem['url'], 'need_resolve':1}]
         
         sts, data = self.cm.getPage(cItem['url']) 
-        if not sts: return
+        if not sts: return []
         
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li data-pos="top" ', '</li>')
         for item in tmp:
@@ -355,6 +366,8 @@ class OurmatchNet(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif category == 'trending':
+            self.listTrending(self.currItem)
         elif category == 'popular':
             self.listPopulars(self.currItem, 'list_items')
         elif category == 'allleagues':

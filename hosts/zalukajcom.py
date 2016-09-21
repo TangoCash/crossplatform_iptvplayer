@@ -3,10 +3,11 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
+from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -34,50 +35,54 @@ from Screens.MessageBox import MessageBox
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.zalukajtv_filmssort = ConfigSelection(default = "ostatnio-dodane", choices = [("ostatnio-dodane", "ostatnio dodane"), ("ostatnio-ogladane", "ostatnio oglądane"), ("odslon", "odsłon"), ("ulubione", "ulubione"), ("oceny", "oceny"), ("mobilne", "mobilne")]) 
-config.plugins.iptvplayer.zalukajtvPREMIUM   = ConfigYesNo(default = False)
-config.plugins.iptvplayer.zalukajtv_login     = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_password  = ConfigText(default = "", fixed_size = False)
-
+config.plugins.iptvplayer.zalukajtv_filmssort    = ConfigSelection(default = "ostatnio-dodane", choices = [("ostatnio-dodane", "ostatnio dodane"), ("ostatnio-ogladane", "ostatnio oglądane"), ("odslon", "odsłon"), ("ulubione", "ulubione"), ("oceny", "oceny"), ("mobilne", "mobilne")]) 
+config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
+config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.zalukajtv_proxygateway = ConfigYesNo(default = False)
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry("Sortuj filmy: ", config.plugins.iptvplayer.zalukajtv_filmssort))
     optionList.append(getConfigListEntry("Zaloguj:", config.plugins.iptvplayer.zalukajtvPREMIUM))
     if config.plugins.iptvplayer.zalukajtvPREMIUM.value:
-        optionList.append(getConfigListEntry("  " + _("login") + ":", config.plugins.iptvplayer.zalukajtv_login))
-        optionList.append(getConfigListEntry("  " + _("hasło") + ":", config.plugins.iptvplayer.zalukajtv_password))
+        optionList.append(getConfigListEntry("Użyj bramki proxy (niebezpieczne):", config.plugins.iptvplayer.zalukajtv_proxygateway))
+        if config.plugins.iptvplayer.zalukajtv_proxygateway.value:
+            optionList.append(getConfigListEntry("  " + _("login") + ":", config.plugins.iptvplayer.zalukajtv_login))
+            optionList.append(getConfigListEntry("  " + _("hasło") + ":", config.plugins.iptvplayer.zalukajtv_password))
     return optionList
 ###################################################
 
 def gettytul():
-    return 'ZalukajTv'
+    return 'http://zalukaj.com/'
 
-class ZalukajTv(CBaseHostClass):
+class ZalukajCOM(CBaseHostClass):
     HOST = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
     HEADER = {'User-Agent': HOST, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Connection': 'keep-alive', 'Pragma': 'no-cache', 'Cache-Control': 'no-cache'} )
     
-    MAINURL   = 'http://zalukaj.com'
-    FILMS_URL = MAINURL + '/gatunek,%d/%s,%s,strona-%d'
-    SEARCH_URL= MAINURL + '/szukaj'
-    LOGIN_URL = MAINURL + '/account.php'
+    DOMAIN     = 'zalukaj.com'
+    MAIN_URL   = 'https://' + DOMAIN + '/'
+    FILMS_URL  = MAIN_URL + '/gatunek,%d/%s,%s,strona-%d'
+    SEARCH_URL = MAIN_URL + '/szukaj'
+    LOGIN_URL  = MAIN_URL + '/account.php'
+    DEFAULT_ICON = 'http://www.userlogos.org/files/logos/8596_famecky/zalukaj.png'
     MAIN_CAT_TAB = [{'category':'films_sub_menu', 'title':"Filmy",   'url': ''},
-                    {'category':'series_sub_menu','title':"Seriale", 'url': MAINURL},
+                    {'category':'series_sub_menu','title':"Seriale", 'url': MAIN_URL},
                     {'category':'search',         'title':"Szukaj filmu", 'search_item':True},
                     {'category':'search_history', 'title':_('Search history')} ]
                     
-    FILMS_SUB_MENU = [{ 'category':'films_category', 'title':'Kategorie',        'url':MAINURL },
-                      { 'category':'films_list',     'title':'Ostatnio oglądane', 'url':MAINURL + '/cache/lastseen.html' },
-                      { 'category':'films_list',     'title':'Ostatnio dodane',   'url':MAINURL + '/cache/lastadded.html'},
+    FILMS_SUB_MENU = [{ 'category':'films_category', 'title':'Kategorie',        'url':MAIN_URL },
+                      { 'category':'films_list',     'title':'Ostatnio oglądane', 'url':MAIN_URL + '/cache/lastseen.html' },
+                      { 'category':'films_list',     'title':'Ostatnio dodane',   'url':MAIN_URL + '/cache/lastadded.html'},
                       { 'category':'films_popular',  'title':'Najpopularniejsze', 'url':'' } ]
                     
-    FILMS_POPULAR = [{ 'category':'films_list', 'title':'Wczoraj',        'url':MAINURL + '/cache/wyswietlenia-wczoraj.html' },
-                     { 'category':'films_list', 'title':'Ostatnie 7 dni', 'url':MAINURL + '/cache/wyswietlenia-tydzien.html' },
-                     { 'category':'films_list', 'title':'W tym miesiącu', 'url':MAINURL + '/cache/wyswietlenia-miesiac.html'} ]
+    FILMS_POPULAR = [{ 'category':'films_list', 'title':'Wczoraj',        'url':MAIN_URL + '/cache/wyswietlenia-wczoraj.html' },
+                     { 'category':'films_list', 'title':'Ostatnie 7 dni', 'url':MAIN_URL + '/cache/wyswietlenia-tydzien.html' },
+                     { 'category':'films_list', 'title':'W tym miesiącu', 'url':MAIN_URL + '/cache/wyswietlenia-miesiac.html'} ]
                      
-    SERIES_SUB_MENU = [{ 'category':'series_list',   'title':'Lista',     'url':MAINURL },
-                       { 'category':'series_updated','title':'Ostatnio zaktualizowane', 'url':MAINURL + '/seriale' } ]
+    SERIES_SUB_MENU = [{ 'category':'series_list',   'title':'Lista',     'url':MAIN_URL },
+                       { 'category':'series_updated','title':'Ostatnio zaktualizowane', 'url':MAIN_URL + '/seriale' } ]
                     
     LANGS_TAB = [{ 'title':'Wszystkie',     'lang':'wszystkie'      },
                  { 'title':'Z lektorem',    'lang':'tlumaczone'     },
@@ -86,46 +91,82 @@ class ZalukajTv(CBaseHostClass):
      
     
     def __init__(self):
-        printDBG("ZalukajTv.__init__")
-        CBaseHostClass.__init__(self, {'history':'ZalukajTv', 'cookie':'zalukajtv.cookie'})
-        self.loggedIn = None  
-    
+        printDBG("ZalukajCOM.__init__")
+        CBaseHostClass.__init__(self, {'history':'ZalukajCOM', 'cookie':'zalukajtv.cookie'})
+        self.loggedIn = None
+        self.needProxy = None
+        
+    def isNeedProxy(self):
+        if self.needProxy == None:
+            sts, data = self.cm.getPage(self.MAIN_URL)
+            self.needProxy = not sts
+        return self.needProxy
+        
     def _getPage(self, url, http_params_base={}, params=None, loggedIn=None):
         if None == loggedIn: loggedIn=self.loggedIn
-        HEADER = ZalukajTv.HEADER
+        HEADER = ZalukajCOM.HEADER
         if loggedIn: http_params = {'header': HEADER, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
         else: http_params = {'header': HEADER}
         http_params.update(http_params_base)
-        return self.cm.getPage(url, http_params, params)
+        return self.getPage(url, http_params, params)
+    
+    def getPage(self, url, params={}, post_data=None):
+        HTTP_HEADER= dict(self.HEADER)
+        params.update({'header':HTTP_HEADER})
         
-    def _getFullUrl(self, url):
-        if 0 < len(url) and not url.startswith('http'): url =  self.MAINURL + url
+        if self.isNeedProxy() and self.DOMAIN in url:
+            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
+            params['header']['Referer'] = proxy
+            #params['header']['Cookie'] = 'flags=2e5;'
+            url = proxy
+        sts, data = self.cm.getPage(url, params, post_data)
+        if sts and None == data:
+            sts = False
+        if sts and 'Duze obciazenie!' in data:
+            SetIPTVPlayerLastHostError(self.cleanHtmlStr(data))
+        return sts, data
+        
+    def getIconUrl(self, url):
+        url = self.getFullUrl(url)
+        if self.DOMAIN in url and self.isNeedProxy():
+            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
+            params = {}
+            params['User-Agent'] = self.HEADER['User-Agent'],
+            params['Referer'] = proxy
+            params['Cookie'] = 'flags=2e5;'
+            url = strwithmeta(proxy, params) 
         return url
+        
+    def getFullUrl(self, url):
+        if 'proxy-german.de' in url:
+            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
+        return CBaseHostClass.getFullUrl(self, url)
             
     def _listLeftTable(self, cItem, category, m1, m2, sp):
-        printDBG("ZalukajTv.listLeftGrid")
+        printDBG("ZalukajCOM.listLeftGrid")
         sts, data = self._getPage(cItem['url'])
         if not sts: return
+        printDBG(data)
         data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2, False)[1]
         data = data.split(sp)
         if len(data): del data[-1]
         for item in data:
             params = dict(cItem)
-            url    = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0] )
-            if ZalukajTv.MAINURL not in url: continue
+            url    = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0] )
+            if self.DOMAIN not in url: continue
             params.update({'category':category, 'title':self.cleanHtmlStr( item ), 'url':url})
             self.addDir(params)
         
     def listFilmsCategories(self, cItem, category):
-        printDBG("ZalukajTv.listFilmsCategories")
+        printDBG("ZalukajCOM.listFilmsCategories")
         self._listLeftTable(cItem, category, '<table id="one" cellpadding="0" cellspacing="3">', '</table>', '</td>')
         
     def listSeries(self, cItem, category):
-        printDBG("ZalukajTv.listFilmsCategories")
+        printDBG("ZalukajCOM.listFilmsCategories")
         self._listLeftTable(cItem, category, '<table id="main_menu" cellpadding="0" cellspacing="3">', '</table>', '</td>')
         
     def listFilms(self, cItem):
-        printDBG("ZalukajTv.listFilms")
+        printDBG("ZalukajCOM.listFilms")
         url      = cItem['url']
         page = cItem.get('page', 1)
         nextPage = False
@@ -133,7 +174,7 @@ class ZalukajTv(CBaseHostClass):
         try:
             cat  = int(url.split('/')[-1])
             sort = config.plugins.iptvplayer.zalukajtv_filmssort.value
-            url  = ZalukajTv.FILMS_URL % (cat, sort, cItem['lang'], page)
+            url  = ZalukajCOM.FILMS_URL % (cat, sort, cItem['lang'], page)
             extract = True
         except Exception: pass
         sts, data = self._getPage(url, {}, cItem.get('post_data', None))
@@ -152,9 +193,9 @@ class ZalukajTv(CBaseHostClass):
             desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '</h3>', '</div>', False)[1] )
             more = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<p class="few_more">', '</p>', False)[1] )
             desc = '%s | %s | %s |' % (year, more, desc)
-            icon = self._getFullUrl( self.cm.ph.getDataBeetwenMarkers(item, 'background-image:url(', ')', False)[1] )
-            if '' == icon: icon = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', 1)[0] )
-            url  = self._getFullUrl( self.cm.ph.getSearchGroups(item, '<a href="([^"]+?)"', 1)[0] )
+            icon = self.getFullUrl( self.cm.ph.getDataBeetwenMarkers(item, 'background-image:url(', ')', False)[1] )
+            if '' == icon: icon = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', 1)[0] )
+            url  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '<a href="([^"]+?)"', 1)[0] )
             title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"', 1)[0] ) 
             title2 = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h3>', '</h3>', False)[1] ) 
             if len(title) < len(title2): title = title2
@@ -165,7 +206,7 @@ class ZalukajTv(CBaseHostClass):
             self.addDir(params)
             
     def listUpdatedSeries(self, cItem, category):
-        printDBG("ZalukajTv.listUpdatedSeries")
+        printDBG("ZalukajCOM.listUpdatedSeries")
         sts, data = self._getPage(cItem['url'])
         if not sts: return
         sp = '<div class="latest tooltip">'
@@ -174,8 +215,8 @@ class ZalukajTv(CBaseHostClass):
         data = data.split(sp)
         if len(data): del data[0]
         for item in data:
-            icon  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', 1)[0] )
-            url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, '<a href="([^"]+?)"', 1)[0] )
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', 1)[0] )
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '<a href="([^"]+?)"', 1)[0] )
             title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="latest_title">', '</div>', False)[1] ) 
             desc  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="latest_info">', '</div>', False)[1] )
             if '' == url: continue
@@ -184,17 +225,17 @@ class ZalukajTv(CBaseHostClass):
             self.addDir(params)
             
     def _listSeriesBase(self, cItem, category, m1, m2, sp):
-        printDBG("ZalukajTv._listSeriesBase")
+        printDBG("ZalukajCOM._listSeriesBase")
         sts, data = self._getPage(cItem['url'])
         if not sts: return
 
         data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2, True)[1]
-        icon  = self._getFullUrl( self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"', 1)[0] )
+        icon  = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"', 1)[0] )
         if '' == icon: icon = cItem.get('icon', '')
         data = data.split(sp)
         if len(data): del data[-1]
         for item in data:
-            url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0] )
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0] )
             title = self.cleanHtmlStr( item ) 
             if '' == url: continue
             params = dict(cItem)
@@ -203,7 +244,7 @@ class ZalukajTv(CBaseHostClass):
             else: self.addDir(params)
                 
     def listSeriesSeasons(self, cItem, category):
-        printDBG("ZalukajTv.listSeriesSeasons")
+        printDBG("ZalukajCOM.listSeriesSeasons")
         self._listSeriesBase(cItem, category, '<div id="sezony" align="center">', '<div class="doln2">', '</div>')
         if 1 == len(self.currList):
             newItem = self.currList[0]
@@ -211,18 +252,18 @@ class ZalukajTv(CBaseHostClass):
             self.listSeriesEpisodes(newItem)
         
     def listSeriesEpisodes(self, cItem):
-        printDBG("ZalukajTv.listSeriesEpisodes")
+        printDBG("ZalukajCOM.listSeriesEpisodes")
         self._listSeriesBase(cItem, 'video', '<div id="odcinkicat">', '<div class="doln2">', '</div>')
         
     def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("ZalukajTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        printDBG("ZalukajCOM.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         #searchPattern = urllib.quote_plus(searchPattern)
         post_data = {'searchinput':searchPattern}
-        params = {'name':'category', 'category':'films_list', 'url': ZalukajTv.SEARCH_URL, 'post_data':post_data}
+        params = {'name':'category', 'category':'films_list', 'url': ZalukajCOM.SEARCH_URL, 'post_data':post_data}
         self.listFilms(params)
     
     def getLinksForVideo(self, cItem):
-        printDBG("ZalukajTv.getLinksForVideo url[%s]" % cItem['url'])
+        printDBG("ZalukajCOM.getLinksForVideo url[%s]" % cItem['url'])
         if self.loggedIn: tries= [True, False]
         else: tries= [False]
         urlTab = []
@@ -230,16 +271,16 @@ class ZalukajTv(CBaseHostClass):
             url = cItem['url']
             sts, data = self._getPage(url, loggedIn=loggedIn)
             if not sts: continue
-            url = self._getFullUrl( self.cm.ph.getSearchGroups(data, '"(/player.php[^"]+?)"', 1)[0] )
+            url = self.getFullUrl( self.cm.ph.getSearchGroups(data, '"([^"]+?player.php[^"]+?)"', 1)[0] )
             if '' == url:
                 printDBG( 'No player.php in data')
                 data = self.cm.ph.getDataBeetwenMarkers(data, 'Oglądaj Film Online', '<div class="doln">', False)[1]
-                url = self.cm.ph.getSearchGroups(data, 'href="([^"]+?)"[^>]*?target', 1)[0]
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'href="([^"]+?)"[^>]*?target', 1)[0] )
                 urlTab.extend(self.up.getVideoLinkExt(url))
                 continue 
             sts, data = self._getPage(url, loggedIn=loggedIn)
             if not sts: continue
-            url = self._getFullUrl(self.cm.ph.getSearchGroups(data, '<a href="([^"]+?)"', 1)[0])
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '<a href="([^"]+?)"', 1)[0])
             if '' == url:
                 printDBG( 'No href in data[%s]' % '')
                 continue
@@ -268,7 +309,7 @@ class ZalukajTv(CBaseHostClass):
                     
             if not premium:
                 printDBG( 'No premium link data[%s]' % data)
-                url = self.cm.ph.getSearchGroups(data, 'iframe src="([^"]+?)" width=', 1)[0]
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'iframe src="([^"]+?)" width=', 1)[0] )
                 urlTab.extend(self.up.getVideoLinkExt(url))
                 # premium link should be checked at first, so if we have free link here break
                 if len(urlTab):
@@ -276,15 +317,16 @@ class ZalukajTv(CBaseHostClass):
         return urlTab
         
     def tryTologin(self):
-        printDBG('ZalukajTv.tryTologin start')
+        printDBG('ZalukajCOM.tryTologin start')
         sts,msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % config.plugins.iptvplayer.zalukajtv_login.value
         post_data = {'login': config.plugins.iptvplayer.zalukajtv_login.value, 'password': config.plugins.iptvplayer.zalukajtv_password.value}
-        params    = { 'host': ZalukajTv.HOST, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
-        sts,data  = self.cm.getPage(ZalukajTv.LOGIN_URL, params, post_data)
+        params    = { 'host': ZalukajCOM.HOST, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
+        sts,data  = self.getPage(ZalukajCOM.LOGIN_URL, params, post_data)
         if sts:
             printDBG( 'Host getInitList: chyba zalogowano do premium...' )
-            sts,data = self._getPage(url='http://zalukaj.tv/libs/ajax/login.php?login=1', loggedIn=True)
+            sts,data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
             if sts:
+                printDBG(data)
                 sts,tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Typ Konta:', '</p>', False)
                 if sts: 
                     tmp = tmp.replace('(kliknij by oglądać bez limitów)', '')
@@ -294,38 +336,44 @@ class ZalukajTv(CBaseHostClass):
         return sts,msg
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
-        printDBG('ZalukajTv.handleService start')
+        printDBG('ZalukajCOM.handleService start')
         if None == self.loggedIn and config.plugins.iptvplayer.zalukajtvPREMIUM.value:
-            self.loggedIn,msg = self.tryTologin()
-            if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
-            else: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+            if config.plugins.iptvplayer.zalukajtv_proxygateway.value:
+                self.loggedIn,msg = self.tryTologin()
+                if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+                else: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+            else:
+                msg = "Problem z zalogowaniem. W tej chwili, logowanie jest możliwe tylko z wykorzystaniem bramki proxy.\n"
+                msg += "Dostęp przez bramkę http://www.proxy-german.de/ można włączyć w konfiguracji hosta.\n\n"
+                msg += "Opcja ta jest niebezpieczna ponieważ możliwe jest przechwycenie loginu i hasła przez server pośredniczący."
+                self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 30 )
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         name     = self.currItem.get("name", None)
         category = self.currItem.get("category", '')
-        printDBG( "ZalukajTv.handleService: ---------> name[%s], category[%s] " % (name, category) )
+        printDBG( "ZalukajCOM.handleService: ---------> name[%s], category[%s] " % (name, category) )
         searchPattern = self.currItem.get("search_pattern", searchPattern)
         self.currList = [] 
 
         if None == name:
-            self.listsTab(ZalukajTv.MAIN_CAT_TAB, {'name':'category'})
+            self.listsTab(ZalukajCOM.MAIN_CAT_TAB, {'name':'category'})
     #FILMS
         elif 'films_sub_menu' == category:
-            self.listsTab(ZalukajTv.FILMS_SUB_MENU, self.currItem)
+            self.listsTab(ZalukajCOM.FILMS_SUB_MENU, self.currItem)
         elif 'films_popular' == category:
-            self.listsTab(ZalukajTv.FILMS_POPULAR, self.currItem) 
+            self.listsTab(ZalukajCOM.FILMS_POPULAR, self.currItem) 
         elif 'films_category' == category:
             self.listFilmsCategories(self.currItem, 'add_lang')
     #LANGS
         elif 'add_lang' == category:
             newItem = dict(self.currItem)
             newItem.update({'category':'films_list'})
-            self.listsTab(ZalukajTv.LANGS_TAB, newItem)
+            self.listsTab(ZalukajCOM.LANGS_TAB, newItem)
     #LIST FILMS 
         elif 'films_list' == category:
             self.listFilms(self.currItem)
     #SERIES
         elif 'series_sub_menu' == category:
-            self.listsTab(ZalukajTv.SERIES_SUB_MENU, self.currItem)
+            self.listsTab(ZalukajCOM.SERIES_SUB_MENU, self.currItem)
         elif 'series_list' == category:
             self.listSeries(self.currItem, 'series_seasons')
         elif 'series_updated' == category:
@@ -349,10 +397,7 @@ class ZalukajTv(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, ZalukajTv(), True)
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('zalukajtvlogo.png')])
+        CHostBase.__init__(self, ZalukajCOM(), True)
 
     def getLinksForVideo(self, Index = 0, selItem = None):
         listLen = len(self.host.currList)
@@ -404,7 +449,8 @@ class IPTVHost(CHostBase):
                 
             title       =  self.host.cleanHtmlStr( cItem.get('title', '') )
             description =  self.host.cleanHtmlStr( cItem.get('desc', '') )
-            icon        =  self.host.cleanHtmlStr( cItem.get('icon', '') )
+            icon        =  self.host.getIconUrl(cItem.get('icon', ''))
+            if icon == '': icon = self.host.DEFAULT_ICON
             
             hostItem = CDisplayListItem(name = title,
                                         description = description,
@@ -417,28 +463,3 @@ class IPTVHost(CHostBase):
 
         return hostList
     # end convertList
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

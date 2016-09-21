@@ -5,10 +5,8 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 ###################################################
 
 ###################################################
@@ -87,8 +85,6 @@ class TvpVod(CBaseHostClass):
                     {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'VOD',                       'marker':'VOD'},
                     {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Programy',                  'marker':'Programy'},
                     {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
-                    #{'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Serwisy Informacyjne',     'marker':'Serwisy Informacyjne'},
-                    #{'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Publicystyka',             'marker':'<li><h2>Publicystyka</h2></li>'},
                     {'icon':DEFAULT_ICON, 'category':'search',          'title':_('Search'), 'search_item':True},
                     {'icon':DEFAULT_ICON, 'category':'search_history',  'title':_('Search history')} ]
     
@@ -116,13 +112,9 @@ class TvpVod(CBaseHostClass):
         try: httplib.HTTPResponse.read = prev_read
         except Exception: printExc()
         return sts, data
-    
-    def _cleanHtmlStr(self, str):
-        str = str.replace('<', ' <').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        return self.cm.ph.removeDoubles(clean_html(str), ' ').strip()
         
     def _getStr(self, v, default=''):
-        return clean_html(self._encodeStr(v, default))
+        return self.cleanHtmlStr(self._encodeStr(v, default))
         
     def _encodeStr(self, v, default=''):
         if type(v) == type(u''): return v.encode('utf-8')
@@ -204,7 +196,7 @@ class TvpVod(CBaseHostClass):
             template ='listing_stats.html'
             direct='&filter=%7B%22playable%22%3Atrue%7D&direct=false'
         elif location == 'directory_video':
-            order='&order=release_date_long,-1'
+            order='&order=position,1'
             type='video'
             template ='listing.html'
             direct='&filter=%7B%22playable%22%3Atrue%7D&direct=false'
@@ -280,7 +272,6 @@ class TvpVod(CBaseHostClass):
         if 0 == len(self.currList):
             self.listItems1(cItem, 'vod_episodes')
         
-        
     def listsMenuGroups(self, cItem, category):
         printDBG("TvpVod.listsGroupsType1")
         url = self._getFullUrl(cItem['url'])
@@ -298,8 +289,8 @@ class TvpVod(CBaseHostClass):
         url = self._getFullUrl(cItem['url'])
         
         if '/shared/' in url:
-            url += '&page=%d' %(page)
             ajaxUrl = url
+            url += '&page=%d' %(page)
         
         sts, data = self._getPage(url, self.defaultParams)
         if not sts: return
@@ -342,6 +333,8 @@ class TvpVod(CBaseHostClass):
                 params = dict(cItem)
                 params.update({'category':category, 'title':title, 'url':url, 'icon':icon, 'desc':desc, 'page':1})
                 if '' ==  duration:
+                    if category == 'vod_episodes':
+                        params['good_for_fav'] = True
                     addedItem = True
                     self.addDir(params)
                 else:
@@ -384,7 +377,7 @@ class TvpVod(CBaseHostClass):
         if len(data): del data[0]
         for item in data:
             url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
-            title = self._cleanHtmlStr('<' + item)
+            title = self.cleanHtmlStr('<' + item)
             params = dict(cItem)
             params.update({'category':category, 'title':title, 'url':url, 'icon':icon, 'desc':desc, 'page':0})
             self.addVideo(params)
@@ -424,7 +417,7 @@ class TvpVod(CBaseHostClass):
             title = self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0]
             if '' == title: title = self.cm.ph.getDataBeetwenMarkers(item, '<strong class="fullTitle">', '</a>')[1]
             if '' == title: title = self.cm.ph.getDataBeetwenMarkers(item, '<strong class="shortTitle">', '</a>')[1]
-            title = self._cleanHtmlStr(title)
+            title = self.cleanHtmlStr(title)
             if 'class="new"' in item: title += _(', nowość')
             if 'class="pay"' in item: title += _(', materiał płatny')
             duration = self.cm.ph.getSearchGroups(item, 'class="duration[^>]+?>([^<]+?)</li>')[0]
@@ -515,19 +508,38 @@ class TvpVod(CBaseHostClass):
             printExc("getVideoLink exception") 
         return videoTab
         
-    def getFavouriteData(self, cItem):
-        return str(cItem['url'])
-        
     def getLinksForFavourite(self, fav_data):
         if None == self.loggedIn:
             premium = config.plugins.iptvplayer.tvpvod_premium.value
             if premium: self.loggedIn, msg = self.tryTologin()
-            
+        
         try:
-            ok = int(fav_data)
-            if ok: return self.getVideoLink(fav_data)
-        except Exception: pass
-        return self.getLinksForVideo({'url':fav_data})
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception:
+            cItem = {'url':fav_data}
+            try:
+                ok = int(cItem['url'])
+                if ok: return self.getVideoLink(cItem['url'])
+            except Exception: pass
+        return self.getLinksForVideo(cItem)
+        
+    def getFavouriteData(self, cItem):
+        printDBG('TvpVod.getFavouriteData')
+        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem['icon']}
+        if 'list_episodes' in cItem:
+            params['list_episodes'] = cItem['list_episodes']
+        return json.dumps(params) 
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('TvpVod.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('TvpVod.handleService start')
@@ -538,11 +550,12 @@ class TvpVod(CBaseHostClass):
                 self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
 
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
-        name     = self.currItem.get("name", None)
+        name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         printDBG( "TvpVod.handleService: ---------> name[%s], category[%s] " % (name, category) )
         searchPattern = self.currItem.get("search_pattern", searchPattern)
         self.currList = [] 
+        self.currItem.pop('good_for_fav', None)
 
         if None == name:
             self.listsTab(TvpVod.VOD_CAT_TAB, {'name':'category'})
@@ -585,9 +598,6 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, TvpVod(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-    
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('tvpvodlogo.png')])
 
     def getLinksForVideo(self, Index = 0, selItem = None):
         retCode = RetHost.ERROR
@@ -633,6 +643,7 @@ class IPTVHost(CHostBase):
         description =  self.host._getStr( cItem.get('desc', '') ).strip()
         icon        =  self.host._getStr( cItem.get('icon', '') )
         if '' == icon: icon = TvpVod.DEFAULT_ICON
+        isGoodForFavourites = cItem.get('good_for_fav', False)
         
         return CDisplayListItem(name = title,
                                 description = description,
@@ -640,29 +651,5 @@ class IPTVHost(CHostBase):
                                 urlItems = hostLinks,
                                 urlSeparateRequest = 1,
                                 iconimage = icon,
-                                possibleTypesOfSearch = possibleTypesOfSearch)
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return
+                                possibleTypesOfSearch = possibleTypesOfSearch,
+                                isGoodForFavourites = isGoodForFavourites)

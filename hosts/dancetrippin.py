@@ -1,236 +1,291 @@
-# -*- coding: utf-8 -*-
-
+﻿# -*- coding: utf-8 -*-
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, byteify, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+###################################################
+
 ###################################################
 # FOREIGN import
 ###################################################
-import re, urllib, urllib2, base64, math 
+import time
+import re
+import urllib
+import string
+import random
+import base64
+from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
-from Components.config import config, ConfigSelection, getConfigListEntry, ConfigYesNo
 ###################################################
 
 ###################################################
 # Config options for HOST
-###################################################
-config.plugins.iptvplayer.vimeo_default_quality = ConfigSelection(default = "360", choices = [
-("0", _("the worst")),
-("270",  "270p"), 
-("360",  "360p"), 
-("720",  "720p"), 
-("1080",  "1080p"), 
-("99999999", _("the best"))
-])
-config.plugins.iptvplayer.vimeo_use_default_quality = ConfigYesNo(default = False)
-#config.plugins.iptvplayer.vimeo_allow_hls           = ConfigYesNo(default = True)
+###################################################)
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Default video quality:"), config.plugins.iptvplayer.vimeo_default_quality))
-    optionList.append(getConfigListEntry(_("Use default video quality:"), config.plugins.iptvplayer.vimeo_use_default_quality))
-    #optionList.append(getConfigListEntry(_("Allow hls format"), config.plugins.iptvplayer.vimeo_allow_hls))
     return optionList
-###################################################
-
-###################################################
-# Title of HOST
-###################################################
 def gettytul():
-    return 'Dancetrippin'
+    return 'http://dancetrippin.tv/'
 
-class IPTVHost(IHost):
-    LOGO_NAME = 'dancetrippinlogo.png'
+class DancetrippinTV(CBaseHostClass):
+ 
+    def __init__(self):
+        CBaseHostClass.__init__(self, {'history':'DancetrippinTV.tv', 'cookie':'kinomantv.cookie', 'cookie_type':'MozillaCookieJar'})
+        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.MAIN_URL = "http://www.dancetrippin.tv/"
+        self.DEFAULT_ICON_URL = 'https://frenezy.files.wordpress.com/2010/10/dancetrippin.jpg'
+        
+        self.MAIN_CAT_TAB = [{'category':'latest',             'title': _('Latest'),   'icon':self.DEFAULT_ICON_URL, 'url':self.MAIN_URL},
+                             {'category':'videos',             'title': _('Videos'),    'icon':self.DEFAULT_ICON_URL},
+                             {'category':'artists',            'title': _('Artists'),   'icon':self.DEFAULT_ICON_URL, 'url':self.MAIN_URL+'artists'},
+                             {'category':'playlists',          'title': _('Playlists'), 'icon':self.DEFAULT_ICON_URL, 'url':self.MAIN_URL+'playlists'}]
+        
+        
+        self.VIDEOS_TAB = [{'category':'list_videos',          'title': _('DJ SETS'),   'url':self.MAIN_URL+'ajax.cfm?datatype=videos&cat=-12&templatetype=grid'},
+                           {'category':'list_videos',          'title': _('MORE VIDS'), 'url':self.MAIN_URL+'ajax.cfm?datatype=videos&cat=12&templatetype=grid'}]
+    
+    def listsVideos(self, cItem):
+        printDBG("DancetrippinTV.listsVideos")
+        
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        try:
+            data = byteify(json.loads(data))
+            for item in data:
+                url   = self.getFullUrl( item['videourl'] )
+                icon  = self.getFullUrl( item['image'] )
+                title = self.cleanHtmlStr( item['title'] )
+                descTab = []
+                for descItem in ['date', 'genre', 'event', 'location']:
+                    if descItem in item:
+                        descTab.append(item[descItem])
+                desc = '| '.join(descTab)
+                params = dict(cItem)
+                params.update({'url':url, 'title':title, 'icon':icon, 'desc':desc, 'good_for_fav':True})
+                self.addVideo(params)
+        except:
+            printExc()
+            
+    def listVideos2(self, cItem):
+        printDBG("DancetrippinTV.listVideos2")
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="grid-content">', '<footer> ', False)[1]
+        data = data.split('<div class="single"')
+        if len(data): del data[0]
+        for item in data:
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''url\(([^\(]+?)\)''')[0].replace('"', '').replace("'", "") )
+            title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
+            params = dict(cItem)
+            params.update({'url':url, 'title':title, 'icon':icon, 'good_for_fav':True})
+            self.addVideo(params)
+            
+    def listLatests(self, cItem):
+        printDBG("DancetrippinTV.listLatests")
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="single videos"', '<div class="gradient">', True)
+        for item in data:
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''url\(([^\(]+?)\)''')[0].replace('"', '').replace("'", "") )
+            title = self.cleanHtmlStr( item )
+            params = dict(cItem)
+            params.update({'url':url, 'title':title, 'icon':icon, 'good_for_fav':True})
+            self.addVideo(params)
+    
+    def listArtists(self, cItem, nextCategory):
+        printDBG("DancetrippinTV.listArtists")
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="grid-content">', '<div class="show-more show-all">', False)[1]
+        data = data.split('div class="single artist"')
+        if len(data): del data[0]
+        for item in data:
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''url\(([^\(]+?)\)''')[0].replace('"', '').replace("'", "") )
+            title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'url':url, 'title':title, 'icon':icon, 'good_for_fav':True})
+            self.addDir(params)
+            
+    def listPlaylists(self, cItem, nextCategory):
+        printDBG("DancetrippinTV.listPlaylists")
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<h2 class="playlistheader"', '</h2>', True)
+        for item in data:
+            url    = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            if 'user/playlists' in url: continue
+            title  = self.cleanHtmlStr( item )
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'url':url, 'title':title, 'good_for_fav':True})
+            self.addDir(params)
+    
+    def getLinksForVideo(self, cItem, forEpisodes=False):
+        printDBG("DancetrippinTV.getLinksForVideo [%s]" % cItem)
+        urlTab = []
+        
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return urlTab
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<video ', '</video>', False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source', '>')
+        for item in data:
+            if 'video/mp4' not in item: continue 
+            name = self.cm.ph.getSearchGroups(item, '''label=['"]([^'^"]+?)['"]''')[0]
+            url  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
+            urlTab.append({'name':name, 'url':self.getFullUrl(url), 'need_resolve':0})
+        return urlTab
+        
+    def getVideoLinks(self, videoUrl):
+        printDBG("DancetrippinTV.getVideoLinks [%s]" % videoUrl)
+        urlTab = []
+            
+        return urlTab
+    
+    def getFavouriteData(self, cItem):
+        printDBG('DancetrippinTV.getFavouriteData')
+        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem.get('desc', '')}
+        return json.dumps(params) 
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('DancetrippinTV.getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('DancetrippinTV.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
+        
+    def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
+        printDBG('handleService start')
+        
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
+
+        name     = self.currItem.get("name", '')
+        category = self.currItem.get("category", '')
+        mode     = self.currItem.get("mode", '')
+        
+        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        self.currList = []
+        
+    #MAIN MENU
+        if name == None:
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif category == 'videos':
+            self.listsTab(self.VIDEOS_TAB, self.currItem)
+        elif category == 'list_videos':
+            self.listsVideos(self.currItem)
+        elif category == 'artists':
+            self.listArtists(self.currItem, 'list_videos2')
+        elif category == 'playlists':
+            self.listPlaylists(self.currItem, 'list_videos2')
+        elif category == 'list_videos2':
+            self.listVideos2(self.currItem)
+        elif category == 'latest':
+            self.listLatests(self.currItem)
+        
+        CBaseHostClass.endHandleService(self, index, refresh)
+class IPTVHost(CHostBase):
 
     def __init__(self):
-        printDBG( "init begin" )
-        self.host = Host()
-        self.prevIndex = []
-        self.currList = []
-        self.prevList = []
-        printDBG( "init end" )
-        
-    def isProtectedByPinCode(self):
-        return False
+        CHostBase.__init__(self, DancetrippinTV(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
     
-    def getLogoPath(self):  
-        return RetHost(RetHost.OK, value = [GetLogoDir(self.LOGO_NAME)])
-
-    def getInitList(self):
-        printDBG( "getInitList begin" )
-        self.prevIndex = []
-        self.currList = self.host.getInitList()
-        self.host.setCurrList(self.currList)
-        self.prevList = []
-        printDBG( "getInitList end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getListForItem(self, Index = 0, refresh = 0, selItem = None):
-        printDBG( "getListForItem begin" )
-        self.prevIndex.append(Index)
-        self.prevList.append(self.currList)
-        self.currList = self.host.getListForItem(Index, refresh, selItem)
-        #self.currList = [ self.prevList[-1][Index] ]
-        printDBG( "getListForItem end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getPrevList(self, refresh = 0):
-        printDBG( "getPrevList begin" )
-        if(len(self.prevList) > 0):
-            self.prevIndex.pop()
-            self.currList = self.prevList.pop()
-            self.host.setCurrList(self.currList)
-            printDBG( "getPrevList end OK" )
-            return RetHost(RetHost.OK, value = self.currList)
-        else:
-            printDBG( "getPrevList end ERROR" )
-            return RetHost(RetHost.ERROR, value = [])
-
-    def getCurrentList(self, refresh = 0):
-        printDBG( "getCurrentList begin" )
-        #if refresh == 1
-        #self.prevIndex[-1] #ostatni element prevIndex
-        #self.prevList[-1]  #ostatni element prevList
-        #tu pobranie listy dla dla elementu self.prevIndex[-1] z listy self.prevList[-1]  
-        printDBG( "getCurrentList end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getLinksForVideo(self, Index = 0, item = None):
-        return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
+    def getLinksForVideo(self, Index = 0, selItem = None):
+        retCode = RetHost.ERROR
+        retlist = []
+        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
         
+        urlList = self.host.getLinksForVideo(self.host.currList[Index])
+        for item in urlList:
+            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
+
+        return RetHost(RetHost.OK, value = retlist)
+    # end getLinksForVideo
+    
     def getResolvedURL(self, url):
         # resolve url to get direct url to video file
         retlist = []
-        urlList = self.host.getResolvedURL(url)
+        urlList = self.host.getVideoLinks(url)
         for item in urlList:
             need_resolve = 0
             retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
+
         return RetHost(RetHost.OK, value = retlist)
-
-    def getSearchResults(self, pattern, searchType = None):
-        return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
-
-    ###################################################
-    # Additional functions on class IPTVHost
-    ###################################################
-
-class Host:
-    currList = []
-    MAIN_URL = ''
     
-    def __init__(self):
-        printDBG( 'Host __init__ begin' )
-        self.cm = pCommon.common()
-        self.currList = []
-        printDBG( 'Host __init__ end' )
+    def converItem(self, cItem):
+        hostList = []
+        searchTypesOptions = [] # ustawione alfabetycznie
+        searchTypesOptions.append((_("Movies"),   "movie"))
+        searchTypesOptions.append((_("TV Shows"), "tv_shows"))
         
-    def getStr(self, v, default=''):
-        if None == v:
-            return default
-        elif isinstance(v, int):
-            return str(v)
-        return str(v)
-        
-    def setCurrList(self, list):
-        printDBG( 'Host setCurrList begin' )
-        self.currList = list
-        printDBG( 'Host setCurrList end' )
-        return 
+        hostLinks = []
+        type = CDisplayListItem.TYPE_UNKNOWN
+        possibleTypesOfSearch = None
 
-    def getInitList(self):
-        printDBG( 'Host getInitList begin' )
-        #self.currList = self.MAIN_MENU
-        self.currList = self.listsItems(-1, '', 'main-menu')
-        printDBG( 'Host getInitList end' )
-        return self.currList
-
-    def getListForItem(self, Index = 0, refresh = 0, selItem = None):
-        printDBG( 'Host getListForItem begin' )
-        valTab = []
-        if len(self.currList[Index].urlItems) == 0:
-           return valTab
-        valTab = self.listsItems(Index, self.currList[Index].urlItems[0], self.currList[Index].urlSeparateRequest)
-        self.currList = valTab
-        printDBG( 'Host getListForItem end' )
-        return self.currList
-
-    def listsItems(self, Index, url, name = ''):
-        printDBG( 'Host listsItems begin' )
-        printDBG( 'Host listsItems url[%r] '% url )
-        valTab = []
-        if name == 'main-menu':
-           printDBG( 'Host listsItems begin name='+name )
-           valTab.append(CDisplayListItem('Episodes',     'http://player.dancetrippin.tv/#dj',    CDisplayListItem.TYPE_CATEGORY, ['http://player.dancetrippin.tv/video/list/dj/'],    'episodes', '', None)) 
-           valTab.append(CDisplayListItem('Sol sessions', 'http://player.dancetrippin.tv/#sol',   CDisplayListItem.TYPE_CATEGORY, ['http://player.dancetrippin.tv/video/list/sol/'],   'episodes', '', None)) 
-           valTab.append(CDisplayListItem('Other videos', 'http://player.dancetrippin.tv/#other', CDisplayListItem.TYPE_CATEGORY, ['http://player.dancetrippin.tv/video/list/other/'], 'episodes', '', None)) 
-           valTab.append(CDisplayListItem('Ibiza Global Radio', 'http://player.dancetrippin.tv/#igr', CDisplayListItem.TYPE_CATEGORY, ['http://player.dancetrippin.tv/video/list/igr/'], 'episodes', '', None))
-           return valTab
-
-        # ########## #
-        if 'episodes' == name:
-           printDBG( 'Host listsItems begin name='+name )
-           self.MAIN_URL = 'http://player.dancetrippin.tv' 
-           try:
-                data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True })
-                result = byteify(json.loads(data))
-           except Exception:
-              printExc( 'Host listsItems query error url[%r]' % url )
-              return valTab
-           if result:
-              for item in result:
-                  if self.getStr(item["image"]) <> "":
-                     phImage = 'http://www.dancetrippin.tv/media/'+self.getStr(item["image"])
-                  else:
-                     phImage = "http://player.dancetrippin.tv/media/static/img/system/default_video.png"
-                  phUrl = self.MAIN_URL+'/video/'+self.getStr(item["slug"])+'/'   
-                  desc = '['+self.getStr(item["venue"])+']['+self.getStr(item["dj"])+']['+self.getStr(item["location"])+']['+self.getStr(item["party"])+']['+self.getStr(item["description"])
-                  desc = clean_html(desc)
-                  valTab.append(CDisplayListItem(self.getStr(item["number"])+' '+self.getStr(item["title"]),desc,CDisplayListItem.TYPE_VIDEO, [CUrlItem('link', phUrl, 1)], 0, phImage, None)) 
-           printDBG( 'Host listsItems end' )
-           return valTab
-
-        return valTab
-
-    def getResolvedURL(self, url):
-        printDBG( 'Host getResolvedURL url[%r] ' % url )
-        videoUrls = []
-        sts, data = self.cm.getPage(url)
-        if not sts: return []
-        
-        videoUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="(http[^"]+?)"', 1, True)[0]
-        
-        sts, data = self.cm.getPage(videoUrl)
-        if not sts: return []
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, 'var t={', '};', False)[1]
-        printDBG(data)
-        
-        try:
-            data = byteify( json.loads('{%s}' % data) )
-            for item in data['request']['files']['progressive']:
-                videoUrls.append({'name':item['quality'], 'url':item['url'], 'height':item['height']})
-        except Exception:
-            printExc()
+        if 'category' == cItem['type']:
+            if cItem.get('search_item', False):
+                type = CDisplayListItem.TYPE_SEARCH
+                possibleTypesOfSearch = searchTypesOptions
+            else:
+                type = CDisplayListItem.TYPE_CATEGORY
+        elif cItem['type'] == 'video':
+            type = CDisplayListItem.TYPE_VIDEO
+        elif 'more' == cItem['type']:
+            type = CDisplayListItem.TYPE_MORE
+        elif 'audio' == cItem['type']:
+            type = CDisplayListItem.TYPE_AUDIO
             
-        if 0 < len(videoUrls):
-            max_bitrate = int(config.plugins.iptvplayer.vimeo_default_quality.value)
-            def __getLinkQuality( itemLink ):
-                return int(itemLink['height'])
-            videoUrls = CSelOneLink(videoUrls, __getLinkQuality, max_bitrate).getSortedLinks()
-            if config.plugins.iptvplayer.vimeo_use_default_quality.value:
-                videoUrls = [videoUrls[0]]
+        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
+            url = cItem.get('url', '')
+            if '' != url:
+                hostLinks.append(CUrlItem("Link", url, 1))
             
-        return videoUrls
+        title       =  cItem.get('title', '')
+        description =  cItem.get('desc', '')
+        icon        =  cItem.get('icon', '')
+        isGoodForFavourites = cItem.get('good_for_fav', False)
+        
+        return CDisplayListItem(name = title,
+                                    description = description,
+                                    type = type,
+                                    urlItems = hostLinks,
+                                    urlSeparateRequest = 1,
+                                    iconimage = icon,
+                                    possibleTypesOfSearch = possibleTypesOfSearch,
+                                    isGoodForFavourites = isGoodForFavourites)
+    # end converItem
+

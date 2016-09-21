@@ -41,7 +41,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'xrysoi.se'
+    return 'http://xrysoi.se/'
 
 class XrysoiSE(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
@@ -59,6 +59,7 @@ class XrysoiSE(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'XrysoiSE.tv', 'cookie':'XrysoiSEtv.cookie'})
+        self.DEFAULT_ICON_URL = self.MAIN_URL + 'wp-content/uploads/2015/03/logo-GM.png'
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}
         self.cacheLinks = {}
@@ -144,8 +145,7 @@ class XrysoiSE(CBaseHostClass):
                 if '-collection' in url: continue
             if url.startswith('http'):
                 params = dict(cItem)
-                params.update({'title':title, 'url':url, 'icon':icon})
-                params['category'] = nextCategory
+                params.update({'category':nextCategory, 'good_for_fav': True, 'title':title, 'url':url, 'icon':icon})
                 self.addDir(params)
         if nextPage:
             params = dict(cItem)
@@ -296,7 +296,7 @@ class XrysoiSE(CBaseHostClass):
         return urlTab
         
     def getArticleContent(self, cItem):
-        printDBG("MoviesHDCO.getArticleContent [%s]" % cItem)
+        printDBG("XrysoiSE.getArticleContent [%s]" % cItem)
         retTab = []
         
         if 'movie' == cItem.get('mode') or 'explore_item' == cItem.get('category'):        
@@ -314,15 +314,19 @@ class XrysoiSE(CBaseHostClass):
              return retTab
         
     def getFavouriteData(self, cItem):
-        return json.dumps({'url':cItem['url'], 'mode':cItem.get('mode')}) 
+        printDBG('XrysoiSE.getFavouriteData')
+        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem['icon']}
+        return json.dumps(params) 
         
-    def getLinksForFavourite(self, fav_data):
-        links = []
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('XrysoiSE.setInitListFromFavouriteItem')
         try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -335,6 +339,7 @@ class XrysoiSE(CBaseHostClass):
         
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
+        self.currItem.pop('good_for_fav', None)
         
     #MAIN MENU
         if name == None:
@@ -361,11 +366,7 @@ class XrysoiSE(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        # for now we must disable favourites due to problem with links extraction for types other than movie
-        CHostBase.__init__(self, XrysoiSE(), True, favouriteTypes=[]) #, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('xrysoiselogo.png')])
+        CHostBase.__init__(self, XrysoiSE(), True, favouriteTypes=[]) 
     
     def getLinksForVideo(self, Index = 0, selItem = None):
         retCode = RetHost.ERROR
@@ -434,6 +435,8 @@ class IPTVHost(CHostBase):
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
         icon        =  cItem.get('icon', '')
+        if icon == '': icon = self.host.DEFAULT_ICON_URL
+        isGoodForFavourites = cItem.get('good_for_fav', False)
         
         return CDisplayListItem(name = title,
                                     description = description,
@@ -441,30 +444,6 @@ class IPTVHost(CHostBase):
                                     urlItems = hostLinks,
                                     urlSeparateRequest = 1,
                                     iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
+                                    possibleTypesOfSearch = possibleTypesOfSearch,
+                                    isGoodForFavourites = isGoodForFavourites)
     # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

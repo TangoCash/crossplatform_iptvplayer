@@ -118,6 +118,7 @@ class KinomanTV(CBaseHostClass):
         self.cacheSeries = {}
         self.loggedIn = None
         self.token = ''
+        self.isPremium = None
         
     def getIconUrl(self, hash):
         # .../o.jpg - big, .../m.jpg - small
@@ -344,9 +345,9 @@ class KinomanTV(CBaseHostClass):
         printDBG("KinomanTV.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
-        
         if 'movie_id' in cItem: post_data = {"movie_id":cItem['movie_id']}
-        else: post_data = {"episode_id":cItem['episode_id']}
+        elif 'episode_id' in cItem: post_data = {"episode_id":cItem['episode_id']}
+        else: return []
         
         url = self.apiHost + 'link'
         
@@ -379,7 +380,8 @@ class KinomanTV(CBaseHostClass):
         params.update({'header':self.AJAX_HEADER, 'raw_post_data':True})
         
         players = []
-        if '' != self.token: players.append('vip')
+        if '' != self.token and self.isPremium:
+            players.append('vip')
         players.append('free')
         
         for player in players:
@@ -534,7 +536,12 @@ class KinomanTV(CBaseHostClass):
         try:
             data = byteify(json.loads(data))
             printDBG(data)
-            msg = 'Premium ważne do: %s\n' % data.get('premium_valid', '-')
+            msg = ''
+            if None != data.get('premium_valid', None):
+                self.isPremium = True
+                msg = 'Premium ważne do: %s\n' % data['premium_valid']
+            else:
+                self.isPremium = False
             msg += 'Punktów: %s\n' % data['points']
         except Exception:
             printExc()
@@ -547,7 +554,7 @@ class KinomanTV(CBaseHostClass):
         if None == self.loggedIn and config.plugins.iptvplayer.kinoman_premium.value:
             self.loggedIn, msg = self.tryTologin(config.plugins.iptvplayer.kinoman_login.value, config.plugins.iptvplayer.kinoman_password.value)
             if not self.loggedIn:
-                self.sessionEx.open(MessageBox, 'Problem z zalogowaniem użytkownika "%s".' % self.LOGIN, type = MessageBox.TYPE_INFO, timeout = 10 )
+                self.sessionEx.open(MessageBox, 'Problem z zalogowaniem użytkownika "%s".' % config.plugins.iptvplayer.kinoman_login.value, type = MessageBox.TYPE_INFO, timeout = 10 )
             else:
                 self.sessionEx.open(MessageBox, 'Zostałeś poprawnie \nzalogowany.\n' + msg, type = MessageBox.TYPE_INFO, timeout = 10 )
                 
@@ -593,8 +600,6 @@ class KinomanTV(CBaseHostClass):
     #HISTORIA SEARCH
         elif category == "search_history":
             self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
-        else:
-            printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
 class IPTVHost(CHostBase):

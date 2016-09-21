@@ -46,10 +46,10 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://watchwrestling.to/'
+    return 'http://watchwrestling.tc/'
 
 class Watchwrestling(CBaseHostClass):
-    MAIN_URL    = 'http://watchwrestling.to/'
+    MAIN_URL    = 'http://watchwrestling.tc/'
     SRCH_URL    = MAIN_URL + 'index.php?s='
     DEFAULT_ICON_URL = 'http://watchwrestling.to/wp-content/uploads/2014/11/ww_fb.png'
     
@@ -187,7 +187,7 @@ class Watchwrestling(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         sp = '<div style="text-align: center;">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '<div id="livefyre-comments">', False)[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '</div>', False)[1]
         data = re.compile('href="([^"]+?)"[^>]*?>([^>]+?)</a>').findall(data)
         for item in data:
             params = dict(cItem)

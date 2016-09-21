@@ -79,7 +79,8 @@ class Twitch(CBaseHostClass):
     
     def __init__(self):
         printDBG("Twitch.__init__")
-        CBaseHostClass.__init__(self, {'history':'Twitch.tv'})     
+        CBaseHostClass.__init__(self, {'history':'Twitch.tv'})
+        self.cm.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Client-ID':'jzkbprff40iqj646a697cyrvl0zt2m6'}
     
     def _cleanHtmlStr(self, str):
         str = str.replace('<', ' <').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')

@@ -1526,19 +1526,19 @@ msgid "Select action"
 msgstr "Выберите действие"
 
 msgid "Select audio track"
-msgstr "Выбор звуковой дорожки"
+msgstr "Выбор аудио дорожки"
 
 msgid "Select favourite group"
-msgstr "Выберите группу избранное"
+msgstr "Выбор группы избранное"
 
 msgid "Select language"
 msgstr "Выберите язык"
 
 msgid "Select link"
-msgstr "Выберите ссылку"
+msgstr "Выбор ссылки"
 
 msgid "Select movie"
-msgstr "Выберите фильм"
+msgstr "Выбор фильма"
 
 msgid "Select movie player"
 msgstr "Выбор плеера"
@@ -1547,25 +1547,25 @@ msgid "Select option"
 msgstr "Выберите опцию"
 
 msgid "Select service"
-msgstr "Выберите услугу"
+msgstr "Выбор услуги"
 
 msgid "Select subtitles file"
-msgstr "Выберите файл с субтитрами"
+msgstr "Выбор файла с субтитрами"
 
 msgid "Select subtitles to download"
-msgstr "Выберите субтитры для загрузки"
+msgstr "Выбор субтитров для загрузки"
 
 msgid "Select subtitles track"
-msgstr "Выберите дорожку субтитров"
+msgstr "Выбор дорожки субтитров"
 
 msgid "Select the directory"
-msgstr "Выберите каталог"
+msgstr "Выбор каталога"
 
 msgid "Select update server"
-msgstr "Выберите сервер обновлений"
+msgstr "Выбор сервера обновлений"
 
 msgid "Select video option"
-msgstr "Выберите видео"
+msgstr "Выбор видео"
 
 msgid "Selected version [%s]."
 msgstr "Выбранный вариант [%s]."
@@ -1874,8 +1874,8 @@ msgid ""
 "There is a new version available do you want to update? \n"
 "Your version [%s], latest version on server [%s]."
 msgstr ""
-"Существует новая версия плагина. Вы хотите, обновить? \n"
-"Ваша версия [%s], последняя версия на сервере [%s]."
+"Вышла новая версия плагина. Вы хотите, обновить? \n"
+"Ваша версия [%s], новая версия на сервере [%s]."
 
 msgid "There is no favourites groups."
 msgstr "Там нет группы избранное."
@@ -4032,8 +4032,41 @@ msgstr "Субтитры24"
 msgid "Titlovi.com"
 msgstr "Титлы"
 
+msgid "Youtube.com"
+msgstr "Youtube"
+
+msgid "Subscene.com"
+msgstr "Subscene"
+
 msgid "If available you can choose other source."
 msgstr "При наличии вы можете выбрать другой источник."
+
+msgid "Reverse a playlist"
+msgstr "Повторить плейлист"
+
+msgid "Use UA proxy server to get file lists"
+msgstr "С помощью UA прокси-сервер, чтобы получить списки файлов"
+
+msgid "any"
+msgstr "Любые"
+
+msgid "C subtitle parser"
+msgstr "C парсер субтитров"
+
+msgid "It improves subtitles parsing.\n"
+msgstr "Он улучшает субтитры синтаксического анализа.\n"
+
+msgid "Use subtitles parser extension if available"
+msgstr "Использовать субтитры расширения парсер, если доступно"
+
+msgid "Copy post installed binaries."
+msgstr "Копировать после установки двоичных файлов."
+
+msgid "IPTVPlayer - Start"
+msgstr "IPTVПлеер - Запуск"
+
+msgid "Info..."
+msgstr "Информация"
 
 msgid "Trailers"
 msgstr "Трейлеры"

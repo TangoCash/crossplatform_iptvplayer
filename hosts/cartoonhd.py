@@ -57,7 +57,7 @@ class CartoonHD(CBaseHostClass):
     
     MAIN_URL = 'http://cartoonhd.website/'
     #SEARCH_URL = MAIN_URL + 'ajax/search.php'
-    SEARCH_URL = MAIN_URL + 'api/v1/cautare/apr'
+    SEARCH_URL = MAIN_URL + 'api/v2/cautare/evokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
                     {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php',    'icon':''},
@@ -131,11 +131,12 @@ class CartoonHD(CBaseHostClass):
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'TV Shows</a>', '</ul>', False)[1]
         tmp = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)<').findall(tmp)
         for item in tmp:
+            if 'latest-episodes' in item[0]: continue
             tvshowsTab.append({'title':item[1], 'url':self.getFullUrl(item[0])})
             
-        newsTab = [{'title':'New Episodes',           'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('new-shows')}]
+        newsTab = [{'title':'New Episodes',           'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('latest-episodes')}]
         newsTab.append( {'title':'New Movies',        'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('new-movies')} )
-        newsTab.append( {'title':'Box Office Movies', 'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('featuredmovies')} )
+        newsTab.append( {'title':'Box Office Movies', 'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('box-office-movies')} )
             
         self.cacheFilters['new']      = newsTab
         self.cacheFilters['movies']   = moviesTab
@@ -228,6 +229,8 @@ class CartoonHD(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
+        showTitle = cItem.get('show_title', '')
+        
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="episode">', '</article>', False)[1]
         data = data.split('<div class="episode">')
         for item in data:
@@ -238,6 +241,7 @@ class CartoonHD(CBaseHostClass):
             if '' == icon: icon = cItem.get('icon', '')
             
             if url.startswith('http'):
+                if showTitle != '': title = showTitle + ' ' + title 
                 params = {'title':title, 'url':url, 'icon':icon, 'desc':desc}
                 self.addVideo(params)
 
@@ -251,7 +255,7 @@ class CartoonHD(CBaseHostClass):
         currid = self._makeid()
         
         q = searchPattern
-        post_data = {'q':q, 'limit':100, 'timestamp':str(time.time()).split('.')[0], 'verifiedCheck':tor, 'set':currid, 'rt':self._rflix(tor+currid)}
+        post_data = {'q':q, 'limit':100, 'timestamp':str(time.time()).split('.')[0], 'verifiedCheck':tor, 'set':currid, 'rt':self._rflix(tor+currid), 'sl':'c3037ef6538bf7e3c048fd6997ca37d3'}
         
         httpParams = dict(self.defaultParams)
         httpParams['header'] =  {'Referer':self.MAIN_URL, 'User-Agent':self.cm.HOST, 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
@@ -357,30 +361,31 @@ class CartoonHD(CBaseHostClass):
         httpParams['header']['Authorization'] = 'Bearer ' + urllib.unquote(__utmx)
         
         #httpParams['header']['Cookie'] = '%s=%s; PHPSESSID=%s; flixy=%s;'% (elid, urllib.quote(encElid), getCookieItem('PHPSESSID'), getCookieItem('flixy'))
-        url = 'ajax/embeds.php'
-        post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid)}
-        sts, data = self.cm.getPage(self.getFullUrl(url), httpParams, post_data)
-        if not sts: return []
-        printDBG('===============================================================')
-        printDBG(data)
-        printDBG('===============================================================')
-        printDBG(hostings)
-        try:
-            data = byteify(json.loads(data))
-            for item in data:
-                url  = data[item]['embed'].replace('\\/', '/')
-                url  = self.cm.ph.getSearchGroups(url, '''src=['"]([^"^']+?)['"]''', 1, ignoreCase=True)[0]
-                name = data[item]['type'] 
-                if 'googlevideo.com' in url or 'googleusercontent.com' in url:
-                    need_resolve = 0
-                elif 1 == self.up.checkHostSupport(url):
-                    need_resolve = 1
-                else: 
-                    need_resolve = 0
-                if url.startswith('http'):
-                    urlTab.append({'name':name, 'url':url, 'need_resolve':need_resolve})
-        except Exception:
-            printExc()
+        for url in ['ajax/tnembeds.php', 'ajax/embeds.php']:
+            post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid)}
+            sts, data = self.cm.getPage(self.getFullUrl(url), httpParams, post_data)
+            if not sts: continue
+            printDBG('===============================================================')
+            printDBG(data)
+            printDBG('===============================================================')
+            printDBG(hostings)
+            try:
+                data = byteify(json.loads(data))
+                for item in data:
+                    url  = data[item]['embed'].replace('\\/', '/')
+                    url  = self.cm.ph.getSearchGroups(url, '''src=['"]([^"^']+?)['"]''', 1, ignoreCase=True)[0]
+                    name = data[item]['type'] 
+                    if 'googlevideo.com' in url or 'googleusercontent.com' in url:
+                        need_resolve = 0
+                    elif 1 == self.up.checkHostSupport(url):
+                        need_resolve = 1
+                    else: 
+                        need_resolve = 0
+                    if url.startswith('http'):
+                        urlTab.append({'name':name, 'url':url, 'need_resolve':need_resolve})
+            except Exception:
+                printExc()
+            if len(urlTab): break
         self.cacheLinks[cItem['url']] = urlTab
         return urlTab
         

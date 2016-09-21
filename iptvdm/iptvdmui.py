@@ -45,7 +45,7 @@ class IPTVDMWidget(Screen):
     if sz_h < 500:
         sz_h += 4
     skin = """
-        <screen name="IPTVDMWidget" position="center,center" title="IPTV Player download manager" size="%d,%d">
+        <screen name="IPTVDMWidget" position="center,center" title="%s" size="%d,%d">
          <ePixmap position="5,9"   zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
          <ePixmap position="180,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
          <ePixmap position="385,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
@@ -56,7 +56,7 @@ class IPTVDMWidget(Screen):
          <widget render="Label" source="key_blue"   position="635,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
          <widget name="list" position="5,100" zPosition="2" size="%d,%d" scrollbarMode="showOnDemand" transparent="0"  backgroundColor="#00000000" enableWrapAround="1" />
          <widget name="titel" position="5,47" zPosition="1" size="%d,23" font="Regular;20" transparent="1"  backgroundColor="#00000000"/>
-        </screen>""" %(
+        </screen>""" %(_("IPTV Player download manager"),
             sz_w, sz_h, # size
             GetIconDir('red.png'), GetIconDir('yellow.png'), GetIconDir('green.png'), GetIconDir('blue.png'),
             sz_w - 10, sz_h - 20, # size list

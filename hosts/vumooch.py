@@ -93,14 +93,15 @@ class Vumoo(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="multi-column-dropdown">', 'Adult', False)[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="multi-column-dropdown">', '<button', False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:
             title = self.cleanHtmlStr( item )
             url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)["']''', 1, True)[0])
             params = dict(cItem)
-            params.update({'category':category, 'title':title, 'url':url})
-            self.addDir(params)
+            if title != '' and url != '':
+                params.update({'category':category, 'title':title, 'url':url})
+                self.addDir(params)
         
     def fillTvShowFilters(self, url):
         printDBG("Vumoo.fillTvShowFilters")

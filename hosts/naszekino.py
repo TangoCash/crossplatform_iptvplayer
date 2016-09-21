@@ -55,6 +55,7 @@ class NaszeKino(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'NaszeKino', 'cookie':'naszekino.cookie'})
         self.categories = {}
+        self.linksCache = {}
             
     def addNextPage(self, cItem, nextPage, page):
         if nextPage:
@@ -140,20 +141,51 @@ class NaszeKino(CBaseHostClass):
         
     def getLinkTab(self, cItem):
         printDBG("NaszeKino.getLinkTab [%s]" % cItem)
+        allLinks = []
+        if cItem['url'] in self.linksCache:
+            return self.linksCache[cItem['url']]
+        else: self.linksCache = {}
+        
         ret = {'episodes':[], 'links':{}}
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return ret
         data = self.cm.ph.getDataBeetwenMarkers(data, "panel-container", "nothing", False)[1]
         data = re.compile('<a [^>]*?href="([^>]+?)"[^>]*?>([^<]+?)</a>').findall(data)
         for item in data:
+            printDBG(item)
+            if 'nasze-kino.online' in item[0] and 'OGLĄDAJ' in item[1].strip():
+                sts, tmpData = self.cm.getPage(item[0])
+                if sts:
+                    tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(tmpData, '<blockquote', '</blockquote>', withMarkers=True, caseSensitive=False)
+                    for tmpItem in tmpTab:
+                        episodeName = self.cleanHtmlStr( self.cm.ph.rgetDataBeetwenMarkers(tmpItem, '<font', '</font>',  withMarkers=True)[1] )
+                        linksTab = re.compile('<a[^>]+?href="([^>]+?)"').findall(tmpItem)
+                        for link in linksTab:
+                            if link in allLinks: continue
+                            if 'facebook' in link: continue
+                            if 1 != self.up.checkHostSupport(link): continue
+                            url  = link
+                            name = self.up.getHostName(url, True)
+                            
+                            if episodeName not in ret['episodes']:
+                                ret['episodes'].append(episodeName)
+                                ret['links'][episodeName] = []
+                            ret['links'][episodeName].insert(0, {'name':name, 'url':url})
+                            allLinks.append(url)
+                continue
             if 1 != self.up.checkHostSupport(item[0]): continue
             url  = item[0]
             name = self.up.getHostName(url, True)
+            if url in allLinks: continue
             
             if item[1] not in ret['episodes']:
                 ret['episodes'].append(item[1])
                 ret['links'][item[1]] = []
             ret['links'][item[1]].append({'name':name, 'url':url})
+            allLinks.append(url)
+            
+        if len(ret['episodes']):
+            self.linksCache[cItem['url']] = ret
         return ret
         
     def listEpisodes(self, cItem):
@@ -239,7 +271,8 @@ class NaszeKino(CBaseHostClass):
         printDBG('handleService start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
-
+        self.linksCache = {}
+        
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
