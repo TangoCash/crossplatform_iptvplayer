@@ -62,6 +62,10 @@ class KreskoweczkiPL(CBaseHostClass):
 
         self.MAIN_CAT_TAB = [{'icon':self.DEFAULT_ICON, 'category':'list_abc',        'title': 'Alfabetycznie',   'url':self.MAIN_URL + 'index.html'},
                              {'icon':self.DEFAULT_ICON, 'category':'list_items',      'title': 'Ostatnio dodane', 'url':self.MAIN_URL + 'index.html'},
+                             {'icon':self.DEFAULT_ICON, 'category':'list_items',      'title': 'Anime',           'url':self.MAIN_URL + 'typ/anime/'},
+                             {'icon':self.DEFAULT_ICON, 'category':'list_items',      'title': 'Bajki',           'url':self.MAIN_URL + 'typ/toon/'},
+                             {'icon':self.DEFAULT_ICON, 'category':'list_items',      'title': 'Seriale',         'url':self.MAIN_URL + 'typ/serial/'},
+                             {'icon':self.DEFAULT_ICON, 'category':'list_items',      'title': 'Pozostałe',       'url':self.MAIN_URL + 'typ/pozostale/'},
                              {'icon':self.DEFAULT_ICON, 'category':'search',          'title': _('Search'), 'search_item':True},
                              {'icon':self.DEFAULT_ICON, 'category':'search_history',  'title': _('Search history')} ]
             
@@ -71,29 +75,14 @@ class KreskoweczkiPL(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        self.abcCache = {}
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li class="letter">', '</ul>')
-        
-        for cat in data:
-            tmp = cat.split('<ul id="collapse_category')
-            if 2 == len(tmp):
-                catName = self.cleanHtmlStr(tmp[0])
-                tmp = tmp[1]
-            else:
-                continue
-                
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
-            tab = []
-            for item in tmp:
-                title = self.cleanHtmlStr(item)
-                url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
-                tab.append({'title':title, 'url':url})
-            
-            if len(tab):
-                params = dict(cItem)
-                self.abcCache[catName] = tab
-                params.update({'category':category, 'title':catName, 'sub_cat':catName})
-                self.addDir(params)
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="category-list one-quarter">', '</ul>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            title = self.cleanHtmlStr(item)
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            params = dict(cItem)
+            params.update({'category':category, 'title':title, 'url':url})
+            self.addDir(params)
             
     def listTitles(self, cItem, nextCategory):
         printDBG("KreskoweczkiPL.listTitles")
@@ -124,7 +113,12 @@ class KreskoweczkiPL(CBaseHostClass):
         else: 
             nextPage = False
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="pm-li-video"', '</li>')
+        video = True
+        m1 = '<div class="pm-li-video"'
+        if m1 not in data: 
+            m1 = '<a class="category-item"'
+            video = False
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, m1, '</li>')
         for item in data:   
             # icon
             icon  = self.cm.ph.getSearchGroups(item, '''url\(['"]([^'^"]+?)['"]''')[0]
@@ -133,15 +127,19 @@ class KreskoweczkiPL(CBaseHostClass):
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             if url == '': continue
             #title
-            title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
+            title = self.cm.ph.getDataBeetwenMarkers(item, '<div class="category-name"', '</div>')[1]
+            if title == '': title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
             if title == '': title = self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>')[1]
             title = self.cm.ph.getDataBeetwenMarkers(item, '<span class="pm-category-name', '</span>')[1] + ' ' + title
-            #desc
-            desc = self.cleanHtmlStr(item)
             
             params = dict(cItem)
-            params.update({'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon), 'desc':desc})
-            self.addVideo(params)
+            params.update({'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon)})
+            if video:
+                params.update({'desc':self.cleanHtmlStr(item)})
+                self.addVideo(params)
+            else:
+                params.update({'desc':self.cleanHtmlStr(item.replace('</b>', '[/br]'))})
+                self.addDir(params)
         
         if nextPage:
             params = dict(cItem)
@@ -231,7 +229,7 @@ class KreskoweczkiPL(CBaseHostClass):
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif category == 'list_abc':
-            self.listABC(self.currItem, 'list_titles')
+            self.listABC(self.currItem, 'list_items')
         elif category == 'list_titles':
             self.listTitles(self.currItem, 'list_items')
         elif category == 'list_items':

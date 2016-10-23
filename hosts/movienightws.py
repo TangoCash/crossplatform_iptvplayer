@@ -102,16 +102,6 @@ class MoviesNight(CBaseHostClass):
         self.movieFiltersCache = self._fillFilters(url)
         return
         
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("MoviesNight.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
-        
     def listMoviesGenres(self, cItem, category):
         printDBG("MoviesNight.listMoviesGenres")
         filter = cItem.get('filter', '')
@@ -162,7 +152,7 @@ class MoviesNight(CBaseHostClass):
             
             
             params = dict(cItem)
-            params.update( {'title': self.cleanHtmlStr( title ), 'url':self._getFullUrl(url), 'desc': desc, 'icon':self._getFullUrl(icon)} )
+            params.update( {'title': self.cleanHtmlStr( title ), 'url':self._getFullUrl(url), 'desc': desc, 'icon':self._getFullUrl(icon), 'good_for_fav': True} )
             if '/tvshows/' in url:
                 params['category'] = category
                 self.addDir(params)
@@ -204,7 +194,7 @@ class MoviesNight(CBaseHostClass):
             if len(episodesTab):
                 self.episodesCache[seasonTitle] = episodesTab
                 params = dict(cItem)
-                params.update( {'category':category, 'title': seasonTitle, 'season_key':seasonTitle} )
+                params.update( {'category':category, 'title': seasonTitle, 'season_key':seasonTitle, 'good_for_fav': False} )
                 self.addDir(params)
         
     def listEpisodes(self, cItem):
@@ -236,10 +226,30 @@ class MoviesNight(CBaseHostClass):
         return urlTab
         
     def getFavouriteData(self, cItem):
-        return cItem['url']
+        printDBG('MoviesNight.getFavouriteData')
+        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem.get('icon', '')}
+        return json.dumps(params) 
         
     def getLinksForFavourite(self, fav_data):
-        return self.getLinksForVideo({'url':fav_data})
+        printDBG('MoviesNight.getLinksForFavourite')
+        if fav_data.startswith('http://') or fav_data.startswith('https://'):
+            return self.getLinksForVideo({'url':fav_data})
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('MoviesNight.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
 
     def getArticleContent(self, cItem):
         printDBG("MoviesNight.getArticleContent [%s]" % cItem)
@@ -372,6 +382,7 @@ class IPTVHost(CHostBase):
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
         icon        =  cItem.get('icon', '')
+        isGoodForFavourites = cItem.get('good_for_fav', False)
         
         return CDisplayListItem(name = title,
                                     description = description,
@@ -379,30 +390,6 @@ class IPTVHost(CHostBase):
                                     urlItems = hostLinks,
                                     urlSeparateRequest = 1,
                                     iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
+                                    possibleTypesOfSearch = possibleTypesOfSearch,
+                                    isGoodForFavourites = isGoodForFavourites)
     # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

@@ -321,8 +321,11 @@ class Playlist(BasePathMixin):
 
         resolution = stream_info.get('resolution')
         if resolution != None:
-            values = resolution.split('x')
-            resolution_pair = (int(values[0]), int(values[1]))
+            try:
+                values = resolution.replace('"', '').split('x')
+                resolution_pair = (int(values[0]), int(values[1]))
+            except Exception:
+                resolution_pair = None
         else:
             resolution_pair = None
 

@@ -178,6 +178,7 @@ class Urllist(CBaseHostClass):
         uri, params   = DMHelper.getDownloaderParamFromUrl(cItem['url'])
         printDBG(params)
         uri = urlparser.decorateUrl(uri, params)
+        uri = urlparser.decorateParamsFromUrl(uri)
         
         urlSupport = self.up.checkHostSupport( uri )
         if 1 == urlSupport:

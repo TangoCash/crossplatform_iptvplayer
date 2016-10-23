@@ -149,9 +149,10 @@ class SeriesEnStreamingCom(CBaseHostClass):
                     category = 'list_items'
                 self.cache[key].append({'category':category, 'title':title, 'url':self._getFullUrl(url)})
         
-        for item in [('series_genre','Séries Par Genre'), \
-                     ('movies_genre','Films Par Genre'), \
-                     ('movies_date','Films Par Date')]:
+        for item in [('series_genre','Séries par genre'), \
+                     ('series_date','Séries par Année'), \
+                     ('movies_genre','Films par genre'), \
+                     ('movies_date','Films par Année')]:
             key = item[0]
             self.cache[key] = []
             tmp = self.cm.ph.getDataBeetwenMarkers(data, item[1], '</ul>', False)[1]
@@ -246,24 +247,52 @@ class SeriesEnStreamingCom(CBaseHostClass):
         nextPage = False
         if ('/page/%d/' % (page+1)) in data or 'nextlink' in data:
             nextPage = True
-        
-        sp = '<div class="list-item-inner">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '<div class="cl', False)[1] #'<div class="clr">'
-        #printDBG(data)
-        data = data.split(sp)
-        for item in data:
-            tmp   = self.cm.ph.getDataBeetwenMarkers(item, '<span class="mtitle">', '</span>', False)[1]
-            url   = self.cm.ph.getSearchGroups(tmp, '''href=["']([^"^']+?)["']''')[0]
-            title = self.cleanHtmlStr( tmp )
-            icon  = self.cm.ph.getSearchGroups(item, '''src=["']([^"^']+?\.jpg)["']''')[0]
-            desc  = self.cleanHtmlStr(item)
-        
-            params = dict(cItem)
-            params.update({'category':category, 'title':title, 'url':self._getFullUrl(url), 'icon':self._getFullUrl(icon), 'desc':desc})
-            if cItem.get('cat', '') == 'movies' or '/films-' in url:
-                self.addVideo(params)
-            else:
-                self.addDir(params)
+            
+        if 'keyword' in cItem:
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a class="sres-wrap', '</a>')
+            for item in data:
+                url   = self.cm.ph.getSearchGroups(item, '''href=["']([^"^']+?)["']''')[0]
+                title = self.cm.ph.getSearchGroups(item, '''alt=["']([^"^']+?)["']''')[0]
+                if '' == title: title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h2', '</h2>', True)[1] )
+                icon  = self.cm.ph.getSearchGroups(item, '''src=["']([^"^']+?\.jpg)["']''')[0]
+                desc  = self.cleanHtmlStr(item)
+            
+                params = dict(cItem)
+                params.update({'category':category, 'title':title, 'url':self._getFullUrl(url), 'icon':self._getFullUrl(icon), 'desc':desc})
+                if cItem.get('cat', '') == 'movies' or '/films-' in url:
+                    self.addVideo(params)
+                else:
+                    self.addDir(params)
+        else:
+            sp = '<div class="movie-item'
+            data = self.cm.ph.getDataBeetwenMarkers(data, sp, '<div class="cl', False)[1] #'<div class="clr">'
+            #printDBG(data)
+            data = data.split(sp)
+            for item in data:
+                #item  = '<div ' + item 
+                tmp   = self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>', True)[1]
+                url   = self.cm.ph.getSearchGroups(tmp, '''href=["']([^"^']+?)["']''')[0]
+                title = self.cleanHtmlStr( tmp )
+                icon  = self.cm.ph.getSearchGroups(item, '''src=["']([^"^']+?\.jpg)["']''')[0]
+                
+                descTab = []
+                tmp = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="movie-series">', '</span>', True)[1])
+                if '' != tmp: descTab.append(tmp)
+                tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<div class="movie-director"', '</div>')
+                for t in tmp: 
+                    t = self.cleanHtmlStr( t )
+                    if '' != t: descTab.append(t)
+                tmp = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="movie-text"', '</div>', True)[1])
+                if '' != tmp: descTab.append(tmp)
+                
+                desc  = '[/br]'.join(descTab)
+            
+                params = dict(cItem)
+                params.update({'category':category, 'title':title, 'url':self._getFullUrl(url), 'icon':self._getFullUrl(icon), 'desc':desc})
+                if cItem.get('cat', '') == 'movies' or '/films-' in url:
+                    self.addVideo(params)
+                else:
+                    self.addDir(params)
         
         if nextPage:
             params = dict(cItem)
@@ -361,42 +390,46 @@ class SeriesEnStreamingCom(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return retTab
         
-        mainData = self.cm.ph.getDataBeetwenMarkers(data, '<h1 id="news-title">', '</ul>')[1]
-        quality = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(mainData, '<div class="rip">', '</div>', False)[1] )
-        icon = self._getFullUrl( self.cm.ph.getSearchGroups(mainData, '''src=["']([^"^']+?\.jpg)["']''')[0] )
+        mainData = self.cm.ph.getDataBeetwenMarkers(data, '<div class="m-header">', '<div class="m-desc full-text', False)[1]
+        
+        rank = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(mainData, '<div class="rip">', '</div>', False)[1] )
+        icon = self.cm.ph.getSearchGroups(mainData, '''background:url\((http[^)]+?\.jpg)\)''')[0].strip()
         if icon == '': icon = cItem.get('icon', '')
-        title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(mainData, '<h1 ', '</h1>')[1] )
-        if title == '': title = cItem['title']
+        title = cItem['title']
         
-        m1 = '<div class="synopsiscontent">'
-        desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, m1, m1, False)[1].split('</h2>')[-1] )
+        desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div class="mr-item">', '<div class="m-info clearfix">')[1])
         
-        keysTab = [{'m1':'fa-film',                         'key':'alternate_title'},
-                   {'m1':'fa-calendar',  'm2':'Date',       'key':'year'},
+        keysTab = [{'m1':'Titre de la série',               'key':'alternate_title'},
+                   {'m1':'fa-calendar',  'm2':'',           'key':'year'},
                    {'m1':'Réalisateur',                     'key':'director'},
-                   {'m1':'Genre',               'key':'genre'},
-                   {'m1':'Langue',              'key':'language'},
-                   {'m1':'Lanague',             'key':'language'},
-                   {'m1':'fa-clock-o',          'key':'duration'},
-                   {'m1':'Statut',              'key':'status'},
-                   {'m1':'Acteurs',             'key':'actors'},
-                   {'m1':'Qualité',             'key':'quality'},
-                   {'m1':'Nationalité',         'key':'country'},
-                   {'m1':'Production',          'key':'production'},
-                   {'m1':'fa-users',            'key':'actors'},
+                   {'m1':'Genre',                           'key':'genre'},
+                   {'m1':'Langue',                          'key':'language'},
+                   {'m1':'Lanague',                         'key':'language'},
+                   {'m1':'fa-clock-o',                      'key':'duration'},
+                   {'m1':'Statut',                          'key':'status'},
+                   {'m1':'Acteurs',                         'key':'actors'},
+                   {'m1':'Qualité',                         'key':'quality'},
+                   {'m1':'Nationalité',                     'key':'country'},
+                   {'m1':'Crée par',                        'key':'production'}, 
+                   {'m1':'Production',                      'key':'production'},
+                   {'m1':'fa-users',                        'key':'actors'},
+                   {'m1':'Durée',                           'key':'duration'},
+                   {'m1':'Date',                            'key':'released'}
                    ]
-        
+
         otherInfo = {}
-        data = self.cm.ph.getAllItemsBeetwenMarkers(mainData, '<li>', '</b>')
+        data = self.cm.ph.getAllItemsBeetwenMarkers(mainData, '<div class="mi-item clearfix">', '<div class="mi-item clearfix">')
         for item in data:
             for keyItem in keysTab:
                 if keyItem['m1'] in item and keyItem.get('m2', '') in item:
-                    val = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<b>', '</b>', False)[1] )
+                    val = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="mi-desc">', '</div>', False)[1] )
                     if '' != val:
                         otherInfo[keyItem['key'] ] =  val
                         break
-        if '' != quality:
-            otherInfo['quality'] = quality
+        rating = self.cm.ph.getDataBeetwenMarkers(mainData, '<i class="fa fa-star">', '</div>', False)[1]
+        m1 = 'Allociné:'
+        if m1 in rating:
+            otherInfo['rating'] = self.cleanHtmlStr( rating.replace(m1, ''))
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self._getFullUrl(icon)}], 'other_info':otherInfo}]
 

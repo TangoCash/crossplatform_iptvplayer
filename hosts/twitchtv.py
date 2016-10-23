@@ -5,7 +5,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, GetDefaultLang
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -49,14 +49,18 @@ def gettytul():
 
 class Twitch(CBaseHostClass):
     NUM_OF_ITEMS = '20'
-    MAIN_URL = 'http://api.twitch.tv/'
+    MAIN_URL = 'https://api.twitch.tv/'
     MAIN_URLS = 'https://api.twitch.tv/'
     GAMES_URL = MAIN_URL + 'kraken/games/top?offset=0&on_site=1&limit=' + NUM_OF_ITEMS
     GAME_LIVE_CHANNELS_URL = MAIN_URL + 'kraken/streams?offset=0&game=%s&broadcaster_language=&on_site=1&limit=' + NUM_OF_ITEMS
     SEARCH_URL = MAIN_URL + 'kraken/search/%s?query=%s&type=suggest&offset=0&on_site=1&limit=' + NUM_OF_ITEMS
+    
     CHANNEL_TOKEN_URL = MAIN_URLS + 'api/channels/%s/access_token'
     LIVE_URL = 'http://usher.justin.tv/api/channel/hls/%s.m3u8?token=%s&sig=%s&allow_source=true'
-    VIDEO_URL = MAIN_URL + 'api/videos/%s?on_site=1'
+    
+    VOD_TOKEN_URL = MAIN_URLS + 'api/vods/%s/access_token'
+    VOD_URL = 'https://usher.ttvnw.net/vod/%s.m3u8?token=%s&sig=%s&allow_source=true'
+    
     VIDEOS_CATS_URL = MAIN_URL + 'kraken/videos/top?offset=0&game=%s&period=%s&on_site=1&limit=' + NUM_OF_ITEMS
     
     MAIN_CAT_TAB = [{'category':'games',          'title':_('Games'), 'url': GAMES_URL},
@@ -68,10 +72,6 @@ class Twitch(CBaseHostClass):
                     {'category':'search_history', 'title':_('Search history')} ]
     GAME_CAT_TAB = [{'category':'streams',        'title':_('Live Channels')},
                     {'category':'videos_period',  'title':_('Videos')} ]
-    CHANNEL_CAT_TAB = [{'category':'streams', 'title':_('Top'),    'url':MAIN_URL+'kraken/streams?offset=0&broadcaster_language=&on_site=1&limit='+ NUM_OF_ITEMS},
-                       {'category':'streams', 'title':_('Polish channles'), 'url':MAIN_URL+'kraken/streams?offset=0&broadcaster_language=pl&on_site=1&limit='+ NUM_OF_ITEMS},
-                       {'category':'streams', 'title':_('German channles'), 'url':MAIN_URL+'kraken/streams?offset=0&broadcaster_language=de&on_site=1&limit='+ NUM_OF_ITEMS},
-                       {'category':'streams', 'title':_('Random'), 'url':MAIN_URL+'kraken/beta/streams/random?offset=0&on_site=1&limit='+ NUM_OF_ITEMS} ]
     VIDEOS_PERIOD_TAB = [{'category':'videos', 'title':_('Week'),     'period':'week'},
                          {'category':'videos', 'title':_('Month'),    'period':'month'} ]
     
@@ -81,6 +81,7 @@ class Twitch(CBaseHostClass):
         printDBG("Twitch.__init__")
         CBaseHostClass.__init__(self, {'history':'Twitch.tv'})
         self.cm.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Client-ID':'jzkbprff40iqj646a697cyrvl0zt2m6'}
+        self.DEFAULT_ICON_URL = 'http://s.jtvnw.net/jtv_user_pictures/hosted_images/GlitchIcon_WhiteonPurple.png'
     
     def _cleanHtmlStr(self, str):
         str = str.replace('<', ' <').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
@@ -110,13 +111,39 @@ class Twitch(CBaseHostClass):
         except Exception:
             printExc()
         return False
-       
-    def listsTab(self, tab, cItem):
-        printDBG("Twitch.listsMainMenu")
-        for item in tab:
+            
+    def listChannelCategories(self, cItem, category):
+        printDBG("Twitch.listChannelCategories")
+        
+        params = dict(cItem)
+        params.update({'category':category, 'title':_('Random'), 'url':self.MAIN_URL+'kraken/beta/streams/random?offset=0&on_site=1&limit='+self.NUM_OF_ITEMS})
+        self.addDir(params)
+        
+        baseChannelUrl = self.MAIN_URL+'kraken/streams?offset=0&broadcaster_language=%s&sce_platform=%s&on_site=1&limit='+ self.NUM_OF_ITEMS
+        tmpTab = [(_('Top'), '', '')]
+        
+        userLang = GetDefaultLang()
+        promoteItem = None
+        # list language
+        sts, data = self.cm.getPage('https://www.twitch.tv/directory/all')
+        if sts:
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'header_language_dropmenu', '</div>', False)[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>', withMarkers=True, caseSensitive=False)
+            for item in data:
+                title = self.cleanHtmlStr(item)
+                lang  = self.cm.ph.getDataBeetwenMarkers(item, 'setByAsyncPut(', ')', False)[1].replace('"', '').replace("'", '')
+                if lang != '':
+                    if lang != userLang:
+                        tmpTab.append((title, lang, ''))
+                    else:
+                        promoteItem = (title, lang, '')
+                
+        if promoteItem != None:
+            tmpTab.insert(1, promoteItem)
+                
+        for item in tmpTab:
             params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
+            params.update({'category':category, 'title':item[0], 'url':baseChannelUrl % (item[1], item[2])})
             self.addDir(params)
             
     def listGames(self, cItem, category):
@@ -195,7 +222,7 @@ class Twitch(CBaseHostClass):
                         self.addDir(params)
                 except Exception: printExc()
                 
-    def listsVideos(self, cItem, category):
+    def listsVideos(self, cItem):
         printDBG("Twitch.listsVideos")
         url = Twitch.VIDEOS_CATS_URL % (urllib.quote_plus(cItem.get('game', '')), cItem['period'])
         sts, data = self.cm.getPage(url)
@@ -206,42 +233,13 @@ class Twitch(CBaseHostClass):
                     params = dict(cItem)
                     desc  = item.get('recorded_at', '') + ', ' + item.get('description', '')
                     icon  = item.get('preview', '')
-                    params.update({'title':self._getStr(item['title']), 'url':'', 'id': self._getStr(item['_id']), 'category':category, 'desc':self._getStr(desc), 'icon':self._getStr(icon)})
-                    self.addDir(params)                
+                    params.update({'title':self._getStr(item['title']), 'url':'', 'vod_id': self._getStr(item['_id']), 'desc':self._getStr(desc), 'icon':self._getStr(icon)})
+                    self.addVideo(params)                
                 nextPage = data['_links']['next']+'&on_site=1'
                 if self._checkNexPage(nextPage, 'videos'):
                     params = dict(cItem)
                     params.update({'title':_('Next page'), 'url':nextPage, 'desc':''})
                     self.addDir(params)
-            except Exception: printExc()
-            
-    def listsVideoChunks(self, cItem):
-        printDBG("Twitch.listsVideoChunks")
-        url = Twitch.VIDEO_URL % cItem['id']
-        sts, data = self.cm.getPage(url)
-        if sts:
-            try:
-                data = json.loads(data)
-                data = data['chunks']
-                if 'quality' not in cItem:
-                    qualities = []
-                    for item in data.keys():
-                        params = dict(cItem)
-                        params.update({'video_title':self._getStr(cItem['title']), 'title':self._getStr(item), 'quality':self._getStr(item)})
-                        qualities.append(params)
-                    if 1 < len(qualities):
-                        self.currList = qualities
-                        return
-                    elif 1 == len(qualities):
-                        cItem.update({'video_title':self._getStr(cItem['title']), 'quality':self._getStr(qualities[0]['quality'])})
-                if 'quality' in cItem:
-                    chunk = 1
-                    data = data[cItem['quality']]
-                    for item in data:
-                        params = dict(cItem)
-                        params.update({'title':self._getStr(cItem['video_title'] + (_(' (chunk %s)') % chunk)), 'url':self._getStr(item['url'])})
-                        self.addVideo(params)     
-                        chunk += 1
             except Exception: printExc()
 
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -260,16 +258,27 @@ class Twitch(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("Twitch.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        if 'channel' in cItem:
-            url = Twitch.CHANNEL_TOKEN_URL % cItem['channel']
+        if 'vod_id' in cItem:
+            id = cItem['vod_id'][1:]
+            tokenUrl = Twitch.VOD_TOKEN_URL
+            vidUrl   = Twitch.VOD_URL
+            liveStream = False
+        elif 'channel' in cItem:
+            id = cItem['channel']
+            tokenUrl = Twitch.CHANNEL_TOKEN_URL
+            vidUrl   = Twitch.LIVE_URL
+            liveStream = True
+        
+        if id != '':
+            url = tokenUrl % id
             sts, data = self.cm.getPage(url)
             if sts:
                 try:
                     data = json.loads(data)
-                    url = Twitch.LIVE_URL % (cItem['channel'], urllib.quote(self._getStr(data['token'])), self._getStr(data['sig']))
+                    url =  vidUrl % (id, urllib.quote(self._getStr(data['token'])), self._getStr(data['sig']))
                     data = getDirectM3U8Playlist(url, checkExt=False)
                     for item in data:
-                        item['url'] = urlparser.decorateUrl(item['url'], {'iptv_proto':'m3u8', 'iptv_livestream':True}) #'iptv_block_exteplayer':True, 
+                        item['url'] = urlparser.decorateUrl(item['url'], {'iptv_proto':'m3u8', 'iptv_livestream':liveStream})
                         urlTab.append(item)
                 except Exception: printExc()
         elif '' != cItem['url']:
@@ -298,7 +307,7 @@ class Twitch(CBaseHostClass):
             self.listsTab(Twitch.GAME_CAT_TAB, self.currItem)
     #CHANNELS CAT
         elif 'channels' == category:
-            self.listsTab(Twitch.CHANNEL_CAT_TAB, self.currItem)
+            self.listChannelCategories(self.currItem, 'streams')
     #LIVE CHANNELS
         elif 'streams' == category:
             self.listLiveChannels(self.currItem)
@@ -307,10 +316,7 @@ class Twitch(CBaseHostClass):
             self.listsTab(Twitch.VIDEOS_PERIOD_TAB, self.currItem)
     #VIDEOS CATS
         elif 'videos' == category:
-            self.listsVideos(self.currItem, 'video_parts')
-    #LIST VIDEOS
-        elif 'video_parts' == category:
-            self.listsVideoChunks(self.currItem)
+            self.listsVideos(self.currItem)
     #WYSZUKAJ
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)
@@ -384,6 +390,8 @@ class IPTVHost(CHostBase):
             title       =  self.host._getStr( cItem.get('title', '') )
             description =  self.host._getStr( cItem.get('desc', '') ).strip()
             icon        =  self.host._getStr( cItem.get('icon', '') )
+            if '' == icon:
+                icon = self.host.DEFAULT_ICON_URL
             
             hostItem = CDisplayListItem(name = title,
                                         description = description,
@@ -396,28 +404,3 @@ class IPTVHost(CHostBase):
 
         return hostList
     # end convertList
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

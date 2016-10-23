@@ -33,8 +33,11 @@ config.plugins.iptvplayer.clear_iframe_file = ConfigIPTVFileSelection(fileMatch 
 config.plugins.iptvplayer.remember_last_position = ConfigYesNo(default = False)
 config.plugins.iptvplayer.fakeExtePlayer3 = ConfigSelection(default = "fake", choices = [("fake", " ")])
 config.plugins.iptvplayer.aac_software_decode = ConfigYesNo(default = False)
+config.plugins.iptvplayer.ac3_software_decode = ConfigYesNo(default = False)
+config.plugins.iptvplayer.eac3_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.dts_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.wma_software_decode = ConfigYesNo(default = True)
+config.plugins.iptvplayer.mp3_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.stereo_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.software_decode_as = ConfigSelection(default = "pcm", choices = [("pcm", _("PCM")), ("lpcm", _("LPCM"))])
 config.plugins.iptvplayer.aac_mix = ConfigSelection(default = None, choices = [(None, _("from E2 settings"))])
@@ -272,9 +275,12 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
         if 1:#IsExecutable(config.plugins.iptvplayer.exteplayer3path.value):
             list.append(getConfigListEntry(_("----------------- External exteplayer3 options -----------------"), config.plugins.iptvplayer.fakeExtePlayer3))
             list.append(getConfigListEntry("    " + _("External player use software decoder for the AAC"), config.plugins.iptvplayer.aac_software_decode))
+            list.append(getConfigListEntry("    " + _("External player use software decoder for the AC3"), config.plugins.iptvplayer.ac3_software_decode))
+            list.append(getConfigListEntry("    " + _("External player use software decoder for the EAC3"), config.plugins.iptvplayer.eac3_software_decode))
             if config.plugins.iptvplayer.plarform.value in ['sh4', 'mipsel', 'armv7', 'armv5t', 'i686']:
                 list.append(getConfigListEntry("    " + _("External player use software decoder for the DTS"), config.plugins.iptvplayer.dts_software_decode))
                 list.append(getConfigListEntry("    " + _("External player use software decoder for the WMA"), config.plugins.iptvplayer.wma_software_decode))
+                list.append(getConfigListEntry("    " + _("External player use software decoder for the MP3"), config.plugins.iptvplayer.mp3_software_decode))
                 if config.plugins.iptvplayer.plarform.value != 'sh4':
                     list.append(getConfigListEntry("    " + _("Software decoding as"), config.plugins.iptvplayer.software_decode_as))
                 list.append(getConfigListEntry("    " + _("Stereo downmix mode for software decoder"), config.plugins.iptvplayer.stereo_software_decode))

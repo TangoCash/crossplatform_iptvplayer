@@ -9,6 +9,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.moonwalkcc import MoonwalkParser
+from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################
@@ -54,31 +55,13 @@ class Kinotan(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history': 'Kinotan', 'cookie': 'Kinotan.cookie'})
         self.moonwalkParser = MoonwalkParser()
-
-    def _getFullUrl(self, url):
-        mainUrl = self.MAIN_URL
-        if 0 < len(url) and not url.startswith('http'):
-            if url.startswith('/'):
-                url = url[1:]
-            url = mainUrl + url
-        if not mainUrl.startswith('https://'):
-            url = url.replace('https://', 'http://')
-        return url
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
 
     def getPage(self, url, params={}, post_data=None):
         sts, data = self.cm.getPage(url, params, post_data)
         return sts, data
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("Kinotan.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name'] = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else:
-                self.addVideo(params)
 
     def listMainMenu(self, cItem, category):
         printDBG("Kinotan.listCategories")
@@ -91,7 +74,7 @@ class Kinotan(CBaseHostClass):
             if item[0] in ['/novosti/', 'http://kinotan.ru/skoro/',
                            'http://kinotan.ru/index.php?do=orderdesc']: continue
         params = dict(cItem)
-        params.update({'category': category, 'title': item[1], 'url': self._getFullUrl(item[0])})
+        params.update({'category': category, 'title': item[1], 'url': self.getFullUrl(item[0])})
         self.addDir(params)
         self.listsTab(self.MAIN_CAT_TAB, {'name': 'category'})
 
@@ -103,7 +86,7 @@ class Kinotan(CBaseHostClass):
         datag = re.compile('<a[^"]+?href="([^"]*?)">(.*?)</a></li>').findall(datag)
         for item in datag:
             params = dict(cItem)
-            params.update({'category': category, 'title': item[1], 'url': self._getFullUrl(item[0])})
+            params.update({'category': category, 'title': item[1], 'url': self.getFullUrl(item[0])})
             self.addDir(params)
 
     def listCountry(self, cItem, category):
@@ -114,7 +97,7 @@ class Kinotan(CBaseHostClass):
         datacn = re.compile('href="(/xf[^"]*?)"[^>]+?>(.*?)</a><br>').findall(datacn)
         for item in datacn:
             params = dict(cItem)
-            params.update({'category': category, 'title': item[1], 'url': self._getFullUrl(item[0][1:])})
+            params.update({'category': category, 'title': item[1], 'url': self.getFullUrl(item[0][1:])})
             self.addDir(params)
 
     def listTrans(self, cItem, category):
@@ -125,7 +108,7 @@ class Kinotan(CBaseHostClass):
         datatr = re.compile('href="(/xf[^"]*?)"[^>]+?>(.*?)</a><br>').findall(datatr)
         for item in datatr:
             params = dict(cItem)
-            params.update({'category': category, 'title': item[1], 'url': self._getFullUrl(item[0][1:])})
+            params.update({'category': category, 'title': item[1], 'url': self.getFullUrl(item[0][1:])})
             self.addDir(params)
 
     def listSel(self, cItem, category):
@@ -136,7 +119,7 @@ class Kinotan(CBaseHostClass):
         datasl = re.compile('href="(/xf[^"]*?)"[^>]+?>(.*?)</a><br>').findall(data1)
         for item in datasl:
             params = dict(cItem)
-            params.update({'category': category, 'title': item[1], 'url': self._getFullUrl(item[0][1:])})
+            params.update({'category': category, 'title': item[1], 'url': self.getFullUrl(item[0][1:])})
             self.addDir(params)
 
     def listYears(self, cItem, category):
@@ -147,7 +130,7 @@ class Kinotan(CBaseHostClass):
         datay = re.compile('href="(/t[^"]*?)"[^>]+?>(.*?)</a><br>').findall(data1)
         for item in datay:
             params = dict(cItem)
-            params.update({'category': category, 'title': item[1][:-2], 'url': self._getFullUrl(item[0][1:])})
+            params.update({'category': category, 'title': item[1][:-2], 'url': self.getFullUrl(item[0][1:])})
             self.addDir(params)
 
     def listItems(self, cItem, category):
@@ -177,13 +160,13 @@ class Kinotan(CBaseHostClass):
         for item in data:
             url = self.cm.ph.getSearchGroups(item, '<h3>.*"(.*?)">.*</a>')[0]
             icon = self.cm.ph.getSearchGroups(item, 'src="(.*?)"')[0][1:]
-            icon = self._getFullUrl(icon)
+            icon = self.getFullUrl(icon)
             title = self.cm.ph.getSearchGroups(item, '<h3>.*".*">(.*?)</a>')[0]
             desc1 = self.cm.ph.getSearchGroups(item, 'label">(.*?)</div>')[0]
             desc2 = self.cm.ph.getSearchGroups(item, 'update3">(.*?)</div>')[0]
             desc = desc1 + ': ' + desc2
             params = dict(cItem)
-            params.update({'category': category, 'title': title, 'icon': self._getFullUrl(icon), 'desc': desc, 'url': self._getFullUrl(url)})
+            params.update({'category': category, 'title': title, 'icon': self.getFullUrl(icon), 'desc': desc, 'url': self.getFullUrl(url)})
             self.addDir(params)
 
         if nextPage:
@@ -195,8 +178,27 @@ class Kinotan(CBaseHostClass):
         printDBG("Kinotan.listContent")
         sts, data = self.getPage(cItem['url'])
         if not sts: return
-
-        title = cItem['title']
+        
+        tabs = []
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="videotabs_', '</div>')
+        printDBG(tmp)
+        for item in tmp:
+            title  = self.cleanHtmlStr(item)
+            tab_block = self.cm.ph.getSearchGroups(item, '''re_xfn="([^"]+?)"''')[0]
+            tab_id    = self.cm.ph.getSearchGroups(item, '''re_idnews="([0-9]+?)"''')[0]
+            tab_page  = self.cm.ph.getSearchGroups(item, '''re_page="([0-9]+?)"''')[0]
+            printDBG('>>>>>>>>> tab_block[%s] tab_id[%s] tab_page[%s]' % (tab_block, tab_id, tab_page))
+            if '' != tab_block and '' != tab_id and '' != tab_page:
+                post_data = {'block':tab_block, 'id':tab_id, 'page':tab_page}
+                tabs.append({'title':title, 'url':self.getFullUrl('/engine/ajax/re_video_part.php'), 'post_data':post_data})
+        
+        if len(tabs):
+            params = dict(cItem)
+            params['category'] = 'list_tab_content'
+            self.listsTab(tabs, params)
+            return
+            
+        
         d_url = self.cm.ph.getDataBeetwenMarkers(data, '<div class="full-text">', '</iframe>', False)[1]
         url = self.cm.ph.getSearchGroups(d_url, 'src="([^"]*?)"')[0]
         if url.startswith('//'):
@@ -204,6 +206,12 @@ class Kinotan(CBaseHostClass):
         desc = self.cm.ph.getDataBeetwenMarkers(data, '<h2 class="opisnie">', '</div>', True)[1]
         desc = self.cm.ph.getSearchGroups(desc, '>(.*?)</div>')[0]
         desc = self.cleanHtmlStr(desc)
+        
+        self.exploreLink(cItem, category, url, desc)
+        
+    def exploreLink(self, cItem, category, url, desc=''):
+        
+        title = cItem['title']
         params = dict(cItem)
         params['desc'] = desc
         params['url'] = url
@@ -219,8 +227,57 @@ class Kinotan(CBaseHostClass):
                     {'host_name': 'moonwalk', 'title': item['title'], 'season_id': item['id'], 'url': item['url']})
                 self.addDir(param)
             return
+        elif hostName == 'hdgo.cc':
+            if '/video/' in url:
+                params = dict(cItem)
+                params.update({'url': strwithmeta(url, {'Referer':cItem['url']})})
+                self.addVideo(params)
+            else:
+                HEADER = dict(self.HEADER)
+                HEADER['Referer'] = cItem['url']
+                sts, data = self.getPage(url, {'header':HEADER})
+                if not sts: return
+                urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+                HEADER['Referer'] = url
+                sts, data = self.getPage(urlNext, {'header':HEADER})
+                if not sts: return
+                
+                printDBG("==========================================")
+                printDBG(data)
+                printDBG("==========================================")
+                
+                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '</option>', '</div>', True)[1])
+                itemTitle = self.cm.ph.getSearchGroups(data, '''createTextNode\([^'^"]*?['"]([^'^"]+?)['"]''')[0]
+                data = self.cm.ph.getDataBeetwenMarkers(data, 'season_list[0] =', ';', False)[1]
+                printDBG("==========================================")
+                printDBG(data)
+                printDBG("==========================================")
+                data = re.compile('''['"](http[^'^"]+?)['"]''').findall(data)
+                idx = 0
+                for idx in range(len(data)):
+                    vidUrl = data[idx] 
+                    params = dict(cItem)
+                    params.update({'title': '%s: %s%s' % (title, itemTitle, idx+1), 'url': strwithmeta(vidUrl, {'Referer':url})})
+                    self.addVideo(params)
+            return
+        
         if 1 == self.up.checkHostSupport(url):
             self.addVideo(params)
+            
+    def listTabContent(self, cItem, category):
+        printDBG("Kinotan.listTabContent")
+        
+        post_data = cItem.get('post_data')
+        sts, data = self.getPage(cItem['url'], {}, post_data)
+        if not sts: return
+        
+        printDBG("==========================================")
+        printDBG(data)
+        printDBG("==========================================")
+        
+        url = data.strip()
+        if url.startswith('http://') or url.startswith('https://'):
+            self.exploreLink(cItem, category, url)
 
     def listEpisodes(self, cItem):
         printDBG("Kinotan.listEpisodes")
@@ -297,6 +354,8 @@ class Kinotan(CBaseHostClass):
             self.listItems(self.currItem, 'list_content')
         elif category == 'list_content':
             self.listContent(self.currItem, 'list_episodes')
+        elif category == 'list_tab_content':
+            self.listTabContent(self.currItem, 'list_episodes')
         elif category == 'list_episodes':
             self.listEpisodes(self.currItem)
     # SEARCH

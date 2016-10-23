@@ -393,7 +393,6 @@ class CHostBase(IHost):
 
     def getSearchResults(self, searchpattern, searchType = None):
         retList = []
-
         if self.withSearchHistrory:
             self.host.history.addHistoryItem( searchpattern, searchType )
 
@@ -427,7 +426,7 @@ class CBaseHostClass:
         self.currList = []
         self.currItem = {}
         if '' != params.get('history', ''):
-            self.history = CSearchHistoryHelper(params['history'])
+            self.history = CSearchHistoryHelper(params['history'], params.get('history_store_type', False))
         if '' != params.get('cookie', ''):
             self.COOKIE_FILE = GetCookieDir(params['cookie'])
         self.moreMode = False

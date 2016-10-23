@@ -345,6 +345,14 @@ class CartoonHD(CBaseHostClass):
         if '' == elid: elid = self.cm.ph.getSearchGroups(data, 'data-id="([^"]+?)"')[0]
         if '' == elid: elid = self.cm.ph.getSearchGroups(data, 'data-movie="([^"]+?)"')[0]
         if '' == elid: return []
+        
+        if "movieInfo['season']" not in data and 'movieInfo["season"]' not in data:
+            type = 'getMovieEmb'
+        else: type = 'getEpisodeEmb'
+        #if '/movie/' in cItem['url']:
+        #    type = 'getMovieEmb'
+        #else: type = 'getEpisodeEmb'
+        
         data = self.cm.ph.getDataBeetwenMarkers(data, '<select', '</select>', False)[1]
         hostings = []
         data = re.compile('<option[^>]*?value="([^"]+?)"[^>]*?>([^<]+?)</option>').findall(data)
@@ -353,9 +361,6 @@ class CartoonHD(CBaseHostClass):
         
         httpParams = dict(self.defaultParams)
         httpParams['header'] =  {'Referer':cItem['url'], 'User-Agent':self.cm.HOST, 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json, text/javascript, */*; q=0.01'}
-        if '/movie/' in cItem['url']:
-            type = 'getMovieEmb'
-        else: type = 'getEpisodeEmb'
         encElid = gettt()
         __utmx = getCookieItem('__utmx')
         httpParams['header']['Authorization'] = 'Bearer ' + urllib.unquote(__utmx)

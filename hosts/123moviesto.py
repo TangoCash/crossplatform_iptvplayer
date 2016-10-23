@@ -236,6 +236,29 @@ class T123MoviesTO(CBaseHostClass):
         
         self.cacheLinks[cItem['url']] = urlTab
         return urlTab
+
+    def uncensored(self, a, b):
+        def jav(a):
+            b = str(a)
+            code = ord(b[0])
+            if 0xD800 <= code and code <= 0xDBFF:
+                c = code
+                if len(b) == 1:
+                    return code
+                d = b[1]
+                return ((c - 0xD800) * 0x400) + (d - 0xDC00) + 0x10000
+            if 0xDC00 <= code and code <= 0xDFFF:
+                return code
+            return code
+        c = ""
+        i = 0;
+        for i in range(len(a)):
+            d = a[i]
+            e = b[i % len(b) - 1]
+            d = jav(d) + jav(e)
+            d = chr(d)
+            c += d
+        return base64.b64encode(c)
         
     def getVideoLinks(self, videoUrl):
         printDBG("T123MoviesTO.getVideoLinks [%s]" % videoUrl)
@@ -262,18 +285,11 @@ class T123MoviesTO(CBaseHostClass):
                 printExc()
                 return []
         else:
-            cookieValue = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(6))
-            #cookieName  = 'bgr63m6d1ln3rech' + episodeId + 'd7ltv9lmvytcq2zf'
-            #url = 'ajax/v3_load_episode/' + episodeId + '/' + md5(episodeId + cookieValue + "f7sg3mfrrs5qako9nhvvqlfr7wc9la63").hexdigest()
-            #cookieName  = 'n1sqcua67bcq9826' + episodeId + 'i6m49vd7shxkn985'
-            #url = 'ajax/v4_load_episode/' + episodeId + '/' + md5(episodeId + cookieValue + "rbi6m49vd7shxkn985mhodk06twz87ww").hexdigest()
             magic = 'n1sqcua67bcq9826avrbi6m49vd7shxkn985mhodk06twz87wwxtp3dqiicks2dfyud213k6ygiomq01s94e4tr9v0k887bkyud213k6ygiomq01s94e4tr9v0k887bkqocxzw39esdyfhvtkpzq9n4e7at4kc6k8sxom08bl4dukp16h09oplu7zov4m5f8'
-            #cookieName  = '826avrbi6m49vd7shxkn985m' + episodeId + 'k06twz87wwxtp3dqiicks2df'
-            #url = 'ajax/get_sources/' + episodeId + '/' + md5(episodeId + cookieValue + magic[12:36]).hexdigest()
-            
-            cookieName  = 'i6m49vd7shxkn985mhodk' + episodeId + 'twz87wwxtp3dqiicks2dfyud213k6yg'
-            url = 'ajax/get_sources/' + episodeId + '/' + md5(episodeId + cookieValue + '7bcq9826avrbi6m4').hexdigest() + '/2'
-            
+            cookieValue = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(16))
+            cookieName  = md5(episodeId + '87wwxtp3dqii').hexdigest()
+            hash = self.uncensored(episodeId + '7bcq9826avrbi6m49vd7shxkn985mhod', cookieValue)
+            url = 'ajax/v2_get_sources/' + episodeId + '?hash=' + urllib.quote(hash)
             url = self.getFullUrl( url )
 
             params = {}

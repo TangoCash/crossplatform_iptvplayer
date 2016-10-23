@@ -218,12 +218,14 @@ class FilmstreamvkCom(CBaseHostClass):
         for item in data:
             url  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''',  grupsNum=1, ignoreCase=True)[0]
             if url in tmpUrls: continue
+            tmpUrls.append(url)
             if url.startswith('http') and 'facebook.com' not in url and 1 == self.up.checkHostSupport(url):
                 videoUrlParams.append({'name': self.up.getHostName(url), 'url':url, 'need_resolve':1})
                 
         data = re.compile('''onclick=[^>]*?['"](http[^'^"]+?)['"]''').findall(wholeData)
         for url in data:
             if url in tmpUrls: continue
+            tmpUrls.append(url)
             if 'facebook.com' not in url and 1 == self.up.checkHostSupport(url):
                 videoUrlParams.append({'name': self.up.getHostName(url), 'url':url, 'need_resolve':1})
         return videoUrlParams
@@ -233,20 +235,29 @@ class FilmstreamvkCom(CBaseHostClass):
         urlTab = []
         
         if cItem.get('episode', False):
-            return cItem['urls']
-        
-        sts, data = self.cm.getPage(cItem['url'])
-        if not sts: return []
+            urlTab = cItem['urls']
+        else:        
+            sts, data = self.cm.getPage(cItem['url'])
+            if not sts: return []
+                
+            urlTab = self._getBaseVideoLink(data)
             
-        urlTab = self._getBaseVideoLink(data)
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="keremiya_part">', '</div>')[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
+            for item in data:
+                url  = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
+                name = self.cleanHtmlStr(item)
+                if url.startswith('http'):
+                    urlTab.append({'name': name, 'url':url, 'need_resolve':1})
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="keremiya_part">', '</div>')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
-        for item in data:
-            url  = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
-            name = self.cleanHtmlStr(item)
-            if url.startswith('http'):
-                urlTab.append({'name': name, 'url':url, 'need_resolve':1})
+        if 1 == len(urlTab) and 'filmstreamvk.com' in urlTab[0]['url']:
+            sts, data = self.cm.getPage(urlTab[0]['url'])
+            if not sts: return urlTab
+            mainName = urlTab[0]['name']
+            urlTab = self._getBaseVideoLink(data)
+            for idx in range(len(urlTab)):
+                urlTab[idx]['name'] = mainName + ' ' + urlTab[idx]['name']
+            
         return urlTab
         
     def getVideoLinks(self, url):

@@ -20,6 +20,7 @@ import re
 import urllib
 try:    import json
 except: import simplejson as json
+from datetime import datetime, timedelta
 ############################################
 
 ###################################################
@@ -153,7 +154,9 @@ class UstvnowApi:
                     prgsvcidMap[params['prgsvcid']] = len(channelsTab)
                     channelsTab.append(params)
                     break
-                    
+        
+        # calculate time difference from utcnow and the local system time reported by OS
+        OFFSET = datetime.now() - datetime.utcnow()
         if config.plugins.iptvplayer.ustvnow_epg.value:
             sts, data = self.cm.getPage(self.MAIN_URL + 'gtv/1/live/channelguide', self.defParams)
             if sts:
@@ -162,7 +165,11 @@ class UstvnowApi:
                     for item in data['results']:
                         if item['prgsvcid'] in prgsvcidMap:
                             idx = prgsvcidMap[item['prgsvcid']]
-                            channelsTab[idx]['desc'] += '[/br][/br] [%s %s][/br]%s[/br]%s[/br]%s[/br]%s' % (item.get('event_date', ''), item.get('event_time', ''), item.get('title', ''), item.get('synopsis', ''), item.get('description', ''), item.get('episode_title', ''))
+                            utc_date = datetime.strptime(item.get('event_date', '') + ' ' + item.get('event_time', ''), '%Y-%m-%d %H:%M:%S')
+                            utc_date = utc_date + OFFSET
+                            if utc_date.time().second == 59:
+                                utc_date = utc_date + timedelta(0,1)
+                            channelsTab[idx]['desc'] += '[/br][/br] [%s][/br]%s[/br]%s[/br]%s[/br]%s' % (utc_date.strftime('%Y-%m-%d %H:%M:%S'), item.get('title', ''), item.get('synopsis', ''), item.get('description', ''), item.get('episode_title', ''))
                 except:
                     printExc()
             

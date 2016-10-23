@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: IPTVPlayer\n"
 "POT-Creation-Date: 2013-12-15 12:19+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: insanity <insanity@user>\n"
+"Last-Translator: doubledip <islu@gmx.de>\n"
 "Language-Team: IPTVPlayer\n"
 "Language: de_DE\n"
 "MIME-Version: 1.0\n"
@@ -260,9 +260,6 @@ msgstr "Seitenverhältnis"
 msgid "Audio buffer size [KB]"
 msgstr "Audiopuffergröße in [KB]"
 
-msgid "Auto"
-msgstr "Auto"
-
 msgid "Auto check for plugin update"
 msgstr "Automatisch nach Plugin Aktualisierung prüfen"
 
@@ -321,7 +318,7 @@ msgid "Collection"
 msgstr "Kollektion"
 
 msgid "Completed."
-msgstr "Vollendet."
+msgstr "Beendet."
 
 msgid "Completed.\n"
 msgstr "Beendet.\n"
@@ -452,7 +449,7 @@ msgid "Disable reordering mode"
 msgstr "Deaktiviere Sortiermodus"
 
 msgid "Display order:"
-msgstr "Anzeigereihenfolge::"
+msgstr "Anzeigereihenfolge:"
 
 msgid "Display thumbnails"
 msgstr "Zeige Vorschaubilder"
@@ -569,9 +566,6 @@ msgstr ""
 "Lade Untertitel.\n"
 " ('%r')."
 
-msgid "Downloads"
-msgstr "Downloads"
-
 msgid "Drama Series"
 msgstr "Drama Serie"
 
@@ -595,9 +589,6 @@ msgstr ""
 
 msgid "Edit favourites"
 msgstr "Favoriten bearbeiten"
-
-msgid "Email"
-msgstr "Email"
 
 msgid "Enable reordering mode"
 msgstr "Aktiviere Sortiermodus"
@@ -666,9 +657,6 @@ msgstr "Softwaredekoder für AAC verwenden"
 
 msgid "External player use software decoder for the DTS"
 msgstr "Softwaredekoder für DTS verwenden"
-
-msgid "Extra"
-msgstr "Extra"
 
 msgid "Extracting an update packet."
 msgstr "Entpacke Update-Paket."
@@ -760,12 +748,6 @@ msgstr "Beziehe Episoden Liste."
 msgid "Get supported languages list."
 msgstr "Beziehe unterstützte Sprachen Liste."
 
-msgid "Global"
-msgstr "Global"
-
-msgid "Grade"
-msgstr ""
-
 msgid "Graphic services selector"
 msgstr "Grafische Serviceauswahl"
 
@@ -804,15 +786,6 @@ msgstr "IPTV - Рlayer Modus"
 
 msgid "IPTV - the recorder mode"
 msgstr "IPTV - Aufnahme Modus"
-
-msgid "IPTV Player"
-msgstr "IPTV Player"
-
-msgid "IPTV Player "
-msgstr "IPTV Player"
-
-msgid "IPTV Player %s"
-msgstr "IPTV Player %s"
 
 msgid "IPTV Player - settings"
 msgstr "IPTV Player - Konfiguration"
@@ -857,9 +830,6 @@ msgid "Icons size"
 msgstr "Icongröße"
 
 msgid "Info"
-msgstr "Information"
-
-msgid "Information"
 msgstr "Information"
 
 msgid "Information about audio tracks not available."
@@ -972,9 +942,6 @@ msgstr "hellgrau"
 msgid "Line Spacing"
 msgstr "Untertitel Zeilenabstand"
 
-msgid "Link"
-msgstr "Link"
-
 msgid "Links are videos and messages, without division into categories"
 msgstr "Alle Video-Links ohne Einteilung in Kategorien"
 
@@ -983,9 +950,6 @@ msgstr "Links zu den Videodateien aus urllist.txt"
 
 msgid "List only channels with subscription"
 msgstr "Zeige nur Kanäle mit Abonnement"
-
-msgid "Live"
-msgstr "Live"
 
 msgid "Live Channels"
 msgstr "Live Kanäle"
@@ -1008,14 +972,8 @@ msgstr "Laden..."
 msgid "LocalMedia"
 msgstr "Lokale Medien"
 
-msgid "Login"
-msgstr "Login"
-
 msgid "Login user \"%s\" into %s"
 msgstr "Benutzer \"%s\" einloggen in %s"
-
-msgid "Login:"
-msgstr "Login:"
 
 msgid "MEDIUM"
 msgstr "MEDIUM"
@@ -1086,9 +1044,6 @@ msgstr "Musik"
 msgid "Music-Box"
 msgstr "Мusik-Box"
 
-msgid "Musik"
-msgstr "Musik"
-
 msgid "Name cannot be empty."
 msgstr "Der Name darf nicht leer sein."
 
@@ -1098,9 +1053,6 @@ msgid ""
 msgstr ""
 "Der Name ist ungültig.\n"
 "Bitte entfernen Sie Sonderzeichen."
-
-msgid "Name:"
-msgstr "Name:"
 
 msgid "New dir"
 msgstr "Neues Verzeichnis"
@@ -1148,9 +1100,6 @@ msgstr "Anzahl der gleichzeitigen Downloads"
 msgid "Obtaining server list."
 msgstr "Bekomme Server-Liste."
 
-msgid "Odśwież"
-msgstr ""
-
 msgid "Offline channels"
 msgstr "Offline Kanäle"
 
@@ -1168,9 +1117,6 @@ msgstr "Operation abgebrochen!"
 
 msgid "Others"
 msgstr "Andere"
-
-msgid "PC"
-msgstr "PC"
 
 msgid "PENDING"
 msgstr "WARTEND"
@@ -1328,7 +1274,7 @@ msgid "Problem with user script execution [%s]."
 msgstr "Problem mit Ausführung von Benutzer-Script [%s]."
 
 msgid "Profile"
-msgstr "Profile"
+msgstr "Profil"
 
 msgid "Promote item"
 msgstr "Eintrag bevorzugen"
@@ -1356,9 +1302,6 @@ msgstr "Rangliste"
 
 msgid "Rating"
 msgstr "Bewertung"
-
-msgid "Raw"
-msgstr ""
 
 msgid "Recent"
 msgstr "Aktuell"
@@ -1565,9 +1508,6 @@ msgstr "Zeige versteckte Dateien"
 msgid "Show update icon in service selection menu"
 msgstr "Zeige Update Icon in Serviceauswahl"
 
-msgid "Shows"
-msgstr "Shows"
-
 msgid "Silverlight stream not supported."
 msgstr "Silverlight Stream wird nicht unterstützt."
 
@@ -1576,9 +1516,6 @@ msgstr "Simple Untertitel Downloader"
 
 msgid "Sin in to"
 msgstr "Anmelden"
-
-msgid "Skin"
-msgstr "Skin"
 
 msgid "Skipping IPTVPlayer serup may cause problems.Are you sure to skip IPTVPlayer setup?"
 msgstr "Das Überspringen des IPTV Setup kann zu Problemen führen. Wollen Sie wirklich das IPTV Setup überspringen?"
@@ -1589,9 +1526,6 @@ msgid ""
 msgstr ""
 "Das Überspringen des IPTV Setup kann zu Problemen führen.\n"
 "Wollen Sie wirklich das IPTV Setup überspringen?"
-
-msgid "SmackDown"
-msgstr "SmackDown"
 
 msgid "Some changes will be applied only after plugin update."
 msgstr "Einige Änderungen werden erst nach einem Plugin Update angewendet."
@@ -1623,9 +1557,6 @@ msgstr "Sortiere nach aktuell am meisten gesehenen Kanälen [live]"
 msgid "Spanish"
 msgstr "Spanisch"
 
-msgid "Start"
-msgstr "Start"
-
 msgid "Start download manager per default"
 msgstr "Downloadverwaltungs-Status per default AKTIV"
 
@@ -1649,9 +1580,6 @@ msgstr "Herunterladen anhalten"
 
 msgid "Stop playing?"
 msgstr "Wiedergabe stoppen?"
-
-msgid "StreamLiveTo.tv"
-msgstr "StreamLiveTo.tv"
 
 msgid "Subtitle background"
 msgstr "Untertitel Hintergrund"
@@ -1727,9 +1655,6 @@ msgstr "Wie das Herunterladen und Installation zusätzlicher Binärdateien"
 
 msgid "Synchronize"
 msgstr "Synchronisieren"
-
-msgid "TV Shows"
-msgstr "TV Shows"
 
 msgid "TV series"
 msgstr "ТV Serien"
@@ -1831,14 +1756,8 @@ msgstr "Es gab einen Fehler beim Herunterladen."
 msgid "This site requires login. Please complete host configuration data."
 msgstr "Diese Seite benötigt einen Login. Bitte vervollständigen Sie die Daten in der Host Konfiguration."
 
-msgid "Top"
-msgstr "Top"
-
 msgid "Topics"
 msgstr "Themen"
-
-msgid "Total Divas"
-msgstr ""
 
 msgid "Transparent"
 msgstr "transparent"
@@ -1854,9 +1773,6 @@ msgstr "Puffermodus aus für http://prognoza.pogody.tv/"
 
 msgid "Type: "
 msgstr "Typ: "
-
-msgid "Türk"
-msgstr "Тürk"
 
 msgid "UNKNOWN"
 msgstr "UNBEKANNT"
@@ -1982,21 +1898,12 @@ msgstr ""
 "Dienstprogramm \"%s\" ist veraltet. \n"
 "Was möchten Sie tun?"
 
-msgid "VIDEO"
-msgstr "VIDEO"
-
-msgid "Version"
-msgstr "Version"
-
 msgid ""
 "Version [%s] is ready for installation. After installation, restart of the system will be done.\n"
 "Do you want to continue?"
 msgstr ""
 "Version [%s] ist bereit zur Installation. Nach der Installation wird das System neu gestartet.\n"
 "Fortfahren?"
-
-msgid "Video"
-msgstr "Video"
 
 msgid "Video buffer size [MB]"
 msgstr "Videopuffergröße in [MB]"
@@ -2007,14 +1914,8 @@ msgstr "Videoformat: "
 msgid "Video options"
 msgstr "Video Optionen"
 
-msgid "Videos"
-msgstr "Videos"
-
 msgid "View count"
 msgstr "Anzahl der Betrachter"
-
-msgid "WWE Main Event"
-msgstr "WWE Main Event"
 
 msgid "Watch video materials from IPTV services"
 msgstr "Schau Videos aus IPTV Quellen"
@@ -2116,9 +2017,6 @@ msgstr "Nach drei Tagen"
 msgid "all types"
 msgstr "Alle Arten"
 
-msgid "alltube.tv"
-msgstr "alltube.tv"
-
 msgid "aqua"
 msgstr "aqua"
 
@@ -2128,14 +2026,11 @@ msgstr "aufsteigend"
 msgid "average"
 msgstr "mittel"
 
-msgid "back_pressed prev sel index %s"
-msgstr ""
-
 msgid "blue"
 msgstr "blau"
 
 msgid "bottom"
-msgstr ""
+msgstr "unten"
 
 msgid "buffer-duration"
 msgstr "Pufferdauer"
@@ -2224,14 +2119,8 @@ msgstr "hoch"
 msgid "High"
 msgstr "Hoch"
 
-msgid "http://www.ex.ua/"
-msgstr "http://www.ex.ua/"
-
 msgid "https - validate SSL certificates"
 msgstr "https - validiere SSL Zertifikate "
-
-msgid "i686"
-msgstr "i686"
 
 msgid "internal"
 msgstr "interner"
@@ -2244,9 +2133,6 @@ msgstr "Verlasse Movie Player..."
 
 msgid "lime"
 msgstr "limettengrün"
-
-msgid "live"
-msgstr "live"
 
 msgid "live transfers"
 msgstr "Live Übertragungen"
@@ -2275,23 +2161,14 @@ msgstr "mobil"
 msgid "movie"
 msgstr "Film"
 
-msgid "movie4k.to"
-msgstr "movie4k.to"
-
 msgid "name"
 msgstr "Name"
-
-msgid "nasze-kino.eu"
-msgstr "nasze-kino.eu"
 
 msgid "navy"
 msgstr "navyblau"
 
 msgid "no"
 msgstr "nein"
-
-msgid "nocnyseans.pl"
-msgstr "nocnyseans.pl"
 
 msgid "number of views"
 msgstr "Anzahl der Aufrufe"
@@ -2327,7 +2204,7 @@ msgid "quality"
 msgstr "Qualität"
 
 msgid "recommended"
-msgstr "Empfohlen"
+msgstr "empfohlen"
 
 msgid "red"
 msgstr "rot"
@@ -2338,21 +2215,14 @@ msgstr "Erscheinungsdatum"
 msgid "ring-buffer-max-size"
 msgstr ""
 
-msgid "rootfs"
-msgstr "rootfs"
-
-#, fuzzy
 msgid "second"
 msgstr "Sekunde"
 
 msgid "seconds"
-msgstr "Senkunden"
+msgstr "Sekunden"
 
 msgid "sequencer"
 msgstr ""
-
-msgid "sh4"
-msgstr "sh4"
 
 msgid "silver"
 msgstr "silber"
@@ -2429,9 +2299,6 @@ msgstr "Autoplay Startverzögerung"
 msgid "Movie categories"
 msgstr "Film Kategorien"
 
-msgid "http://hdkinomir.com/"
-msgstr "http://hdkinomir.com/"
-
 msgid "----------------- External exteplayer3 options -----------------"
 msgstr "---------------- Externer Exteplayer3 Optionen ----------------"
 
@@ -2479,9 +2346,6 @@ msgstr "FEHLER - Fehler beim Kopieren"
 
 msgid "Update End. Please manual restart enigma2"
 msgstr "Update Ende. Enigma2 bitte manuell neu starten."
-
-msgid "---UPDATE---"
-msgstr "---UPDATE---"
 
 msgid "UPDATE MENU"
 msgstr "UPDATE MENÜ"
@@ -2582,9 +2446,6 @@ msgstr "Video Standardqualität:"
 msgid "Use default quality:"
 msgstr "Benutze Standardqualität:"
 
-msgid "Portal:"
-msgstr "Portal:"
-
 msgid "Live-streams"
 msgstr "Live-Streams"
 
@@ -2617,9 +2478,6 @@ msgstr "Empfohlen von Rafalcool1"
 
 msgid "List of movies prepared by Rafalcool1"
 msgstr "Liste von Filmen zusammengestellt von Rafalcool1"
-
-msgid "http://fs.to/"
-msgstr "http://fs.to/"
 
 msgid "Use ru proxy server to get file lists"
 msgstr "Benutze ru Proxy Server um Datenlisten zu holen"
@@ -2659,15 +2517,6 @@ msgstr "Top bewertet"
 
 msgid "Latest"
 msgstr "Letzte"
-
-msgid "Najtrafniejsze"
-msgstr ""
-
-msgid "Folder start"
-msgstr ""
-
-msgid "Name hamster (login)"
-msgstr ""
 
 msgid "Password for hamster"
 msgstr "Passwort für Hamster"
@@ -2900,9 +2749,6 @@ msgstr "Bitrate: 1800"
 msgid "bitrate: the best"
 msgstr "Bitrate: die beste"
 
-msgid "Ekstraklasa use a proxy?"
-msgstr ""
-
 msgid "Goals"
 msgstr "Tore"
 
@@ -2938,9 +2784,6 @@ msgstr "Top Beiträge (Aller Zeiten)"
 
 msgid "Yoursay"
 msgstr "Eure Meinung"
-
-msgid "Liveleakers"
-msgstr "Liveleakers"
 
 msgid "Must See"
 msgstr "Sehenswert"
@@ -3062,15 +2905,6 @@ msgstr ""
 msgid "SHOW REPLAY"
 msgstr ""
 
-msgid "WWE NETWORK"
-msgstr "WWE NETWORK"
-
-msgid "SMACKDOWN"
-msgstr "SMACKDOWN"
-
-msgid "LUCHA UNDERGROUND"
-msgstr "LUCHA UNDERGROUND"
-
 msgid "DEFAULT"
 msgstr "STANDARD"
 
@@ -3123,9 +2957,6 @@ msgid "TOP100 of the Month"
 msgstr "TOP100 des Monats"
 
 msgid "Iplex use a proxy?"
-msgstr ""
-
-msgid "WrestlingNet._listVideos - no markers [m1][m2] found!"
 msgstr ""
 
 msgid ""
@@ -3188,10 +3019,7 @@ msgid "New Releases"
 msgstr "Neuerscheinungen"
 
 msgid "Categorization:"
-msgstr ""
-
-msgid "http://online-kinopokaz.ru/"
-msgstr "http://online-kinopokaz.ru/"
+msgstr "Kategorien:"
 
 msgid "Labels"
 msgstr "Label"
@@ -3293,9 +3121,6 @@ msgstr "Dateinamen festlegen"
 msgid "File \"%s\" already exists!"
 msgstr "Datei \"%s\" existiert bereits!"
 
-msgid "Mangas"
-msgstr "Mangas"
-
 msgid "By Year"
 msgstr "Nach Jahr"
 
@@ -3313,9 +3138,6 @@ msgstr "Staffel"
 
 msgid "Plugin can be run on one of the following platforms: sh4, mipsel, i686, armv7, armv5t."
 msgstr "Plugin kann auf folgenden Plattformen verwendet werden: sh4, mipsel, i686, armv7, armv5t."
-
-msgid "SovDub"
-msgstr ""
 
 msgid "Foreign films"
 msgstr "Ausländische Filme"
@@ -3357,7 +3179,7 @@ msgstr ""
 "Manche Funktionen könnten nicht richtig funktionieren."
 
 msgid "Install into the \"%s\"."
-msgstr "Installiere in den \"%s\"."
+msgstr "Installiere in \"%s\"."
 
 msgid "Decode file [%s] problem."
 msgstr "Problem beim Dekodieren von Datei [%s]."
@@ -3400,9 +3222,6 @@ msgstr "Letterbox"
 
 msgid "nonlinear"
 msgstr "Nicht linear"
-
-msgid "Cartoons"
-msgstr "Cartoons"
 
 msgid "Genre selection"
 msgstr "Genre Auswahl"
@@ -3455,17 +3274,8 @@ msgstr "Vereinfachen Sie den Titel und versuchen es erneut."
 msgid "Ukrainian proxy server url"
 msgstr "Ukrainische Proxy Server URL"
 
-msgid "file://"
-msgstr "file://"
-
 msgid "An error occurred while writing into: %s"
 msgstr "Ein Fehler ist aufgetreten beim Schreiben in: %s"
-
-msgid "Top Cartoons"
-msgstr "Top Cartoons"
-
-msgid "Anime"
-msgstr "Anime"
 
 msgid "Cartoon List"
 msgstr "Cartoon Liste"
@@ -3583,15 +3393,6 @@ msgstr "Suche Untertitel für \"%s\""
 msgid "Select subtitles provider:"
 msgstr "Wähle Untertitel Anbieter:"
 
-msgid "OpenSubtitles.org"
-msgstr "OpenSubtitles.org"
-
-msgid "Napisy24.pl"
-msgstr "Napisy24.pl"
-
-msgid "Titlovi.com"
-msgstr "Titlovi.com"
-
 msgid "If available you can choose other source."
 msgstr "Falls vorhanden, können Sie eine andere Quelle wählen."
 
@@ -3613,7 +3414,7 @@ msgstr "schwarz"
 msgid "Element"
 msgstr "Eintrag"
 
-msgid "Wersja poprawna."
+msgid "Correct version."
 msgstr "Gültige Version."
 
 msgid "Copy post installed binaries."
@@ -3642,17 +3443,17 @@ msgstr "irgendein"
 msgid "Question"
 msgstr "Abfrage"
 
-msgid "Polecane kamery"
-msgstr "Besondere Kameras"
+msgid "(unsafe)"
+msgstr "(unsicher)"
 
-msgid "Ostatnio dodane"
-msgstr "Zuletzt hinzugefügt"
+msgid "External player use software decoder for the AC3"
+msgstr "Softwaredekoder für AC3 verwenden"
 
-msgid "Strona wymaga zalogowania. Proszę uzupełnić dane w konfiguracji hosta."
-msgstr "Seite erfodert Login. Bitte vervollständigen Sie die Daten in der Host-Konfiguration."
+msgid "External player use software decoder for the EAC3"
+msgstr "Softwaredekoder für EAC3 verwenden"
 
-msgid "Najnowsze filmy"
-msgstr "Neueste Filme"
+msgid "External player use software decoder for the MP3"
+msgstr "Softwaredekoder für MP3 verwenden"
 
-msgid "Polecamy"
-msgstr "Empfohlen"
+msgid "Menu"
+msgstr "Menü"

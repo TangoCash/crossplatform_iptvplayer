@@ -91,12 +91,12 @@ class GoldVodTVApi:
         
         nameMap = {'3':'Eleven','2':'TVP 1 HD','4':'Polsat HD','5':'Polsat 2 HD','6':'Canal+ Sport HD','7':'Eleven Sports',
         '8':'Canal+ Sport 2 HD','9':'Canal+ HD','10':'TVN Meteo Active','11':'Eurosport 2 HD','12':'nSport HD',
-        '13':'Erosport HD','14':'Nickelodeon','15':'Comedy Central','16':'National Geographic Channel HD','17':'MTV',
-        '18':'Polsat Sport News','19':'TTV','20':'TVN 7 HD','21':'MiniMini+','22':'Discavery Channel HD','23':'BBC Earth',
+        '13':'Eurosport HD','14':'Nickelodeon','15':'Comedy Central','16':'National Geographic Channel HD','17':'MTV',
+        '18':'Polsat Sport News','19':'TTV','20':'TVN 7 HD','21':'MiniMini+','22':'Discovery Channel HD','23':'BBC Earth',
         '24':'Nat Geo Wild HD','25':'AXN HD','26':'TVP Seriale','27':'TVP Info','28':'Fokus TV','29':'TV Puls',
         '30':'TVP 2 HD','31':'TVN HD','32':'HBO HD','33':'TLC HD','34':'TVP HD','35':'TVP Sport HD','36':'Canal+ Film HD',
         '37':'Canal+ Family HD','38':'Canal+ Seriale','39':'Eska Rock','40':'Polo TV','41':'Eska go','42':'Eska TV',
-        '43':'6','44':'Stopklatka TV','45':'Animal Planet HD','46':'TVN Style HD','47':'TVN Trurbo HD','48':'TVN 24',
+        '43':'6','44':'Stopklatka TV','45':'Animal Planet HD','46':'TVN Style HD','47':'TVN Turbo HD','48':'TVN 24',
         '49':'KinoPolska PL','50':'HBO 2 HD','51':'HBO Comedy HD','52':'Travel Channel','53':'Polsat Sport HD',
         '54':'Fox HD','55':'TVP Historia','56':'TVN 24 Biznes i Świat','57':'AXN White','58':'AXN Black','59':'Polsat News',
         '60':'Cinemax 2 HD','61':'Discovery ID HD','62':'History HD','63':'Explorer','64':'Filmbox','65':'TVP Kultura',
@@ -104,10 +104,11 @@ class GoldVodTVApi:
         '71':'Tuba TV','72':'Music VOX TV','73':'TVK','74':'Czwórka Polskie Radio','75':'Disney XD','76':'Filmbox Family',
         '77':'TVP Pololnia','78':'Da Vinci Learning','79':'Polsat Film','80':'Disney Channel','81':'Kuchnia+','82':'History',
         '83':'4 Fun.TV','84':'SportKlub','85':'Domo+','86':'AXN Spin HD','87':'Discovery Historia','88':'4 Fun.TV','89':'Disney Junior',
-        '94':'Kino Polska Muzyka', '102':'Boomerang', '97':'Polo Party TV', '96':'Fight Klube', '100':'Canal+ HD', '101':'Canal+ Sport HD',
-        '117':'nSport', '116':'Extreme Sport', '117':'Discavery Turbo', '118':'MGM', '109':'AXN Black', '106':'nSport', '134':'TVP ABC', 
+        '94':'Kino Polska Muzyka', '102':'Boomerang', '97':'Polo Party TV', '96':'Fightklub', '100':'Canal+ HD', '101':'Canal+ Sport HD',
+        '117':'nSport', '116':'Extreme Sport', '117':'Discovery Turbo', '118':'MGM', '109':'AXN Black', '106':'nSport', '134':'TVP ABC', 
         '135':'Puls 2', '113':'Polsat Sport Extra', '121':'NATGEO people HD', '119':'FilmBox HD', '139':'TV4', '146':'ATM rozrywka',
-        '147':'Polsat Cafe HD', '123':'FilmBox Premium', '141':'JimJam Polsat'}
+        '147':'Polsat Cafe HD', '123':'FilmBox Premium', '141':'JimJam Polsat', '167':'Animal Planet HD', '156':'Discovery life',
+        '165':'Discovery life', '169':'Nat Geo Wild HD', '170':'Superstacja', '179':'4Fun TV', '126':'Polsat Play', '140':'Polsat Sport News'}
 
         sts, data = self.cm.getPage(self.MAIN_URL + 'kanaly.html?show=on', self.http_params)
         if not sts: return []

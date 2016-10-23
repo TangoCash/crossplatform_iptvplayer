@@ -1166,5 +1166,5 @@ def GetE2AudioCodecMixOption(codec):
     if 1 == len(options): return options[0]
     return None
     
-def SetE2AudioCodecMixOption(value, codec):
+def SetE2AudioCodecMixOption(codec, value):
     return SetE2OptionByFile('/proc/stb/audio/%s' % codec, value)

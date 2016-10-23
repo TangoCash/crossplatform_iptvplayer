@@ -3,11 +3,10 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 ###################################################
 
 ###################################################
@@ -17,6 +16,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 import re
 try:    import simplejson as json
 except: import json
+import urllib
 ############################################
 
 ###################################################
@@ -50,11 +50,10 @@ def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry(_('Preferred streaming protocol') + ": ", config.plugins.iptvplayer.videostar_streamprotocol))
     optionList.append(getConfigListEntry(_('Preferred quality') + ": ", config.plugins.iptvplayer.videostar_defquality))
-    optionList.append(getConfigListEntry(_('Premium user') + ": ", config.plugins.iptvplayer.videostar_premium))
     optionList.append(getConfigListEntry( _("Login") + ": ", config.plugins.iptvplayer.videostar_login))
     optionList.append(getConfigListEntry( _("Password") + ": ", config.plugins.iptvplayer.videostar_password))
     if '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
-        optionList.append(getConfigListEntry(_("Use a proxy gateway"), config.plugins.iptvplayer.videostar_use_proxy_gateway))
+        optionList.append(getConfigListEntry(_("Use a proxy gateway") + ' ' + _('(unsafe)'), config.plugins.iptvplayer.videostar_use_proxy_gateway))
         #if config.plugins.iptvplayer.videostar_use_proxy_gateway.value:
         #    optionList.append(getConfigListEntry("    " + _("Url:"), config.plugins.iptvplayer.videostar_proxy_gateway_url))
     return optionList
@@ -67,7 +66,8 @@ class VideoStarApi:
     HTTP_HEADER_IOS  = { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B179 Safari/7534.48.3', 'Referer': MAINURL_IOS }
     HTTP_HEADER2     = { 'User-Agent':'Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16', 'Referer': MAINURL_IOS}
 
-    API_URLS = { 'login_url'          : 'login',
+    API_URLS = { 'subscriptions_url'  : 'subscriptions',
+                 'login_url'          : 'login',
                  'get_ad_show'        : 'api/ad/show',
                  'get_ad_urls'        : 'api/ad/urls',
                  'get_channels_list'  : 'api/channels/list/web',
@@ -81,15 +81,23 @@ class VideoStarApi:
         self.cm = common()#proxyURL= '', useProxy = True)
         self.up = urlparser()
         self.sessionEx = MainSessionWrapper()
+        
+    def printPageData(self, url, data):
+        printDBG("printPageData")
+        printDBG(": [%s]" % url)
+        printDBG(data)
+        printDBG("--------------------------------------------------")
 
     def doInit(self):
-        if config.plugins.iptvplayer.videostar_use_proxy_gateway.value:
-            self.proxy_gateway_url = "http://www.bramka-proxy.pl/browse.php?u={0}&b=192&f=norefer" #config.plugins.iptvplayer.videostar_proxy_gateway_url.value
-            self.proxy_gateway_ssl = "http://www.bramka-proxy.pl/includes/process.php?action=sslagree"
-            self.my_ip             = self.getProxyGatewayIP()
+        if config.plugins.iptvplayer.videostar_use_proxy_gateway.value and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
+            self.proxy_gateway_url      = "http://www.bramka-proxy.pl/browse.php?u={0}&b=60" #192&f=norefer" #config.plugins.iptvplayer.videostar_proxy_gateway_url.value
+            self.proxy_gateway_url_ssl  = "http://www.bramka-proxy.pl/includes/process.php?action=sslagree"
+            self.my_ip = ''
+            #self.my_ip                   = self.getProxyGatewayIP()
         else:
             self.my_ip = ''
             self.proxy_gateway_url = ''
+            self.proxy_gateway_url_ssl = ''
         self._reInit()
         self.channelsList = []
         
@@ -129,7 +137,6 @@ class VideoStarApi:
             self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER_PC)
         if '' != self.my_ip:
             self.cm.HEADER['X-Forwarded-For'] = self.my_ip
-        self.PREMIUM         = config.plugins.iptvplayer.videostar_premium.value
         self.LOGIN           = config.plugins.iptvplayer.videostar_login.value
         self.PASSWORD        = config.plugins.iptvplayer.videostar_password.value
         
@@ -148,7 +155,7 @@ class VideoStarApi:
                 self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."') % self.LOGIN, type = MessageBox.TYPE_INFO, timeout = 10 )
                 return self.channelsList
         else:
-            self.sessionEx.open(MessageBox, _('Strona wymaga zalogowania. Proszę uzupełnić dane w konfiguracji hosta.'), type = MessageBox.TYPE_INFO, timeout = 10 )
+            self.sessionEx.open(MessageBox, _('Strona wymaga darmowego konta na http://videostar.pl/.\nProszę uzupełnić dane w konfiguracji hosta.'), type = MessageBox.TYPE_INFO, timeout = 10 )
             return self.channelsList
          
         self._fillChannelsList()
@@ -156,18 +163,26 @@ class VideoStarApi:
         
     def _fillChannelsList(self):
         printDBG("VideoStarApi._fillChannelsList")
+        
+        HTTP_HEADER = dict(self.cm.HEADER)
+        HTTP_HEADER.update( {'X-Reguested-With':'XMLHttpReguest'} )
+        
+        if self.proxy_gateway_url != '':
+            HTTP_HEADER['Referer'] = self.proxy_gateway_url.format( urllib.quote(HTTP_HEADER['Referer']) )
+            params = {'header': HTTP_HEADER, 'proxy_gateway':self.proxy_gateway_url}
+        else:
+            params = {'header': HTTP_HEADER}
         # get channels list
-        sts, data = self.cm.getPage( self._getUrl('get_channels_list') )
+        url = self._getUrl('get_channels_list')
+        sts, data = self.cm.getPage(url, params )
         if sts:
+            self.printPageData(url, data)
             try:
-                data = json.loads(data)
+                data = byteify(json.loads(data))
                 if "ok" == data['status']:
                     self.channelsList = data['channels']
             except:
                 printExc()
-        
-        #self.getVideoLink(12)
-        #self.getVideoLink(12)
 
     def getVideoLink(self, channelID):
         printDBG("VideoStarApi.getVideoLink")
@@ -179,46 +194,54 @@ class VideoStarApi:
         for item in self.channelsList:
             if channelID == item['id']:
                 referer = self.MAINURL  + '#' + item['slug'] # "slug" attrib can be also taken from stream_channel data
+                linkType = 'basic'
                 if "unsubscribed" == item['access_status']:
                     guestMode = True
+                elif 'subscribed' == item['access_status']:
+                    linkType = 'premium'
                 break
         
         for tryNum in range(2):
         
             # there is need to close previuse played channel 
-            self._closePrevChannel()
+            #self._closePrevChannel()
             
-            # retrie if there was unknown problem with getting link
-            self._reInit()
-            if not guestMode:
-                self.doLogin(self.LOGIN, self.PASSWORD)
-                sts, data = self.cm.getPage( referer )
-                if not sts:
-                    printExc('Error when downloading referer')
-            else:
-                self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER2)
-                if '' != self.my_ip:
-                    self.cm.HEADER['X-Forwarded-For'] = self.my_ip
+            if tryNum > 0:
+                # retrie if there was unknown problem with getting link
+                self._reInit()
+                if not guestMode:
+                    self.doLogin(self.LOGIN, self.PASSWORD)
+                else:
+                    self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER2)
+            
+            if '' != self.my_ip:
+                self.cm.HEADER['X-Forwarded-For'] = self.my_ip
             
             url     = self._getUrl('get_channel_url') % (channelID, self.streamprotocol)
+            
             HTTP_HEADER = dict(self.cm.HEADER)
             HTTP_HEADER.update( {'X-Reguested-With':'XMLHttpReguest'} )
             
+            if self.proxy_gateway_url != '':
+                HTTP_HEADER['Referer'] = self.proxy_gateway_url.format( urllib.quote(HTTP_HEADER['Referer']) )
+                params = {'header': HTTP_HEADER, 'proxy_gateway':self.proxy_gateway_url}
+            else:
+                params = {'header': HTTP_HEADER}
+            
             if guestMode: 
                 url = url.replace('https://videostar.pl/api', 'https://api.videostar.pl/guest')
-            sts, data = self.cm.getPage( url, {'header': HTTP_HEADER} )
+            sts, data = self.cm.getPage( url, params )
             try:
-                #printDBG("--------------------------------------------------")
-                #printDBG(data)
-                #printDBG("--------------------------------------------------")
-                data = json.loads(data)
+                self.printPageData(url, data)
+                data = byteify(json.loads(data))
                 if "ok" == data['status']:
                     VideoStarApi.VIDEO_STAR_T = data['stream_channel']['url_params'][-1].decode('utf-8')
                     url_param1 = data['stream_channel']['url_params'][1].decode('utf-8')
                     VideoStarApi.VIDEO_GUEST_M  = guestMode
                     if '1' == self.streamprotocol:
                         url = data['stream_channel']['url_base'].decode('utf-8')
-                        sts, data = self.cm.getPage( url, {'header': HTTP_HEADER})
+                        sts, data = self.cm.getPage( url, params)
+                        self.printPageData(url, data)
                         r = re.search('<baseURL>([^<]+?)</baseURL>', data).group(1)
                         
                         streams = re.findall('url="([^"]+?)" bitrate="([0-9]+?)"', data)
@@ -234,13 +257,13 @@ class VideoStarApi:
                             channelID = data['stream_channel']['channel_id']
                             #if url.startswith('https://'): url = 'http://' + url[8:]
                             server = self.cm.ph.getSearchGroups(url, r'://([^/]+?)/')[0]
-                            meta['iptv_m3u8_custom_base_link'] = 'http://%s:1935/%s/smil:%s.ism/list.m3u8' % (server, channelID, 'basic')
+                            meta['iptv_m3u8_custom_base_link'] = 'http://%s:1935/%s/smil:%s.ism/list.m3u8' % (server, channelID, linkType)
                             meta['iptv_proxy_gateway'] = self.proxy_gateway_url
                             meta['Referer'] =  self.proxy_gateway_url
                             meta['User-Agent'] = 'Mozilla/5.0'
-                            meta['X-Forwarded-For'] = self.my_ip
-                            
-                            meta['Cookie'] = self.getCookieItem('s', self.proxy_gateway_ssl, {'header':{'User-Agent':'Mozilla/5.0'}})
+                            if '' != self.my_ip:
+                                meta['X-Forwarded-For'] = self.my_ip
+                            meta['Cookie'] = self.cm.HEADER.get('Cookie', '')
                         urlsTab.append({'url': self.up.decorateUrl(url, meta), 'name': 'videostar hls', 'type':'hls'})
             except:
                 printExc()
@@ -250,51 +273,44 @@ class VideoStarApi:
         
         printDBG(urlsTab)
         return urlsTab
-
-    def _closePrevChannel(self):
-        printDBG("VideoStarApi._closePrevChannel start VIDEO_STAR_T[%s]" % VideoStarApi.VIDEO_STAR_T)
-        if '' != VideoStarApi.VIDEO_STAR_T:
-            url         = self._getUrl('close_channel')
-            HTTP_HEADER = dict(self.cm.HEADER)
-            HTTP_HEADER.update( {'X-Reguested-With':'XMLHttpReguest', 'Content-Type':'application/x-www-form-urlencoded', 'charset':'UTF-8'} )
-            post_data = {'t': VideoStarApi.VIDEO_STAR_T}
-            
-            if VideoStarApi.VIDEO_GUEST_M: url = url.replace('https://videostar.pl/api', 'https://api.videostar.pl/guest')
-            sts, data = self.cm.getPage( url, {'header': HTTP_HEADER}, post_data)
-            try:
-                data = json.loads(data)
-                if "ok" == data['status']:
-                    VideoStarApi.VIDEO_STAR_T = ''
-            except:
-                printExc()
-        printDBG("_closePrevChannel end VIDEO_STAR_T[%s]" % VideoStarApi.VIDEO_STAR_T)
-
+    
     def doLogin(self, login, password):
         HTTP_HEADER= dict(self.cm.HEADER)
         HTTP_HEADER.update( {'Content-Type':'application/x-www-form-urlencoded'} )
         
         cookiePath = GetCookieDir('videostar.cookie')
         params = {'header':HTTP_HEADER, 'cookiefile': cookiePath, 'use_cookie': True, 'save_cookie':True}
+        
+        rm(cookiePath)
+        
+        if self.proxy_gateway_url_ssl != '':
+            HTTP_HEADER['Referer'] = self.proxy_gateway_url
+            sts, data = self.cm.getPage(self.proxy_gateway_url_ssl, params)
+            self.printPageData(self.proxy_gateway_url_ssl, data)
+            if not sts: return False
+            params['load_cookie'] = True
+            params['proxy_gateway'] = self.proxy_gateway_url
+
         post_data = {'login': login, 'password': password, 'permanent': '1'}
-        sts, data = self.cm.getPage( self._getUrl('login_url'), params, post_data)
+        url = self._getUrl('login_url')
+        
+        sts, data = self.cm.getPage(url, params, post_data)
+        if not sts: return False
+        
+        self.printPageData(url, data)
+        self.cm.HEADER['Cookie'] = self.cm.getCookieHeader(cookiePath)
+        if self.proxy_gateway_url != '':
+            HTTP_HEADER = dict(self.cm.HEADER)
+            HTTP_HEADER['Referer'] = self.proxy_gateway_url.format(urllib.quote(HTTP_HEADER['Referer']))
+            params = {'proxy_gateway':self.proxy_gateway_url, 'header':HTTP_HEADER}
+        else:
+            params = {}
+        
+        url = self._getUrl('subscriptions_url')
+        sts, data = self.cm.getPage(url, params)
         if sts:
-            # the LWP has problem to read prepared Cookie, so we will manually read them and add to header
-            PHPSESSID = self.cm.getCookieItem(cookiePath, 'PHPSESSID')
-            netviapisessid = self.cm.getCookieItem(cookiePath, 'netviapisessid')
-            self.cm.HEADER['Cookie'] = 'PHPSESSID=%s; netviapisessid=%s;' % (PHPSESSID, netviapisessid)
-            sts, data = self.cm.getPage(self.MAINURL)
-            if sts and 'Wyloguj' in data:
+            self.printPageData(url, data)
+            if 'Wyloguj' in data:
                 return True
 
         return False
-        
-        
-    def getCookieItem(self, key, url, params={}, post_data=None):
-        
-        cookiePath = GetCookieDir('tmp.cookie')
-        params.update({'cookiefile': cookiePath, 'use_cookie': True, 'save_cookie':True})
-        sts, data = self.cm.getPage(url, params, post_data)
-        itemValue = ''
-        if sts:
-            itemValue = '%s=%s; ' % (key, self.cm.getCookieItem(cookiePath, key))
-        return itemValue

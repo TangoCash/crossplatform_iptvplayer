@@ -52,6 +52,7 @@ def gettytul():
     return 'http://fs.to/'
 
 class FsTo(CBaseHostClass):
+    HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36', 'Accept': 'text/html'}
     DEFAULT_ICON_URL = 'http://inext.ua/wp-content/uploads/2014/04/fsto_Icon-570x380.jpg'
     MAIN_URL = 'http://fs.to/'
     MAIN_CAT_TAB = [
@@ -67,14 +68,31 @@ class FsTo(CBaseHostClass):
         self.filtesCache = []
         self.sortKeyCache = []
         self.searchCache = {}
-        self.PROXY_GATE = 'http://proxy2974.my-addr.org/myaddrproxy.php'
+        #self.PROXY_GATE = 'http://proxy2974.my-addr.org/myaddrproxy.php'
+        #self.PROXY_GATE = 'http://goweb.com.ua/index.php?q={0}&hl=c1'
+        self.PROXY_GATE = 'http://proxy.yadro.in/browse.php?u={0}&b=4&f=norefer'
         self.needProxyGate = None
+        
+    def _getDomain(self, url, withScheme=True):
+        from urlparse import urlparse
+        parsed_uri = urlparse( url )
+        if withScheme:
+            domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
+        else:
+            domain = '{uri.netloc}'.format(uri=parsed_uri)
+        return domain
     
     def _getFullUrl(self, url, baseUrl=None):
         if baseUrl == None:
             baseUrl = self.MAIN_URL
         if 'myaddrproxy.php/' in url:
             return url.split('myaddrproxy.php/')[1].replace('http/', 'http://')
+        
+        if 'goweb.com.ua' in url:
+            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
+            
+        if 'proxy.yadro.in' in url or '/browse.php?u=' in url:
+            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?u=(http[^&]+?)&''')[0] )
         
         if url.startswith('//'):
             url = 'http:' + url
@@ -86,11 +104,14 @@ class FsTo(CBaseHostClass):
             url = url.replace('https://', 'http://')
         return url
         
-    def proxyGate(self, url):
+    def proxyGate(self, url, params):
         if self.needProxyGate:
             if url == '': return ''
             if self.PROXY_GATE in url: return url
-            return self.PROXY_GATE + '/' + url.replace('://', '/')
+            #return self.PROXY_GATE + '/' + url.replace('://', '/')
+            params['header'] = dict(self.HEADER)
+            params['header']['Referer'] = self._getDomain(self.PROXY_GATE)
+            return self.PROXY_GATE.format(urllib.quote(url, ''))
         else:
             return url
         
@@ -388,7 +409,7 @@ class FsTo(CBaseHostClass):
             self.addDir(params)
             
     def listFiles(self, cItem, category):
-        printDBG("listFiles")
+        printDBG("listFiles url[%r]" % cItem['url'])
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
@@ -416,14 +437,14 @@ class FsTo(CBaseHostClass):
         self.listFolder(cItem)
         
     def listFolder(self, cItem):
-        printDBG('listFolder')
+        printDBG('listFolder url[%r] folder_id[%s]' % (cItem['url'], cItem.get('folder_id', '')))
         
         url = cItem['url'].format(cItem.get('folder_id', '0'))
         params = {}
         if config.plugins.iptvplayer.fsto_proxy_enable.value:
             params = {'http_proxy': config.plugins.iptvplayer.ukrainian_proxyurl.value}
         else:
-            url = self.proxyGate(url)
+            url = self.proxyGate(url, params)
         
         sts, data = self.cm.getPage(url, params)
         if not sts: return
@@ -432,35 +453,40 @@ class FsTo(CBaseHostClass):
         #printDBG(data)
         printDBG("==================================================")
         
+        getDLMarker = ''
         m1 = '<li class='
         items = self.cm.ph.getAllItemsBeetwenMarkers(data, m1, '</li>')
         for item in items:
             if m1 in item:
                 item = m1 + item.split(m1)[-1]
             parentId = self.cm.ph.getSearchGroups(item, "parent_id:[^0-9]+?([0-9]+?)[^0-9]")[0]
-            url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
-            if parentId != '' and parentId != cItem.get('folder_id', '0') and url.endswith('#'):
+            url = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]*?)"')[0] )
+            if parentId != '' and parentId != cItem.get('folder_id', '0') and ('' == url or url.endswith('#')):
                 tmp = item.split('</a>')
                 params = dict(cItem)
                 params.update({'folder_id':parentId, 'title':self.cleanHtmlStr(tmp[0]), 'desc':self.cleanHtmlStr(tmp[1])})
                 self.addDir(params)
             elif '/get/dl/' in item:
+                getDLMarker = '/get/dl/'
+            elif '%2Fget%2Fdl%2F' in item:
+                getDLMarker = '%2Fget%2Fdl%2F'
+            else:
+                printDBG("-----------------Wrong item-----------------")
+                printDBG(item)
+                printDBG("--------------------------------------------")
+            
+            if '' != getDLMarker:
                 viewUrl = '' #self.cm.ph.getSearchGroups(item, 'href="([^"]*?/view/[^"]*?)"')[0]
-                dlUrl = self.cm.ph.getSearchGroups(item, 'href="([^"]*?/get/dl/[^"]*?)"')[0]
+                dlUrl = self.cm.ph.getSearchGroups(item, 'href="([^"]*?%s[^"]*?)"' % getDLMarker)[0]
                 if viewUrl != '':
                     params = {'icon':cItem.get('icon', ''), 'title':self.cleanHtmlStr(item) + '[%s]' % _('view'), 'url':self._getFullUrl(viewUrl)}
                     self.addVideo(params)
                 if dlUrl != '':
                     params = {'icon':cItem.get('icon', ''), 'title':self.cleanHtmlStr(item), 'url':self._getFullUrl(dlUrl)}
                     self.addVideo(params)
-            else:
-                printDBG("-----------------Wrong item-----------------")
-                printDBG(item)
-                printDBG("--------------------------------------------")
-        
         
     def getLinksForVideo(self, cItem):
-        printDBG("FsTo.getLinksForVideo [%s]" % cItem)
+        printDBG("FsTo.getLinksForVideo cItem[%s]" % cItem['url'])
         urlTab = []
         
         url = cItem['url']
@@ -468,7 +494,7 @@ class FsTo(CBaseHostClass):
         if config.plugins.iptvplayer.fsto_proxy_enable.value:
             params = {'http_proxy': config.plugins.iptvplayer.ukrainian_proxyurl.value}
         else:
-            url = self.proxyGate(url)
+            url = self.proxyGate(url, params)
         params['return_data'] = False
         try:
             sts, response = self.cm.getPage(url, params)

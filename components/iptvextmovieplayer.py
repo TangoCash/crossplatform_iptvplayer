@@ -25,6 +25,7 @@ from Plugins.Extensions.IPTVPlayer.components.iptvchoicebox import IPTVChoiceBox
 from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVFileSelectorWidget
 from Plugins.Extensions.IPTVPlayer.components.configextmovieplayer import ConfigExtMoviePlayerBase, ConfigExtMoviePlayer
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
+from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 ###################################################
 
 ###################################################
@@ -1340,7 +1341,7 @@ class IPTVExtMoviePlayer(Screen):
                             printDBG('eplayer3DataAvailable PLAYBACK_INFO not handled')
                 elif "GSTPLAYER_EXTENDED" == key: self.playerBinaryInfo['version'] = obj['version']
                 elif "EPLAYER3_EXTENDED" == key: self.playerBinaryInfo['version'] = obj['version']
-                elif "GST_ERROR" == key: self.showMessage('%s\ncode:%s' % (obj['msg'].encode('utf-8'), obj['code']), MessageBox.TYPE_ERROR, None)
+                elif "GST_ERROR" == key or "FF_ERROR" == key: self.showMessage('%s\ncode:%s' % (obj['msg'].encode('utf-8'), obj['code']), MessageBox.TYPE_ERROR, None)
                 elif "GST_MISSING_PLUGIN" == key: self.showMessage(obj['msg'].encode('utf-8'), MessageBox.TYPE_INFO, None)
 
                         
@@ -1639,6 +1640,10 @@ class IPTVExtMoviePlayer(Screen):
                         headers += ('%s: %s\r\n' % (key, httpParams[key]) )
                 if len(headers):
                     cmd += ' -h "%s"' % headers
+                if url.startswith('http'):
+                    url = urlparser.decorateParamsFromUrl(url)
+                    if '1' == url.meta.get('MPEGTS-Live', '0'):
+                        cmd += ' -v '
                     
             if config.plugins.iptvplayer.stereo_software_decode.value:
                 cmd += ' -s '
@@ -1649,7 +1654,12 @@ class IPTVExtMoviePlayer(Screen):
             if config.plugins.iptvplayer.plarform.value in ('sh4', 'mipsel', 'armv7', 'armv5t'):
                 if config.plugins.iptvplayer.wma_software_decode.value:
                     cmd += ' -w '
-                
+                if config.plugins.iptvplayer.mp3_software_decode.value:
+                    cmd += ' -m '
+                if config.plugins.iptvplayer.eac3_software_decode.value:
+                    cmd += ' -e '
+                if config.plugins.iptvplayer.ac3_software_decode.value:
+                    cmd += ' -3 '
             if 'lpcm' == config.plugins.iptvplayer.software_decode_as.value: 
                 cmd += ' -l '
             

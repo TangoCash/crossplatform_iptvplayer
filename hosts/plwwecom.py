@@ -5,10 +5,8 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
@@ -156,11 +154,23 @@ class PLWWECOM(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("PLWWECOM.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        sts, data = self.cm.getPage(cItem['url'])
-        if not sts: return urlTab
         
         if '' == self.countryCode:
             self.countryCode = self.cm.getCountryCode()
+            
+        HTTP_HEADER = dict(self.HTTP_HEADER) 
+        if 'pl' != self.countryCode:
+            HTTP_HEADER['Referer'] = self.proxy_gateway
+            params =  {'header' : HTTP_HEADER, 'proxy_gateway':self.proxy_gateway}
+        else:
+            params =  {}
+            
+        sts, data = self.cm.getPage(cItem['url'], params)
+        if not sts: return urlTab
+        
+        hlsUrl = self.cm.ph.getSearchGroups(data, '''['"](http[^'^"]*?\.m3u8[^'^"]*?)['"]''')[0].replace('\\/', '/')
+        if '' != hlsUrl:
+            return getDirectM3U8Playlist(hlsUrl, checkExt=False, variantCheck=False)
         
         baseUrl     = 'http://c.brightcove.com/services/viewer/htmlFederated?playerID={0}&playerKey={1}&purl={2}&%40videoPlayer={3}&flashID={4}'
         data        = self.cm.ph.getDataBeetwenMarkers(data, '<object id=', '</object>', True)[1]
@@ -267,7 +277,7 @@ class IPTVHost(CHostBase):
         
         urlList = self.host.getLinksForVideo(self.host.currList[Index])
         for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
+            retlist.append(CUrlItem(item["name"], item["url"], item.get('need_resolve', False)))
 
         return RetHost(RetHost.OK, value = retlist)
     # end getLinksForVideo
