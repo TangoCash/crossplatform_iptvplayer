@@ -212,7 +212,12 @@ class IKlubNetApi(CBaseHostClass):
                 
                 if 'rtmp://' in data:
                     rtmpUrl = self.cm.ph.getDataBeetwenMarkers(data, '&source=', '&', False)[1]
+                    if rtmpUrl == '':
+                        rtmpUrl = self.cm.ph.getSearchGroups(data, r'''['"](rtmp[^"^']+?)['"]''')[0]
                     urlsTab.append({'name':title + ' [rtmp]', 'url':rtmpUrl + ' live=1 '})
+                elif '.m3u8' in data:
+                    file = self.cm.ph.getSearchGroups(data, r'''['"](http[^"^']+?\.m3u8[^"^']*?)['"]''')[0]
+                    urlsTab.extend( getDirectM3U8Playlist(file) )
                 elif 'content.jwplatform.com' in data:
                     vidUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^'^"]+?content.jwplatform.com[^'^"]+?)['"]''')[0] )
                     

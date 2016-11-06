@@ -312,6 +312,9 @@ class common:
         string = string.decode('UTF-8')
         s = re.compile("&#?(\w+?);").sub(self.html_entity_decode_char, string)
         return s.encode('UTF-8')
+        
+    def isValidUrl(self, url):
+        return url.startswith('http://') or url.startswith('https://')
     
     def getPage(self, url, addParams = {}, post_data = None):
         ''' wraps getURLRequestData '''

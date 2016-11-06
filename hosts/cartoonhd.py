@@ -56,7 +56,6 @@ class CartoonHD(CBaseHostClass):
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
     MAIN_URL = 'http://cartoonhd.website/'
-    #SEARCH_URL = MAIN_URL + 'ajax/search.php'
     SEARCH_URL = MAIN_URL + 'api/v2/cautare/evokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
@@ -71,6 +70,7 @@ class CartoonHD(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
+        self.DEFAULT_ICON_URL = 'http://cartoonhd.website/templates/FliXanity/assets/images/logochd.png'
         
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()
@@ -190,11 +190,15 @@ class CartoonHD(CBaseHostClass):
         data = data.split('</section>')
         if len(data): del data[-1]
         for item in data:
-            url  = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
-            icon = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
+            icon = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?\.jpg[^"]*?)"')[0] )
             desc = 'IMDb ' + self.cm.ph.getSearchGroups(item, '>([ 0-9.]+?)<')[0] + ', '
-            desc += self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</p>', False)[1]
-            title  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h3>', '</h3>', False)[1] )
+            desc += self.cleanHtmlStr(' '.join(self.cm.ph.getAllItemsBeetwenMarkers(item, '<p>', '</p>', False)))
+            tmp   = self.cm.ph.rgetAllItemsBeetwenMarkers(item, '</a>', '<a', True)
+            url = ''
+            for t in tmp:
+                if url == '': url = self.getFullUrl(self.cm.ph.getSearchGroups(t, '''href=["']([^"^']+?)['"]''')[0])
+                title = self.cleanHtmlStr(t)
+                if title != '': break
             if url.startswith('http'):
                 params = {'title':title, 'url':url, 'desc':desc, 'icon':icon}
                 if nextCategory == None:
@@ -319,7 +323,6 @@ class CartoonHD(CBaseHostClass):
                     break
             enc = ''.join(tmp_arr)
             r   = len(data) % 3
-            printDBG("EEEEEEEEEEEEEEEEEEEEEEEEEE: %s" % enc)
             if r > 0:
                 fill = '==='
                 enc  = enc[0:r-3] + fill[r:]
@@ -509,9 +512,7 @@ class IPTVHost(CHostBase):
     
     def converItem(self, cItem):
         hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
+        searchTypesOptions = []
         
         hostLinks = []
         type = CDisplayListItem.TYPE_UNKNOWN
@@ -538,6 +539,7 @@ class IPTVHost(CHostBase):
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
         icon        =  cItem.get('icon', '')
+        if icon == '': icon = self.host.DEFAULT_ICON_URL
         
         return CDisplayListItem(name = title,
                                     description = description,

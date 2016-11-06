@@ -16,6 +16,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getD
 import re
 import base64
 import copy
+import urllib
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 try: import json
 except: import simplejson as json
@@ -47,6 +48,7 @@ class MoonwalkParser():
 
         contentData = self.cm.ph.getDataBeetwenMarkers(data, 'setRequestHeader|', '|beforeSend', False)[1]
         csrfToken = self.cm.ph.getSearchGroups(data, '<meta name="csrf-token" content="([^"]+?)"')[0] 
+        xDataPool = self.cm.ph.getSearchGroups(data, '''['"]X-Data-Pool['"]\s*:\s*['"]([^'^"]+?)['"]''')[0] 
         
         cd = self.cm.ph.getSearchGroups(data, 'var condition_detected = ([^;]+?);')[0]
         if 'true' == cd: cd = 1
@@ -60,8 +62,13 @@ class MoonwalkParser():
         access_key = self.cm.ph.getSearchGroups(data, "access_key: '([^']+?)'")[0]
         mw_pid = self.cm.ph.getSearchGroups(data, "mw_pid: ([0-9]+?)[^0-9]")[0]
         mw_did = self.cm.ph.getSearchGroups(data, "mw_did: ([0-9]+?)[^0-9]")[0]
+        mw_domain_id = self.cm.ph.getSearchGroups(data, "mw_domain_id: ([0-9]+?)[^0-9]")[0]
         
+        printDBG("=======================================================================")
+        printDBG(data)
+        printDBG("=======================================================================")
         sec_header['Encoding-Pool'] = base64.b64encode(contentData.replace('|', ''))
+        sec_header['X-Data-Pool'] = xDataPool
         sec_header['X-CSRF-Token'] = csrfToken
         sec_header['X-Requested-With'] = 'XMLHttpRequest'
         post_data = {}
@@ -73,7 +80,9 @@ class MoonwalkParser():
         if 'access_key:' in data: post_data['access_key'] = access_key
         if 'mw_pid:' in data: post_data['mw_pid'] = mw_pid
         if 'mw_did:' in data: post_data['mw_did'] = mw_did
-
+        if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id      
+        #post_data['ad_attr'] =0
+        
         return sec_header, post_data
 
     def getDirectLinks(self, url):
@@ -164,8 +173,9 @@ class MoonwalkParser():
             
             episodeData = self.cm.ph.getDataBeetwenMarkers(data, 'id="episode"', '</select>', False)[1]
             episodeData = re.compile('<option[^>]+?value="([0-9]+?)">([^<]+?)</option>').findall(episodeData)
+            ref = urllib.quote(self.cm.ph.getSearchGroups(data, '''var\s*referer\s*=[^"^']*['"]([^"^']+?)["']''')[0])
             episodeMainUrl = self.cm.ph.getDataBeetwenMarkers(data, "$('#episode').val();", '});', False)[1]
-            episodeMainUrl = self.cm.ph.getSearchGroups(episodeMainUrl, "var url = '(http[^']+?)'")[0] + '?season=' + str(seasonIdx) + '&episode='
+            episodeMainUrl = self.cm.ph.getSearchGroups(episodeMainUrl, "var url = '(http[^']+?)'")[0] + '?season=' + str(seasonIdx) + '&ref=' + ref + '&episode='
             if not episodeMainUrl.startswith('http'): 
                 return []
             

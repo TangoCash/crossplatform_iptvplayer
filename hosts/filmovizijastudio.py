@@ -75,6 +75,7 @@ class FilmovizijaStudio(CBaseHostClass):
         self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_videos':[], 'new_hd_videos':[]}
         self.cacheSeasons = []
         self.needProxy = None
+        self.cacheLinks = {}
         
     def isNeedProxy(self):
         if self.needProxy == None:
@@ -320,10 +321,13 @@ class FilmovizijaStudio(CBaseHostClass):
         printDBG("FilmovizijaStudio.getLinksForVideo [%s]" % cItem)
         urlTab = [] #{'name':'', 'url':cItem['url'], 'need_resolve':1}]
         
+        if len(self.cacheLinks.get(cItem['url'], [])):
+            return self.cacheLinks[cItem['url']]
+        
         sts, data = self.getPage(cItem['url']) 
         if not sts: return []
         
-        tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile(';[^;]*?id\^\="page"'), re.compile('show\(\)'))[1].split('</script>')[0]
+        tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('id\^\="page"'), re.compile('show\(\)'))[1].split('</script>')[0]
         printDBG("==========================================")
         printDBG(tmp)
         printDBG("==========================================")
@@ -344,7 +348,7 @@ class FilmovizijaStudio(CBaseHostClass):
             pageAttribs.append({'name':name, 'attrib':attrib})
         
         # main links
-        mainData = self.cm.ph.getDataBeetwenMarkers(data, '</table>', '<div id="contents">', False)[1]
+        mainData = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="tabs"', '</ul>', False)[1]
         mainData = self.cm.ph.getAllItemsBeetwenMarkers(mainData, '<li>', '</li>')
         for item in mainData:
             try:
@@ -363,8 +367,10 @@ class FilmovizijaStudio(CBaseHostClass):
                 urlName  = self.cleanHtmlStr( item )
                 printDBG('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ' + item)
                 if urlClass == 'direct':
-                    if not urlId.startswith('http'): continue
-                    urlTab.append({'name':urlName, 'url':self._getFullUrl(urlId), 'need_resolve':1})
+                    if not urlId.startswith('http'):
+                        urlTab.append({'name':urlName, 'url':'id=' + urlId, 'need_resolve':1})
+                    else:
+                        urlTab.append({'name':urlName, 'url':self._getFullUrl(urlId), 'need_resolve':1})
                 elif urlId.startswith('page') and pageFormat != '':
                     url = pageFormat
                     for a in pageAttribs:
@@ -377,12 +383,42 @@ class FilmovizijaStudio(CBaseHostClass):
                     urlTab.append({'name':urlName, 'url':self._getFullUrl(url), 'need_resolve':1})
             except Exception:
                 printExc()
+                
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<tr id="linktr">', '</tr>')
+        for item in data:
+            urlName = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h9', '</h9>', True)[1] )
+            redirect = self.cm.ph.getSearchGroups(item, 'class="redirect"\s*id="([^"]+?)"')[0]
+            if '' == redirect: continue
+            urlTab.append({'name':urlName, 'url':'redirect=' + redirect, 'need_resolve':1})
+                
+        uniqTab = []
+        tmpTab = []
+        for item in urlTab:
+            if item['url'] not in uniqTab:
+                uniqTab.append(item['url'])
+                tmpTab.append(item)
+        urlTab = tmpTab
+            
+        if len(urlTab):
+            self.cacheLinks[cItem['url']] = urlTab
         printDBG(urlTab)
         return urlTab
         
     def getVideoLinks(self, videoUrl):
         printDBG("FilmovizijaStudio.getVideoLinks [%s]" % videoUrl)
         urlTab = []
+        
+        for key in self.cacheLinks:
+            for idx in range(len(self.cacheLinks[key])):
+                if self.cacheLinks[key][idx]['url'] == videoUrl:
+                    self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
+        if videoUrl.startswith("id=") or videoUrl.startswith("redirect="): 
+            sts, data = self.getPage(self.getFullUrl('/morgan.php'), {'raw_post_data':True}, videoUrl)
+            if not sts: return []
+            printDBG(data)
+            videoUrl = data
+            
+            
         if 'filmovizija.' in videoUrl:
             sts, data = self.getPage(videoUrl)
             if not sts: return []
@@ -470,6 +506,7 @@ class FilmovizijaStudio(CBaseHostClass):
         
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
+        self.cacheLinks = {}
         
     #MAIN MENU
         if name == None:

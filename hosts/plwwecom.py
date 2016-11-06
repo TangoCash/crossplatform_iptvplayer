@@ -168,8 +168,10 @@ class PLWWECOM(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], params)
         if not sts: return urlTab
         
-        hlsUrl = self.cm.ph.getSearchGroups(data, '''['"](http[^'^"]*?\.m3u8[^'^"]*?)['"]''')[0].replace('\\/', '/')
-        if '' != hlsUrl:
+        hlsUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.m3u8[^'^"]*?)['"]''')[0].replace('\\/', '/')
+        if hlsUrl.startswith('//'):
+            hlsUrl = 'http:' + hlsUrl
+        if self.cm.isValidUrl(hlsUrl):
             return getDirectM3U8Playlist(hlsUrl, checkExt=False, variantCheck=False)
         
         baseUrl     = 'http://c.brightcove.com/services/viewer/htmlFederated?playerID={0}&playerKey={1}&purl={2}&%40videoPlayer={3}&flashID={4}'

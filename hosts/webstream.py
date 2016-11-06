@@ -19,6 +19,7 @@ from Plugins.Extensions.IPTVPlayer.libs.wagasworld        import WagasWorldApi
 from Plugins.Extensions.IPTVPlayer.libs.ustvnow           import UstvnowApi, GetConfigList as Ustvnow_GetConfigList
 #from Plugins.Extensions.IPTVPlayer.libs.telewizjadanet    import TelewizjadaNetApi, GetConfigList as TelewizjadaNet_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.iklubnet          import IKlubNetApi, GetConfigList as IKlubNet_GetConfigList
+from Plugins.Extensions.IPTVPlayer.libs.telewizjacom      import TeleWizjaComApi
 from Plugins.Extensions.IPTVPlayer.libs.meteopl           import MeteoPLApi, GetConfigList as MeteoPL_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.edemtv            import EdemTvApi, GetConfigList as EdemTv_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.livestreamtv      import LiveStreamTvApi 
@@ -27,6 +28,7 @@ from Plugins.Extensions.IPTVPlayer.libs.livespottingtv    import LivespottingTvA
 from Plugins.Extensions.IPTVPlayer.libs.goldvodtv         import GoldVodTVApi, GetConfigList as GoldVodTV_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.showsporttvcom    import ShowsportTVApi
 from Plugins.Extensions.IPTVPlayer.libs.sport365live      import Sport365LiveApi
+from Plugins.Extensions.IPTVPlayer.libs.pierwszatv        import PierwszaTVApi, GetConfigList as PierwszaTV_GetConfigList
 from Plugins.Extensions.IPTVPlayer.tools.iptvtypes        import strwithmeta
 
 
@@ -67,6 +69,10 @@ def GetConfigList():
     
     optionList.append(getConfigListEntry("-----------------VideoStar------------------", config.plugins.iptvplayer.fake_separator))
     try:    optionList.extend( VideoStar_GetConfigList() )
+    except Exception: printExc()
+    
+    optionList.append(getConfigListEntry("----------------Pierwsza.TV-----------------", config.plugins.iptvplayer.fake_separator))
+    try:    optionList.extend( PierwszaTV_GetConfigList() )
     except Exception: printExc()
     
     optionList.append(getConfigListEntry("-----------------iklub.net------------------", config.plugins.iptvplayer.fake_separator))
@@ -122,11 +128,11 @@ def gettytul():
 
 class HasBahCa(CBaseHostClass):
     HTTP_HEADER= { 'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3 Gecko/2008092417 Firefox/3.0.3' }
-    # {'name': 'meczhd.tv',       'title': 'MeczHH TV',                         'url': 'http://meczhd.tv/',                                                  'icon': 'http://meczhd.tv/theme/img/logo.png'}, \
-    # New links for webstream prepared by user @matzg
     MAIN_GROUPED_TAB = [{'alias_id':'weeb.tv',                 'name': 'weeb.tv',             'title': 'WeebTV',                            'url': '',                                                                   'icon': 'http://weebtv.yolasite.com/resources/425149_345424975498308_1363873965_n.jpg'}, \
                         {'alias_id':'videostar.pl',            'name': 'videostar.pl',        'title': 'VideoStar',                         'url': '',                                                                   'icon': 'https://static-videostar1.4vod.tv/assets/images/logo.png'}, \
                         {'alias_id':'iklub.net',               'name': 'iklub.net',           'title': 'iKlub.net',                         'url': '',                                                                   'icon': 'http://iklub.net/wp-content/uploads/2015/11/klub2.png'}, \
+                        {'alias_id':'tele-wizja.com',          'name': 'tele-wizja.com',      'title': 'tele-wizja.com',                    'url': '',                                                                   'icon': 'http://htk.net.pl/wp-content/uploads/2016/07/cache_2422349465.jpg'}, \
+                        {'alias_id':'pierwsza.tv',             'name': 'pierwsza.tv',         'title': 'Pierwsza.TV',                       'url': '',                                                                   'icon': 'http://pierwsza.tv/img/logo.png'}, \
                         #{'alias_id':'telewizjada.net',         'name': 'telewizjada.net',     'title': 'Telewizjada.net',                   'url': '',                                                                   'icon': 'http://www.btv.co/newdev/images/rokquickcart/samples/internet-tv.png'}, \
                         {'alias_id':'iptv_matzgpl',            'name': 'm3u',                 'title': 'Kanały IPTV_matzgPL',               'url': 'http://matzg2.prv.pl/Lista_matzgPL.m3u',                             'icon': 'http://matzg2.prv.pl/Iptv_matzgPL.png'}, \
                         {'alias_id':'prognoza.pogody.tv',      'name': 'prognoza.pogody.tv',  'title': 'prognoza.pogody.tv',                'url': 'http://prognoza.pogody.tv',                                          'icon': 'http://s2.manifo.com/usr/a/A17f/37/manager/pogoda-w-chorwacji-2013.png'}, \
@@ -170,8 +176,10 @@ class HasBahCa(CBaseHostClass):
         self.purecastNetApi    = None
         self.telewizjadaNetApi = None
         self.iKlubNetApi       = None
+        self.teleWizjaComApi   = None
         self.meteoPLApi        = None
         self.liveStreamTvApi   = None
+        self.pierwszaTvApi     = None
         self.goldvodTvApi      = None
         self.showsportTvApi    = None
         self.sport365LiveApi   = None
@@ -719,6 +727,22 @@ class HasBahCa(CBaseHostClass):
         urlsTab = self.iKlubNetApi.getVideoLink(cItem)
         return urlsTab
         
+    def getTeleWizjaComList(self, cItem):
+        printDBG("getTeleWizjaComList start")
+        if None == self.teleWizjaComApi:
+            self.teleWizjaComApi = TeleWizjaComApi()
+        tmpList = self.teleWizjaComApi.getList(cItem)
+        for item in tmpList:
+            if 'video' == item['type']:
+                self.addVideo(item) 
+            else:
+                self.addDir(item)
+        
+    def getTeleWizjaComLink(self, cItem):
+        printDBG("getTeleWizjaComLink start")
+        urlsTab = self.teleWizjaComApi.getVideoLink(cItem)
+        return urlsTab
+        
     def getMeteoPLList(self, cItem):
         printDBG("getMeteoPLApiList start")
         if None == self.meteoPLApi:
@@ -783,6 +807,19 @@ class HasBahCa(CBaseHostClass):
     def getLiveStreamTvLink(self, cItem):
         printDBG("getLiveStreamTvLink start")
         urlsTab = self.liveStreamTvApi.getVideoLink(cItem)
+        return urlsTab
+        
+    def getPierwszaTvList(self, cItem):
+        printDBG("getPierwszaTvList start")
+        if None == self.pierwszaTvApi:
+            self.pierwszaTvApi = PierwszaTVApi()
+        tmpList = self.pierwszaTvApi.getChannelsList(cItem)
+        for item in tmpList:
+            self.playVideo(item) 
+        
+    def getPierwszaTvLink(self, cItem):
+        printDBG("getPierwszaTvLink start")
+        urlsTab = self.pierwszaTvApi.getVideoLink(cItem)
         return urlsTab
         
     def getGoldVodTvList(self, cItem):
@@ -898,6 +935,9 @@ class HasBahCa(CBaseHostClass):
     #prognoza.pogody.tv items
         elif name == "prognoza.pogody.tv":
             self.prognozaPogodyList(url)
+    #pierwsza.tv items
+        elif name == 'pierwsza.tv':
+            self.getPierwszaTvList(self.currItem)
     #goldvod.tv items
         elif name == "goldvod.tv":
             self.getGoldVodTvList(url)
@@ -920,6 +960,9 @@ class HasBahCa(CBaseHostClass):
     #iklub.net items
         elif name == 'iklub.net':
             self.getIKlubNetList(self.currItem)
+    #tele-wizja.com items
+        elif name == 'tele-wizja.com':
+            self.getTeleWizjaComList(self.currItem)
     #meteo.pl items
         elif name == 'meteo.pl':
             self.getMeteoPLList(self.currItem)
@@ -985,6 +1028,8 @@ class IPTVHost(CHostBase):
             if 0 < len(url): retlist.append(CUrlItem("Własny link", new_url))
         elif url.startswith('http://goldvod.tv/'):
             urlList = self.host.getGoldVodTvLink(cItem)
+        elif name == 'pierwsza.tv':
+            urlList = self.host.getPierwszaTvLink(cItem)
         elif "showsport-tv.com" == name:
             urlList = self.host.getShowsportTvLink(cItem)
         elif "sport365.live" == name:
@@ -1012,6 +1057,8 @@ class IPTVHost(CHostBase):
             urlList = self.host.getTelewizjadaNetLink(cItem)
         elif name == 'iklub.net':
             urlList = self.host.getIKlubNetLink(cItem)
+        elif name == 'tele-wizja.com':
+            urlList = self.host.getTeleWizjaComLink(cItem)
         elif name == 'meteo.pl':
             urlList = self.host.getMeteoPLLink(cItem)
         elif name == 'edem.tv':
@@ -1091,7 +1138,8 @@ class IPTVHost(CHostBase):
                 
             title       =  self.host._cleanHtmlStr( cItem.get('title', '') )
             description =  self.host._cleanHtmlStr( cItem.get('desc', '') )
-            icon        =  self.host._cleanHtmlStr( cItem.get('icon', '') )
+            icon        =  strwithmeta(cItem.get('icon', ''))
+            icon        =  strwithmeta(self.host._cleanHtmlStr(icon), icon.meta)
             
             hostItem = CDisplayListItem(name = title,
                                         description = description,

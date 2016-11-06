@@ -30,6 +30,7 @@ from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 from binascii import hexlify, unhexlify, a2b_hex
 from hashlib import md5, sha256
 from os import path as os_path
+from datetime import datetime, timedelta
 ############################################
 
 ###################################################
@@ -56,7 +57,7 @@ class Sport365LiveApi:
         self.COOKIE_FILE = GetCookieDir('sport365live.cookie')
         self.cm = common()
         self.up = urlparser()
-        self.http_params = {'header': dict(self.HTTP_HEADER), 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.http_params = {'header': dict(self.HTTP_HEADER), 'use_cookie':True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
     def getFullUrl(self, url):
         if url.startswith('http'):
@@ -85,8 +86,14 @@ class Sport365LiveApi:
     def getMainCategries(self, cItem):
         printDBG("Sport365LiveApi.getMainCategries")
         channelsTab = []
-        url = self.getFullUrl('en/events/-/1/-/-/120')
-        sts, data = self.cm.getPage(url)
+        dt = datetime.now() - datetime.utcnow()
+        OFFSET = (dt.microseconds + (dt.seconds + dt.days * 24 * 3600) * 10**6) / 10**6
+        OFFSET /= 60
+        if OFFSET % 10 == 9:
+            OFFSET += 1
+        url = self.getFullUrl('en/events/-/1/-/-/%s' % (OFFSET))
+        sts, data = self.cm.getPage(self.MAIN_URL, self.http_params)
+        sts, data = self.cm.getPage(url, self.http_params)
         if not sts: return []
         
         date = ''
@@ -124,7 +131,7 @@ class Sport365LiveApi:
         
         eventId = linksData[0].replace('event_', '')
         url = self.getFullUrl('en/links/{0}/{1}'.format(eventId, linksData[-1]))
-        sts, data = self.cm.getPage(url)
+        sts, data = self.cm.getPage(url, self.http_params)
         if not sts: return []
         
         desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<table', '</table>')[1] ) + '[/br]' + cItem.get('desc', '')
