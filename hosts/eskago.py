@@ -136,15 +136,18 @@ class EskaGo(CBaseHostClass):
                     if streamUrlHD != '': tmpUrls.append({'name':'HD', 'url':streamUrlHD})
                     if streamUrlSD != '': tmpUrls.append({'name':'SD', 'url':streamUrlSD}) 
                 else:
-                    streamUrl  = item.get('streamUrl', '').strip()
+                    streamUrl  = item.get('streamUrl', '')
+                    if None == streamUrl: streamUrl = ''
+                    else: streamUrl = streamUrl.strip()
                     if streamUrl != '': tmpUrls.append({'name':'Normal', 'url':streamUrl}) 
                 
-                params = dict(cItem)
-                params.update( {'title':title, 'urls':tmpUrls} )
-                if type == 'Radio':
-                    self.addAudio(params)
-                else:
-                    self.addVideo(params)
+                if len(tmpUrls):
+                    params = dict(cItem)
+                    params.update( {'title':title, 'urls':tmpUrls} )
+                    if type == 'Radio':
+                        self.addAudio(params)
+                    else:
+                        self.addVideo(params)
             idx += 1
 
     def getLinksForVideo(self, cItem):

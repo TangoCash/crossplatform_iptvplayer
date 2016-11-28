@@ -13,7 +13,7 @@ ClearDBGfile = True
 try:
     from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG
     outsidePLI = False
-except:
+except Exception:
     outsidePLI = True
     def printDBG( DBGtxt ):
         global ClearDBGfile, outsidePLI
@@ -205,7 +205,7 @@ def GetWebPage(url = 'forum.dvhk.pl', vdir = '/search.php?do=getnew', uname = ''
                     printDBG('Znaleziono passwd: XXXXXXX\n')
                 if uname != '' and passwd != '':
                     break
-        except:
+        except Exception:
             pass
         
     global WebPageCharSet

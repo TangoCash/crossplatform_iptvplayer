@@ -14,7 +14,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 ###################################################
 import re
 try: import json
-except: import simplejson
+except Exception: import simplejson
 ############################################
 
 
@@ -43,7 +43,7 @@ class NettvPw:
                 if '' == icon: continue
                 if not icon.startswith('http'): icon = NettvPw.MAINURL + icon
                 channelsList.append({'title':title, 'url':url, 'icon':icon})
-        except:
+        except Exception:
             printExc()
         return channelsList
     

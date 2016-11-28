@@ -15,7 +15,7 @@ from Plugins.Extensions.IPTVPlayer.components.ihost import CFavItem
 import codecs
 from os import path as os_path, remove as os_remove
 try: import json
-except: import simplejson as json
+except Exception: import simplejson as json
 
 from Plugins.Extensions.IPTVPlayer.components.ihost import CFavItem
 ###################################################
@@ -153,7 +153,7 @@ class IPTVFavourites:
         idx = self._getGroupIdx(group_id)
         if -1 != idx:
             try: del self.groups[idx]['items'][itemIdx]
-            except:
+            except Exception:
                 printExc()
                 self.lastError = _("Item idx[%d] not found in group[%s].") % (itemIdx, group_id)
                 return False
@@ -190,7 +190,7 @@ class IPTVFavourites:
                 for item in data:
                     favItems.append( CFavItem().setFromDict(item) )
                 self.groups[groupIdx]['items'] = favItems
-            except:
+            except Exception:
                 printExc()
                 self.lastError = _("Error reading file \"%s\".\n") % filePath
                 ret = False
@@ -206,7 +206,7 @@ class IPTVFavourites:
                 printDBG(data)
                 data = byteify( json.loads(data) )
                 self.groups = data
-            except:
+            except Exception:
                 printExc()
                 self.lastError = _("Error reading file \"%s\".\n") % filePath
                 ret = False
@@ -219,7 +219,7 @@ class IPTVFavourites:
         if os_path.isfile(filePath):
             try:
                 os_remove(filePath)
-            except:
+            except Exception:
                 printExc()
                 self.lastError = _("Error deleting file \"%s\".\n") % filePath
                 ret = False
@@ -236,7 +236,7 @@ class IPTVFavourites:
                 items.append( favItem.getAsDict() )
             data = json.dumps(items)
             self._saveToFile(filePath, data)
-        except:
+        except Exception:
             printExc()
             self.lastError = _("Error writing file \"%s\".\n") % filePath
             ret = False
@@ -251,7 +251,7 @@ class IPTVFavourites:
             filePath = os_path.join(self.favDir, IPTVFavourites.GROUPS_FILE_NAME)
             data = json.dumps(groups)
             self._saveToFile(filePath, data)
-        except:
+        except Exception:
             self.lastError = _("Error writing file \"%s\".\n") % filePath
             ret = False
         return ret

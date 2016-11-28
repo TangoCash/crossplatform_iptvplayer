@@ -62,6 +62,7 @@ class StreamLiveTo(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'StreamLiveTo.tv', 'cookie':'streamliveto.cookie'})
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}
+        self.DEFAULT_ICON_URL = self.MAIN_URL + 'images/logo.png' 
         
     def _getFullUrl(self, url):
         if 0 < len(url):
@@ -467,7 +468,7 @@ class IPTVHost(CHostBase):
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
         icon        =  cItem.get('icon', '')
-        
+        if icon == '':  icon = self.host.DEFAULT_ICON_URL
         return CDisplayListItem(name = title,
                                     description = description,
                                     type = type,

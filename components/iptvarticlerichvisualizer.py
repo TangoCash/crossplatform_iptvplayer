@@ -117,7 +117,7 @@ class IPTVArticleRichVisualizer(Screen):
         self.cover = {'src':'', 'downloader':None, 'files_to_remove':[], 'image_path':''}
         try:
             self.cover['image_path'] = os.path.join(addParams['buffering_path'], '.iptv_buffering.jpg')
-        except: printExc()
+        except Exception: printExc()
         #############################################
         
         #############################################
@@ -128,7 +128,7 @@ class IPTVArticleRichVisualizer(Screen):
                 spinnerName = "spinner"
                 if idx: spinnerName += '_%d' % idx 
                 self[spinnerName] = Cover3()
-        except: printExc()
+        except Exception: printExc()
         self.spinner = {}
         self.spinner["pixmap"] = [LoadPixmap(GetIconDir('radio_button_on.png')), LoadPixmap(GetIconDir('radio_button_off.png'))]
         # spinner timer
@@ -231,7 +231,7 @@ class IPTVArticleRichVisualizer(Screen):
         for filePath in self.cover['files_to_remove']:
             if fileExists(filePath):
                 try: os.remove(filePath)
-                except: printDBG('Problem with removing old buffering file')
+                except Exception: printDBG('Problem with removing old buffering file')
     #################################################
     
     #######################################################################
@@ -244,7 +244,7 @@ class IPTVArticleRichVisualizer(Screen):
                 for idx in range(4):
                     spinnerName = 'spinner_%d' % (idx + 1)
                     self[spinnerName].setPixmap(self.spinner["pixmap"][1])
-        except: printExc()
+        except Exception: printExc()
         
     def showSpinner(self):
         if None != self.spinner["timer"]:
@@ -262,7 +262,7 @@ class IPTVArticleRichVisualizer(Screen):
                     spinnerName = "spinner"
                     if idx: spinnerName += '_%d' % idx
                     self[spinnerName].visible = visible
-        except: printExc()
+        except Exception: printExc()
         
     def updateSpinner(self):
         try:
@@ -277,7 +277,7 @@ class IPTVArticleRichVisualizer(Screen):
                     self.spinner["timer"].start(self.spinner["timer_interval"], True)
                     return
             self.hideSpinner()
-        except: printExc()
+        except Exception: printExc()
     #######################################################################
     
     #######################################################################

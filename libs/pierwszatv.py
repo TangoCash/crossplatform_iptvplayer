@@ -23,7 +23,7 @@ import random
 import string
 import base64
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 from time import time
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 from binascii import hexlify, unhexlify, a2b_hex
@@ -306,7 +306,7 @@ class PierwszaTVApi:
                 #return []
                 return [{'name':'pierwsza_hls', 'url':vidUrl}]
             
-        except:
+        except Exception:
             printExc()
             return []
         

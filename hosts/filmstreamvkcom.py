@@ -45,7 +45,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'filmstreamvk.com'
+    return 'http://filmstreamvk.com/'
 
 class FilmstreamvkCom(CBaseHostClass):
     HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
@@ -250,7 +250,7 @@ class FilmstreamvkCom(CBaseHostClass):
                 if url.startswith('http'):
                     urlTab.append({'name': name, 'url':url, 'need_resolve':1})
         
-        if 1 == len(urlTab) and 'filmstreamvk.com' in urlTab[0]['url']:
+        if 1 == len(urlTab) and 'filmstreamvk' in self.up.getDomain(urlTab[0]['url']):
             sts, data = self.cm.getPage(urlTab[0]['url'])
             if not sts: return urlTab
             mainName = urlTab[0]['name']
@@ -265,7 +265,7 @@ class FilmstreamvkCom(CBaseHostClass):
         urlTab = []
         
         videoUrl = ''
-        if 'filmstreamvk.com' in url:
+        if 'filmstreamvk' in self.up.getDomain(url):
             sts, data = self.cm.getPage(url)
             if not sts: return []
             tmoUrlTab = self._getBaseVideoLink(data)

@@ -29,7 +29,7 @@ def download(url, file):
     try:
         (tmpfile, headers) = urllib.urlretrieve(url, file)
         return 0,str(headers)
-    except:
+    except Exception:
         return 2,str( formatExceptionInfo() )
 
 if __name__ == "__main__":
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     try:
         params = sys.argv[1].split('?')[1]
         CheckVer(params)
-    except:
+    except Exception:
         pass
 
     sts,data = download(sys.argv[1], sys.argv[2])

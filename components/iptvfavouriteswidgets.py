@@ -263,7 +263,7 @@ class IPTVFavouritesMainWidget(Screen):
             self.menu = ":groups:"
             self.displayList()
             try: self["list"].moveToIndex(self.prevIdx)
-            except: pass
+            except Exception: pass
             
     def askForSave(self):
         self.session.openWithCallback(self.save, MessageBox, text = _("Save changes?"), type = MessageBox.TYPE_YESNO)
@@ -289,16 +289,16 @@ class IPTVFavouritesMainWidget(Screen):
             
             self.menu = sel.privateData
             try: self["title"].setText(_("Items in group \"%s\"") % self.favourites.getGroup(self.menu)['title'])
-            except: printExc()
+            except Exception: printExc()
             self["label_red"].setText(_("Remove item"))
             self["label_yellow"].setText(_("Move item"))
             self["label_green"].setText(_("Add item to group"))
             
             try: self.prevIdx = self["list"].getCurrentIndex()
-            except: self.prevIdx = 0
+            except Exception: self.prevIdx = 0
             self.displayList()
             try: self["list"].moveToIndex(0)
-            except: pass
+            except Exception: pass
             
     def keyRed(self):
         if self.reorderingMode: return
@@ -336,7 +336,7 @@ class IPTVFavouritesMainWidget(Screen):
             self.modified = True
             self.displayList()
             try: self["list"].moveToIndex( len(self.favourites.getGroups())-1 )
-            except: pass
+            except Exception: pass
             
     def _itemCloned(self, ret):
         if ret: self.modified = True
@@ -377,7 +377,7 @@ class IPTVFavouritesMainWidget(Screen):
     def getSelectedItem(self):
         sel = None
         try: sel = self["list"].l.getCurrentSelection()[0]
-        except: pass
+        except Exception: pass
         return sel
     
     

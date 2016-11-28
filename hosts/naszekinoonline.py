@@ -152,9 +152,14 @@ class NaszeKinoOnline(CBaseHostClass):
         perPage = 30
         page = cItem.get('page', 1)
         
-        baseUrl = cItem['url']
+        tmp = cItem['url'].split('?')
+        baseUrl = tmp[0]
+        if len(tmp) == 2:
+            getParams = tmp[1] + '&'
+        else: getParams = ''
+            
         if page > 1: baseUrl += '/page{0}'.format(page)
-        baseUrl += '?s=&pp={0}&'.format(perPage)
+        baseUrl += '?%ss=&pp={0}&'.format(getParams, perPage)
         
         if 'daysprune' in cItem:
             baseUrl += 'daysprune={0}&'.format(cItem['daysprune'])
@@ -183,8 +188,9 @@ class NaszeKinoOnline(CBaseHostClass):
             icon   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''<img\s*class="preview"\s*src=['"]([^'^"]+?)['"]''')[0])
             title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3', '</h3>')[1])
             desc   = self.cleanHtmlStr(item.replace('</td>', '[/br]').replace('<br />', '[/br]'))
+            prefix = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<img\s+src=['"][^'^"]+?/prefix/[^'^"]+?['"][^>]+?alt=['"]([^'^"]+?)['"]''')[0])
             params = dict(cItem)
-            params.update({'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            params.update({'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':prefix + ' ' + desc})
             self.addDir(params)
             
         if nextPage:
@@ -195,7 +201,8 @@ class NaszeKinoOnline(CBaseHostClass):
     def listThreads2(self, cItem, nextCategory):
         printDBG("NaszeKinoOnline.listThreads2")
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        baseUrl = cItem['url']
+        sts, data = self.cm.getPage(baseUrl, self.defaultParams)
         if not sts: return
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="blockrow"', '</div>', withMarkers=False)[1]
@@ -213,8 +220,11 @@ class NaszeKinoOnline(CBaseHostClass):
         
         page = cItem.get('page', 1)
         
-        baseUrl = cItem['url']
+        tmp = cItem['url'].split('?')
+        baseUrl = tmp[0]
         if page > 1: baseUrl += '/page{0}'.format(page)
+        if len(tmp) == 2:
+            baseUrl += '?' + tmp[1]
         
         sts, data = self.cm.getPage(baseUrl, self.defaultParams)
         if not sts: return
@@ -227,9 +237,6 @@ class NaszeKinoOnline(CBaseHostClass):
         ret = {'names':[], 'links':{}}
         desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="bbcode_quote_container"></div>', '</div>', withMarkers=False)[1].replace('<br />', '[/br]'))       
         mainIcon = self.cm.ph.getDataBeetwenMarkers(data, '<meta name="description"', '>')[1]
-        printDBG('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
-        printDBG(mainIcon)
-        printDBG('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
         mainIcon = self.cm.ph.getSearchGroups(mainIcon, '''(https?://[^\s^"^'^<^>^:]+\.(?:jpg|png|jpeg))''')[0]
         
         tmpTab0 = self.cm.ph.getAllItemsBeetwenMarkers(data, '<blockquote', '</blockquote>', withMarkers=True, caseSensitive=False)
@@ -289,22 +296,42 @@ class NaszeKinoOnline(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("NaszeKinoOnline.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
-        params = dict(self.defaultParams)
-        params.update({'return_data':False})
+        if 'url' not in cItem:
+            params = dict(self.defaultParams)
+            baseUrl = self.getFullUrl('search.php?do=process')
+            post_data = {'do':'process', 'query': searchPattern, 'titleonly':'1'}
+            
+            sts, data = self.cm.getPage(self.MAIN_URL, params)
+            if not sts: return
+            
+            if self.login != '' and self.password != '':
+                securitytoken = self.cm.ph.getSearchGroups(data, '''var\s+SECURITYTOKEN\s+=\s+['"]([^'^"]+?)['"]''')[0]
+                post_data['securitytoken'] = securitytoken
+            
+            params.update({'return_data':False})
+            sts, response = self.cm.getPage(baseUrl, params, post_data)
+            if not sts: return
+            try:
+                newUrl = response.geturl()
+                response.close()
+            except Exception:
+                printExc()
+                return
+                
+            if self.cm.isValidUrl(newUrl):
+                cItem = dict(cItem)
+                cItem['url'] = newUrl
         
-        baseUrl = self.getFullUrl('search.php?do=process')
-        post_data = {'do':'process', 'query': searchPattern, 'titleonly':'1'}
-        sts, response = self.cm.getPage(baseUrl, params, post_data)
-        if not sts: return
-        try:
-            newUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return
+        page = cItem.get('page', 1)
+        baseUrl = cItem['url']
+        if page > 1: baseUrl += '&pp=&page={0}'.format(page)
         
-        sts, data = self.cm.getPage(newUrl, self.defaultParams)
+        sts, data = self.cm.getPage(baseUrl, self.defaultParams)
         if not sts: return
+        
+        if None != re.search('<a[^>]+rel="next"', data):
+            nextPage = True
+        else: nextPage = False
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ol id="searchbits"', '</ol>', withMarkers=False)[1]
         data = data.split('<li class="imodselector')
@@ -316,8 +343,14 @@ class NaszeKinoOnline(CBaseHostClass):
             icon   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''<img\s*class="preview"\s*src=['"]([^'^"]+?)['"]''')[0])
             title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3', '</h3>')[1])
             desc   = self.cleanHtmlStr(item.replace('</td>', '[/br]').replace('<br />', '[/br]'))
+            prefix = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<img\s+src=['"][^'^"]+?/prefix/[^'^"]+?['"][^>]+?alt=['"]([^'^"]+?)['"]''')[0])
             params = dict(cItem)
-            params.update({'good_for_fav': True, 'category':'list_posts', 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            params.update({'good_for_fav': True, 'category':'list_posts', 'title':title, 'url':url, 'icon':icon, 'desc': prefix + '[/br]' + desc})
+            self.addDir(params)
+            
+        if nextPage:
+            params = dict(cItem)
+            params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page + 1})
             self.addDir(params)
     
     def getLinksForVideo(self, cItem):
@@ -424,6 +457,8 @@ class NaszeKinoOnline(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
+            if self.login == '' or self.password == '':
+                rm(self.COOKIE_FILE)
             self.listCategories({'name':'category'}, 'list_threads')
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif 'list_threads' == category:

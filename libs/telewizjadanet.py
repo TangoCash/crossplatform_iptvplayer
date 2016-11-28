@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################
@@ -78,7 +78,7 @@ class TelewizjadaNetApi:
             if not sts: return []
             try:
                 self.cacheList = byteify(json.loads(data))
-            except:
+            except Exception:
                 printExc()
                 
         def __addChannel(item):
@@ -107,7 +107,7 @@ class TelewizjadaNetApi:
                     params = dict(cItem)
                     params.update({'title':_('Dla dorosłych'), 'adult_cat':True, 'get_list':False, 'pin_locked':True})
                     channelsTab.append(params)
-            except:
+            except Exception:
                 printExc()
         else:
             try:
@@ -126,7 +126,7 @@ class TelewizjadaNetApi:
                     idx = cItem.get('cat_id', -1)
                     for item in self.cacheList['categories'][idx]['Categorychannels']:
                         __addChannel(item)
-            except:
+            except Exception:
                 printExc()
         return channelsTab
         
@@ -148,7 +148,7 @@ class TelewizjadaNetApi:
         try:
             data = byteify(json.loads(data))
             vid_url = data['url']
-        except:
+        except Exception:
             printExc()
             return []
         
@@ -163,7 +163,7 @@ class TelewizjadaNetApi:
         try:
             vid_url = byteify(json.loads(data))
             vid_url = vid_url['url']
-        except:
+        except Exception:
             vid_url = data
         
         urlsTab = []
@@ -175,6 +175,6 @@ class TelewizjadaNetApi:
                 statid = self.cm.getCookieItem(self.COOKIE_FILE, 'statid')
                 url = strwithmeta(vid_url, {'Cookie':'sessid=%s; msec=%s; statid=%s;' % (sessid, msec, statid)})
                 urlsTab = getDirectM3U8Playlist(url)
-            except:
+            except Exception:
                 SetIPTVPlayerLastHostError("Problem z dostępem do pliku \"%\".\nSprawdź, czy masz wolne miejsce na pliki cookies." % self.COOKIE_FILE)
         return urlsTab

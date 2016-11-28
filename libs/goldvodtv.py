@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 
 from os import path as os_path
 ############################################
@@ -108,7 +108,10 @@ class GoldVodTVApi:
         '117':'nSport', '116':'Extreme Sport', '117':'Discovery Turbo', '118':'MGM', '109':'AXN Black', '106':'nSport', '134':'TVP ABC', 
         '135':'Puls 2', '113':'Polsat Sport Extra', '121':'NATGEO people HD', '119':'FilmBox HD', '139':'TV4', '146':'ATM rozrywka',
         '147':'Polsat Cafe HD', '123':'FilmBox Premium', '141':'JimJam Polsat', '167':'Animal Planet HD', '156':'Discovery life',
-        '165':'Discovery life', '169':'Nat Geo Wild HD', '170':'Superstacja', '179':'4Fun TV', '126':'Polsat Play', '140':'Polsat Sport News'}
+        '165':'Discovery life', '169':'Nat Geo Wild HD', '170':'Superstacja', '179':'4Fun TV', '126':'Polsat Play', '140':'Polsat Sport News',
+        '206':'VOX Music TV', '193':'Filmbox', '192':'Filmbox Premium', '191':'8TV', '190':'Disco Polo Music', '202':'Polsat Sport Extra',
+        '203':'Polsat Sport HD', '194':'Filmbox Family', '181':'Polsat 2', '204':'Polsat HD', '120':'Discovery Science', '205':'Canal+',
+        '172':'Eleven Extra HD', '171':'Cartoon Network'}
 
         sts, data = self.cm.getPage(self.MAIN_URL + 'kanaly.html?show=on', self.http_params)
         if not sts: return []

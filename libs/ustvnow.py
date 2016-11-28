@@ -19,7 +19,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 import re
 import urllib
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 from datetime import datetime, timedelta
 ############################################
 
@@ -108,7 +108,7 @@ class UstvnowApi:
                 params['af']            = item['af']
                 channelList.append(params)
                 
-        except:
+        except Exception:
             printExc()
         return channelList
     
@@ -170,7 +170,7 @@ class UstvnowApi:
                             if utc_date.time().second == 59:
                                 utc_date = utc_date + timedelta(0,1)
                             channelsTab[idx]['desc'] += '[/br][/br] [%s][/br]%s[/br]%s[/br]%s[/br]%s' % (utc_date.strftime('%Y-%m-%d %H:%M:%S'), item.get('title', ''), item.get('synopsis', ''), item.get('description', ''), item.get('episode_title', ''))
-                except:
+                except Exception:
                     printExc()
             
         return channelsTab

@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################
@@ -73,8 +73,8 @@ class LivespottingTvApi:
                     if camId.startswith('LS_'): camId = camId[3:]
                     url   =  'rtmp://stream.livespotting.tv/windit-edge/%s.stream live=1' % camId
                     list.append({'title':title, 'url':url, 'icon':icon, 'desc':desc})
-                except: printExc()
-        except:
+                except Exception: printExc()
+        except Exception:
             printExc()
 
         return list

@@ -145,7 +145,7 @@ class IPTVPlayerBufferingWidget(Screen):
         try:
             url = strwithmeta(url)
             if (url.startswith('rtmp') or url.split('?')[0].endswith('.f4m')) and url.meta.get('iptv_livestream', True): return True
-        except: printExc()
+        except Exception: printExc()
         return False
         
     def _startDownloader(self, sts, reason):
@@ -268,7 +268,7 @@ class IPTVPlayerBufferingWidget(Screen):
                 if self.mainTimerEnabled:
                     self.mainTimer.stop()
                     self.mainTimerEnabled = False
-        except: printDBG("setMainTimerSts status[%r] EXCEPTION" % start)
+        except Exception: printDBG("setMainTimerSts status[%r] EXCEPTION" % start)
             
     def updateDisplay(self):
         printDBG("updateDisplay")
@@ -365,7 +365,7 @@ class IPTVPlayerBufferingWidget(Screen):
         try:
             self.mainTimer_conn = None
             self.mainTimer = None
-        except:   printExc()
+        except Exception:   printExc()
 
         self.onClose.remove(self.__onClose)
         #self.onLayoutFinish.remove(self.doStart)
@@ -375,10 +375,10 @@ class IPTVPlayerBufferingWidget(Screen):
     def _cleanedUp(self):
         if fileExists(self.filePath):
             try: os_remove(self.filePath)
-            except: printDBG('Problem with removing old buffering file')
+            except Exception: printDBG('Problem with removing old buffering file')
         if fileExists(self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE):
             try: os_remove(self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE)
-            except: printDBG('Problem with removing gstreamer flag file [%s]' % self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE)
+            except Exception: printDBG('Problem with removing gstreamer flag file [%s]' % self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE)
     '''
     def doStart(self):
         if not self.onStartCalled:

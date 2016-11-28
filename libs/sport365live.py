@@ -83,6 +83,42 @@ class Sport365LiveApi:
         cipher = AES_CBC(key=key, keySize=32)
         return cipher.decrypt(encrypted, iv)
         
+    def refreshAdvert(self):
+        url = self.getFullUrl('home')
+        sts, data = self.cm.getPage(url, self.http_params)
+        if not sts: return
+        printDBG(data)
+        
+        data = re.compile('''src=['"](http[^"^']*?advert[^"^']*?\.js[^'^"]*?)["']''').findall(data)
+        params = dict(self.http_params)
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = self.getFullUrl('home')
+        for url in data:
+            sts, data = self.cm.getPage(url, params)
+        return
+        
+        millis = str(int(time()*1000))
+        rand = str(int(random.random() * 100000000))
+        url = "http://adbetnet.advertserve.com/servlet/view/dynamic/javascript/zone?zid=281&pid=4&resolution=1920x1080&random=" + rand + "&millis=" + millis + "&referrer=http%3A%2F%2Fwww.sport365.live%2Fen%2Fhome"
+        
+        params = dict(self.http_params)
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = self.getFullUrl('home')
+        
+        sts, data = self.cm.getPage(url, params)
+        if not sts: return
+        
+        #printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        #printDBG(data)
+        #printDBG("=========================================================")
+        
+        data = data.replace('\\"', '"')
+        UTM = self.cm.ph.getSearchGroups(data, '''UTM\s*=\s*['"]([^'^"]+?)['"]''')[0]
+        URL = self.cm.ph.getSearchGroups(data, '''URL\s*=\s*['"]([^'^"]+?)['"]''')[0]
+        url = URL + 'http%3A%2F%2Fwww.sport365.live%2Fen%2Fhome' + UTM
+        sts, data = self.cm.getPage(url, params)
+        if not sts: return
+        
     def getMainCategries(self, cItem):
         printDBG("Sport365LiveApi.getMainCategries")
         channelsTab = []
@@ -155,6 +191,7 @@ class Sport365LiveApi:
         
     def getChannelsList(self, cItem):
         printDBG("Sport365LiveApi.getChannelsList")
+        self.refreshAdvert()
         
         category = cItem.get('priv_cat', None)
         if None == category:
@@ -259,6 +296,8 @@ class Sport365LiveApi:
                 playerUrl = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](http[^"^']+?)['"]''', 1, True)[0] )
                 
                 urlsTab = self.up.getVideoLinkExt(strwithmeta(playerUrl, {'aes_key':aes}))
+                if len(urlsTab):
+                    break
                 
             except Exception:
                 printExc()

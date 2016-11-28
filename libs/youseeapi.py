@@ -24,7 +24,7 @@ import urllib2
 import re
 try:
     import simplejson
-except:
+except Exception:
     import json as simplejson
 
 
@@ -74,7 +74,7 @@ class YouSeeApi(object):
 
         try:
             return simplejson.loads(json)
-        except:
+        except Exception:
             return None
 
 

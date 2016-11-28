@@ -21,7 +21,7 @@ try:
     from hashlib import md5
     def hex_md5(e):
         return md5(e).hexdigest()
-except:
+except Exception:
     from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.md5Hash import MD5 as md5
     def hex_md5(e):
         hashAlg = MD5()
@@ -278,7 +278,7 @@ def unpackJS(data, decryptionFun, addCode=''):
     paramsCode += 'paramsTouple = (' + data + ')'
     try:
         paramsAlgoObj = compile(paramsCode, '', 'exec')
-    except:
+    except Exception:
         printExc('unpackJS compile algo code EXCEPTION')
         return ''
     vGlobals = {"__builtins__": None, 'string': string, 'decodeURIComponent':urllib.unquote, 'unescape':urllib.unquote}
@@ -286,13 +286,13 @@ def unpackJS(data, decryptionFun, addCode=''):
 
     try:
         exec( paramsAlgoObj, vGlobals, vLocals )
-    except:
+    except Exception:
         printExc('unpackJS exec code EXCEPTION')
         return ''
     # decrypt JS Player params
     try:
         return decryptionFun(*vLocals['paramsTouple'])
-    except:
+    except Exception:
         printExc('decryptPlayerParams EXCEPTION')
     return ''
     
@@ -367,14 +367,14 @@ def VIDEOWEED_unpackJSPlayerParams(code):
         paramsAlgoObj = compile(paramsCode, '', 'exec')
         try:
             paramsAlgoObj = compile(paramsCode, '', 'exec')
-        except:
+        except Exception:
             printDBG('unpackJSPlayerParams compile algo code EXCEPTION')
             return ''
         vGlobals = {"__builtins__": None, 'string': string}
         vLocals = { 'paramsTouple': None }
         try:
             exec( paramsAlgoObj, vGlobals, vLocals )
-        except:
+        except Exception:
             printDBG('unpackJSPlayerParams exec code EXCEPTION')
             return ''
         # decrypt JS Player params
@@ -383,7 +383,7 @@ def VIDEOWEED_unpackJSPlayerParams(code):
             code = VIDEOWEED_decryptPlayerParams(*vLocals['paramsTouple'])
             if -1 == code.find('eval'):
                 return code
-        except:
+        except Exception:
             printDBG('decryptPlayerParams EXCEPTION')
             return ''
     return ''
@@ -393,14 +393,14 @@ def pythonUnescape(data):
     sourceCode = "retData = '''%s'''" % data
     try:
         code = compile(sourceCode, '', 'exec')
-    except:
+    except Exception:
         printExc('pythonUnescape compile algo code EXCEPTION')
         return ''
     vGlobals = {"__builtins__": None, 'string': string}
     vLocals = { 'paramsTouple': None }
     try:
         exec( code, vGlobals, vLocals )
-    except:
+    except Exception:
         printExc('pythonUnescape exec code EXCEPTION')
         return ''
     return vLocals['retData']
@@ -511,7 +511,7 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
         else:
             item = {'name':'m3u8', 'url':M3U8Url, 'codec':'unknown', 'with':0, 'heigth':0, 'bitrate':'unknown'}
             retPlaylists.append(item)
-    except:
+    except Exception:
         printExc()
     return retPlaylists
     

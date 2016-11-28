@@ -92,6 +92,10 @@ class TvpVod(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'TvpVod', 'cookie':'tvpvod.cookie', 'cookie_type':'MozillaCookieJar', 'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.tvpVodProxyEnable.value})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':TvpVod.HTTP_HEADERS}
         self.loggedIn = None
+        self.fixUrlMap = {'nadobre.tvp.pl':        'http://vod.tvp.pl/8514270/na-dobre-i-na-zle',
+                          'mjakmilosc.tvp.pl':     'http://vod.tvp.pl/1654521/m-jak-milosc',
+                          'barwyszczescia.tvp.pl': 'http://vod.tvp.pl/8514286/barwy-szczescia',
+                          'nasygnale.tvp.pl':      'http://vod.tvp.pl/13883615/na-sygnale'}
         
     def _getPage(self, url, addParams = {}, post_data = None):
         
@@ -360,6 +364,8 @@ class TvpVod(CBaseHostClass):
                 if '' == tmp: tmp = self.cm.ph.getDataBeetwenMarkers(tmp, '<strong class="shortTitle">', '</strong>', False)[1]
                 tmp = self.cm.ph.getSearchGroups(tmp, 'href="([^"]+?)"[^>]+?>([^<]+?)<', 2)
                 url = tmp[0]
+                # quick fix
+                url = self.fixUrlMap.get(self.up.getDomain(url), url)
                 title = tmp[1]
                 if 'class="new"' in item: title += _(', nowość')
                 if 'class="pay"' in item: title += _(', materiał płatny')

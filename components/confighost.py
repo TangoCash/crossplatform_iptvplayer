@@ -133,7 +133,7 @@ class ConfigHostsMenu(ConfigBaseWidget):
                     else:
                         self.session.open(ConfigHostMenu, hostName = hostName)
                         addConf = True
-                except:
+                except Exception:
                     printExc('ConfigMenu host "%s" does not have method GetConfigList' % hostName)
                 if not addConf:
                     self.hostsConfigsAvailableList[curIndex] = False
@@ -220,5 +220,5 @@ class ConfigHostsMenu(ConfigBaseWidget):
                     self.privacePoliceWorningList.append( optionEntry )
                 self.hostsConfigsAvailableList.append(True)
                 self.listOfHostsNames.append(hostName)
-            except:
+            except Exception:
                 printExc()

@@ -253,7 +253,7 @@ class Vevo(CBaseHostClass):
             if 'viewCount' in item: desc.append( _('view count: %s') % item['viewCount'] )
             if 'copyright' in item: desc.append( item['copyright'] )
             desc = ', '.join(desc)
-        params.update({'title':item['title'], 'icon':icon, 'desc':desc, 'isrc':item['isrc']})
+        params.update({'title':item['title'], 'icon':self.getFullUrl(icon), 'desc':desc, 'isrc':item['isrc']})
         self.addVideo(params)
         
     def addPlaylistItem(self, cItem, item):
@@ -300,7 +300,7 @@ class Vevo(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, 'window.__INITIAL_STORE__ = ', '</script>', False)[1]
+        data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('window\.__INITIAL_STORE__\s*=\s*'), re.compile('</script>'), False)[1]
         try:
             data = byteify(json.loads(data.strip()[:-1]))
             id = cItem['url'].split('/')[-1]

@@ -19,7 +19,7 @@ import re
 import codecs
 import time
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 from os import remove as os_remove, path as os_path
 ###################################################
 
@@ -83,13 +83,13 @@ class IPTVSubtitlesHandler:
                     try:
                         tmp = int(st[0].strip())
                         i = 1
-                    except:
+                    except Exception:
                         if '' == st[0]: i = 1
                         else: i = 0
                     if len(st)<(i+2): continue
                     split = st[i].split(' --> ')
                     subAtoms.append( { 'start':self._srtTc2ms(split[0].strip()), 'end':self._srtTc2ms(split[1].strip()), 'text':self._srtClearText('\n'.join(j for j in st[i+1:len(st)])) } )
-                except:
+                except Exception:
                     printExc("Line number [%d]" % line)
         return subAtoms
         
@@ -161,7 +161,7 @@ class IPTVSubtitlesHandler:
         cacheFile = self._getCacheFileName(filePath)
         try:
             os_remove(cacheFile)
-        except:
+        except Exception:
             printExc()
             
     def _getCacheFileName(self, filePath):
@@ -179,9 +179,9 @@ class IPTVSubtitlesHandler:
                 if len(self.subAtoms):
                     sts = True
                     printDBG("IPTVSubtitlesHandler._loadFromCache orgFilePath[%s] --> cacheFile[%s]" % (orgFilePath, filePath))
-            except:
+            except Exception:
                 printExc()
-        except:
+        except Exception:
             printExc()
         return sts
         
@@ -192,7 +192,7 @@ class IPTVSubtitlesHandler:
             with codecs.open(filePath, 'w', encoding) as fp:
                 fp.write(json.dumps(self.subAtoms))
             printDBG("IPTVSubtitlesHandler._saveToCache orgFilePath[%s] --> cacheFile[%s]" % (orgFilePath, filePath))
-        except: 
+        except Exception: 
             printExc()
             
     def _fillPailsOfAtoms(self):
@@ -271,7 +271,7 @@ class IPTVSubtitlesHandler:
                     elif filePath.endswith('.mpl'):
                         self.subAtoms = self._mplToAtoms(subText)
                         sts = True
-            except:
+            except Exception:
                 printExc()
         else:
             saveCache = False
@@ -321,7 +321,7 @@ class IPTVEmbeddedSubtitlesHandler:
                         self.pailsOfAtoms[tmp] = [idx]
                     elif idx not in self.pailsOfAtoms[tmp]:
                         self.pailsOfAtoms[tmp].append( idx )
-        except:
+        except Exception:
             pass
             
     def getSubtitles(self, currTimeMS, prevMarker):

@@ -320,7 +320,7 @@ class CHostBase(IHost):
                     sts, prevPattern = CSearchHistoryHelper.loadLastPattern()
                     if sts and prevPattern != self.searchPattern:
                         CSearchHistoryHelper.saveLastPattern(self.searchPattern)
-            except:
+            except Exception:
                 printExc()
         
         self.host.handleService(Index, refresh, self.searchPattern, self.searchType)
@@ -526,7 +526,7 @@ class CBaseHostClass:
                 params = dict(baseItem)
                 params.update({'title': pattern, 'search_type': search_type,  desc_key: plot})
                 self.addDir(params)
-            except: printExc()
+            except Exception: printExc()
             
     def setInitListFromFavouriteItem(self, fav_data):
         return False

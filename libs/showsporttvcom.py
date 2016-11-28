@@ -24,7 +24,7 @@ import string
 import base64
 import datetime
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 
 ############################################
 

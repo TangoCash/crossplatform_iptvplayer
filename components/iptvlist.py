@@ -93,7 +93,7 @@ class IPTVMainNavigatorList(IPTVListComponentBase):
         
         self.screenwidth = getDesktop(0).size().width()
         try: self.font = skin.fonts["iptvlistitem"]
-        except:
+        except Exception:
             if self.screenwidth and self.screenwidth == 1920: self.font = ("Regular", 28, 40, 0)
             else: self.font = ("Regular", 18, 35, 0)
         self.l.setFont(0, gFont("Regular", 40))
@@ -111,7 +111,7 @@ class IPTVMainNavigatorList(IPTVListComponentBase):
             try:
                 pixFile = self.ICONS_FILESNAMES.get(key, None)
                 if None != pixFile: self.dictPIX[key] = LoadPixmap(cached=True, path=GetIconDir(pixFile))
-            except: printExc()
+            except Exception: printExc()
         
     def onDestroy(self):
         self._nullPIX()

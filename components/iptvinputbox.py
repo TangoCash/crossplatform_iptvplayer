@@ -50,6 +50,6 @@ class IPTVInputBoxWidget(InputBox):
         if 0 < len(self.icon.get('icon_path', '')):
             try:
                 self["cover"].updateIcon( self.icon['icon_path'] )
-            except:
+            except Exception:
                 printExc()
 #class IPTVInputBoxWidget

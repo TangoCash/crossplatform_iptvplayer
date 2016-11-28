@@ -11,7 +11,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayer
 import threading
 import traceback
 try: import ctypes
-except: pass
+except Exception: pass
 ###################################################
 
 gMainFunctionsQueueTab = [None, None]
@@ -66,7 +66,7 @@ class AsyncCall(object):
                         printDBG("AsyncCall._kill ********************************* PyThreadState_SetAsyncExc failed")
                     else:
                         printDBG("AsyncCall._kill ********************************* KILL OK")
-            except:
+            except Exception:
                 printDBG("AsyncCall._kill ********************************* exception")
 
     def kill(self):
@@ -93,7 +93,7 @@ class AsyncCall(object):
     def run(self, *args, **kwargs):
         try:
             result = self.Callable(*args, **kwargs)
-        except: 
+        except Exception: 
             self.mainLock.acquire()
             self.exceptStack = traceback.format_exc()
             self.mainLock.release()

@@ -66,7 +66,7 @@ class IPTVFileHost:
                             self.items.append(params)
                             continue
                     printDBG('IPTVFileHost.addFile wrong line[%d]' % (lineNum))
-        except:
+        except Exception:
             printExc()
                 
     def getGroups(self, sort=False):

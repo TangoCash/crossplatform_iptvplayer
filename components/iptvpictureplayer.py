@@ -155,7 +155,7 @@ class IPTVPicturePlayerWidget(Screen):
         self.recordingPath = pathForRecordings
         try:
             self.filePath = os.path.join(pathForRecordings, '.iptv_buffering.jpg')
-        except:
+        except Exception:
             self.filePath = ''
             printExc()
         
@@ -224,7 +224,7 @@ class IPTVPicturePlayerWidget(Screen):
         self.onEnd()
         if None != self.mainTimer:
             try: self.mainTimer.stop()
-            except: pass
+            except Exception: pass
         self.mainTimer_conn = None
         self.mainTimer = None
         
@@ -351,7 +351,7 @@ class IPTVPicturePlayerWidget(Screen):
                 if self.mainTimerEnabled:
                     self.mainTimer.stop()
                     self.mainTimerEnabled = False
-        except:
+        except Exception:
             printExc("IPTVPicturePlayerWidget.setMainTimerSts status[%r] EXCEPTION" % start)
             
     def updateDisplay(self):
@@ -367,7 +367,7 @@ class IPTVPicturePlayerWidget(Screen):
             filePath = self.filePath + item
             if fileExists(filePath):
                 try: os.remove(filePath)
-                except: printDBG('Problem with removing old buffering file')
+                except Exception: printDBG('Problem with removing old buffering file')
             
     def doStart(self):
         self.onShow.remove(self.doStart)

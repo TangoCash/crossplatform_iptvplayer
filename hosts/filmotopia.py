@@ -169,7 +169,10 @@ class Filmotopia(CBaseHostClass):
             season = self.seasons[-1]['season']
             tmp = item.split('<button class="download-button">')
             linksUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data="([^"]+?)"')[0]
-            linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(linksUrl)
+            if '' != linksUrl:  linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(linksUrl)
+            if '' == linksUrl:
+                linksUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data-open="([^"]+?)"')[0]
+                if '' != linksUrl: linksUrl = 'http://openload.co/embed/{0}/'.format(linksUrl)
             if '' == linksUrl: linksUrl = self.cm.ph.getSearchGroups(item, '''['"](http[^'^"]+?openload[^'^"]+?)['"]''')[0]
             if '' == linksUrl: continue
             episodeTitle = self.cleanHtmlStr( tmp[0] )

@@ -98,7 +98,7 @@ class IPTVDirectorySelectorWidget(Screen):
                 if tmp == currDir:
                     break
                 currDir = tmp
-        except:
+        except Exception:
             currDir = ''
             printExc()
         
@@ -135,7 +135,7 @@ class IPTVDirectorySelectorWidget(Screen):
     def prepareCmd(self):
         lsdirPath = GetBinDir("lsdir")
         try: os_chmod(lsdirPath, 0777)
-        except: printExc()
+        except Exception: printExc()
         cmd = '%s "%s" dl d' % (lsdirPath, self.currDir)
         return cmd
         
@@ -209,7 +209,7 @@ class IPTVDirectorySelectorWidget(Screen):
     def requestCancel(self):
         printDBG(">>>REQUEST CANCEL<<<")
         try: running = self.console.running()
-        except: running = True
+        except Exception: running = True
         if not self.console or not running:
             self._iptvDoClose(None)
         else:
@@ -261,7 +261,7 @@ class IPTVDirectorySelectorWidget(Screen):
             sts = False
             if IsValidFileName(newDirName):
                 try: sts,msg = mkdir(os_path.join(self.currDir, newDirName))
-                except: sts,msg = False, _("Exception occurs")
+                except Exception: sts,msg = False, _("Exception occurs")
             else:
                 msg = _("Invalid name.")
             if sts:
@@ -305,7 +305,7 @@ class IPTVFileSelectorWidget(IPTVDirectorySelectorWidget):
     def prepareCmd(self):
         lsdirPath = GetBinDir("lsdir")
         try: os_chmod(lsdirPath, 0777)
-        except: printExc()
+        except Exception: printExc()
         cmd = '%s "%s" drl dr' % (lsdirPath, self.currDir)
         return cmd
         
@@ -321,7 +321,7 @@ class IPTVFileSelectorWidget(IPTVDirectorySelectorWidget):
                     try:
                         if None != self.fileMatch and None == self.fileMatch.match(params[0]):
                             continue
-                    except:
+                    except Exception:
                         printExc()
                         continue
                 self.tmpList.append( CListItem(name=params[0], fullDir=params[3], type=type) )

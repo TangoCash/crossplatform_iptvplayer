@@ -260,7 +260,9 @@ class HoofootCom(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenMarkers(data, 'id="player"', '</div>', False)[1]
         videoUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, ignoreCase=True)[0]
         
-        if videoUrl.startswith('http'):
+        if videoUrl.startswith('//'):
+            videoUrl = 'http:' + videoUrl
+        if self.cm.isValidUrl(videoUrl):
             urlTab.extend(self.up.getVideoLinkExt(videoUrl))
         return urlTab
         

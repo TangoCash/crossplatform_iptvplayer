@@ -83,7 +83,7 @@ class DancetrippinTV(CBaseHostClass):
                 params = dict(cItem)
                 params.update({'url':url, 'title':title, 'icon':icon, 'desc':desc, 'good_for_fav':True})
                 self.addVideo(params)
-        except:
+        except Exception:
             printExc()
             
     def listVideos2(self, cItem):

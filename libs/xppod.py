@@ -42,7 +42,7 @@ def Decode(param):
                 break
             try:
                 loc_2 += unichr(loc_4[j])
-            except:
+            except Exception:
                 pass
             j = j + 1
 

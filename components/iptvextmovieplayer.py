@@ -50,8 +50,8 @@ from skin import parseColor, parseFont
 from datetime import timedelta
 try:
     try:    import json
-    except: import simplejson as json
-except:
+    except Exception: import simplejson as json
+except Exception:
     printExc()
 from os import chmod as os_chmod, path as os_path
 import re
@@ -339,7 +339,7 @@ class IPTVExtMoviePlayer(Screen):
         self['subSynchroLabel']        = Label("0.0s")
         self['subSynchroIcon']         = Cover3() 
         try: self.subHandler['synchro']['icon'] = LoadPixmap( GetIPTVDMImgDir("sub_synchro.png") )
-        except: printExc()
+        except Exception: printExc()
         self.hideSubSynchroControl()
         
         # VIDEO options
@@ -386,7 +386,7 @@ class IPTVExtMoviePlayer(Screen):
             else: self.playback['logoIcon']             = LoadPixmap( GetIPTVDMImgDir("playback_ffmpeg_logo.png") )
             self.playback['loopIcons']['On']  = LoadPixmap( GetIPTVDMImgDir("playback_loop_on.png") )
             self.playback['loopIcons']['Off'] = LoadPixmap( GetIPTVDMImgDir("playback_loop_off.png") )
-        except:
+        except Exception:
             printExc()
         
         # show hide info bar functionality
@@ -413,7 +413,7 @@ class IPTVExtMoviePlayer(Screen):
         self.underMessage = False
         
         try: self.autoHideTime = 1000 * int(self.configObj.getInfoBarTimeout())
-        except: self.autoHideTime = 1000
+        except Exception: self.autoHideTime = 1000
         
         self.fatalErrorOccurs  = False
         self.delayedClosure    = None
@@ -473,7 +473,7 @@ class IPTVExtMoviePlayer(Screen):
                     tmp = dir(eLabel)
                     if 'setBorderColor' in tmp:
                         self[subLabel].instance.setBorderWidth( 0 )
-                except: printExc()
+                except Exception: printExc()
             
             if 'shadow' in sub:
                 self[subLabel].instance.setShadowColor( parseColor(sub['shadow']['color']) )
@@ -493,7 +493,7 @@ class IPTVExtMoviePlayer(Screen):
                     self[subLabel].resize(eSize(getDesktop(0).size().width()-20, sub['box_height']))
                     self[subLabel].move( ePoint(10, getDesktop(0).size().height()-sub['pos']-sub['box_height']) )
                     self[subLabel].instance.move( ePoint(10, getDesktop(0).size().height()-sub['pos']-sub['box_height']) )
-                except:
+                except Exception:
                     printExc()
             self.setSubtitlesText(" ", False)
         self.setSubOffsetFromInfoBar()
@@ -530,7 +530,7 @@ class IPTVExtMoviePlayer(Screen):
         
         # set auto hide options
         try: self.autoHideTime = 1000 * int(self.configObj.getInfoBarTimeout())
-        except: self.autoHideTime = 1000
+        except Exception: self.autoHideTime = 1000
         
     def getE2AudioOptions(self):
         defAudioOptions  = {'ac3': GetE2AudioCodecMixOption('ac3'), 
@@ -731,7 +731,7 @@ class IPTVExtMoviePlayer(Screen):
             fileSRC = fileSRC[len(tmpMatch):].replace('//', '/')
         if fileExists(fileSRC) and not fileSRC.endswith('/.iptv_buffering.flv'):
             try: currDir, tail = os_path.split(fileSRC)
-            except: printExc()
+            except Exception: printExc()
             
             
         fileMatch = re.compile("^.*?(:?\.%s)$" % '|\.'.join( IPTVSubtitlesHandler.getSupportedFormats() ),  re.IGNORECASE)
@@ -763,7 +763,7 @@ class IPTVExtMoviePlayer(Screen):
         if None != filePath:
             lang = CParsingHelper.getSearchGroups(filePath, "_([a-z]{2})_[0-9]+?_[0-9]+?_[0-9]+?(:?\.%s)$" % '|\.'.join( IPTVSubtitlesHandler.getSupportedFormats() ))[0]
             try: currDir, fileName = os_path.split(filePath)
-            except: 
+            except Exception: 
                 printExc()
                 return
             trackIdx = -1
@@ -773,7 +773,7 @@ class IPTVExtMoviePlayer(Screen):
                     if os_path.samefile(tracks[idx]['path'], filePath):
                         trackIdx = idx
                         break
-                except: printExc()
+                except Exception: printExc()
             if -1 == trackIdx:
                 trackIdx = self.metaHandler.addSubtitleTrack( {"title":fileName, "id":"", "provider":"", "lang":lang, "delay_ms":0, "path":filePath} )
             self.metaHandler.setSubtitleIdx( trackIdx )
@@ -818,7 +818,7 @@ class IPTVExtMoviePlayer(Screen):
                             if fileExists(name + '.' + ext):
                                 subFile = name + '.' + ext
                                 break
-                    except:
+                    except Exception:
                         printExc()
                     if '' != subFile:
                         self.openSubtitlesFromFileCallback(subFile)
@@ -936,7 +936,7 @@ class IPTVExtMoviePlayer(Screen):
                     self[subLabel].instance.move( ePoint((desktopW-lW) / 2, desktopH - y - lH) )
                     y += lH + self.subConfig['line_spacing']
                     self[subLabel].show()
-                except:
+                except Exception:
                     printExc()
         
     def updateInfo(self):
@@ -1273,7 +1273,7 @@ class IPTVExtMoviePlayer(Screen):
                     #printDBG("Status object [%r]" % obj)
                     key = obj.keys()[0]
                     obj = obj[key]
-                except: 
+                except Exception: 
                     printExc(item)
                     continue
                     
@@ -1835,11 +1835,11 @@ class IPTVExtMoviePlayer(Screen):
         try:
             self.console.write( data, len(data) )
             return
-        except:
+        except Exception:
             try: 
                 self.console.write( data )
                 return
-            except:
+            except Exception:
                 printExc()
         msg = _("Fatal error: consoleWrite failed!")
         self.fatalErrorHandler(msg)

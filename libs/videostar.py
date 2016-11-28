@@ -15,7 +15,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 import re
 try:    import simplejson as json
-except: import json
+except Exception: import json
 import urllib
 ############################################
 
@@ -109,7 +109,7 @@ class VideoStarApi:
             try:
                 my_ip = self.cm.ph.getSearchGroups(data, 'name="checkip"[^>]+?value="([^"]+?)"')[0]
                 printDBG('getProxyGatewayIP my_ip[%s]' % my_ip)
-            except:
+            except Exception:
                 printExc()
         if '' == my_ip:
             self.sessionEx.open(MessageBox, _('Problem z uzyskaniem IP bramki proxy!'), type = MessageBox.TYPE_INFO, timeout = 10 )
@@ -181,7 +181,7 @@ class VideoStarApi:
                 data = byteify(json.loads(data))
                 if "ok" == data['status']:
                     self.channelsList = data['channels']
-            except:
+            except Exception:
                 printExc()
 
     def getVideoLink(self, channelID):
@@ -265,7 +265,7 @@ class VideoStarApi:
                                 meta['X-Forwarded-For'] = self.my_ip
                             meta['Cookie'] = self.cm.HEADER.get('Cookie', '')
                         urlsTab.append({'url': self.up.decorateUrl(url, meta), 'name': 'videostar hls', 'type':'hls'})
-            except:
+            except Exception:
                 printExc()
                 
             if 0 < len(urlsTab):

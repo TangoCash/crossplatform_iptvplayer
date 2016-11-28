@@ -16,7 +16,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 import re
 import urllib
 try:    import simplejson as json
-except: import json
+except Exception: import json
 ############################################
 
 ###################################################
@@ -86,7 +86,7 @@ class WeebTvApi:
             postdata = { 'username': username, 'userpassword': password } 
             sts, data = self.cm.getPage(url, WeebTvApi.DEFPARAMS, postdata)
             if sts: ret = json.loads(data)
-        except: printExc()
+        except Exception: printExc()
         return ret
     
     def _getStr(self, v, default=''):
@@ -132,8 +132,8 @@ class WeebTvApi:
                             title = '%s - %s %s' % (title, user, online)
                             params = {'url':channel, 'title':title, 'desc':desc, 'icon':image, 'rank':rank, 'bitrate':bitrate, 'user':user}
                             channelsList.append(params)
-                        except: printExc()
-            except: printExc()
+                        except Exception: printExc()
+            except Exception: printExc()
         return channelsList
     
     def getVideoLink(self, url):
@@ -176,7 +176,7 @@ class WeebTvApi:
                 
                 rtmp = str(rtmpLink) + '/' + str(playPath) + ' live=1 pageUrl=token swfUrl=' + str(token)
                 printDBG("||||||||||||||||||||||||||||| " + rtmp)
-        except: printExc()
+        except Exception: printExc()
         
         if rtmp.startswith('rtmp'):
             if 0 == premium: 
@@ -195,21 +195,21 @@ class UrlParser:
             result = params[name]
             result = urllib.unquote_plus(result)
             return result
-        except:
+        except Exception:
             return None
     
     def getIntParam (self, params, name):
         try:
             param = self.getParam(params, name)
             return int(param)
-        except:
+        except Exception:
             return None
     
     def getBoolParam (self, params, name):
         try:
             param = self.getParam(params,name)
             return 'True' == param
-        except:
+        except Exception:
             return None
     
     def getParams(self, paramstring = ''):

@@ -120,7 +120,7 @@ class IPTVDMApi():
             # delete file
             try:
                 os.remove(item.fileName)
-            except:
+            except Exception:
                 printDBG("deleteDownloadItem removing file[%s] error" % item.fileName)
             
             # remove item from self.queueDQ
@@ -141,7 +141,7 @@ class IPTVDMApi():
             # delete file
             try:
                 os.remove(item.fileName)
-            except:
+            except Exception:
                 printDBG("removeDownloadItem removing file[%s] error" % item.fileName)
             
             # remove item from self.queueAA
@@ -234,7 +234,7 @@ class IPTVDMApi():
                 # remove old sts file
                 try:
                     os.remove(item.statusFile)
-                except:
+                except Exception:
                     printExc("ERROR: while removing status file %s" % item.statusFile)
                     
                 # start downloading

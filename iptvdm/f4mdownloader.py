@@ -24,8 +24,8 @@ import re
 import datetime
 try:
     try:    import json
-    except: import simplejson as json
-except:
+    except Exception: import simplejson as json
+except Exception:
     printExc()
 ###################################################
 
@@ -127,7 +127,7 @@ class F4mDownloader(BaseDownloader):
                     if "total_download_size" in obj:
                         self.localFileSize = obj["total_download_size"]
                         BaseDownloader._updateStatistic(self)
-                except: 
+                except Exception: 
                     printExc()
                     continue
                         

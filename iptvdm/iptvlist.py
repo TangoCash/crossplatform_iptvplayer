@@ -35,11 +35,11 @@ class IPTVDownloadManagerList(IPTVListComponentBase):
         
         self.fonts = {}
         try: self.fonts[0] = skin.fonts["iptvdwnlistitem_0"]
-        except: self.fonts[0] = ("Regular", 20, 40, 0)
+        except Exception: self.fonts[0] = ("Regular", 20, 40, 0)
         try: self.fonts[1] = skin.fonts["iptvdwnlistitem_1"]
-        except: self.fonts[1] = ("Regular", 16, 20, 0)
+        except Exception: self.fonts[1] = ("Regular", 16, 20, 0)
         try: self.fonts[2] = skin.fonts["iptvdwnlistitem_2"]
-        except: self.fonts[2] = ("Regular", 26, 55, 0)
+        except Exception: self.fonts[2] = ("Regular", 26, 55, 0)
         
         self.l.setFont(0, gFont(self.fonts[0][0], self.fonts[0][1]))
         self.l.setFont(1, gFont(self.fonts[1][0], self.fonts[1][1]))
@@ -61,7 +61,7 @@ class IPTVDownloadManagerList(IPTVListComponentBase):
             try:
                 pixFile = self.ICONS_FILESNAMES.get(key, None)
                 if None != pixFile: self.dictPIX[key] = LoadPixmap(cached=True, path=GetIconDir(pixFile))
-            except: printExc()
+            except Exception: printExc()
 
     def onDestroy(self):
         self._nullPIX()
@@ -84,7 +84,7 @@ class IPTVDownloadManagerList(IPTVListComponentBase):
         info2 = info1 + ", " + formatBytes(item.downloadedSpeed) + "/s"
         
         try: fileName = item.fileName.split('/')[-1]
-        except: fileName = ''
+        except Exception: fileName = ''
         res.append((eListboxPythonMultiContent.TYPE_TEXT, 70, 0, width-70, self.fonts[0][2], 0, RT_HALIGN_LEFT|RT_VALIGN_CENTER, fileName))
         res.append((eListboxPythonMultiContent.TYPE_TEXT, 70, self.fonts[0][2], width-70, self.fonts[1][2], 1, RT_HALIGN_LEFT|RT_VALIGN_CENTER, item.url))
         

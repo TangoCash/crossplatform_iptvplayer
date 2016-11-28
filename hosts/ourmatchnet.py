@@ -304,6 +304,15 @@ class OurmatchNet(CBaseHostClass):
                 name = 'playwire.com'
                 urlTab.append({'name':name, 'url':self._getFullUrl(item), 'need_resolve':1})
         
+        if 0 == len(urlTab):
+            data = re.compile('<iframe[^>]+?src="([^"]+?)"', re.IGNORECASE).findall(data)
+            for link in data:
+                link = self._getFullUrl(link)
+                if 'facebook' in link: continue
+                if 1 != self.up.checkHostSupport(link): continue
+                name = self.up.getHostName(link, True)
+                urlTab.append({'name':name, 'url':link, 'need_resolve':1})
+  
         return urlTab
         
     def getVideoLinks(self, videoUrl):

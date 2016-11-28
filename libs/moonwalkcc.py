@@ -19,7 +19,7 @@ import copy
 import urllib
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 try: import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ###################################################
 
 ###################################################
@@ -133,7 +133,7 @@ class MoonwalkParser():
                     tmpTab = [tmpTab[0]]
                 for item in tmpTab:
                     linksTab.append({'name':'[f4m/hds] %sp' % __getLinkQuality(item), 'url':item['url']})
-        except:
+        except Exception:
             printExc()
         return linksTab
         
@@ -157,7 +157,7 @@ class MoonwalkParser():
             
             for item in seasonData:
                 seasonsTab.append({'title':item[1], 'id':int(item[0]), 'url': seasonMainUrl + item[0]})
-        except:
+        except Exception:
             printExc()
         return seasonsTab
         
@@ -181,6 +181,6 @@ class MoonwalkParser():
             
             for item in episodeData:
                 episodesTab.append({'title':item[1], 'id':int(item[0]), 'url': episodeMainUrl + item[0]})
-        except:
+        except Exception:
             printExc()
         return episodesTab

@@ -11,7 +11,7 @@ try:
         import urllib.request as compat_urllib_request
     except ImportError: # Python 2
         import urllib2 as compat_urllib_request
-except:
+except Exception:
     printDBG("YT import problem 1")
 
 try:
@@ -19,7 +19,7 @@ try:
         import urllib.error as compat_urllib_error
     except ImportError: # Python 2
         import urllib2 as compat_urllib_error
-except:
+except Exception:
     printDBG("YT import problem 2")
 
 try:
@@ -27,7 +27,7 @@ try:
         import urllib.parse as compat_urllib_parse
     except ImportError: # Python 2
         import urllib as compat_urllib_parse
-except:
+except Exception:
     printDBG("YT import problem 3")
 
 try:
@@ -35,7 +35,7 @@ try:
         from urllib.parse import urlparse as compat_urllib_parse_urlparse
     except ImportError: # Python 2
         from urlparse import urlparse as compat_urllib_parse_urlparse
-except:
+except Exception:
     printDBG("YT import problem 4")
   
 try:  
@@ -43,7 +43,7 @@ try:
         import http.cookiejar as compat_cookiejar
     except ImportError: # Python 2
         import cookielib as compat_cookiejar
-except:
+except Exception:
     printDBG("YT import problem 5")
 
 try: 
@@ -51,7 +51,7 @@ try:
         import html.entities as compat_html_entities
     except ImportError: # Python 2
         import htmlentitydefs as compat_html_entities
-except:
+except Exception:
     printDBG("YT import problem 6")
   
 try:  
@@ -59,7 +59,7 @@ try:
         import http.client as compat_http_client
     except ImportError: # Python 2
         import httplib as compat_http_client
-except:
+except Exception:
     printDBG("YT import problem 8")
 
 try:
@@ -175,7 +175,7 @@ def htmlentity_transform(entity):
     try:
         if entity in compat_html_entities.name2codepoint:
             return compat_chr(compat_html_entities.name2codepoint[entity])
-    except: pass
+    except Exception: pass
 
     mobj = re.match(r'#(x?[0-9A-Fa-f]+)', entity)
     if mobj is not None:
@@ -188,7 +188,7 @@ def htmlentity_transform(entity):
         try:
             ret = compat_chr(int(numstr, base))
             return ret
-        except:
+        except Exception:
             printExc()
     # Unknown entity in name, return its literal representation
     return (u'&%s;' % entity)

@@ -23,7 +23,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################
@@ -149,7 +149,7 @@ class EdemTvApi:
         value = ''
         try:
             value = self.cm.getCookieItem(self.COOKIE_FILE, name)
-        except:
+        except Exception:
             printExc()
         return value
     

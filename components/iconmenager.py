@@ -165,7 +165,7 @@ class IconMenager:
                     file_path = os_path.normcase(self.currDownloadDir + '/' + filename)
                 else:
                     file_path = os_path.normcase(file_path + '/' + filename)
-            except:
+            except Exception:
                 printExc()
         self.lockAA.release()
         

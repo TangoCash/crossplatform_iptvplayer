@@ -154,7 +154,29 @@ class CParsingHelper:
         return itemsTab
         
     @staticmethod
+    def rgetDataBeetwenMarkers2(data, marker1, marker2, withMarkers=True, caseSensitive=True):
+        if caseSensitive:
+            sData = data
+        else:
+            sData = data.lower()
+            marker1 = marker1.lower()
+            marker2 = marker2.lower()
+        idx1 = len(data)
+        
+        idx1 = sData.rfind(marker1, 0, idx1)
+        if -1 == idx1: return False, ''
+        idx2 = sData.rfind(marker2, 0, idx1)
+        if -1 == idx2: return False, ''
+        
+        if withMarkers:
+            return True, data[idx2:idx1+len(marker1)]
+        else:
+            return True, data[idx2+len(marker2):idx1]
+        
+    @staticmethod
     def rgetDataBeetwenMarkers(data, marker1, marker2, withMarkers = True):
+        # this methods is not working as expected, but is is used in many places
+        # so I will leave at it is, please use rgetDataBeetwenMarkers2
         idx1 = data.rfind(marker1)
         if -1 == idx1: return False, ''
         idx2 = data.rfind(marker2, idx1 + len(marker1))
@@ -229,7 +251,8 @@ class common:
     
     @staticmethod
     def getParamsFromUrlWithMeta(url, baseHeaderOutParams=None):
-        HANDLED_HTTP_HEADER_PARAMS = ['Host', 'User-Agent', 'Referer', 'Cookie', 'Accept', 'X-Forwarded-For', 'Range']
+        from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
+        HANDLED_HTTP_HEADER_PARAMS = DMHelper.HANDLED_HTTP_HEADER_PARAMS #['Host', 'User-Agent', 'Referer', 'Cookie', 'Accept',  'Range']
         outParams = {}
         tmpParams = {}
         postData = None

@@ -170,7 +170,7 @@ class IPTVSubSimpleDownloaderWidget(Screen):
             tmpList = self.params.get('sub_list', [])
             if len(tmpList) == 1:
                 self.acceptSub()
-        except:
+        except Exception:
             printExc()
             self["console"].setText(_('Subtitles conversion to UTF-8 failed.'))
     
@@ -178,21 +178,21 @@ class IPTVSubSimpleDownloaderWidget(Screen):
         try:
             for icon in self.iconPixmap:
                 self['icon_'+icon].setPixmap(self.iconPixmap[icon])
-        except: printExc()
+        except Exception: printExc()
         
     def hideButtons(self, buttons=['red', 'green']):
         try:
             for button in buttons:
                 self['icon_'+button].hide()
                 self['label_'+button].hide()
-        except: printExc()
+        except Exception: printExc()
         
     def showButtons(self, buttons=['red', 'green']):
         try:
             for button in buttons:
                 self['icon_'+button].show()
                 self['label_'+button].show()
-        except: printExc()
+        except Exception: printExc()
     
     def onStart(self):
         self.onShown.remove(self.onStart)
@@ -231,7 +231,7 @@ class IPTVSubSimpleDownloaderWidget(Screen):
                 dItem = CDisplayListItem(name = item['title'], type=CDisplayListItem.TYPE_ARTICLE)
                 dItem.privateData = item
                 list.append( (dItem,) )
-        except: 
+        except Exception: 
             printExc()
         self["list"].setList(list)
         self["list"].show()
@@ -271,18 +271,18 @@ class IPTVSubSimpleDownloaderWidget(Screen):
                 track = {'title':self.currItem.get('lang', _('default')), 'lang':self.currItem.get('lang', _('default')), 'path':self.downloadedSubFilePath}
                 track['id'] = self.currItem.get('url', '')
                 self.close(track)
-        except: printExc()
+        except Exception: printExc()
     
     def getSelectedItem(self):
         try: idx = self["list"].getCurrentIndex()
-        except: idx = 0
+        except Exception: idx = 0
         sel = None
         try: 
             if self["list"].visible:
                 sel = self["list"].l.getCurrentSelection()[0]
                 if None != sel:
                     return idx, sel
-        except: 
+        except Exception: 
             printExc()
             sel = None
         return -1, None

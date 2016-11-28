@@ -213,7 +213,7 @@ class WebSocket(object):
         try:
             self.handshake_response = handshake(self.sock, *addrs, **options)
             self.connected = True
-        except:
+        except Exception:
             if self.sock:
                 self.sock.close()
                 self.sock = None
@@ -391,11 +391,11 @@ class WebSocket(object):
                         recv_status = struct.unpack("!H", frame.data)[0]
                         if recv_status != STATUS_NORMAL:
                             error("close status: " + repr(recv_status))
-                except:
+                except Exception:
                     pass
                 self.sock.settimeout(sock_timeout)
                 self.sock.shutdown(socket.SHUT_RDWR)
-            except:
+            except Exception:
                 pass
 
         self.shutdown()

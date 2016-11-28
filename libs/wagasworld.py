@@ -13,7 +13,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 ###################################################
 import re
 try: import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 

@@ -77,7 +77,7 @@ class IPTVChoiceBoxWidget(Screen):
             
     def __onClose(self):
         try: self["list"].disconnectSelChanged(self.onSelectionChanged)
-        except: printExc()
+        except Exception: printExc()
         self.params = None
         
     def onStart(self):
@@ -85,7 +85,7 @@ class IPTVChoiceBoxWidget(Screen):
         
         self["list"].setList([ (x,) for x in self.params['options']])
         try:    self["list"].moveToIndex(self.params['current_idx'])
-        except: printExc()
+        except Exception: printExc()
         self["list"].connectSelChanged(self.onSelectionChanged)
             
     def key_ok(self):
@@ -102,7 +102,7 @@ class IPTVChoiceBoxWidget(Screen):
     def getSelectedItem(self):
         sel = None
         try: sel = self["list"].l.getCurrentSelection()[0]
-        except: pass
+        except Exception: pass
         return sel
     
     

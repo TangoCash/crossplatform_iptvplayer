@@ -148,7 +148,7 @@ class ConfigExtMoviePlayerBase():
                 if font not in fonts:
                     fonts.append(font)
                     options.append((font, font))
-        except: printExc()
+        except Exception: printExc()
         config.plugins.iptvplayer.extplayer_subtitle_font = ConfigSelection(default = "Regular", choices = options)
         
         # check if border is avaliable
@@ -157,7 +157,7 @@ class ConfigExtMoviePlayerBase():
             tmp = dir(eLabel)
             if 'setBorderColor' in tmp:
                 self.subtitle_border_avaliable = True
-        except: printExc()
+        except Exception: printExc()
         if not self.subtitle_border_avaliable:
             config.plugins.iptvplayer.extplayer_subtitle_border_enabled.value = False
     

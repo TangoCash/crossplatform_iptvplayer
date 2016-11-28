@@ -188,7 +188,7 @@ for hostName in gListOfHostsNames:
         else:
             enabledByDefault = 'True'
         exec('config.plugins.iptvplayer.host' + hostName + ' = ConfigIPTVHostOnOff(default = ' + enabledByDefault + ')')
-    except:
+    except Exception:
         printExc(hostName)
 
 ###################################################

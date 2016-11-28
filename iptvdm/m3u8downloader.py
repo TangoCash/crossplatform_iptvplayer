@@ -147,7 +147,7 @@ class M3U8Downloader(BaseDownloader):
                             #self.mergeFragmentsList(newFragments)
                             self.mergeFragmentsListWithChecking(newFragments, m3u8Obj.media_sequence)
                             printDBG('m3u8 _updateM3U8Finished list updated ---')
-                except:
+                except Exception:
                     printDBG("m3u8 _updateM3U8Finished exception url[%s] data[%s]" % (self.m3u8Url, self.M3U8ListData))
             else:
                 printDBG('m3u8 _updateM3U8Finished no data ---')
@@ -178,7 +178,7 @@ class M3U8Downloader(BaseDownloader):
         try: 
             idx = newFragments.index(self.fragmentList[-1])
             newFragments = newFragments[idx+1:]
-        except: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
+        except Exception: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
         
         tmpList = []
         for item in reversed(newFragments):
@@ -210,7 +210,7 @@ class M3U8Downloader(BaseDownloader):
                 
                 idx = tmpNewFragments.index(tmpCurrFragmentList[-1])
                 newFragments = newFragments[idx+1:]
-            except: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
+            except Exception: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
             
             for item in reversed(newFragments):
                 if item in self.fragmentList:
@@ -242,14 +242,14 @@ class M3U8Downloader(BaseDownloader):
             idx = -1
             if 0 < len(self.fragmentList):
                 try: idx = newFragments.index(self.fragmentList[-1])
-                except: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
+                except Exception: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
                     
             if 0 <= idx:
                 if (idx+1) < len(newFragments):
                     self.fragmentList.extend(newFragments[idx+1:])
             else:
                 self.fragmentList.extend(newFragments)
-        except: pass
+        except Exception: pass
         #printDBG("===========================================================")
         #printDBG("%r" % self.fragmentList)
         #printDBG("===========================================================")
@@ -429,12 +429,12 @@ class M3U8Downloader(BaseDownloader):
                                     for seg in m3u8Obj.segments:
                                         self.totalDuration += seg.duration
                                         self.fragmentDurationList.append(seg.duration)
-                                except:
+                                except Exception:
                                     printExc()
                                     self.totalDuration = -1
                                     self.fragmentDurationList = []
                             localStatus = self._startFragment()
-                except:
+                except Exception:
                     pass
             printDBG(">>>>>>>>>>>>>>>>>> localStatus [%s] tries[%d]" % (localStatus, self.tries))
             if localStatus == DMHelper.STS.ERROR and self.tries < self.maxTriesAtStart:
@@ -462,7 +462,7 @@ class M3U8Downloader(BaseDownloader):
             elif 0 < (self.localFileSize - self.m3u8_prevLocalFileSize):
                 if  self.totalDuration > 0:
                     try: self.downloadDuration += self.fragmentDurationList[self.currentFragment]
-                    except: printExc()
+                    except Exception: printExc()
                 localStatus = self._startFragment()
             elif  0 == (self.localFileSize - self.m3u8_prevLocalFileSize):
                 localStatus = self._startFragment(True) # retry

@@ -24,8 +24,8 @@ import re
 import datetime
 try:
     try:    import json
-    except: import simplejson as json
-except:
+    except Exception: import simplejson as json
+except Exception:
     printExc()
 ###################################################
 
@@ -101,7 +101,7 @@ class MergeDownloader(BaseDownloader):
                 self.multi['remote_content_type'].append('')
                 
                 idx += 1
-        except:
+        except Exception:
             printExc()
         
         self.doStartDownload()

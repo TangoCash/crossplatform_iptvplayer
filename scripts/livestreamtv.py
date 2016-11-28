@@ -29,7 +29,7 @@ def getPage(url, params={}):
         resp = urllib2.urlopen(req)
         data = resp.read()
         sts = True
-    except:
+    except Exception:
         printExc()
     return sts, data
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
             dt = time.time() - start_time
             if dt > 0 and dt < 20:
                 time.sleep(20 - dt)
-    except:
+    except Exception:
         printExc()
     sys.exit(0)
 

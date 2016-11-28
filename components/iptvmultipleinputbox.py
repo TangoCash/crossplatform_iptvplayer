@@ -49,7 +49,7 @@ class IPTVVirtualKeyBoardWithCaptcha(VirtualKeyBoard):
     def loadCaptcha(self):
         self.onShown.remove(self.loadCaptcha)
         try: self['captcha'].updateIcon( self.captchaPath )
-        except: printExc()
+        except Exception: printExc()
 
 class IPTVMultipleInputBox(Screen):
     DEF_INPUT_PARAMS = {'validator':None, 'title':'', 'useable_chars':None, 'label_font':'Regular;23', 'label_size':(550,25), 'input_font':'Regular;20', 'input_size':(550,25), 'input':dict(text="", maxSize = False, visible_width = False, type = Input.TEXT)}
@@ -173,7 +173,7 @@ class IPTVMultipleInputBox(Screen):
             try:
                 printDBG('Update icon: [%s]' % item['path'])
                 self[item['name']].updateIcon( item['path'] )
-            except:
+            except Exception:
                 printExc()
         
     def loadMarkers(self):
@@ -182,7 +182,7 @@ class IPTVMultipleInputBox(Screen):
                 self["marker"].setPixmap(self.markerPixmap[0])
                 for idx in range(len(self.list)):
                     self['marker_%d'%idx].setPixmap(self.markerPixmap[1])
-        except: printExc()
+        except Exception: printExc()
         
     def keyUp(self):
         if not self.started: return
@@ -213,7 +213,7 @@ class IPTVMultipleInputBox(Screen):
                 for idx in range(len(self.list)):
                     self["border_%d"%idx].hide()
             self["border_%d"%self.idx].show()
-        except: printExc()
+        except Exception: printExc()
         
     def setKeyboardMode(self):
         
@@ -262,7 +262,7 @@ class IPTVMultipleInputBox(Screen):
         
         # title
         try: title = self.list[self.idx]['title']
-        except: title = ''
+        except Exception: title = ''
         
         # virtual keyboard type
         captchaKeyBoard = False
@@ -273,7 +273,7 @@ class IPTVMultipleInputBox(Screen):
                     captchaSize = self.list[self.idx]['label_size']
                     captchaPath = self.list[self.idx]['icon_path']
                     params = {'captcha_size':captchaSize, 'captcha_path':captchaPath}
-            except: printExc()
+            except Exception: printExc()
         
         if not captchaKeyBoard:
             self.session.openWithCallback(VirtualKeyBoardCallBack, VirtualKeyBoard, title=title, text=self[self.activeInput].getText())

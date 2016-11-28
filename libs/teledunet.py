@@ -65,7 +65,7 @@ class TeledunetParser:
             url = '%s playpath=%s app=teledunet swfUrl=%s pageUrl=http://www.teledunet.com/tv/?channel=%s&no_pub live=1' % (rtmp_url, play_path, swf_url, play_path)
             printDBG('get_rtmp_params url[%s]' % url)
             return url
-        except:
+        except Exception:
             printDBG('get_rtmp_params excetion')
             return ''
             

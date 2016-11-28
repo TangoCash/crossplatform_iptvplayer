@@ -48,14 +48,14 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://cartoonhd.website/'
+    return 'http://cartoonhd.online/'
 
 class CartoonHD(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL = 'http://cartoonhd.website/'
+    MAIN_URL = 'http://cartoonhd.online/'
     SEARCH_URL = MAIN_URL + 'api/v2/cautare/evokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
@@ -70,7 +70,7 @@ class CartoonHD(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
-        self.DEFAULT_ICON_URL = 'http://cartoonhd.website/templates/FliXanity/assets/images/logochd.png'
+        self.DEFAULT_ICON_URL = 'http://cartoonhd.online/templates/FliXanity/assets/images/logochd.png'
         
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()

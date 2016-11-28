@@ -3,7 +3,7 @@
 
 try:
     from urllib.parse import urlsplit, urlparse, parse_qs, urljoin
-except:
+except Exception:
     from urlparse import urlsplit, urlparse, parse_qs, urljoin
 
 import re
@@ -46,6 +46,7 @@ class UnshortenIt(object):
     _adfocus_regex = r'adfoc\.us'
     _lnxlu_regex = r'lnx\.lu'
     _shst_regex = r'sh\.st'
+    _viidme_regex = r'viid\.me'
     _hrefli_regex = r'href\.li'
     _anonymz_regex = r'anonymz\.com'
 
@@ -77,6 +78,8 @@ class UnshortenIt(object):
             return self._unshorten_lnxlu(uri)
         if re.search(self._shst_regex, domain, re.IGNORECASE):
             return self._unshorten_shst(uri)
+        if re.search(self._viidme_regex, domain, re.IGNORECASE):
+            return self._unshorten_viidme(uri)
         if re.search(self._hrefli_regex, domain, re.IGNORECASE):
             return self._unshorten_hrefli(uri)
         if re.search(self._anonymz_regex, domain, re.IGNORECASE):
@@ -368,6 +371,36 @@ class UnshortenIt(object):
 
                 payload = {'adSessionId': session_id, 'callback': 'c'}
                 sts, response = self.cm.getPage('http://sh.st/shortest-url/end-adsession', {'header':http_header}, payload)
+
+                resp_uri = byteify(json.loads(response[6:-2]))['destinationUrl']
+                if resp_uri is not None:
+                    uri = resp_uri
+            
+            return uri, 'OK'
+
+        except Exception as e:
+            printExc()
+            return uri, str(e)
+            
+    def _unshorten_viidme(self, uri):
+        try:
+            sts, html = self.cm.getPage(uri, {'header':HTTP_HEADER})
+
+            session_id = re.findall(r'sessionId\:(.*?)\"\,', html)
+            if len(session_id) > 0:
+                session_id = re.sub(r'\s\"', '', session_id[0])
+
+                http_header = copy.copy(HTTP_HEADER)
+                http_header["Content-Type"]     = "application/x-www-form-urlencoded"
+                http_header["Host"]             = "viid.me"
+                http_header["Referer"]          = uri
+                http_header["Origin"]           = "http://viid.me"
+                http_header["X-Requested-With"] = "XMLHttpRequest"
+
+                time.sleep(5)
+
+                payload = {'adSessionId': session_id, 'callback': 'c'}
+                sts, response = self.cm.getPage('http://viid.me/shortest-url/end-adsession', {'header':http_header}, payload)
 
                 resp_uri = byteify(json.loads(response[6:-2]))['destinationUrl']
                 if resp_uri is not None:

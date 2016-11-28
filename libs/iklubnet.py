@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################
@@ -170,8 +170,9 @@ class IKlubNetApi(CBaseHostClass):
             
             printDBG(data)
             
-            urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
-            if urlNext.startswith('http://') or urlNext.startswith('https://'):
+            urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?iklub[^"]+?)"', 1, True)[0]
+            if '' == urlNext: urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+            if self.cm.isValidUrl(urlNext):
                 sts, data = self.cm.getPage(urlNext)
                 if not sts: continue
             
@@ -217,8 +218,23 @@ class IKlubNetApi(CBaseHostClass):
                     urlsTab.append({'name':title + ' [rtmp]', 'url':rtmpUrl + ' live=1 '})
                 elif '.m3u8' in data:
                     file = self.cm.ph.getSearchGroups(data, r'''['"](http[^"^']+?\.m3u8[^"^']*?)['"]''')[0]
+                    if file == '': file = self.cm.ph.getDataBeetwenMarkers(data, 'src=', '&amp;', False)[1]
                     urlsTab.extend( getDirectM3U8Playlist(file) )
-                elif 'content.jwplatform.com' in data:
+                elif 'tvp.info' in data:
+                    vidUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"](http[^'^"]+?tvp.info[^'^"]+?)['"]''')[0] )
+                    sts, data = self.cm.getPage(vidUrl)
+                    if not sts: return []
+                    urlsTab.extend( self.getTvpStreamLink(data) )
+                elif 'mrl=' in data:
+                    file = self.cm.ph.getSearchGroups(data, '''mrl=['"](http[^'^"]+?)['"]''')[0]
+                    urlsTab.append({'name':title + ' [mrl]', 'url':file})
+                elif '<source ' in data:
+                    file = self.cm.ph.getSearchGroups(data, '''<source[^>]+?src=['"](http[^'^"]+?)['"]''')[0]
+                    urlsTab.append({'name':title + ' [src]', 'url':file})
+                else:
+                    urlsTab.extend( self.up.getAutoDetectedStreamLink(url, data) )
+                    
+                if 'content.jwplatform.com' in data:
                     vidUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^'^"]+?content.jwplatform.com[^'^"]+?)['"]''')[0] )
                     
                     sts, data = self.cm.getPage(vidUrl)
@@ -238,17 +254,7 @@ class IKlubNetApi(CBaseHostClass):
                         urlsTab.extend( getDirectM3U8Playlist(file) )
                     elif file.startswith('rtmp'):
                         urlsTab.append({'name':title + ' [rtmp]', 'url':file + ' live=1 '})
-                elif 'tvp.info' in data:
-                    vidUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"](http[^'^"]+?tvp.info[^'^"]+?)['"]''')[0] )
-                    sts, data = self.cm.getPage(vidUrl)
-                    if not sts: return []
-                    urlsTab.extend( self.getTvpStreamLink(data) )
-                elif 'mrl=' in data:
-                    file = self.cm.ph.getSearchGroups(data, '''mrl=['"](http[^'^"]+?)['"]''')[0]
-                    urlsTab.append({'name':title + ' [mrl]', 'url':file})
-                else:
-                    urlsTab.extend( self.up.getAutoDetectedStreamLink(url, data) )
-            except:
+            except Exception:
                 printExc()
                 continue
         

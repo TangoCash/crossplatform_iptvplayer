@@ -52,7 +52,7 @@ def getPage(url, params={}, post_data=None):
         else:
             data = resp
         sts = True
-    except:
+    except Exception:
         printExc()
     return sts, data
     
@@ -76,7 +76,7 @@ def checkAndReportUrl(vidUrl, userAgent):
                             printDBG(resp.headers['content-length'])
                             testResult = True
                         resp.close()
-                    except:
+                    except Exception:
                         printExc()
                     break
             if testResult:
@@ -85,7 +85,7 @@ def checkAndReportUrl(vidUrl, userAgent):
             dt = time.time() - start_time
             if dt >= timeout:
                 break
-    except:
+    except Exception:
         printExc()
     print('\n%s\n' % vidUrl, file=sys.stderr)
  
@@ -183,7 +183,7 @@ if __name__ == "__main__":
         ws1.close()
         try: ws2.close()
         except Exception: pass
-    except:
+    except Exception:
         printExc()
     sys.exit(0)
 

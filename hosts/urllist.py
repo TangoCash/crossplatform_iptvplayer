@@ -102,7 +102,7 @@ class Urllist(CBaseHostClass):
         
         # if we have loacal version get remote version for comparison
         if localVersion != '':
-            sts, data = self.cm.getPage("http://hybrid.xunil.pl/IPTVPlayer_resources/UsersFiles/urllist.txt.version")
+            sts, data = self.cm.getPage("http://hybrid.xunil.pl/IPTVPlayer_resources/UsersFiles/urllist.txt.version?t=" + timestamp)
             if sts:
                 try:
                     remoteVersion = int(data.strip())

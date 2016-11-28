@@ -157,7 +157,7 @@ class IPTVDMWidget(Screen):
                 if skip: continue
                 listItem = DMItemBase(url=fileName, fileName=fileName)
                 try: listItem.downloadedSize = os_path.getsize(fileName)
-                except: listItem.downloadedSize = 0
+                except Exception: listItem.downloadedSize = 0
                 listItem.status      = DMHelper.STS.DOWNLOADED
                 listItem.downloadIdx = -1
                 self.tmpList.append( listItem )
@@ -196,7 +196,7 @@ class IPTVDMWidget(Screen):
             self.mainTimer_conn = None
             self.mainTimer.stop()
             self.mainTimer = None
-        except: printExc()
+        except Exception: printExc()
         try:
             self.currentService = None
             self.session.nav.event.remove(self.__event)
@@ -204,7 +204,7 @@ class IPTVDMWidget(Screen):
 
             self.onClose.remove(self.__onClose)
             self.onShow.remove(self.onStart)
-        except: printExc()
+        except Exception: printExc()
         
     def red_pressed(self):
         self.DM.stopWorkThread()
@@ -224,7 +224,7 @@ class IPTVDMWidget(Screen):
             self.tmpData = ''
             lsdirPath = GetBinDir("lsdir")
             try: os_chmod(lsdirPath, 0777)
-            except: printExc()
+            except Exception: printExc()
             cmd = '%s "%s" rl r' % (lsdirPath, config.plugins.iptvplayer.NaszaSciezka.value)
             printDBG("cmd[%s]" % cmd)
             self.console.execute( E2PrioFix( cmd ) )
@@ -301,7 +301,7 @@ class IPTVDMWidget(Screen):
                 try:
                     title = os_path.basename(title)
                     title = os_path.splitext(title)[0]
-                except:
+                except Exception:
                     printExc()
                 # when we watch we no need update sts
                 self.DM.setUpdateProgress(False)
@@ -334,7 +334,7 @@ class IPTVDMWidget(Screen):
                                 del self.localFiles[idx]
                                 self.reloadList(True)
                                 break
-                    except: printExc()
+                    except Exception: printExc()
             elif ret[1] == "continue":
                 self.DM.continueDownloadItem(item.downloadIdx)
             elif ret[1] == "retry":
@@ -365,7 +365,7 @@ class IPTVDMWidget(Screen):
         sel = None
         try:
             sel = self["list"].l.getCurrentSelection()[0]
-        except:return None
+        except Exception:return None
         return sel
         
     def onStart(self):

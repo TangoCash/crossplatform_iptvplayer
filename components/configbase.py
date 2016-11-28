@@ -244,7 +244,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
                         fileMatch = re.compile(currItem.fileMatch)
                 else:
                     fileMatch = None
-            except:
+            except Exception:
                 printExc()
                 return
             self.session.openWithCallback(boundFunction(SetFilePathCallBack, curIndex), IPTVFileSelectorWidget, currItem.value,  _('Select the file'), fileMatch)

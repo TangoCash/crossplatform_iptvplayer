@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################

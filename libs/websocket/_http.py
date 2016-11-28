@@ -71,7 +71,7 @@ def connect(url, options, proxy, socket):
                 raise WebSocketException("SSL not available.")
 
         return sock, (hostname, port, resource)
-    except:
+    except Exception:
         if sock:
             sock.close()
         raise

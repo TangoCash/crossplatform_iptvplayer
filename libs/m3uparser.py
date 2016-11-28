@@ -29,7 +29,7 @@ def ParseM3u(data):
             try:
                 length, title = line.split('#EXTINF:')[1].split(',', 1)
                 params = {'title':title, 'length':length, 'uri':''}
-            except:
+            except Exception:
                 printExc()
                 params = {'title':'', 'length':'', 'uri':''}
         else:

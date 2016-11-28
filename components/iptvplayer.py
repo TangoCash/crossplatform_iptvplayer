@@ -103,7 +103,7 @@ class customMoviePlayer(InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, Inf
             self.waitForSeekToLastPosition = 0
             if self.bugEOFworkaround == 0 or position == 0 or self.seekstate != self.SEEK_STATE_PLAY: return #== self.SEEK_STATE_PAUSE: return
             self.lastPosition = position
-        except:
+        except Exception:
             printExc()
             return
 
@@ -167,7 +167,7 @@ class customMoviePlayer(InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, Inf
             self.onShow = []
             self.onHide = []
             self.hideTimer.stop()
-        except:
+        except Exception:
             printExc(customMoviePlayer._doClose)
         self.close(sts, self.lastPosition)
         

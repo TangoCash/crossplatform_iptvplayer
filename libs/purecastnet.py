@@ -22,7 +22,7 @@ import urllib
 import random
 import string
 try:    import json
-except: import simplejson as json
+except Exception: import simplejson as json
 ############################################
 
 ###################################################
@@ -102,7 +102,7 @@ class PurecastNetApi:
                 params = dict(cItem)
                 params.update({'type':'video', 'title':item[prefix+'Name'], 'icon':item[prefix+'Logo'], 'vid_url':item[prefix+'URL'].replace('swfVfy=true', ' ')})
                 channelsTab.append(params)
-        except:
+        except Exception:
             printExc()
         return channelsTab
         

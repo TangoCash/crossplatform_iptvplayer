@@ -51,7 +51,7 @@ class PlayerSelectorWidget(Screen):
             # 0 - means AUTO
             if confNumOfRow > 0: numOfRow = confNumOfRow
             if confNumOfCol > 0: numOfCol = confNumOfCol
-        except:
+        except Exception:
             pass
 
         # position of first img
