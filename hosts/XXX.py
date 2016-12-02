@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "20.0.14.0"
+    XXXversion = "20.0.17.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -242,6 +242,7 @@ class Host:
            valTab.append(CDisplayListItem('FILMYPORNO',     'http://www.filmyporno.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.filmyporno.tv/channels/'],'FILMYPORNO', 'http://www.filmyporno.tv/templates/default_tube2016/images/logo.png', None)) 
            valTab.append(CDisplayListItem('CLIPHUNTER',     'http://www.cliphunter.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.cliphunter.com/categories/'],'CLIPHUNTER', 'http://www.cliphunter.com/gfx/new/logo.png', None)) 
            valTab.append(CDisplayListItem('EMPFLIX',     'http://www.empflix.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.empflix.com/categories.php'],'EMPFLIX', 'http://empflix.eu/gfx/logo.png', None)) 
+           valTab.append(CDisplayListItem('PORNOHUB',     'http://pornohub.su/', CDisplayListItem.TYPE_CATEGORY, ['http://pornohub.su/'],'PORNOHUB', 'http://st.pornohub.su/pornohub.png', None)) 
            if config.plugins.iptvplayer.xxxsortall.value:
                valTab.sort(key=lambda poz: poz.name)
            self.SEARCH_proc=name
@@ -300,7 +301,11 @@ class Host:
               valtemp = self.listsItems(-1, url, 'porndoe-search')
               for item in valtemp: item.name='porndoe - '+item.name              
               valTab = valTab + valtemp 
-  
+
+              valtemp = self.listsItems(-1, url, 'PORNOHUB-search')
+              for item in valtemp: item.name='PORNOHUB - '+item.name              
+              valTab = valTab + valtemp 
+
               return valTab
            valTab = self.listsItems(-1, url, self.SEARCH_proc)
            printDBG( 'Host listsItems end' )              
@@ -2818,6 +2823,135 @@ class Host:
            printDBG( 'Host listsItems end' )
            return valTab
 
+        if 'PORNOHUB' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           self.MAIN_URL = 'http://pornohub.su' 
+           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           except:
+              printDBG( 'Host listsItems query error cookie' )
+              return valTab
+           printDBG( 'Host listsItems data: '+data )
+           parse = re.search('<a href="#">Categories<(.*?)pornohub.su/my-list/', data, re.S)
+           if parse:
+              phCats = re.findall('href="(.*?)"', parse.group(1), re.S) 
+              if phCats:
+                 for (phUrl) in phCats:
+                    phTitle = decodeHtml(phUrl).replace ('http://pornohub.su/porn/','').replace('/','')
+                    printDBG( 'Host listsItems phUrl: '  +phUrl )
+                    printDBG( 'Host listsItems phTitle: '+phTitle )
+                    valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [phUrl],'PORNOHUB-clips', '', None)) 
+           valTab.insert(0,CDisplayListItem("--- PORNSTARS ---",      "PORNSTARS", CDisplayListItem.TYPE_CATEGORY,["http://pornohub.su/pornstars/"], 'PORNOHUB-pornstars', '',None))
+           valTab.insert(0,CDisplayListItem("--- PREMIUM SELECTION ---",     "PREMIUM SELECTION",      CDisplayListItem.TYPE_CATEGORY,["http://pornohub.su/porn/premium-selection/"], 'PORNOHUB-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- MOFOS HD 720 ---","MOFOS HD 720", CDisplayListItem.TYPE_CATEGORY,["http://pornohub.su/porn/mofos/"], 'PORNOHUB-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- BRAZZERS ---",       "BRAZZERS",  CDisplayListItem.TYPE_CATEGORY,["http://pornohub.su/porn/brazzers/"], 'PORNOHUB-clips', '',None))
+           self.SEARCH_proc='PORNOHUB-search'
+           valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
+           valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'PORNOHUB-search' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           valTab = self.listsItems(-1, 'http://pornohub.su/?s=%s' % url, 'PORNOHUB-pornstars-clips')
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'PORNOHUB-clips' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           #printDBG( 'Host listsItems data: '+data )
+           parse = re.search('<div class="td-category-grid">(.*?)page-nav', data, re.S)
+           if parse:
+              #printDBG( 'Host listsItems parse: '+parse.group(1) )
+              if not '/page/' in url:
+                 hot5 = re.search('<div class="td-container">(.*?)"entry-thumb99">', parse.group(1), re.S)
+                 phMovies = re.findall('thumb"><a href="(.*?)".*?title="(.*?)".*?src="(.*?)"', hot5.group(1), re.S)  
+                 if phMovies:
+                    for ( phUrl, phTitle, phImage) in phMovies:
+                        phTitle = decodeHtml(phTitle)
+                        phRuntime = '-'
+                        printDBG( 'Host listsItems phUrl: '  +phUrl )
+                        printDBG( 'Host listsItems phImage: '+phImage )
+                        printDBG( 'Host listsItems phTitle: '+phTitle )
+                        printDBG( 'Host listsItems phRuntime: '+phRuntime )
+                        valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+              phMovies = re.findall('"entry-thumb99">.*?href="(.*?)".*?title="(.*?)".*?src="(.*?)".*?"time">(.*?)</div>', parse.group(1), re.S)  
+              if phMovies:
+                 for ( phUrl, phTitle, phImage, phRuntime) in phMovies:
+                     phTitle = decodeHtml(phTitle)
+                     printDBG( 'Host listsItems phUrl: '  +phUrl )
+                     printDBG( 'Host listsItems phImage: '+phImage )
+                     printDBG( 'Host listsItems phTitle: '+phTitle )
+                     printDBG( 'Host listsItems phRuntime: '+phRuntime )
+                     valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+           match = re.findall('</a><a href="(.*?)"', data, re.S)
+           if match:
+              phUrl = match[-1]
+              if '#' in phUrl: phUrl = match[-2]
+              printDBG( 'Host listsItems page phUrl: '+phUrl )
+              valTab.append(CDisplayListItem('Next', 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', None))
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'PORNOHUB-pornstars' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           #printDBG( 'Host listsItems data: '+data )
+           phMovies = re.findall('"td-module-image44">.*?href="(.*?)".*?title="(.*?)".*?src="(.*?)".*?camera"></i>(.*?)</div>', data, re.S)  
+           if phMovies:
+              for ( phUrl, phTitle, phImage, phRuntime) in phMovies:
+                  phTitle = decodeHtml(phTitle)
+                  printDBG( 'Host listsItems phUrl: '  +phUrl )
+                  printDBG( 'Host listsItems phImage: '+phImage )
+                  printDBG( 'Host listsItems phTitle: '+phTitle )
+                  printDBG( 'Host listsItems phRuntime: '+phRuntime )
+                  valTab.append(CDisplayListItem(phTitle, 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl+'#videos'], 'PORNOHUB-pornstars-clips', phImage, None))
+                  #valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+           match = re.findall('</a><a href="(.*?)"', data, re.S)
+           if match:
+              phUrl = match[-1]
+              printDBG( 'Host listsItems page phUrl: '+phUrl )
+              valTab.append(CDisplayListItem('Next', 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', None))
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'PORNOHUB-pornstars-clips' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           #printDBG( 'Host listsItems data: '+data )
+           phMovies = re.findall('td-block-span.*?"time">(.*?)<.*?href="(.*?)".*?title="(.*?)".*?src="(.*?)"', data, re.S)  
+           if phMovies:
+              for ( phRuntime, phUrl, phTitle, phImage) in phMovies:
+                  phTitle = decodeHtml(phTitle)
+                  printDBG( 'Host listsItems phUrl: '  +phUrl )
+                  printDBG( 'Host listsItems phImage: '+phImage )
+                  printDBG( 'Host listsItems phTitle: '+phTitle )
+                  printDBG( 'Host listsItems phRuntime: '+phRuntime )
+                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+           phMovies = re.findall('WPcommentSearch.*?href="(.*?)".*?src="(.*?)".*?alt="(.*?)"', data, re.S)  
+           if phMovies:
+              for ( phUrl, phImage, phTitle ) in phMovies:
+                  phTitle = decodeHtml(phTitle)
+                  phRuntime = '-'
+                  printDBG( 'Host listsItems phUrl: '  +phUrl )
+                  printDBG( 'Host listsItems phImage: '+phImage )
+                  printDBG( 'Host listsItems phTitle: '+phTitle )
+                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+      
+           printDBG( 'Host listsItems end' )
+           return valTab
         return valTab
 
 
@@ -2839,6 +2973,7 @@ class Host:
         printDBG( 'Host getParser begin' )
         printDBG( 'Host getParser mainurl: '+self.MAIN_URL )
         printDBG( 'Host getParser url    : '+url )
+        if self.MAIN_URL == 'http://pornohub.su':            return self.MAIN_URL
         if self.MAIN_URL == 'http://www.cliphunter.com':     return self.MAIN_URL
         if url.startswith('http://www.slutsxmovies.com/embed/'): return 'http://www.nuvid.com'
         if url.startswith('http://www.cumyvideos.com/embed/'):   return 'http://www.nuvid.com'
@@ -3830,7 +3965,10 @@ class Host:
            if match: return match[0]
            else: return ''
 
-
+        if parser == 'http://pornohub.su':
+           match = re.findall('video/mp4.*?src="(.*?)"', data, re.S)
+           if match: return match[0]
+           else: return ''
 
         printDBG( 'Host getResolvedURL end' )
         return videoUrl

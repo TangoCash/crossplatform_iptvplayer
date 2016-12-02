@@ -337,6 +337,8 @@ class ARDmediathek(CBaseHostClass):
             tmpUrlTab = []
             data = byteify(json.loads(data))
             live = data['_isLive']
+            subtitleUrl = data.get('_subtitleUrl', '')
+            itemType = data['_type']
             try:
                 data = data['_mediaArray']
                 for media in data:
@@ -352,14 +354,18 @@ class ARDmediathek(CBaseHostClass):
                         if url.startswith('https://'):
                             url = 'http' + url[5:]
                         for type in [{'pattern':'.m3u8', 'name':'m3u8'}, {'pattern':'.mp4', 'name':'mp4'}]:
-                            if not url.endswith(type['pattern']): continue
-                            if type['name'] == 'mp4':
+                            if itemType == 'audio':
+                                typeName = 'mp4'
+                            elif not url.endswith(type['pattern']): continue
+                            else:
+                                typeName = type['name']
+                            if typeName == 'mp4':
                                 quality = self._getQualityName(int(quality))
                                 qualityVal = self.STREAM_QUALITY_MAP.get(quality, 10)
                                 qualityPref = abs(qualityVal - preferedQuality)
-                                formatPref  = formatMap.get(type['name'], 10)
-                                tmpUrlTab.append({'url':url, 'quality_name':quality, 'quality':qualityVal, 'quality_pref':qualityPref, 'format_name':type['name'], 'format_pref':formatPref})
-                            elif type['name'] == 'm3u8':
+                                formatPref  = formatMap.get(typeName, 10)
+                                tmpUrlTab.append({'url':url, 'quality_name':quality, 'quality':qualityVal, 'quality_pref':qualityPref, 'format_name':typeName, 'format_pref':formatPref})
+                            elif typeName == 'm3u8':
                                 if quality != 'auto': break
                                 tmpList = getDirectM3U8Playlist(url, checkExt=False)
                                 for tmpItem in tmpList:
@@ -372,7 +378,7 @@ class ARDmediathek(CBaseHostClass):
                                     if res > 1200: quality = 'hd'
                                     qualityVal = self.STREAM_QUALITY_MAP.get(quality, 10)
                                     qualityPref = abs(qualityVal - preferedQuality)
-                                    formatPref  = formatMap.get(type['name'], 10)
+                                    formatPref  = formatMap.get(typeName, 10)
                                     tmpUrlTab.append({'url':tmpItem['url'], 'quality_name':quality + ' {0}x{1}'.format(tmpItem['with'], tmpItem['heigth']), 'quality':qualityVal, 'quality_pref':qualityPref, 'format_name':type['name'], 'format_pref':formatPref})
             except Exception:
                 printExc()
@@ -403,8 +409,11 @@ class ARDmediathek(CBaseHostClass):
             for item in tmpUrlTab:
                 url = item['url']
                 name = item['quality_name'] + ' ' + item['format_name']
-                if '' != url:
-                    urlTab.append({'need_resolve':0, 'name':name, 'url':self.up.decorateUrl(url, {'iptv_livestream':live})})
+                if self.cm.isValidUrl(url):
+                    decorateParams = {'iptv_livestream':live}
+                    if self.cm.isValidUrl(subtitleUrl):
+                        decorateParams['external_sub_tracks'] = [{'title':_('German'), 'url':subtitleUrl, 'lang':_('de'), 'format':'ttml'}]
+                    urlTab.append({'need_resolve':0, 'name':name, 'url':self.up.decorateUrl(url, decorateParams)})
                     if onelinkmode: break
             printDBG(tmpUrlTab)
         except Exception:

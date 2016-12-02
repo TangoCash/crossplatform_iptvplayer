@@ -31,7 +31,7 @@ class IPTVSubtitlesHandler:
         printDBG("getSupportedFormats")
         if IsSubtitlesParserExtensionCanBeUsed():
             printDBG("getSupportedFormats after import")
-            return ['srt', 'vtt', 'mpl', 'ssa', 'smi', 'rt', 'txt', 'sub', 'dks', 'jss', 'psb']
+            return ['srt', 'vtt', 'mpl', 'ssa', 'smi', 'rt', 'txt', 'sub', 'dks', 'jss', 'psb', 'ttml']
         printDBG("getSupportedFormats end")
         return IPTVSubtitlesHandler.SUPPORTED_FORMATS
     

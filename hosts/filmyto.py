@@ -46,11 +46,11 @@ class FilmyTo(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'FilmyTo.tv', 'cookie':'filmyto.cookie'})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'http://filmy.to/'
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'static/frontend/img/logo.06ac9ed751db.png'
@@ -211,11 +211,18 @@ class FilmyTo(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
+        params  = dict(self.defaultParams)
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = cItem['url']
+        
         data  = self.cm.ph.getDataBeetwenMarkers(data, '<form method="post">', '</form>')[1]
         name  = self.cm.ph.getSearchGroups(data, '''name=['"]([^'^"]+?)['"]''')[0]
         value = self.cm.ph.getSearchGroups(data, '''value=['"]([^'^"]+?)['"]''')[0]
-        post_data = {name:value, 'ukryj':'on'}
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams, post_data)
+        post_data = {name:value, 'ukryj_bez_zrodel':'1', 'ukryj':'on'}
+        sts, data = self.cm.getPage(cItem['url'], params, post_data)
+        
+        #if not sts or '<aside>' not in data:
+        sts, data = self.cm.getPage(cItem['url'], params)
         if not sts: return
         
         sNum = cItem['priv_snum']
@@ -223,8 +230,8 @@ class FilmyTo(CBaseHostClass):
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>', withMarkers=True)
         for item in data:
             url    = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
-            title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<span class="ep_tyt">', '</span>')[1])
-            eNum   = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<span class="ep_nr">', '</span>')[1])
+            title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<span class="ep_tyt[^>]+?>'), re.compile('</span>'))[1])
+            eNum   = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<span class="ep_nr[^>]+?>'), re.compile('</span>'))[1])
             eNum   = self.cm.ph.getSearchGroups('|%s|' % eNum, '''[^0-9]?([0-9]+?)[^0-9]''')[0]
             title  = cItem['priv_stitle'] + ': s{0}e{1} {2}'.format(sNum.zfill(2), eNum.zfill(2), title)
             params = dict(cItem)

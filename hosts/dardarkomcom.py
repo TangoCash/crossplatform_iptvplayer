@@ -279,7 +279,7 @@ class DardarkomCom(CBaseHostClass):
         for idx in range(len(data)):
             item = data[idx]
             if idx < len(tabsNames):
-                tabName = tabsNames[idx]
+                tabName = self.cleanHtmlStr(tabsNames[idx])
             else:
                 tabName = 'ERROR'
             
@@ -294,13 +294,13 @@ class DardarkomCom(CBaseHostClass):
                 # trailer
                 url = self.cm.ph.getSearchGroups(item, '''file:[^"^']*?["'](http[^'^"]+?)["']''')[0]
                 title = _('[Trailer]') + ' ' + tabName
-            elif 'باقي السيرفرات' in tabName:
+            elif 'باقي السيرفرات' in tabName or '/templates/server/server.htm' in item:
                 # diffrents servers
-                servers   = re.compile('''<a[^>]+?href=['"]([^'^"]+?)['"][^>]*?>([^<]+?)<''').findall(item)
+                servers   = self.cm.ph.getAllItemsBeetwenMarkers(item, '<a ', '</a>')
                 for server in servers:
-                    url   = self._getFullUrl( server[0] )
-                    title = tabName + ' ' + self.cleanHtmlStr( server[1] )
-                    if url.startswith('http'):
+                    url   = self._getFullUrl( self.cm.ph.getSearchGroups(server, '''href=['"]([^'^"]+?)['"]''')[0] )
+                    title = tabName + ' ' + self.cleanHtmlStr( server )
+                    if self.cm.isValidUrl(url):
                         urlTab.append({'name':title, 'url':url, 'need_resolve':1})
                 url = ''
             elif 'iframe' in item:
@@ -325,7 +325,7 @@ class DardarkomCom(CBaseHostClass):
         if m1 in videoUrl:
             videoUrl = videoUrl[videoUrl.find(m1)+3:]
         
-        if 'dardarkom.com' in videoUrl or 'darkom.me' in videoUrl:
+        if 'dardarkom.com' in videoUrl or 'darkom.me' in videoUrl or 'jacvideo.com' in videoUrl:
             sts, data = self.cm.getPage(videoUrl)
             if not sts: return []
             url = ''

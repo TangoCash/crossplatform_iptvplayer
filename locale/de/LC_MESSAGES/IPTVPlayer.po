@@ -827,7 +827,7 @@ msgid "IPTVPlayer setup version %s "
 msgstr "IPTV Player Setup Version %s "
 
 msgid "Icons size"
-msgstr "Icongröße"
+msgstr "Icon-Größe"
 
 msgid "Info"
 msgstr "Information"
@@ -1672,13 +1672,13 @@ msgid "The \"%s\" utility is used by IPTVPlayer."
 msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player verwendet."
 
 msgid "The \"%s\" utility is used by the IPTVPlayer as external movie player based on the ffmpeg and libeplayer."
-msgstr "Der \"%s\" wird vom IPTV Player als Externer Movie Player verwendetbasierend auf ffmpeg und Libeplayer."
+msgstr "Der \"%s\" wird vom IPTV Player als Externer Movie Player verwendet basierend auf ffmpeg und Libeplayer."
 
 msgid "The \"%s\" utility is used by the IPTVPlayer as external movie player."
 msgstr "Der \"%s\" wird vom IPTV Player als Externer Movie Player verwendet."
 
 msgid "The \"%s\" utility is used by the IPTVPlayer to buffering and downloading [%s] links."
-msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player zum Puffern und Herunterladenvon [%s] Links verwendet."
+msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player zum Puffern und Herunterladen von [%s] Links verwendet."
 
 msgid "The \"%s\" utility is used by the IPTVPlayer to determine the encoding of the text."
 msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player werwendet, um die Kodierung von Texten zu bestimmen."
@@ -2093,7 +2093,10 @@ msgid "favourtes"
 msgstr "Favoriten"
 
 msgid "format"
-msgstr "Format"
+msgstr " Format "
+
+msgid "Format"
+msgstr " Format "
 
 msgid "fuchsia"
 msgstr "magenta"
@@ -2876,7 +2879,7 @@ msgid "  password:"
 msgstr "  Passwort:"
 
 msgid "The default video format"
-msgstr ""
+msgstr "Standard Video Format"
 
 msgid "Use Proxy?"
 msgstr "Verwende Proxy?"
@@ -3457,3 +3460,6 @@ msgstr "Softwaredekoder für MP3 verwenden"
 
 msgid "Menu"
 msgstr "Menü"
+
+msgid "Icons quality"
+msgstr "Icon-Größe"

@@ -1100,12 +1100,12 @@ class IPTVExtMoviePlayer(Screen):
     def key_pause(self):        self.extPlayerCmddDispatcher.pause()  
     def key_exit(self):         self.doExit()
     def key_info(self):         self.doInfo()
-    def key_seek1(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_13.value * -1)
-    def key_seek3(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_13.value) 
-    def key_seek4(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_46.value * -1)
-    def key_seek6(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_46.value)
-    def key_seek7(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_79.value * -1)
-    def key_seek9(self):        self.extPlayerCmddDispatcher.doSeek(config.seek.selfdefined_79.value)  
+    def key_seek1(self):        self.doSeek(config.seek.selfdefined_13.value * -1)
+    def key_seek3(self):        self.doSeek(config.seek.selfdefined_13.value) 
+    def key_seek4(self):        self.doSeek(config.seek.selfdefined_46.value * -1)
+    def key_seek6(self):        self.doSeek(config.seek.selfdefined_46.value)
+    def key_seek7(self):        self.doSeek(config.seek.selfdefined_79.value * -1)
+    def key_seek9(self):        self.doSeek(config.seek.selfdefined_79.value)  
     def key_seekFwd(self):      self.extPlayerCmddDispatcher.seekFwd()   
     def key_seekBack(self):     self.extPlayerCmddDispatcher.seekBack()   
     def key_left_press(self):   self.goToSeekKey(-1, 'press')
@@ -1116,6 +1116,17 @@ class IPTVExtMoviePlayer(Screen):
     def key_up_repeat(self):    self.goSubSynchroKey(-1, 'repeat') 
     def key_down_press(self):   self.goSubSynchroKey(1, 'press')
     def key_down_repeat(self):  self.goSubSynchroKey(1, 'repeat')
+    
+    def doSeek(self, val):
+        if None != self.downloader and self.downloader.getName() == "wget m3u8" \
+           and self.playback['CurrentTime'] >= 0 and self.playback['Length'] > 10:
+            val += self.playback['CurrentTime']
+            if val < 0: val = 0
+            elif val > self.playback['Length'] - 10:
+                val = self.playback['Length'] - 10
+            self.extPlayerCmddDispatcher.doGoToSeek(str(val))
+            return
+        self.extPlayerCmddDispatcher.doSeek(val)
     
     def key_ok(self):
         if 'Pause' == self.playback['Status']: self.extPlayerCmddDispatcher.play()

@@ -380,6 +380,9 @@ class urlparser:
                        'easyvideo.me':         self.pp.parserEASYVIDEOME    ,
                        'vidlox.tv':            self.pp.parserVIDLOXTV       ,
                        'embeducaster.com':     self.pp.parserUCASTERCOM     ,
+                       'darkomplayer.com':     self.pp.parserDARKOMPLAYER   ,
+                       'vivo.sx':              self.pp.parserVIVOSX         ,
+                       'zstream.to':           self.pp.parserZSTREAMTO      ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -2290,7 +2293,21 @@ class pageParser:
             printExc()
             
         sts, data = self.cm.getPage(baseUrl, {'header' : HTTP_HEADER}, post_data)
-        return self._findLinks(data, 'moshahda.net')
+        if not sts: return False
+        
+        linksTab = []
+        srcData = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', '],', False)[1].strip()
+        srcData = byteify(json.loads(srcData+']')) 
+        for link in srcData:
+            if not self.cm.isValidUrl(link): continue
+            if link.split('?')[0].endswith('m3u8'):
+                tmp = getDirectM3U8Playlist(link)
+                linksTab.extend(tmp)
+            else:
+                linksTab.append({'name': 'mp4', 'url':link})
+        return linksTab
+                
+        #return self._findLinks(data, 'moshahda.net', linkMarker=r'''['"](http[^"^']+)['"]''')
         
     def parseSTREAMMOE(self, baseUrl):
         printDBG("parseSTREAMMOE baseUrl[%r]" % baseUrl)
@@ -3537,6 +3554,31 @@ class pageParser:
         
         return rtmpUrl + ' playpath=' + playpath + ' swfUrl=' + swfUrl +  ' pageUrl=' + baseUrl + ' live=1'
         
+    def parserVIVOSX(self, baseUrl):
+        printDBG("parserVIVOSX baseUrl[%s]" % baseUrl)
+        HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
+        sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
+        if not sts:
+            cmd = DMHelper.getBaseWgetCmd(HTTP_HEADER) + "'{0}'".format(baseUrl) + ' -O - 2> /dev/null'
+            data = iptv_execute()( cmd )
+            #if not data['sts'] or 0 != data['code']: return False
+            data = data['data']
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, 'InitializeStream', ';', False)[1]
+        data = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]+?)['"]''')[0]
+        data = byteify(json.loads(base64.b64decode(data)))
+        urlTab = []
+        for idx in range(len(data)):
+            if not self.cm.isValidUrl(data[idx]): continue
+            urlTab.append({'name':_('Source %s') % (idx+1), 'url':strwithmeta(data[idx], {'Referer':baseUrl, 'User-Agent':HTTP_HEADER['User-Agent']})})
+        return urlTab
+        
+    def parserZSTREAMTO(self, baseUrl):
+        printDBG("parserZSTREAMTO baseUrl[%s]" % baseUrl)
+        HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
+        sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
+        return self._findLinks(data, 'zstream')
+        
     def parserUCASTERCOM(self, baseUrl):
         printDBG("parserUCASTERCOM baseUrl[%s]" % baseUrl)
         HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3 Gecko/2008092417 Firefox/3.0.3', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
@@ -4041,6 +4083,8 @@ class pageParser:
                       
         if '.tv/embed-' not in baseUrl:
             baseUrl = baseUrl.replace('.tv/', '.tv/embed-')
+        if not baseUrl.endswith('.html'):
+            baseUrl += '.html'
         HTTP_HEADER['Referer'] = baseUrl
         SWF_URL = 'http://static.flashx.tv/player6/jwplayer.flash.swf'
         
@@ -4068,25 +4112,29 @@ class pageParser:
             return urlunsplit((scheme, netloc, path, query, fragment))
         
         vid = self.cm.ph.getSearchGroups(redirectUrl+'/', '[^A-Za-z0-9]([A-Za-z0-9]{12})[^A-Za-z0-9]')[0]
-        for item in ['playthis-', 'playit-', 'playvid-']:
-            if item in data:
+        for item in ['playvid', 'playthis', 'playit']:
+            if item+'-' in data:
                 play = item
                 break
         
         printDBG("vid[%s] play[%s]" % (vid, play))
         
         tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?counter[^'^"]+?)['"]""")[0]
+        if tmpUrl == '': tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?jquery2[^'^"]+?)['"]""")[0]
+        
         if tmpUrl.startswith('.'):
             tmpUrl = tmpUrl[1:]
+        if tmpUrl.startswith('//'):
+            tmpUrl = 'http:' + tmpUrl
         if tmpUrl.startswith('/'):
             tmpUrl = 'http://www.flashx.tv' + tmpUrl
         if tmpUrl != '':
             sts, tmp = self.cm.getPage(tmpUrl, params)
         
-        url = self.cm.ph.getSearchGroups(redirectUrl, """(https?://[^/]+?/)""")[0] + play + '{0}.html'.format(vid)
+        url = self.cm.ph.getSearchGroups(redirectUrl, """(https?://[^/]+?/)""")[0] + play + '-{0}.html?{1}'.format(vid, play)
         sts, data = self.cm.getPage(url, params)
-        if not sts:
-            return False
+        if not sts: return False
+        printDBG(data)
             
         if 'fxplay' not in url and 'fxplay' in data:
             url = self.cm.ph.getSearchGroups(data, '"(http[^"]+?fxplay[^"]+?)"')[0]
@@ -5194,6 +5242,30 @@ class pageParser:
         
         return urlTab
         
+    def parserDARKOMPLAYER(self, baseUrl):
+        printDBG("parserDARKOMPLAYER baseUrl[%s]" % baseUrl)
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return False
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, "eval(", '</script>')[1]
+        tmp = unpackJSPlayerParams(tmp, TEAMCASTPL_decryptPlayerParams, type=0)
+        data += tmp
+        
+        urlTab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source ', '>', False, False)
+        for item in data:
+            type  = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
+            res   = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
+            label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+            url   = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+            if 'mp4' not in type: continue
+            if url.startswith('//'):
+                url = 'http:' + url
+            if self.cm.isValidUrl(url):
+                url = urlparser.decorateUrl(url, {'Referer':baseUrl, 'User-Agent':'Mozilla/5.0'})
+                urlTab.append({'name':'darkomplayer {0}: {1}'.format(label, res), 'url':url})
+        return urlTab
+        
     def parseJACVIDEOCOM(self, baseUrl):
         printDBG("parseJACVIDEOCOM baseUrl[%s]" % baseUrl)
         
@@ -5224,6 +5296,13 @@ class pageParser:
                 return linksTab
             except Exception:
                 printExc()
+        
+        url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]*?src=["'](http[^"^']+?)["']''', 1, True)[0]
+        try:
+            linksTab = urlparser().getVideoLinkExt(url)
+            if len(linksTab): return linksTab
+        except Exception:
+            printExc()
         return self._findLinks(data, contain='mp4')
         
     def parseSPEEDVICEONET(self, baseUrl):

@@ -244,7 +244,19 @@ class TvpVod(CBaseHostClass):
             id    = self.cm.ph.getSearchGroups(item, 'data-id="([0-9]+?)"')[0]
             title = self.cleanHtmlStr(item)
             if id != '':
-                url = 'http://sport.tvp.pl/shared/listing.php?parent_id=' + id +'&type=v_listing_typical_a&order=release_date_long,-1&filter=%7B%22playable%22%3Atrue%7D&direct=false&template=vod/items-listing.html&count=' + str(self.PAGE_SIZE)
+                if mode == 'popular':
+                    copy   = 'true'
+                    direct = 'true'
+                    order  = 'position,1'
+                    filter = '{"types.1":"video","play_mode":1}'
+                else:
+                    copy   = 'false'
+                    direct = 'false'
+                    order  = 'release_date_long,-1'
+                    if mode == 'newest': filter = '{"types.1":"video","parents":{"$in":[432801,434339,548368]},"copy":false,"play_mode":1}'
+                    else: filter = '{"types.1":"video","copy":false,"play_mode":1}'
+                    
+                url = 'http://sport.tvp.pl/shared/listing.php?parent_id=' + id + '&type=v_listing_typical_a&direct=' + direct +'&order=' + order + '&copy=' + copy + '&mode=' + mode + '&filter=' + urllib.quote(filter) + '&template=vod/items-listing.html&count=' + str(self.PAGE_SIZE)
                 params = dict(cItem)
                 params.update({'category':nextCategory, 'good_for_fav':True, 'title':title, 'url':url})
                 self.addDir(params)
@@ -253,6 +265,8 @@ class TvpVod(CBaseHostClass):
         printDBG("TvpVod.listTVPSportVideos")
         
         page = cItem.get('page', 1)
+        videosNum = 0
+        
         url  = cItem['url']
         url += '&page=%d' %(page)
         
@@ -260,7 +274,7 @@ class TvpVod(CBaseHostClass):
         if not sts: return
         data = data.split('<div class="item')
         if len(data): del data[0]
-        videosNum = 0
+        
         for item in data:
             url   = self.cm.ph.getSearchGroups(item, 'data-url="([^"]+?)"')[0]
             if url.startswith('/'):
