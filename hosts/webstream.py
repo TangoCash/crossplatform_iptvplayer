@@ -566,61 +566,96 @@ class HasBahCa(CBaseHostClass):
         
     def getWebCamera(self, cItem):
         printDBG("getWebCamera start")
-        def __wcFullUrl(url):
+        baseMobileUrl = 'http://www.webcamera.mobi/'
+        baseUrl = 'http://www.webcamera.pl/'
+        
+        def _getFullUrl(url, mobile=False):
+            if mobile: 
+                base = baseMobileUrl
+            else:
+                base = baseUrl
+            
+            if self.cm.isValidUrl(url):
+                if mobile:
+                    url = url.replace(self.up.getDomain(baseUrl), self.up.getDomain(baseMobileUrl))
+                else:
+                    url = url.replace(self.up.getDomain(baseMobileUrl), self.up.getDomain(baseUrl))
+                return url
             if url.startswith('//'):
                 return 'http:' + url
+            elif url.startswith('/'):
+                return base[:-1] + url
+            elif len(url):
+                return base + url
             return url
-            if url.startswith('/'):
-                return 'http://www.webcamera.pl' + url
-            return url
-        sts = True
-        if 'sub_cats' not in cItem:
+        
+        catKey = 'webcamera_category'
+        category = cItem.get(catKey, '')
+            
+        if category == '':
+            sts, data = self.cm.getPage(baseMobileUrl)
+            if not sts: return
+
+            params = dict(cItem)
+            params.update({'title':'TV', 'url':strwithmeta(_getFullUrl('tv'), {'iframe':True})})
+            self.addVideo(params)
+            params = dict(cItem)
+            params.update({'title':'Polecane kamery', 'url':baseUrl, catKey:'list_videos'})
+            self.addDir(params)
+            params = dict(cItem)
+            params.update({'title':'Ostatnio dodane', catKey:'list_videos', 'url':_getFullUrl('ostatniododane')})
+            self.addDir(params)
+            
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam inlinecamv2"', '</div>')
+            for item in data:
+                catUrl = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0]
+                icon   = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?)['"]""")[0] 
+                params = dict(cItem)
+                params.update({'title':self._cleanHtmlStr(item), 'url':_getFullUrl(catUrl, True), 'icon':_getFullUrl(icon, True), catKey:'sub_cat'})
+                self.addDir(params)
+        elif category == 'sub_cat':
             sts, data = self.cm.getPage(cItem['url'])
-        if sts:
-            wc_cat = cItem.get('wc_cat', None)
-            if wc_cat == None:
+            if not sts: return
+            
+            hasSubCats = False
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam inlinecamv2"', '</div>')
+            for item in data:
+                catUrl = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0].replace('?cat=', 'kategoria,')
+                icon   = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?)['"]""")[0] 
                 params = dict(cItem)
-                params.update({'title':'TV', 'url':'https://www.youtube.com/embed/oG5v9EBTJug'})
-                self.addVideo(params)
-                params = dict(cItem)
-                params.update({'title':'Polecane kamery', 'wc_cat':'list_videos'})
+                params.update({'title':self._cleanHtmlStr(item), 'url':_getFullUrl(catUrl), 'icon':_getFullUrl(icon, True), catKey:'list_videos'})
                 self.addDir(params)
+                hasSubCats = True
+            if hasSubCats:
                 params = dict(cItem)
-                params.update({'title':'Ostatnio dodane', 'wc_cat':'list_videos', 'url':'http://www.webcamera.pl/ostatniododane'})
-                self.addDir(params)
-                
-                data = self.cm.ph.getDataBeetwenMarkers(data, '>kategorie', '</nav>', False)[1]
-                data = data.split('<li class="has-children"')
-                if len(data): del data[0]
-                for cat in data:
-                    cat = cat.split('<ul class="is-hidden">')
-                    catTitle = self._cleanHtmlStr(cat[0])
-                    tmp = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)<').findall(cat[-1])
-                    subCats = []
-                    for item in tmp:
-                        params = dict(cItem)
-                        params.update({'title':self._cleanHtmlStr(item[1]), 'url':__wcFullUrl(item[0]), 'wc_cat':'list_videos'})
-                        subCats.append(params)
-                    if len(subCats):
-                        params = dict(cItem)
-                        params.update({'title':catTitle, 'url':'', 'sub_cats':subCats, 'wc_cat':'list_sub'})
-                        self.addDir(params)
-            elif wc_cat == 'list_sub':
-                for item in cItem['sub_cats']:
-                    self.addDir(item)
-            elif wc_cat == 'list_videos':
-                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam', '</div>')
-                for item in data:
-                    url = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0]
-                    if '' != url:
-                        title = self._cleanHtmlStr(item)
-                        icon  = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?\.jpg[^'^"]*?)['"]""")[0]
-                        params = dict(cItem)
-                        params.update({'title':title, 'url':__wcFullUrl(url), 'icon':__wcFullUrl(icon)})
-                        self.addVideo(params)
+                params.update({'type':'category', 'title':'Wszystkie', 'url':_getFullUrl(params['url']).replace('?cat=', 'kategoria,')})
+                self.currList.insert(0, params)
+            else:
+                cItem = dict(cItem)
+                cItem['url'] = _getFullUrl(cItem['url']).replace('?cat=', 'kategoria,')
+                category = 'list_videos'
+        
+        if category == 'list_videos':
+            sts, data = self.cm.getPage(cItem['url'])
+            if not sts: return
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam', '</div>')
+            for item in data:
+                url = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0]
+                if '' != url:
+                    title = self._cleanHtmlStr(item)
+                    icon  = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?\.jpg[^'^"]*?)['"]""")[0]
+                    params = dict(cItem)
+                    params.update({'title':title, 'url':_getFullUrl(url), 'icon':_getFullUrl(icon)})
+                    self.addVideo(params)
                        
     def getWebCameraLink(self, videoUrl):
         printDBG("getWebCameraLink start")
+        videoUrl = strwithmeta(videoUrl)
+        if videoUrl.meta.get('iframe', False):
+            sts, data = self.cm.getPage(videoUrl)
+            if not sts: return []
+            videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?embed[^"^']+?)['"]''', 1, True)[0]
+        
         return self.up.getVideoLinkExt(videoUrl)
     
     def getVideostarList(self):

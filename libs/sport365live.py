@@ -37,6 +37,7 @@ from datetime import datetime, timedelta
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
@@ -55,9 +56,11 @@ class Sport365LiveApi:
     
     def __init__(self):
         self.COOKIE_FILE = GetCookieDir('sport365live.cookie')
+        self.sessionEx = MainSessionWrapper()
         self.cm = common()
         self.up = urlparser()
         self.http_params = {'header': dict(self.HTTP_HEADER), 'use_cookie':True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.needRefreshAdvert = True
         
     def getFullUrl(self, url):
         if url.startswith('http'):
@@ -82,42 +85,82 @@ class Sport365LiveApi:
         key, iv = derive_key_and_iv(password, salt, 32, 16)
         cipher = AES_CBC(key=key, keySize=32)
         return cipher.decrypt(encrypted, iv)
+    
+    def getMarketCookie(self, url, referer, num=1):
+        id = url.split('.')[-2]
+        
+        xz = str(int(time() * 1000)) + id + str(int(random.random()*1000)) + str(2 * int(random.random()*4)) + str(num)
+        xz = base64.b64encode(xz)
+        return 'MarketGidStorage=%s; ' % urllib.quote('{"0":{"svspr":"%s","svsds":%s,"TejndEEDj":"%s"},"C%s":{"page":1,"time":%s}}' % (referer, num, xz, id, int(time() * 100)))
         
     def refreshAdvert(self):
-        url = self.getFullUrl('home')
-        sts, data = self.cm.getPage(url, self.http_params)
-        if not sts: return
-        printDBG(data)
+        if not self.needRefreshAdvert: return
         
-        data = re.compile('''src=['"](http[^"^']*?advert[^"^']*?\.js[^'^"]*?)["']''').findall(data)
+        self.sessionEx.open(MessageBox, _('Please remember to visit http://www.sport365.live/ and watch a few advertisements.\nThis will fix problem, if your playback is constantly interrupted.'), type=MessageBox.TYPE_INFO, timeout=10)
+        self.needRefreshAdvert = False
+        
+        COOKIE_FILE = GetCookieDir('sport365live2.cookie')
         params = dict(self.http_params)
+        params['cookiefile'] = COOKIE_FILE
         params['header'] = dict(params['header'])
-        params['header']['Referer'] = self.getFullUrl('home')
-        for url in data:
-            sts, data = self.cm.getPage(url, params)
+        params['return_data'] = False
+        baseUrl = self.MAIN_URL
+        try:
+            sts, response = self.cm.getPage(baseUrl, params)
+            baseUrl = response.geturl()
+            data = response.read()
+            response.close()
+        except Exception:
+            printExc()
+            return
+        
+        sessionCookie = self.cm.getCookieHeader(COOKIE_FILE)
+        params['return_data'] = True
+        params['header']['Referer'] = baseUrl
+        
+        awrapperUrls = re.compile('''['"]([^"^']*?/awrapper/[^'^"]*?)["']''').findall(data)
+        
+        D = datetime.now()
+        timeMarker = '{0}{1}{2}{3}'.format(D.year-1900, D.month-1, D.day, D.hour)
+        jscUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?jsc\.mgid[^'^"]*?)['"]''')[0]
+        if jscUrl.endswith('t='): jscUrl += timeMarker
+        adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
+        
+        sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+        if sts: adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
+        
+        sts, data = self.cm.getPage(self.getFullUrl(jscUrl), params)
+        marketCookie = self.getMarketCookie(jscUrl, baseUrl)
+        params['use_cookie'] = False
+        params['header']['Cookie'] = marketCookie
+        sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+
+        
+        for awrapperUrl in awrapperUrls:
+            awrapperUrl = self.getFullUrl(awrapperUrl)
+            params['header']['Referer'] = baseUrl
+            params['header']['Cookie'] = sessionCookie + marketCookie
+            sts, data = self.cm.getPage(awrapperUrl, params)
+            if not sts: continue
+            
+            adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
+            params['header']['Referer'] = awrapperUrl
+            params['header']['Cookie'] = marketCookie
+            
+            sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+            if not sts: continue
+            
+            jscUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?jsc\.mgid[^'^"]*?)['"]''')[0]
+            if jscUrl.endswith('t='): jscUrl += timeMarker
+            if jscUrl != '':
+                sts, tmp = self.cm.getPage(self.getFullUrl(jscUrl), params)
+                if sts: params['header']['Cookie'] = self.getMarketCookie(jscUrl, awrapperUrl)
+            adUrls = re.compile('''['"]([^'^"]*?bannerid[^'^"]*?)['"]''').findall(data)
+            for adUrl in adUrls:
+                adUrl = adUrl.replace('&amp;', '&')
+                sts, tmp = self.cm.getPage(self.getFullUrl(adUrl), params)
+        
         return
-        
-        millis = str(int(time()*1000))
-        rand = str(int(random.random() * 100000000))
-        url = "http://adbetnet.advertserve.com/servlet/view/dynamic/javascript/zone?zid=281&pid=4&resolution=1920x1080&random=" + rand + "&millis=" + millis + "&referrer=http%3A%2F%2Fwww.sport365.live%2Fen%2Fhome"
-        
-        params = dict(self.http_params)
-        params['header'] = dict(params['header'])
-        params['header']['Referer'] = self.getFullUrl('home')
-        
-        sts, data = self.cm.getPage(url, params)
-        if not sts: return
-        
-        #printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        #printDBG(data)
-        #printDBG("=========================================================")
-        
-        data = data.replace('\\"', '"')
-        UTM = self.cm.ph.getSearchGroups(data, '''UTM\s*=\s*['"]([^'^"]+?)['"]''')[0]
-        URL = self.cm.ph.getSearchGroups(data, '''URL\s*=\s*['"]([^'^"]+?)['"]''')[0]
-        url = URL + 'http%3A%2F%2Fwww.sport365.live%2Fen%2Fhome' + UTM
-        sts, data = self.cm.getPage(url, params)
-        if not sts: return
         
     def getMainCategries(self, cItem):
         printDBG("Sport365LiveApi.getMainCategries")
@@ -221,9 +264,6 @@ class Sport365LiveApi:
                     if len(tmp): del tmp[0]
                     tmpData = ''
                     for item in tmp:
-                        #printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
-                        #printDBG(item)
-                        #printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
                         for decFun in [VIDEOWEED_decryptPlayerParams, VIDEOWEED_decryptPlayerParams2, SAWLIVETV_decryptPlayerParams]:
                             tmpData = unpackJSPlayerParams('eval('+item, decFun, 0)
                             if '' != tmpData:   
@@ -240,8 +280,7 @@ class Sport365LiveApi:
                 aes = ''
             if aes != '':
                 break;
-                
-                
+        
         if aes == '':
             funname = self.cm.ph.getSearchGroups(deObfuscatedData, 'CryptoJS\.AES\.decrypt\([^\,]+?\,([^\,]+?)\,')[0].strip()
             printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")

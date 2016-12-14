@@ -445,6 +445,10 @@ class NaszeKinoOnline(CBaseHostClass):
                 self.login    = config.plugins.iptvplayer.naszekino_login.value
                 self.password = config.plugins.iptvplayer.naszekino_password.value
                 #self.sessionEx.open(MessageBox, 'Zostałeś poprawnie \nzalogowany.\n' + msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+                
+        if '' == config.plugins.iptvplayer.naszekino_login.value.strip() or \
+           '' == config.plugins.iptvplayer.naszekino_password.value.strip():
+           self.sessionEx.open(MessageBox, 'Serwis wymaga zalogowania.\nZarejestruj się na stronie http://nasze-kino.online/ i wprowdż dane do logowania w konfiguracji hosta.', type=MessageBox.TYPE_INFO, timeout=20 )
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
 

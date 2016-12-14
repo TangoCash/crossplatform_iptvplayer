@@ -194,11 +194,11 @@ class VideoStarApi:
         for item in self.channelsList:
             if channelID == item['id']:
                 referer = self.MAINURL  + '#' + item['slug'] # "slug" attrib can be also taken from stream_channel data
-                linkType = 'basic'
+                linkType = '2' #'basic'
                 if "unsubscribed" == item['access_status']:
                     guestMode = True
                 elif 'subscribed' == item['access_status']:
-                    linkType = 'premium'
+                    linkType = '1' #'premium'
                 break
         
         for tryNum in range(2):
@@ -257,7 +257,7 @@ class VideoStarApi:
                             channelID = data['stream_channel']['channel_id']
                             #if url.startswith('https://'): url = 'http://' + url[8:]
                             server = self.cm.ph.getSearchGroups(url, r'://([^/]+?)/')[0]
-                            meta['iptv_m3u8_custom_base_link'] = 'http://%s:1935/%s/smil:%s.ism/list.m3u8' % (server, channelID, linkType)
+                            meta['iptv_m3u8_custom_base_link'] = 'https://%s:443/%s/%s%s.stream/list.m3u8' % (server, channelID, channelID, linkType)#'http://%s:1935/%s/smil:%s.ism/list.m3u8' % (server, channelID, linkType)
                             meta['iptv_proxy_gateway'] = self.proxy_gateway_url
                             meta['Referer'] =  self.proxy_gateway_url
                             meta['User-Agent'] = 'Mozilla/5.0'

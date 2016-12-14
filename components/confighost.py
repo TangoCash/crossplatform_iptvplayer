@@ -162,10 +162,9 @@ class ConfigHostsMenu(ConfigBaseWidget):
                 self.runSetup()
             self.setOKLabel()
         
-    def _moveItem(self, dir):
+    def _moveItem(self, curIndex):
         assert( len(self.list) == len(self.hostsConfigsAvailableList) == len(self.listOfHostsNames) )
-        curIndex = self["config"].getCurrentIndex()
-        newIndex = curIndex + dir
+        newIndex = self["config"].getCurrentIndex()
         if 0 <= curIndex and len(self.list) > curIndex and 0 <= newIndex and len(self.list) > newIndex:
             printDBG(">>>>>>>>>>>>>>>>>>> _moveItem")
             self.list.insert(newIndex, self.list.pop(curIndex))
@@ -176,14 +175,20 @@ class ConfigHostsMenu(ConfigBaseWidget):
     def keyUp(self):
         if self.reorderingMode:
             printDBG(">>>>>>>>>>>>>>>>>>> keyUp")
-            self._moveItem(-1)
-        ConfigBaseWidget.keyUp(self)
+            curIndex = self["config"].getCurrentIndex()
+            ConfigBaseWidget.keyUp(self)
+            self._moveItem(curIndex)
+        else:
+            ConfigBaseWidget.keyUp(self)
         
     def keyDown(self):
         if self.reorderingMode:
             printDBG(">>>>>>>>>>>>>>>>>>> keyDown")
-            self._moveItem(1)
-        ConfigBaseWidget.keyDown(self)
+            curIndex = self["config"].getCurrentIndex()
+            ConfigBaseWidget.keyDown(self)
+            self._moveItem(curIndex)
+        else:
+            ConfigBaseWidget.keyDown(self)
     
     def keyLeft(self):
         if not self.reorderingEnabled:

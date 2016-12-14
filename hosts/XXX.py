@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "20.0.17.0"
+    XXXversion = "20.0.24.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -160,7 +160,7 @@ class Host:
            #printDBG( 'Host init data: '+data )
            r=re.search( r'XXXversion.*?class="s">"(.*?)"',data)
            if r:
-              printDBG( 'r' )
+              printDBG( 'release = '+r.group(1) )
               self.XXXremote=r.group(1)
         except:
            printDBG( 'Host init query error' )
@@ -233,7 +233,7 @@ class Host:
            valTab.append(CDisplayListItem('TNAFLIX',     'https://www.tnaflix.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.tnaflix.com/categories'],'TNAFLIX', 'https://pbs.twimg.com/profile_images/1109542593/logo_400x400.png', None)) 
            valTab.append(CDisplayListItem('EL-LADIES - JUST-EROPROFILE',     'http://search.el-ladies.com', CDisplayListItem.TYPE_CATEGORY, ['http://search.el-ladies.com'],'EL-LADIES', 'http://amateurblogs.eroprofile.com/img/ep_new_gallery_header.png', None)) 
            valTab.append(CDisplayListItem('EXTREMETUBE',     'http://www.extremetube.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.extremetube.com/video-categories'],'EXTREMETUBE', 'http://www.wp-tube-plugin.com/feed-images/extremetube.png', None)) 
-           valTab.append(CDisplayListItem('PORNKINO',     'http://pornkino.to', CDisplayListItem.TYPE_CATEGORY, ['http://pornkino.to/'],'PORNKINO', 'http://pornkino.to/images/logo.png', None)) 
+           #valTab.append(CDisplayListItem('PORNKINO',     'http://pornkino.to', CDisplayListItem.TYPE_CATEGORY, ['http://pornkino.to/'],'PORNKINO', 'http://pornkino.to/images/logo.png', None)) 
            valTab.append(CDisplayListItem('RUPORN',     'http://ruporn.video/', CDisplayListItem.TYPE_CATEGORY, ['http://ruporn.video/categories.html'],'RUSPORN', 'http://ruporn.video/App_Themes/ruporn/img/logo.png?12013', None)) 
            valTab.append(CDisplayListItem('PORN720',     'http://porn720.net/', CDisplayListItem.TYPE_CATEGORY, ['http://porn720.net/'],'PORN720', 'http://porn720.net/wp-content/themes/porn720/img/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNTREX',     'http://www.porntrex.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.porntrex.com/categories'],'PORNTREX', 'http://www.porntrex.com/templates/frontend/porntrex/img/logo.png', None)) 
@@ -243,6 +243,7 @@ class Host:
            valTab.append(CDisplayListItem('CLIPHUNTER',     'http://www.cliphunter.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.cliphunter.com/categories/'],'CLIPHUNTER', 'http://www.cliphunter.com/gfx/new/logo.png', None)) 
            valTab.append(CDisplayListItem('EMPFLIX',     'http://www.empflix.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.empflix.com/categories.php'],'EMPFLIX', 'http://empflix.eu/gfx/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNOHUB',     'http://pornohub.su/', CDisplayListItem.TYPE_CATEGORY, ['http://pornohub.su/'],'PORNOHUB', 'http://st.pornohub.su/pornohub.png', None)) 
+           valTab.append(CDisplayListItem('THUMBZILLA',     'http://www.thumbzilla.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.thumbzilla.com/'],'THUMBZILLA', 'https://cdn-d-static.pornhub.com/tz-static/images/pc/logo.png?cache=2016111010', None)) 
            if config.plugins.iptvplayer.xxxsortall.value:
                valTab.sort(key=lambda poz: poz.name)
            self.SEARCH_proc=name
@@ -305,6 +306,10 @@ class Host:
               valtemp = self.listsItems(-1, url, 'PORNOHUB-search')
               for item in valtemp: item.name='PORNOHUB - '+item.name              
               valTab = valTab + valtemp 
+
+              valtemp = self.listsItems(-1, url, 'THUMBZILLA-search')
+              for item in valtemp: item.name='THUMBZILLA - '+item.name              
+              valTab = valTab + valtemp
 
               return valTab
            valTab = self.listsItems(-1, url, self.SEARCH_proc)
@@ -1968,6 +1973,8 @@ class Host:
               if genre:
                  for phUrl, phImage, phTitle in genre:
                     phTitle = decodeHtml(phTitle)
+                    if phImage[:2] == "//":
+                       phImage = "http:" + phImage
                     printDBG( 'Host listsItems phUrl: '  +phUrl )
                     printDBG( 'Host listsItems phTitle: '+phTitle )
                     printDBG( 'Host listsItems phImage: '+phImage )
@@ -2949,9 +2956,75 @@ class Host:
                   printDBG( 'Host listsItems phImage: '+phImage )
                   printDBG( 'Host listsItems phTitle: '+phTitle )
                   valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
-      
            printDBG( 'Host listsItems end' )
            return valTab
+
+        if 'THUMBZILLA' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           self.MAIN_URL = 'http://www.thumbzilla.com' 
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url:'+url )
+              return valTab
+           printDBG( 'Host listsItems data: '+data )
+           Cats = re.findall('href="(/categories/.*?)".*?click\',\s\'(.*?)\'', data, re.S) 
+           if Cats:
+              for (phUrl, phTitle) in Cats:
+                 phTitle = decodeHtml(phTitle)
+                 printDBG( 'Host listsItems phUrl: '  +phUrl )
+                 printDBG( 'Host listsItems phTitle: '+phTitle )
+                 if not phTitle == "All": 
+                    valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl],'THUMBZILLA-clips', '', None)) 
+           valTab.insert(0,CDisplayListItem("--- Homemade ---",     "Homemade",      CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/homemade"], 'THUMBZILLA-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- HD Videos ---","HD Videos", CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/hd"], 'THUMBZILLA-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Popular Videos ---",     "Popular Videos",      CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/popular"], 'THUMBZILLA-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Top Videos ---",     "Top Videos",      CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/top"], 'THUMBZILLA-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Trending ---",     "Trending",      CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/trending"], 'THUMBZILLA-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Newest ---",     "Newest",      CDisplayListItem.TYPE_CATEGORY,[self.MAIN_URL+"/newest"], 'THUMBZILLA-clips', '',None))
+           self.SEARCH_proc='THUMBZILLA-search'
+           valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
+           valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'THUMBZILLA-search' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           valTab = self.listsItems(-1, 'http://www.thumbzilla.com/tags/%s' % url, 'THUMBZILLA-clips')
+           printDBG( 'Host listsItems end' )
+           return valTab          
+        if 'THUMBZILLA-clips' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           #printDBG( 'Host listsItems data: '+data )
+           phMovies = re.findall('href="(/video/.*?)".*?src="(.*?)".*?"title">(.*?)<.*?"duration">(.*?)<', data, re.S)  
+           if phMovies:
+              for ( phUrl, phImage, phTitle, phRuntime) in phMovies:
+                  if phUrl[:2] == "//":
+                     phUrl = "http:" + phUrl
+                  else:
+                     phUrl = self.MAIN_URL + phUrl
+                  phImage = 'http:'+phImage
+                  printDBG( 'Host listsItems phUrl: '  +phUrl )
+                  printDBG( 'Host listsItems phImage: '+phImage )
+                  printDBG( 'Host listsItems phTitle: '+phTitle )
+                  printDBG( 'Host listsItems phRuntime: '+phRuntime )
+                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+           match = re.findall('"next" href="(.*?)"', data, re.S)
+           if match:
+              phUrl = match[0]
+              printDBG( 'Host listsItems page phUrl: '+phUrl )
+              valTab.append(CDisplayListItem('Next', 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', None))
+           printDBG( 'Host listsItems end' )
+           return valTab
+
         return valTab
 
 
@@ -2973,6 +3046,7 @@ class Host:
         printDBG( 'Host getParser begin' )
         printDBG( 'Host getParser mainurl: '+self.MAIN_URL )
         printDBG( 'Host getParser url    : '+url )
+        if self.MAIN_URL == 'http://www.thumbzilla.com':     return self.MAIN_URL
         if self.MAIN_URL == 'http://pornohub.su':            return self.MAIN_URL
         if self.MAIN_URL == 'http://www.cliphunter.com':     return self.MAIN_URL
         if url.startswith('http://www.slutsxmovies.com/embed/'): return 'http://www.nuvid.com'
@@ -3014,7 +3088,7 @@ class Host:
         if self.MAIN_URL == 'http://showup.tv':              return self.MAIN_URL
         if self.MAIN_URL == 'http://www.xnxx.com':           return self.MAIN_URL
         if self.MAIN_URL == 'http://www.xvideos.com':        return self.MAIN_URL
-        if self.MAIN_URL == 'http://hentaigasm.com':         return self.MAIN_URL
+        if self.MAIN_URL == 'http://hentaigasm.com':         return 'file: "'
         if self.MAIN_URL =='http://xhamsterlive.com':        return 'http://xhamster.com/cams'
         if self.MAIN_URL == 'http://xhamster.com':           return self.MAIN_URL
         if self.MAIN_URL == 'http://www.eporner.com':        return self.MAIN_URL
@@ -3038,14 +3112,14 @@ class Host:
         if url.startswith('http://m.tube8.com'):             return 'http://m.tube8.com'
         if url.startswith('http://mobile.youporn.com'):      return 'http://mobile.youporn.com'
         if url.startswith('http://m.pornhub.com'):           return 'http://m.pornhub.com'
-        if url.startswith('http://www.katestube.com'):       return 'http://www.katestube.com'
-        if url.startswith('http://www.x3xtube.com'):         return 'http://www.x3xtube.com'
+        if url.startswith('http://www.katestube.com'):       return 'file: "'
+        if url.startswith('http://www.x3xtube.com'):         return 'file: "'
         if url.startswith('http://www.nuvid.com'):           return 'http://www.nuvid.com'
-        if url.startswith('http://www.wankoz.com'):          return 'http://www.wankoz.com'
-        if url.startswith('http://hornygorilla.com'):        return 'http://hornygorilla.com'
-        if url.startswith('http://www.vikiporn.com'):        return 'http://www.vikiporn.com'
-        if url.startswith('http://www.fetishshrine.com'):    return 'http://www.fetishshrine.com'
-        if url.startswith('http://www.hdzog.com'):           return 'http://www.hdzog.com'
+        if url.startswith('http://www.wankoz.com'):          return 'file: "'
+        if url.startswith('http://hornygorilla.com'):        return 'file: "'
+        if url.startswith('http://www.vikiporn.com'):        return 'file: "'
+        if url.startswith('http://www.fetishshrine.com'):    return 'file: "'
+        if url.startswith('http://www.hdzog.com'):           return "file': '"
         if url.startswith('http://www.sunporno.com'):        return 'http://www.sunporno.com'
         if url.startswith('http://www.befuck.com'):          return 'http://www.befuck.com'
         if url.startswith('http://www.drtuber.com'):         return 'http://www.drtuber.com'
@@ -3054,7 +3128,7 @@ class Host:
         if url.startswith('http://www.tnaflix.com'):         return 'https://www.tnaflix.com'
         if url.startswith('https://alpha.tnaflix.com'):      return 'https://alpha.tnaflix.com'
         if url.startswith('http://www.faphub.xxx'):          return 'http://www.faphub.xxx'
-        if url.startswith('http://www.sleazyneasy.com'):     return 'http://www.sleazyneasy.com'
+        if url.startswith('http://www.sleazyneasy.com'):     return 'file: "'
         if url.startswith('http://www.proporn.com'):         return 'http://www.proporn.com'
         if url.startswith('http://www.tryboobs.com'):        return 'http://www.tryboobs.com'
         if url.startswith('http://www.empflix.com'):         return 'http://www.empflix.com'
@@ -3071,7 +3145,7 @@ class Host:
         if url.startswith('https://www.rapidvideo.com'):     return 'xxxlist.txt'
         if url.startswith('http://videomega.tv'):            return 'xxxlist.txt'
         if url.startswith('http://www.flashx.tv'):           return 'xxxlist.txt'
-        if url.startswith('http://www.porndreamer.com'):     return 'http://www.katestube.com'
+        if url.startswith('http://www.porndreamer.com'):     return 'http://www.x3xtube.com'
         if url.startswith('http://pornicom.com'):            return 'http://pornicom.com'
         if url.startswith('http://www.pornicom.com'):        return 'http://pornicom.com'
         if url.startswith('http://www.tubeon.com'):          return 'http://www.nuvid.com'
@@ -3098,6 +3172,10 @@ class Host:
         if url.startswith('http://www.pornpillow.com'):      return 'http://www.pornpillow.com'
         if url.startswith('http://porneo.com'):              return 'http://www.nuvid.com'
         if self.MAIN_URL == 'http://www.pornfromczech.com':  return self.MAIN_URL
+        if url.startswith('http://www.5fing.com'):           return 'file: "'
+        if url.startswith('http://www.pornroxxx.com'):       return "0p'  : '"
+        if url.startswith('http://www.hd21.com'):            return "0p'  : '"
+        if url.startswith('http://www.txxx.com'):            return "file': '"
 
         return ''
 
@@ -3299,8 +3377,10 @@ class Host:
               videoAppUrl = Movies.group(3)
               printDBG( 'Host swfUrl: '  +swfUrl )
               printDBG( 'Host videoPlayUrl: '  +videoPlayUrl )
-              printDBG( 'videoPlayUrl: '  +videoPlayUrl )
-              Url = '%s playpath=%s swfUrl=%s conn=S:OK live=1 pageUrl=%s' % (videoAppUrl, videoPlayUrl, swfUrl, url)
+              printDBG( 'Host videoAppUrl: '  +videoAppUrl )
+              if videoPlayUrl=='null': return ''
+              if videoAppUrl=='null': return ''
+              Url = '%s playpath=%s?playToken=null swfUrl=%s conn=S:OK live=1 pageUrl=%s' % (videoAppUrl, videoPlayUrl, swfUrl, url)
               #Url = '%s playpath=%s swfUrl=%s pageUrl=%s' % (videoAppUrl, videoPlayUrl, swfUrl, url)
               printDBG( 'Host listsItems Url: '  +Url )
               return Url
@@ -3428,6 +3508,26 @@ class Host:
            printDBG( 'Host getResolvedURL query error' )
            return videoUrl
 
+
+        if parser == 'file: "':
+           videoPage = re.findall('file: "(.*?)"', data, re.S)   
+           if videoPage:
+              return videoPage[0]
+           return ''
+
+        if parser == "file': '":
+           videoPage = re.findall("file': '(.*?)'", data, re.S)   
+           if videoPage:
+              return videoPage[-1]
+           return ''
+
+
+        if parser == "0p'  : '":
+           videoPage = re.findall("0p'  : '(http.*?)'", data, re.S)   
+           if videoPage:
+              return videoPage[-1]
+           return ''
+
         if parser == 'http://www.pornrabbit.com':
            videoPage = re.findall("file: '(.*?)'", data, re.S)
            if videoPage:
@@ -3483,18 +3583,18 @@ class Host:
               return videoPage[0]
            return ''
 
-        if parser == 'http://www.x3xtube.com':
-           videoPage = re.findall('file: "(.*?)"', data, re.S)   
-           if videoPage:
-              printDBG( 'Host videoPage:'+videoPage[0])
-              return videoPage[0]
-           return ''
-
         if parser == 'http://www.nuvid.com':
-           videoPage = re.findall('source src="(.*?)"', data, re.S)   
-           if videoPage:
-              printDBG( 'Host videoPage:'+videoPage[0])
-              return videoPage[0]
+           videoUrl = re.search('video_id = "(.*?)"', data, re.S)
+           if videoUrl:
+              xml = 'http://www.nuvid.com/embed/%s' % videoUrl.group(1)
+              try:    data = self.cm.getURLRequestData({'url': xml, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+              except: 
+                 printDBG( 'Host getResolvedURL query error xml' )
+                 return ''
+              #printDBG( 'Host data json: '+data )
+              videoPage = re.findall('source src="(.*?)"', data, re.S)   
+              if videoPage:
+                 return videoPage[0]
            return ''
 
         if parser == 'http://www.wankoz.com':
@@ -3504,28 +3604,7 @@ class Host:
               return videoPage[0]
            return ''
 
-        if parser == 'http://hornygorilla.com':
-           videoPage = re.findall('file: "(.*?)"', data, re.S)   
-           if videoPage:
-              printDBG( 'Host videoPage:'+videoPage[0])
-              return videoPage[0]
-           return ''
-
-        if parser == 'http://www.vikiporn.com':
-           videoPage = re.findall("video_url: '(.*?).'", data, re.S)   
-           if videoPage:
-              printDBG( 'Host videoPage:'+videoPage[0])
-              return videoPage[0]
-           return ''
-
         if parser == 'http://www.fetishshrine.com':
-           videoPage = re.findall("video_url: '(.*?).'", data, re.S)   
-           if videoPage:
-              printDBG( 'Host videoPage:'+videoPage[0])
-              return videoPage[0]
-           return ''
-
-        if parser == 'http://www.hdzog.com':
            videoPage = re.findall("video_url: '(.*?).'", data, re.S)   
            if videoPage:
               printDBG( 'Host videoPage:'+videoPage[0])
@@ -3630,11 +3709,6 @@ class Host:
            if videoUrl: return decodeUrl(videoUrl.group(1))
            return ''
 
-        if parser == 'http://hentaigasm.com':
-           videoUrl = re.findall('file: "(.*?)"', data, re.S)
-           if videoUrl: return videoUrl[0]
-           return ''
-
         if parser == 'http://www.youporn.com':
            match = re.findall(r'encryptedQuality720URL\s=\s\'([a-zA-Z0-9+/]+={0,2})\',', data)
            if match:
@@ -3662,7 +3736,9 @@ class Host:
         if parser == 'http://embed.redtube.com':
            videoPage = re.findall('sources:.*?":"(.*?)"', data, re.S)
            if videoPage:
-              return videoPage[-1].replace(r"\/",r"/")
+              link = videoPage[-1].replace(r"\/",r"/")
+              if link.startswith('//'): link = 'http:' + link 
+              return link
            return ''
 
         if parser == 'http://www.redtube.com':
@@ -3787,9 +3863,18 @@ class Host:
            return ''
 
         if parser == 'https://www.tnaflix.com':
-           videoPage = re.search('contentUrl.*?content="(.*?)"', data, re.S) 
-           if videoPage:
-              return videoPage.group(1)
+           link = re.search("data-vid='(.*?)'\sdata-nk='(.*?)'\sdata-vk='(.*?)'", data, re.S) 
+           if link:
+              vid = link.group(1)
+              nk =  link.group(2)
+              vk =  link.group(3)
+              xml = 'https://cdn-fck.tnaflix.com/tnaflix/%s.fid?key=%s&VID=%s&nomp4=1&catID=0&rollover=1&startThumb=31&embed=0&utm_source=0&multiview=0&premium=1&country=0user=0&vip=1&cd=0&ref=0&alpha' % (vk, nk, vid) 
+           try:    data = self.cm.getURLRequestData({'url': xml, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+           except: 
+                   printDBG( 'Host getResolvedURL query error xml' )
+                   return videoUrl
+           videoPage = re.findall('<videoLink>.*?//(.*?)(?:]]>|</videoLink>)', data, re.S)
+           if videoPage: return 'http://' + videoPage[-1]
            return ''
 
         if parser == 'https://www.empflix.com':
@@ -3958,6 +4043,15 @@ class Host:
                  videoPage = re.search('file:"(.*?)"', data, re.S)
                  if videoPage: return videoPage.group(1)
            except: pass
+           try:
+              link = re.search('src="(https://www.bitporno.com/embed/.*?)"', data, re.S) 
+              if link:
+                 printDBG( 'Host listsItems test2: '  +link.group(1) )
+                 data = self.cm.getURLRequestData({'url': link.group(1).replace('embed/','?v='), 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+                 #printDBG( 'Host getResolvedURL data: '+data )
+                 videoPage = re.findall('"file":"(.*?)"', data, re.S)
+                 if videoPage: return videoPage[-1].replace('\/','/')
+           except: pass
            return ''
 
         if parser == 'http://www.filmyporno.tv':
@@ -3969,6 +4063,15 @@ class Host:
            match = re.findall('video/mp4.*?src="(.*?)"', data, re.S)
            if match: return match[0]
            else: return ''
+
+        if parser == 'http://www.thumbzilla.com':
+           match = re.findall('data-quality="(.*?)"', data)
+           if match:
+              fetchurl = urllib2.unquote(match[-1])
+              fetchurl = fetchurl.replace(r"\/",r"/")
+              if fetchurl.startswith('//'): fetchurl = 'http:' + fetchurl
+              return fetchurl 
+           return ''
 
         printDBG( 'Host getResolvedURL end' )
         return videoUrl

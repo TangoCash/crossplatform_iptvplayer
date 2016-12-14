@@ -213,6 +213,17 @@ def OPENLOADIO_decryptPlayerParams(p, a, c, k, e, d):
             reg = '\\b' + e(c) + '\\b'
             p = re.sub(reg, k[c], p)
     return p
+    
+def KINGFILESNET_decryptPlayerParams(p, a, c, k, e=None, d=None):
+    def e1(c, a):
+        return JS_toString(c, a)
+    e = e1
+    while c != 0:
+        c -= 1
+        if k[c]:
+            reg = '\\b' + e(c, a) + '\\b'
+            p = re.sub(reg, k[c], p)
+    return p
 
 def TEAMCASTPL_decryptPlayerParams(p, a, c, k, e=None, d=None):
     def e1(c):
@@ -462,7 +473,7 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'm3u8'
     return retUrl
 
-def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}):
+def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False):
     if checkExt and not M3U8Url.split('?')[0].endswith('.m3u8'):
         return []
         
@@ -509,6 +520,8 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                                                                         item['codec'] )
                 retPlaylists.append(item)
         else:
+            if checkContent and 0 == len(m3u8Obj.segments):
+                return []
             item = {'name':'m3u8', 'url':M3U8Url, 'codec':'unknown', 'with':0, 'heigth':0, 'bitrate':'unknown'}
             retPlaylists.append(item)
     except Exception:

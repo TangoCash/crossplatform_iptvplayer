@@ -6,11 +6,13 @@
 from asynccall import AsyncMethod
 from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.md5Hash import MD5
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
+from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import mkdirs, \
                       FreeSpace as iptvtools_FreeSpace, \
                       printDBG, printExc, RemoveOldDirsIcons, RemoveAllFilesIconsFromPath, \
                       RemoveAllDirsIconsFromPath, GetIconsFilesFromDir, GetNewIconsDirName, \
                       GetIconsDirs, RemoveIconsDirByPath
+from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -249,5 +251,28 @@ class IconMenager:
             if 'gif' in params['subtypes']: params['check_first_bytes'].extend(['GIF87a','GIF89a'])
         else:
             params['check_first_bytes'] = ['\xFF\xD8', '\xFF\xD9', '\x89\x50\x4E\x47','GIF87a','GIF89a']
+        
+        if img_url.endswith('need_resolve.jpeg') and 'imdb.com' in urlparser.getDomain(img_url): 
+            # link need resolve, at now we will have only one img resolver, 
+            # we should consider add img resolver to urlparser if more will be needed
+            sts, data = self.cm.getPage(img_url)
+            if not sts: return False
+            img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="poster"', '</div>')[1]
+            img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
+            if not self.cm.isValidUrl(img_url):
+                img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="slate"', '</div>')[1]
+                img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
+                if not self.cm.isValidUrl(img_url): return False
+        else:
+            img_url = strwithmeta(img_url)
+            if img_url.meta.get('icon_resolver', None) is not None:
+                try:
+                    img_url = img_url.meta['icon_resolver'](self.cm, img_url)
+                except Exception:
+                    printExc()
+                    return False
+        
+        if not self.cm.isValidUrl(img_url): return False
+        
         return self.cm.saveWebFile(file_path, img_url, params)['sts']
     

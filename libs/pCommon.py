@@ -20,6 +20,7 @@ import time
 import htmlentitydefs
 import cookielib
 import unicodedata
+#import urllib2_ssl
 try:    import json
 except Exception: import simplejson as json
 try:
@@ -574,6 +575,8 @@ class common:
             if params.get('load_cookie', False):
                 try:
                     cj.load(params['cookiefile'], ignore_discard = True)
+                except IOError:
+                    printDBG('Cookie file [%s] not exists' % params['cookiefile'])
                 except Exception:
                     printExc()
             try:
@@ -588,6 +591,8 @@ class common:
         #customOpeners.append(urllib2.HTTPSHandler(debuglevel=1))
         #customOpeners.append(urllib2.HTTPHandler(debuglevel=1))
         if not IsHttpsCertValidationEnabled():
+            #try: customOpeners.append(urllib2_ssl.HTTPSHandler(ssl_version=ssl.PROTOCOL_SSLv3)) # #PROTOCOL_TLSv1 PROTOCOL_SSLv3
+            #except Exception:printExc()
             try: customOpeners.append(urllib2.HTTPSHandler(context=ssl._create_unverified_context()))
             except Exception: pass
         #proxy support

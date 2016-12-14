@@ -204,7 +204,7 @@ class TvGryPL(CBaseHostClass):
             #elif '_C/1920_' in item[0] or "1080p" in item[1]:
             #    q = 'FHD'
             if '' != q:
-                urlTab.append({'name':item[1], 'url':urlparser.decorateUrl(item[0], {'Referer':'http://p.jwpcdn.com/6/12/jwplayer.flash.swf'}), 'q':q}) 
+                urlTab.append({'name':item[1], 'url':urlparser.decorateUrl(item[0].replace('&amp;', '&'), {'Referer':'http://p.jwpcdn.com/6/12/jwplayer.flash.swf'}), 'q':q}) 
         
         # for item in ['MOB', 'SD', 'HD']:
             # url = 'http://tvgry.pl/video/source.asp?SC=TV&ID=%s&QL=%s' % (id, item[:2])

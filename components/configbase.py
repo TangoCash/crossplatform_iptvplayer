@@ -41,7 +41,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
     if screenwidth and screenwidth == 1920:
         skin = """
             <screen position="center,center" size="920,860" title="" >
-                <widget name="config"    position="10,70" size="900,780" zPosition="1" transparent="1" scrollbarMode="showOnDemand" />
+                <widget name="config"    position="10,70" size="900,780" zPosition="1" transparent="1" scrollbarMode="showOnDemand" enableWrapAround="1" />
                 <widget name="key_red"   position="10,10" zPosition="2" size="600,35" valign="center" halign="left"   font="Regular;28" transparent="1" foregroundColor="red" />
                 <widget name="key_ok"    position="10,10" zPosition="2" size="600,35" valign="center" halign="center" font="Regular;28" transparent="1" foregroundColor="white" />
                 <widget name="key_green" position="10,10" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;28" transparent="1" foregroundColor="green" />
@@ -51,7 +51,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
     else:
         skin = """
             <screen position="center,center" size="620,440" title="" >
-                <widget name="config"    position="10,50" size="600,370" zPosition="1" transparent="1" scrollbarMode="showOnDemand" />
+                <widget name="config"    position="10,50" size="600,370" zPosition="1" transparent="1" scrollbarMode="showOnDemand" enableWrapAround="1" />
                 <widget name="key_red"   position="10,10" zPosition="2" size="600,35" valign="center" halign="left"   font="Regular;22" transparent="1" foregroundColor="red" />
                 <widget name="key_ok"    position="10,10" zPosition="2" size="600,35" valign="center" halign="center" font="Regular;22" transparent="1" foregroundColor="white" />
                 <widget name="key_green" position="10,10" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;22" transparent="1" foregroundColor="green" />

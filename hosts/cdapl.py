@@ -196,6 +196,7 @@ class cda(CBaseHostClass):
                 data = data['result']['html']
             except Exception:
                 printExc()
+                return
         
         data = self.cm.ph.rgetAllItemsBeetwenMarkers(data, '</span>', '</style>', withMarkers=True)
         for item in data:

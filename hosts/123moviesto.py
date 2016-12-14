@@ -61,7 +61,7 @@ class T123MoviesTO(CBaseHostClass):
         
     def selectDomain(self):
     
-        for domain in ['http://123movies.is/', 'http://123movies.ru/', 'http://123movies.to/']:
+        for domain in ['http://123movies.to/', 'http://123movies.ru/', 'http://123movies.is/']:
             sts, data = self.cm.getPage(domain)
             if sts and 'genre/action/' in data:
                 self.MAIN_URL = domain
@@ -73,12 +73,12 @@ class T123MoviesTO(CBaseHostClass):
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
         
-        self.MAIN_CAT_TAB = [{'category':'list_filter_genre', 'title': 'Movies',    'url':self.MAIN_URL+'movie/filter/movie',  'icon':self.DEFAULT_ICON_URL},
-                             {'category':'list_filter_genre', 'title': 'TV-Series', 'url':self.MAIN_URL+'movie/filter/series', 'icon':self.DEFAULT_ICON_URL},
-                             {'category':'search',          'title': _('Search'), 'search_item':True,                     'icon':self.DEFAULT_ICON_URL},
-                             {'category':'search_history',  'title': _('Search history'),                                 'icon':self.DEFAULT_ICON_URL} 
+        self.MAIN_CAT_TAB = [{'category':'list_filter_genre', 'title': 'Movies',    'url':self.MAIN_URL+'movie/filter/movie' },
+                             {'category':'list_filter_genre', 'title': 'TV-Series', 'url':self.MAIN_URL+'movie/filter/series'},
+                             {'category':'search',          'title': _('Search'), 'search_item':True,                        },
+                             {'category':'search_history',  'title': _('Search history'),                                    } 
                             ]
-    
+        
     def fillCacheFilters(self):
         self.cacheFilters = {}
         
@@ -449,91 +449,14 @@ class T123MoviesTO(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
+
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, T123MoviesTO(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
+        CHostBase.__init__(self, T123MoviesTO(), True, [])
     
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        cItem = self.host.currList[Index]
-        
+    def withArticleContent(self, cItem):
         if cItem['type'] != 'video' and cItem['category'] != 'list_episodes':
-            return RetHost(retCode, value=retlist)
-        hList = self.host.getArticleContent(cItem)
-        for item in hList:
-            title      = item.get('title', '')
-            text       = item.get('text', '')
-            images     = item.get("images", [])
-            othersInfo = item.get('other_info', '')
-            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-        if len(hList): retCode = RetHost.OK
-        return RetHost(retCode, value = retlist)
+            return False
+        return True
     
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem
-

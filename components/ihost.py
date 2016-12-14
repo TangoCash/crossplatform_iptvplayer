@@ -28,7 +28,7 @@ class CDisplayListItem:
     TYPE_ARTICLE   = "ARTICLE"
     TYPE_PICTURE   = "PICTURE"
     TYPE_MORE      = "MORE"
-    TYPE_PICTURE   = "PICTURE"
+    
     TYPE_SUBTITLE      = "SUBTITLE"
     TYPE_SUB_PROVIDER  = "SUB_PROVIDER"
     TYPE_UNKNOWN       = "UNKNOWN"
@@ -61,7 +61,9 @@ class CDisplayListItem:
 class ArticleContent:
     VISUALIZER_DEFAULT = 'DEFAULT'
     # Posible args and values for richDescParams:
-    RICH_DESC_PARAMS        = ["alternate_title", "views", "status", "country", "language", "quality", "subtitles", "year", "released", "rating", "rated", "duration", "genre", "production", "director", "writer", "actors", "stars", "awards" ]
+    RICH_DESC_PARAMS        = ["alternate_title", "views", "status", "country", "language", "quality", "subtitles", "year", "imdb_rating", \
+                               "released", "rating", "rated", "duration", "genre", "production", "director", "directors", "writer", "writers", \
+                               "creator", "creators", "actors", "stars", "awards" ]
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
     RICH_DESC_LABELS = {"alternate_title":   "Alternate Title:",
@@ -72,13 +74,18 @@ class ArticleContent:
                         "language":          "Language",
                         "year":              "Year:", 
                         "released":          "Released:",
+                        "imdb_rating":       "IMDb Rating:",
                         "rating":            "Rating:", 
                         "rated":             "Rated:",
                         "duration":          "Duration:", 
                         "genre":             "Genre:", 
-                        "production":        "Production",
+                        "production":        "Production:",
                         "director":          "Director:",
-                        "writer":            "Writer",
+                        "directors":         "Directors:",
+                        "writer":            "Writer:",
+                        "writers":           "Writers:",
+                        "creator":           "Creator:",
+                        "creators":          "Creators:",
                         "actors":            "Actors:", 
                         "stars":             "Stars:",
                         "awards":            "Awards:",
@@ -258,6 +265,53 @@ class CHostBase(IHost):
             return False
         return True
         
+    def withArticleContent(self, cItem):
+        return False
+    
+    def getArticleContent(self, Index = 0):
+        retCode = RetHost.ERROR
+        retlist = []
+        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
+        cItem = self.host.currList[Index]
+        
+        if not self.withArticleContent(cItem):
+            return RetHost(retCode, value=retlist)
+        hList = self.host.getArticleContent(cItem)
+        if None == hList:
+            return RetHost(retCode, value=retlist)
+        for item in hList:
+            title      = item.get('title', '')
+            text       = item.get('text', '')
+            images     = item.get("images", [])
+            othersInfo = item.get('other_info', '')
+            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
+        if len(hList): retCode = RetHost.OK
+        return RetHost(retCode, value = retlist)
+    # end getArticleContent
+    
+    def getLinksForItem(self, Index = 0, selItem = None):
+        retCode = RetHost.ERROR
+        retlist = []
+        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
+        
+        urlList = self.host.getLinksForVideo(self.host.currList[Index])
+        for item in urlList:
+            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
+
+        return RetHost(RetHost.OK, value = retlist)
+    # end getLinksForVideo
+    
+    def getResolvedURL(self, url):
+        # resolve url to get direct url to video file
+        retlist = []
+        urlList = self.host.getVideoLinks(url)
+        for item in urlList:
+            need_resolve = 0
+            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
+
+        return RetHost(RetHost.OK, value = retlist)
+    # end getResolvedURL
+        
     def getFavouriteItem(self, Index=0):
         retCode = RetHost.ERROR
         retlist = []
@@ -384,12 +438,58 @@ class CHostBase(IHost):
         return hostList
     # end convertList
     
-    # this method must be overwritten 
-    # by the child class
-    '''
+    def getSearchTypes(self):
+        searchTypesOptions = []
+        #searchTypesOptions.append((_("Movies"),   "movie"))
+        #searchTypesOptions.append((_("TV Shows"), "series"))
+        return searchTypesOptions
+        
+    def getDefaulIcon(self, cItem):
+        return self.host.getDefaulIcon(cItem)
+    
     def converItem(self, cItem):
-        return None
-    '''
+        hostList = []
+        hostLinks = []
+        type = CDisplayListItem.TYPE_UNKNOWN
+        possibleTypesOfSearch = None
+
+        if 'category' == cItem['type']:
+            if cItem.get('search_item', False):
+                type = CDisplayListItem.TYPE_SEARCH
+                possibleTypesOfSearch = self.getSearchTypes()
+            else:
+                type = CDisplayListItem.TYPE_CATEGORY
+        elif cItem['type'] == 'video':
+            type = CDisplayListItem.TYPE_VIDEO
+        elif 'audio' == cItem['type']:
+            type = CDisplayListItem.TYPE_AUDIO
+        elif 'picture' == cItem['type']:
+            type = CDisplayListItem.TYPE_PICTURE
+        elif 'article' == cItem['type']:
+            type = CDisplayListItem.TYPE_ARTICLE
+        elif 'more' == cItem['type']:
+            type = CDisplayListItem.TYPE_MORE
+            
+        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO, \
+                    CDisplayListItem.TYPE_PICTURE, CDisplayListItem.TYPE_ARTICLE]:
+            url = cItem.get('url', '')
+            if '' != url: hostLinks.append(CUrlItem("Link", url, 1))
+            
+        title       =  cItem.get('title', '')
+        description =  cItem.get('desc', '')
+        icon        =  cItem.get('icon', '')
+        if icon == '': icon = self.getDefaulIcon(cItem)
+        isGoodForFavourites = cItem.get('good_for_fav', False)
+        
+        return CDisplayListItem(name = title,
+                                    description = description,
+                                    type = type,
+                                    urlItems = hostLinks,
+                                    urlSeparateRequest = 1,
+                                    iconimage = icon,
+                                    possibleTypesOfSearch = possibleTypesOfSearch,
+                                    isGoodForFavourites = isGoodForFavourites)
+    # end converItem
 
     def getSearchResults(self, searchpattern, searchType = None):
         retList = []
@@ -453,6 +553,12 @@ class CBaseHostClass:
         elif 0 < len(url) and '://' not in url:
             url =  self.getMainUrl() + url
         return url
+        
+    def getDefaulIcon(self, cItem=None):
+        try: return self.DEFAULT_ICON_URL
+        except Exception:
+            pass
+        return ''
     
     @staticmethod 
     def cleanHtmlStr(str):

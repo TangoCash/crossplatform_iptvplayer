@@ -45,6 +45,16 @@ class MoonwalkParser():
         printDBG('MoonwalkParser._getSecurityData')
         sec_header = {}
         post_data = {}
+        
+        #printDBG(data)
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'headers:', '}')
+        for item in tmp:
+            printDBG("---------------------------------------------")
+            printDBG(item)
+            printDBG("---------------------------------------------")
+            item = re.compile("'([^']+?)'\s*:\s*'([^']+?)'").findall(item)
+            for header in item:
+                sec_header[header[0]] = header[1]
 
         contentData = self.cm.ph.getDataBeetwenMarkers(data, 'setRequestHeader|', '|beforeSend', False)[1]
         csrfToken = self.cm.ph.getSearchGroups(data, '<meta name="csrf-token" content="([^"]+?)"')[0] 
@@ -63,16 +73,20 @@ class MoonwalkParser():
         mw_pid = self.cm.ph.getSearchGroups(data, "mw_pid: ([0-9]+?)[^0-9]")[0]
         mw_did = self.cm.ph.getSearchGroups(data, "mw_did: ([0-9]+?)[^0-9]")[0]
         mw_domain_id = self.cm.ph.getSearchGroups(data, "mw_domain_id: ([0-9]+?)[^0-9]")[0]
+        uuid = self.cm.ph.getSearchGroups(data, "uuid:\s*'([^,^']+?)'")[0]
+        debug = self.cm.ph.getSearchGroups(data, "debug:\s*([^,^\s]+?)[,\s]")[0].strip()
         
         printDBG("=======================================================================")
         printDBG(data)
         printDBG("=======================================================================")
+        
         sec_header['Encoding-Pool'] = base64.b64encode(contentData.replace('|', ''))
         sec_header['X-Data-Pool'] = xDataPool
         sec_header['X-CSRF-Token'] = csrfToken
         sec_header['X-Requested-With'] = 'XMLHttpRequest'
         post_data = {}
         if 'cd:' in data: post_data['cd'] = cd
+        if 'ad_attr:' in data: post_data['ad_attr'] = cd
         if 'partner:' in data: post_data['partner'] = partner
         if 'd_id:' in data: post_data['d_id'] = d_id
         if 'video_token:' in data: post_data['video_token'] = video_token
@@ -80,7 +94,9 @@ class MoonwalkParser():
         if 'access_key:' in data: post_data['access_key'] = access_key
         if 'mw_pid:' in data: post_data['mw_pid'] = mw_pid
         if 'mw_did:' in data: post_data['mw_did'] = mw_did
-        if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id      
+        if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id
+        if 'uuid:' in data: post_data['uuid'] = uuid
+        if 'debug:' in data: post_data['debug'] = debug   
         #post_data['ad_attr'] =0
         
         return sec_header, post_data
@@ -98,13 +114,17 @@ class MoonwalkParser():
             sec_header, post_data = self._getSecurityData(data)
             params['header'].update(sec_header)
             
+            params['load_cookie'] = True
             sts, data = self.cm.getPage( '%s/sessions/new_session' % self.baseUrl, params, post_data)
             printDBG("=======================================================")
             printDBG(data)
             printDBG("=======================================================")
             if not sts: return []
             
-            data = byteify( json.loads(data) )['mans']
+            try: 
+                data = byteify( json.loads(data) )
+                data = data['mans']
+            except Exception: printExc()
             if 'm3u8' == config.plugins.iptvplayer.moonwalk_format.value:
                 tmpTab = getDirectM3U8Playlist(data["manifest_m3u8"])
                 def __getLinkQuality( itemLink ):

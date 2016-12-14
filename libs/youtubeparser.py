@@ -309,14 +309,17 @@ class YouTubeParser():
                     nextPage = True
                 else: 
                     nextPage = False
-        
-                sts,data = CParsingHelper.getDataBeetwenMarkers(data, '<li><div class="yt-lockup', '</ol>', False)
                 
-                data = data.split('<li><div class="yt-lockup')
-                #del data[0]
+                sp = '<li><div class="yt-lockup'
+                if searchType == 'playlist':
+                    m2 = '<div class="branded-page-box'
+                else:
+                    m2 = '</ol>'
                 
+                data = CParsingHelper.getDataBeetwenMarkers(data, sp, m2, False)[1]
+                data = data.split(sp)
                 currList = self.parseListBase(data, searchType)
-        
+                
                 if len(currList) and nextPage:
                     item = {'name': 'history', 'type': 'category', 'category': nextPageCategory, 'pattern':pattern, 'search_type':searchType, 'title': _("Next page"), 'page': str(int(page) + 1)}
                     currList.append(item)
