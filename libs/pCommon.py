@@ -267,6 +267,8 @@ class common:
                 outParams = tmpParams
             if 'iptv_proxy_gateway' in url.meta:
                 outParams['proxy_gateway'] = url.meta['iptv_proxy_gateway']
+            if 'iptv_http_proxy' in url.meta:
+                outParams['http_proxy'] = url.meta['iptv_http_proxy']
         return outParams, postData
         
     @staticmethod

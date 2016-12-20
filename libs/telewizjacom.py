@@ -51,6 +51,7 @@ class TeleWizjaComApi(CBaseHostClass):
         self.COOKIE_FILE = GetCookieDir('telewizjacom.cookie')
         self.PROXY_URL   = 'http://www.proxy-german.de/index.php?q={0}&hl=2e5'
         self.http_params = {}
+        self.useProxy    = False
         #self.http_params.update({'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
         
     def getFullUrl(self, url):
@@ -62,38 +63,42 @@ class TeleWizjaComApi(CBaseHostClass):
         
     def getIconUrl(self, url):
         url = self.getFullUrl(url)
-        proxy = self.PROXY_URL.format(urllib.quote(url, ''))
-        params = {}
-        params['User-Agent'] = self.HTTP_HEADER['User-Agent'],
-        params['Referer']    = proxy
-        params['Cookie']     = 'flags=2e5;'
-        url = strwithmeta(proxy, params) 
+        if self.useProxy:
+            proxy = self.PROXY_URL.format(urllib.quote(url, ''))
+            params = {}
+            params['User-Agent'] = self.HTTP_HEADER['User-Agent'],
+            params['Referer']    = proxy
+            params['Cookie']     = 'flags=2e5;'
+            url = strwithmeta(proxy, params) 
         return url
         
     def getPage(self, url, params={}, post_data=None):
         
-        params.update({'header':self.HTTP_HEADER})
-        proxy = self.PROXY_URL.format(urllib.quote_plus(url))
-        params['header']['Referer'] = proxy
-        url = proxy
+        if self.useProxy:
+            params.update({'header':self.HTTP_HEADER})
+            proxy = self.PROXY_URL.format(urllib.quote_plus(url))
+            params['header']['Referer'] = proxy
+            url = proxy
         return self.cm.getPage(url, params, post_data)
         
     def getListOfChannels(self, cItem):
         printDBG("TeleWizjaComApi.getListOfChannels")
-        sts, data = self.getPage(cItem['url'], self.http_params)
+        #cItem['url']
+        sts, data = self.getPage(self.MAIN_URL, self.http_params)
         if not sts: return []
         
         retList = []
-        m = '<div class="article">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m, m)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', 'a>')
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<figure', '</figure>')
         printDBG(data)
         for item in data:
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             url = self.getFullUrl(url)
             if url == '': continue
-            title = url.split('/')[-1].replace('.html', '')
+            title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0]
+            if title == '': title = url.split('/')[-1].replace('.html', '')
             icon = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
+            if icon == '': icon = self.cm.ph.getSearchGroups(item, '''data-original=['"]([^'^"]+?)['"]''')[0]
+            
             params = dict(cItem)
             params.update({'type':'video', 'url':url, 'title':title, 'icon':self.getIconUrl(icon)})
             retList.append(params)
@@ -102,6 +107,8 @@ class TeleWizjaComApi(CBaseHostClass):
     def getList(self, cItem):
         printDBG("TeleWizjaComApi.getChannelsList")
         channelsTab = []
+        return self.getListOfChannels(cItem)
+        
         initList = cItem.get('init_list', True)
         if initList:
             retList = []
@@ -129,10 +136,12 @@ class TeleWizjaComApi(CBaseHostClass):
         sts, data = self.getPage(cItem['url'], self.http_params)
         if not sts: return urlsTab
         
-        m = '<div class="article">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m, m)[1]
+        #m = '<div class="article">'
+        #data = self.cm.ph.getDataBeetwenMarkers(data, m, m)[1]
         frameUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0] )
         if not self.cm.isValidUrl(frameUrl): return urlsTab
+        
+        printDBG(frameUrl)
         
         sts, data = self.getPage(frameUrl, self.http_params)
         if not sts: return urlsTab

@@ -34,11 +34,16 @@ from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrappe
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.icefilmsinfo_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
+                                                                                            ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                            ("proxy_2",  _("Alternative proxy server (2)"))])
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.icefilmsinfo_proxy))
     return optionList
 ###################################################
+
 
 
 def gettytul():
@@ -68,6 +73,19 @@ class IceFilms(CBaseHostClass):
         self.cacheLinks = {}
         self.cacheSeries = {}
         
+    def getPage(self, url, addParams = {}, post_data = None):
+        proxy = config.plugins.iptvplayer.icefilmsinfo_proxy.value
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> " + proxy)
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
+        
+        return self.cm.getPage(url, addParams, post_data)
+        
     def _getAttrVal(self, data, attr):
         val = self.cm.ph.getSearchGroups(data, '[<\s][^>]*' + attr + '=([^\s^>]+?)[\s>]')[0].strip()
         if len(val) > 2:
@@ -82,7 +100,7 @@ class IceFilms(CBaseHostClass):
         tab = self.cacheFilters.get(cItem['url'], {}).get('tab', [])
         if 0 == len(tab):
             self.cacheFilters[cacheKey] = {}
-            sts, data = self.cm.getPage(cItem['url'])
+            sts, data = self.getPage(cItem['url'])
             if not sts: return
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<div class='menu submenu", '</div>', withMarkers=True)
             numOfTabs = len(data)
@@ -127,14 +145,14 @@ class IceFilms(CBaseHostClass):
     def listRandom(self, cItem, nextCategory):
         printDBG("IceFilms.listRandom")
         try:
-            sts, response = self.cm.getPage(cItem['url'], {'return_data':False})
+            sts, response = self.getPage(cItem['url'], {'return_data':False})
             url = response.geturl()
             response.close()
         except Exception:
             printExc()
             return
             
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return
         
         tmp  = self.cm.ph.getDataBeetwenMarkers(data, '<title>', '</span>', False)[1]
@@ -155,7 +173,7 @@ class IceFilms(CBaseHostClass):
     def listItems(self, cItem, nextCategory):
         printDBG("IceFilms.listItems")
             
-        sts, data = self.cm.getPage(self.getFullUrl(cItem['url']))
+        sts, data = self.getPage(self.getFullUrl(cItem['url']))
         if not sts: return
         
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<span class="?list"?'), re.compile('</span>'), withMarkers=False)[1]
@@ -182,7 +200,7 @@ class IceFilms(CBaseHostClass):
         
     def listEpisodes(self, cItem):
         printDBG("IceFilms.listEpisodes")
-        sts, data = self.cm.getPage(self.getFullUrl(cItem['url']))
+        sts, data = self.getPage(self.getFullUrl(cItem['url']))
         if not sts: return
         
         tmp  = self.cm.ph.getDataBeetwenMarkers(data, '<title>', '<div', False)[1]
@@ -210,7 +228,7 @@ class IceFilms(CBaseHostClass):
         printDBG("IceFilms.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
         baseUrl = self.getFullUrl('/search.php?q=%s&x=0&y=0' % urllib.quote_plus(searchPattern))
-        sts, data = self.cm.getPage(baseUrl)
+        sts, data = self.getPage(baseUrl)
         if not sts: return
 
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div class=['"]?number['"]?'''), re.compile('</table>'), withMarkers=True)[1]
@@ -235,13 +253,13 @@ class IceFilms(CBaseHostClass):
             return self.cacheLinks[cItem['url']]
         
         rm(self.COOKIE_FILE)
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
         url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
         url = self.getFullUrl(url)
         
-        sts, data = self.cm.getPage(url, self.defaultParams )
+        sts, data = self.getPage(url, self.defaultParams )
         if not sts: return []
         
         data = self.cm.ph.getDataBeetwenMarkers(data, 'id="srclist"', 'These links brought')[1]
@@ -275,13 +293,13 @@ class IceFilms(CBaseHostClass):
         sourceId = videoUrl
         url = strwithmeta(videoUrl).meta.get('url')
 
-        sts, data = self.cm.getPage(url, self.defaultParams)
+        sts, data = self.getPage(url, self.defaultParams)
         if not sts: return []
         
         url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
         frameUrl = self.getFullUrl(url)
         
-        sts, data = self.cm.getPage(frameUrl, self.defaultParams)
+        sts, data = self.getPage(frameUrl, self.defaultParams)
         if not sts: return []
         
         baseUrl = '/membersonly/components/com_iceplayer/video.phpAjaxResp.php?s=%s&t=%s'
@@ -321,7 +339,7 @@ class IceFilms(CBaseHostClass):
         params['header'] = dict(params['header'])
         params['header']['Referer'] = frameUrl
         
-        sts, data = self.cm.getPage(url, params, post_data={'id':sourceId, 's':s, 'iqs':iqs, 'url':uri, 'm':m, 'cap':' ', 'sec':secret, 't':t})
+        sts, data = self.getPage(url, params, post_data={'id':sourceId, 's':s, 'iqs':iqs, 'url':uri, 'm':m, 'cap':' ', 'sec':secret, 't':t})
         if not sts: return []
         printDBG(data)
         
@@ -337,7 +355,7 @@ class IceFilms(CBaseHostClass):
         if 'imdb_id' not in cItem: return retTab
         
         url = 'http://www.imdb.com/title/tt{0}/'.format(cItem['imdb_id'])
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return retTab
         title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '''<meta property=['"]?og\:title['"]?[^>]+?content=['"]([^"^']+?)['"]''')[0] )
         desc  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div class="summary_text"' , '</div>')[1] )

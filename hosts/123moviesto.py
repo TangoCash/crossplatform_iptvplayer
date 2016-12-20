@@ -36,9 +36,13 @@ from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrappe
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.moviesto123_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
+                                                                                           ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                           ("proxy_2",  _("Alternative proxy server (2)"))])
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.moviesto123_proxy))
     return optionList
 ###################################################
 
@@ -59,16 +63,39 @@ class T123MoviesTO(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         
+    def getPage(self, url, addParams = {}, post_data = None):
+        proxy = config.plugins.iptvplayer.moviesto123_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
+        
+        return self.cm.getPage(url, addParams, post_data)
+        
+    def getFullIconUrl(self, url):
+        url = self.getFullUrl(url)
+        proxy = config.plugins.iptvplayer.moviesto123_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            url = strwithurl(url, {'iptv_http_proxy':proxy})
+        return url
+        
     def selectDomain(self):
     
         for domain in ['http://123movies.to/', 'http://123movies.ru/', 'http://123movies.is/']:
-            sts, data = self.cm.getPage(domain)
+            sts, data = self.getPage(domain)
             if sts and 'genre/action/' in data:
                 self.MAIN_URL = domain
                 break
         
         if self.MAIN_URL == None:
-            self.MAIN_URL = domain # last domain is default one
+            self.MAIN_URL = 'http://123movies.to/' # first domain is default one
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
@@ -82,7 +109,7 @@ class T123MoviesTO(CBaseHostClass):
     def fillCacheFilters(self):
         self.cacheFilters = {}
         
-        sts, data = self.cm.getPage(self.getFullUrl('movie/filter/all'), self.defaultParams)
+        sts, data = self.getPage(self.getFullUrl('movie/filter/all'), self.defaultParams)
         if not sts: return
         
         # get sort by
@@ -128,7 +155,7 @@ class T123MoviesTO(CBaseHostClass):
             url += '/{0}/{1}/{2}/{3}/all/{4}'.format(cItem['sort_by'], cItem['genre'], cItem['country'], cItem['year'], cItem['quality'])
         
         if page > 1: url = url + '/{0}'.format(page)
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return
         
         nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="pagination">', '</ul>', False)[1]
@@ -203,7 +230,7 @@ class T123MoviesTO(CBaseHostClass):
         if len(urlTab): return urlTab
         self.cacheLinks = {}
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return []
         
         # get trailer
@@ -222,7 +249,7 @@ class T123MoviesTO(CBaseHostClass):
         
         params = dict(self.defaultParams)
         params['header'] = self.AJAX_HEADER
-        sts, data = self.cm.getPage(url, params)
+        sts, data = self.getPage(url, params)
         if not sts: return []
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="server', '<div class="clearfix">', withMarkers=True)
@@ -285,7 +312,7 @@ class T123MoviesTO(CBaseHostClass):
         if serverId in ['12', '13', '14', '15']:
             url = 'ajax/load_embed/' + episodeId
             url = self.getFullUrl( url )
-            sts, data = self.cm.getPage(url)
+            sts, data = self.getPage(url)
             if not sts: return []
             try:
                 data = byteify(json.loads(data))
@@ -305,7 +332,7 @@ class T123MoviesTO(CBaseHostClass):
             params = {}
             params['header'] = dict(self.AJAX_HEADER)
             params['header']['Cookie'] = '%s=%s;' % (cookieName, cookieValue)
-            sts, data = self.cm.getPage(url, params)
+            sts, data = self.getPage(url, params)
             if not sts: return []
             
             subTracks = []
@@ -343,7 +370,7 @@ class T123MoviesTO(CBaseHostClass):
         printDBG("T123MoviesTO.getArticleContent [%s]" % cItem)
         retTab = []
         
-        sts, data = self.cm.getPage(cItem.get('url', ''))
+        sts, data = self.getPage(cItem.get('url', ''))
         if not sts: return retTab
         
         title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '<meta property="og:title"[^>]+?content="([^"]+?)"')[0] )
@@ -378,7 +405,7 @@ class T123MoviesTO(CBaseHostClass):
         
         if '' != cItem.get('movie_id', ''):
             rating = ''
-            sts, data = self.cm.getPage(self.getFullUrl('ajax/movie_rate_info/' + cItem['movie_id']))
+            sts, data = self.getPage(self.getFullUrl('ajax/movie_rate_info/' + cItem['movie_id']))
             if sts: rating = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div id="movie-mark"', '</label>', True)[1] )
             if rating != '': otherInfo['rating'] = self.cleanHtmlStr( rating )
         

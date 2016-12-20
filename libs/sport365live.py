@@ -87,8 +87,11 @@ class Sport365LiveApi:
         return cipher.decrypt(encrypted, iv)
     
     def getMarketCookie(self, url, referer, num=1):
-        id = url.split('.')[-2]
-        
+        try:
+            id = url.split('.')[-2]
+        except Exception:
+            printExc()
+            id = '403'
         xz = str(int(time() * 1000)) + id + str(int(random.random()*1000)) + str(2 * int(random.random()*4)) + str(num)
         xz = base64.b64encode(xz)
         return 'MarketGidStorage=%s; ' % urllib.quote('{"0":{"svspr":"%s","svsds":%s,"TejndEEDj":"%s"},"C%s":{"page":1,"time":%s}}' % (referer, num, xz, id, int(time() * 100)))

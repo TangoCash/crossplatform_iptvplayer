@@ -63,6 +63,9 @@ class Kinopokaz(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'Kinopokaz', 'cookie':'Kinopokaz.cookie'})
         self.catCache = []
         self.moonwalkParser = MoonwalkParser()
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
 
     def _getFullUrl(self, url):
         mainUrl = self.MAIN_URL
@@ -146,7 +149,7 @@ class Kinopokaz(CBaseHostClass):
 
         params = dict(cItem)
         params['desc'] = desc
-        params['url'] = url
+        params['url'] = strwithmeta(url, {'Referer':cItem['url']})
         hostName = self.up.getHostName(url)
         if hostName in ['serpens.nl', '37.220.36.15']:
             hostName = 'moonwalk.cc'
@@ -158,6 +161,35 @@ class Kinopokaz(CBaseHostClass):
                 param.update({'host_name':'moonwalk', 'title':item['title'], 'season_id':item['id'], 'url':item['url']})
                 self.addDir(param)
             return
+        elif hostName == 'hdgo.cc':
+            if '/serials/' in url:
+                HEADER = dict(self.HEADER)
+                HEADER['Referer'] = cItem['url']
+                sts, data = self.getPage(url, {'header':HEADER})
+                if not sts: return
+                urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+                HEADER['Referer'] = url
+                sts, data = self.getPage(urlNext, {'header':HEADER})
+                if not sts: return
+                
+                printDBG("==========================================")
+                printDBG(data)
+                printDBG("==========================================")
+                
+                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '</option>', '</div>', True)[1])
+                itemTitle = self.cm.ph.getSearchGroups(data, '''createTextNode\([^'^"]*?['"]([^'^"]+?)['"]''')[0]
+                data = self.cm.ph.getDataBeetwenMarkers(data, 'season_list[0] =', ';', False)[1]
+                printDBG("==========================================")
+                printDBG(data)
+                printDBG("==========================================")
+                data = re.compile('''['"](http[^'^"]+?)['"]''').findall(data)
+                idx = 0
+                for idx in range(len(data)):
+                    vidUrl = data[idx] 
+                    params = dict(cItem)
+                    params.update({'title': '%s: %s%s' % (title, itemTitle, idx+1), 'url': strwithmeta(vidUrl, {'Referer':url})})
+                    self.addVideo(params)
+        
         if self.up.checkHostSupport(url) == 1:
             self.addVideo(params)
 

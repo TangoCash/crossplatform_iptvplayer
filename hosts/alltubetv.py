@@ -73,7 +73,7 @@ class AlltubeTV(CBaseHostClass):
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
     def getIconUrl(self, url):
-        url = self.getFullUrl(url)
+        url = self.getFullUrl(url.strip())
         if url == '': return ''
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})

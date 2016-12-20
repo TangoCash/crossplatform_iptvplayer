@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "20.0.24.0"
+    XXXversion = "20.0.25.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -449,25 +449,25 @@ class Host:
            except:
               printDBG( 'Host error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
+           printDBG( 'Host listsItems data: '+data )
            sex = ''
+           hash = ''
            ph1 = re.search('var streams = (.*?)}];', data, re.S)
            if ph1: 
               ph1 = ph1.group(1)+'}]'
               result = simplejson.loads(ph1)
               if result:
                  for item in result:
+                     phash = re.search('"phash":"(.*?)"', data, re.S)
+                     if phash: hash=phash.group(1)
                      if str(item["accType"])=='1': sex = 'male'
                      if str(item["accType"])=='2': sex = 'female'
                      if str(item["accType"])=='3': sex = 'couple'
                      printDBG( 'Host listsItems nick: '+item["nick"] )
                      printDBG( 'Host listsItems broadcasturl: '+item["broadcasturl"] )
-                     #printDBG( 'Host listsItems topic: '+item["topic"] )
-                     #printDBG( 'Host listsItems goalDesc: '+item["goalDesc"] )
                      phImage = 'http://ctn.zbiornik.com/cams/'+str(item["broadcasturl"])+'-224.jpg'
                      printDBG( 'Host listsItems phImage: '+phImage )
-                     #streamUrl = 'rtmp://'+str(item["server"])[0]+''+str(item["server"])[1:]+'/videochat/? playpath='+str(item["broadcasturl"])+' swfUrl=http://old.zbiornik.com/wowza.swf?v42 pageUrl=http://old.zbiornik.com/live/# live=1'+ ' flashVer=WIN 12,0,0,44 '
-                     streamUrl = 'rtmp://'+str(item["server"])[0]+''+str(item["server"])[1:]+'/videochat/'+str(item["broadcasturl"])+' live=1'
+                     streamUrl = 'rtmp://'+str(item["server"])+'/videochat/?'+hash+' playpath='+str(item["broadcasturl"])+' swfUrl=http://zbiornik.tv/wowza.swf?v50&b=100 pageUrl=http://zbiornik.tv/'+str(item["nick"])+' live=1'
                      printDBG( 'Host listsItems streamUrl: '+streamUrl )
                      if str(item["accType"])<>'1':
                         valTab.append(CDisplayListItem(str(item["nick"])+'    {'+sex+'}',str(item["nick"]),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', streamUrl, 0)], 0, phImage, None)) 

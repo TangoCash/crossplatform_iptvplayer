@@ -148,6 +148,8 @@ config.plugins.iptvplayer.proxyurl = ConfigText(default = "http://PROXY_IP:PORT"
 config.plugins.iptvplayer.german_proxyurl = ConfigText(default = "http://PROXY_IP:PORT", fixed_size = False)
 config.plugins.iptvplayer.russian_proxyurl = ConfigText(default = "http://PROXY_IP:PORT", fixed_size = False)
 config.plugins.iptvplayer.ukrainian_proxyurl = ConfigText(default = "http://PROXY_IP:PORT", fixed_size = False)
+config.plugins.iptvplayer.alternative_proxy1 = ConfigText(default = "http://username:password@proxy_url:port", fixed_size = False)
+config.plugins.iptvplayer.alternative_proxy2 = ConfigText(default = "http://username:password@proxy_url:port", fixed_size = False)
 
 # Update
 config.plugins.iptvplayer.autoCheckForUpdate = ConfigYesNo(default = False)

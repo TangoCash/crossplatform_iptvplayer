@@ -70,6 +70,7 @@ class MoonwalkParser():
         video_token = self.cm.ph.getSearchGroups(data, "video_token: '([^,]+?)'")[0]
         content_type = self.cm.ph.getSearchGroups(data, "content_type: '([^']+?)'")[0]
         access_key = self.cm.ph.getSearchGroups(data, "access_key: '([^']+?)'")[0]
+        mw_key = self.cm.ph.getSearchGroups(data, "mw_key: '([^']+?)'")[0]
         mw_pid = self.cm.ph.getSearchGroups(data, "mw_pid: ([0-9]+?)[^0-9]")[0]
         mw_did = self.cm.ph.getSearchGroups(data, "mw_did: ([0-9]+?)[^0-9]")[0]
         mw_domain_id = self.cm.ph.getSearchGroups(data, "mw_domain_id: ([0-9]+?)[^0-9]")[0]
@@ -94,6 +95,7 @@ class MoonwalkParser():
         if 'access_key:' in data: post_data['access_key'] = access_key
         if 'mw_pid:' in data: post_data['mw_pid'] = mw_pid
         if 'mw_did:' in data: post_data['mw_did'] = mw_did
+        if 'mw_key' in data: post_data['mw_key'] = mw_key
         if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id
         if 'uuid:' in data: post_data['uuid'] = uuid
         if 'debug:' in data: post_data['debug'] = debug   

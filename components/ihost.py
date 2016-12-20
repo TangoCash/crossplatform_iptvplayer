@@ -296,7 +296,8 @@ class CHostBase(IHost):
         
         urlList = self.host.getLinksForVideo(self.host.currList[Index])
         for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
+            need_resolve = item.get("need_resolve", 0)
+            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
 
         return RetHost(RetHost.OK, value = retlist)
     # end getLinksForVideo
@@ -446,6 +447,9 @@ class CHostBase(IHost):
         
     def getDefaulIcon(self, cItem):
         return self.host.getDefaulIcon(cItem)
+        
+    def getFullIconUrl(self, cItem):
+        return self.host.getFullIconUrl(cItem)
     
     def converItem(self, cItem):
         hostList = []
@@ -477,7 +481,7 @@ class CHostBase(IHost):
             
         title       =  cItem.get('title', '')
         description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
+        icon        =  self.getFullIconUrl( cItem.get('icon', '') )
         if icon == '': icon = self.getDefaulIcon(cItem)
         isGoodForFavourites = cItem.get('good_for_fav', False)
         
@@ -552,6 +556,9 @@ class CBaseHostClass:
             url = self.getMainUrl() + url[1:]
         elif 0 < len(url) and '://' not in url:
             url =  self.getMainUrl() + url
+        return url
+        
+    def getFullIconUrl(self, url):
         return url
         
     def getDefaulIcon(self, cItem=None):

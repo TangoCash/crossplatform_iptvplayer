@@ -3472,3 +3472,16 @@ msgstr "Es verbessert das Untertitel Parsing.\n"
 
 msgid "C subtitle parser"
 msgstr "C Untertitel Parser"
+
+msgid ""
+"Please remember to visit http://www.sport365.live/ and watch a few advertisements.\n"
+"This will fix problem, if your playback is constantly interrupted."
+msgstr ""
+"Bitte besuchen Sie http://www.sport365.live/ um einige Werbeeinblendungen anzusehen.\n"
+"Dies könnte Ihr Problem lösen, falls die Wiedergabe ständig unterbrechen sollte."
+
+msgid "Opening. Please wait..."
+msgstr "Wird geöffnet. Bitte warten..."
+
+msgid "Closing. Please wait..."
+msgstr "Wird geschlossen. Bitte warten..."

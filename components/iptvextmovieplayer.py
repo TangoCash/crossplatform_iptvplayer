@@ -49,6 +49,7 @@ from skin import parseColor, parseFont
 
 from datetime import timedelta
 try:
+    from math import floor, fabs
     try:    import json
     except Exception: import simplejson as json
 except Exception:
@@ -174,6 +175,8 @@ class IPTVExtMoviePlayer(Screen):
             
         skin = """
         <screen name="IPTVExtMoviePlayer"    position="center,center" size="%d,%d" flags="wfNoBorder" backgroundColor="#FFFFFFFF" >
+                <widget name="pleaseWait"         noWrap="1" position="30,30"        size="500,30"    zPosition="3" transparent="1" foregroundColor="#999999"   backgroundColor="transparent" font="Regular;24" halign="left"  valign="top"/>
+                
                 <widget name="logoIcon"           position="140,30"        size="160,40"    zPosition="4"             transparent="1" alphatest="blend" />
                 <widget name="playbackInfoBaner"  position="0,0"           size="1280,177"  zPosition="2" pixmap="%s" />
                 <widget name="progressBar"        position="220,86"        size="840,7"     zPosition="4" pixmap="%s" transparent="1" borderWidth="1" borderColor="#888888" />
@@ -187,7 +190,7 @@ class IPTVExtMoviePlayer(Screen):
                 <widget name="currTimeLabel"      noWrap="1" position="220,100"       size="200,40"   zPosition="3" transparent="1" foregroundColor="#66ccff"   backgroundColor="#251f1f1f" font="Regular;30" halign="left"   valign="top"/>
                 <widget name="lengthTimeLabel"    noWrap="1" position="540,100"       size="200,40"   zPosition="3" transparent="1" foregroundColor="#999999"   backgroundColor="#251f1f1f" font="Regular;30" halign="center" valign="top"/>
                 <widget name="remainedLabel"      noWrap="1" position="860,100"       size="200,40"   zPosition="3" transparent="1" foregroundColor="#66ccff"   backgroundColor="#251f1f1f" font="Regular;30" halign="right"  valign="top"/>
-                <widget name="videoInfo"          noWrap="1" position="760,20"        size="300,30"    zPosition="3" transparent="1" foregroundColor="#999999"   backgroundColor="#251f1f1f" font="Regular;24" halign="right"  valign="top"/>
+                <widget name="videoInfo"          noWrap="1" position="560,20"        size="500,30"    zPosition="3" transparent="1" foregroundColor="#999999"   backgroundColor="#251f1f1f" font="Regular;24" halign="right"  valign="top"/>
                 
                 <widget name="subSynchroIcon"     position="0,0"           size="180,66"  zPosition="4" transparent="1" alphatest="blend" />
                 <widget name="subSynchroLabel"    position="1,3"           size="135,50"  zPosition="5" transparent="1" foregroundColor="white"      backgroundColor="transparent" font="Regular;24" halign="center"  valign="center"/>
@@ -316,6 +319,7 @@ class IPTVExtMoviePlayer(Screen):
         self['remainedLabel']     = Label("-0:00:00")
         self['lengthTimeLabel']   = Label("0:00:00")
         self['videoInfo']         = Label(" ")
+        self['pleaseWait']        = Label(_("Opening. Please wait..."))
         
         # for subtitles
         self.infoBanerOffsetY = -1
@@ -904,14 +908,21 @@ class IPTVExtMoviePlayer(Screen):
             self['subLabel1'].setText(text)
             self['subLabel1'].show()
         else:
+            if text.startswith('{\\an8}'):
+                text = text[6:]
+                subOnTopHack = True
+            else:
+                subOnTopHack = False
+                
             if self.subLinesNum == 1:
                 lineHeight = self.subConfig['line_height'] * text.count('\n')
                 text = [text]
             else:
                 text = text.split('\n')
-                text.reverse()
+                if not subOnTopHack: text.reverse()
                 lineHeight = self.subConfig['line_height']
-            y = self.subConfig['pos'] + self.subHandler['pos_y_offset']
+            y = self.subConfig['pos'] 
+            if not subOnTopHack: y += self.subHandler['pos_y_offset']
             for lnIdx in range(self.subLinesNum):
                 subLabel = 'subLabel%d' % (lnIdx+1)
                 if lnIdx < len(text):
@@ -933,7 +944,8 @@ class IPTVExtMoviePlayer(Screen):
                     lW = textSize[0] + self.subConfig['font_size'] / 2
                     lH = lineHeight #textSize[1] + self.subConfig['font_size'] / 2
                     self[subLabel].instance.resize(eSize(lW, lH))
-                    self[subLabel].instance.move( ePoint((desktopW-lW) / 2, desktopH - y - lH) )
+                    if not subOnTopHack: self[subLabel].instance.move( ePoint((desktopW-lW) / 2, desktopH - y - lH) )
+                    else: self[subLabel].instance.move( ePoint((desktopW-lW) / 2, y) )
                     y += lH + self.subConfig['line_spacing']
                     self[subLabel].show()
                 except Exception:
@@ -1019,6 +1031,7 @@ class IPTVExtMoviePlayer(Screen):
                 if 0 < self.playback['CurrentTime']: self.playback['StartGoToSeekTime'] = self.playback['CurrentTime']
                 self['currTimeLabel'].setText( str(timedelta(seconds=self.playback['CurrentTime'])) )
                 self['remainedLabel'].setText( '-' + str(timedelta(seconds=self.playback['Length']-self.playback['CurrentTime'])) )
+                self['pleaseWait'].hide()
             elif 'Status' == key:
                 curSts = self.playback['Status']
                 if self.playback['Status'] != val[0]:
@@ -1039,7 +1052,14 @@ class IPTVExtMoviePlayer(Screen):
             elif 'VideoTrack' == key:
                 self.playback[key] = val
                 codec = val['encode'].split('/')[-1]
-                self['videoInfo'].setText( "%s %sx%s" % (codec, val['width'], val['height']) )
+                text = "%s %sx%s" % (codec, val['width'], val['height'])
+                if val['progressive']: text += 'p'
+                else: text += 'i'
+                fps = val['frame_rate']
+                if fps == floor(fps): fps = int(fps)
+                text += ', %sfps' % fps
+                text += ', %s' % val['aspect_ratio'].replace('_', ':')
+                self['videoInfo'].setText( text )
             else:
                 self.playback[key] = val
                 printDBG(">>> playback[%s] = %s" % (key, val))
@@ -1092,10 +1112,13 @@ class IPTVExtMoviePlayer(Screen):
             self.lastPosition = self.metaHandler.getLastPosition()
     
     # handling of RCU keys
-    def key_stop(self):
-        self.isCloseRequestedByUser = True
+    def key_stop(self, requestedByUser=True):
+        self['pleaseWait'].setText(_("Closing. Please wait..."))
+        self['pleaseWait'].show()
+        self.isCloseRequestedByUser = requestedByUser
         self.extPlayerCmddDispatcher.stop()
         self.saveLastPlaybackTime()
+    
     def key_play(self):         self.extPlayerCmddDispatcher.play()
     def key_pause(self):        self.extPlayerCmddDispatcher.pause()  
     def key_exit(self):         self.doExit()
@@ -1197,8 +1220,7 @@ class IPTVExtMoviePlayer(Screen):
             self.playbackInfoBar['blocked'] = False
             self.hidePlaybackInfoBar()
         elif not self.isClosing:
-            self.extPlayerCmddDispatcher.stop()
-            self.saveLastPlaybackTime()
+            self.key_stop(False)
             
     def doInfo(self):
         if not self.playbackInfoBar['visible']:
@@ -1252,9 +1274,27 @@ class IPTVExtMoviePlayer(Screen):
             params['encode']     = str(obj['e'][2:])
             params['name']       = str(obj['n'])
             if video:
-                params['frame_rate'] = float(obj['f']/1000)
+                params['frame_rate'] = float(obj['f'])/1000.0
                 params['width']      = int(obj['w'])
                 params['height']     = int(obj['h'])
+                params['progressive']= False
+                try:
+                    if int(obj[p]):
+                        params['progressive'] = True
+                except Exception: 
+                    printExc()
+                try:
+                    DAR = float(obj.get('an', 1) * params['width']) / float(obj.get('ad', 1) * params['height'])
+                    aTab = []
+                    for item in [(16,9,'16_9'), (4,3,'4_3'), (16,10,'16_10'), (3,2,'3_2'), (5,4,'5_4'), (1.85,1,'1.85'), (2.35,1,'2.35')]:
+                        diff = fabs(float(item[0])/item[1] - DAR)
+                        aTab.append((diff, item[2]))
+                    aTab.sort(key=lambda item: item[0])
+                    params['aspect_ratio'] = aTab[0][1]
+                except Exception: 
+                    params['aspect_ratio'] = 'unknown'
+                    printExc()
+                    
             return params
             
         def _mapSubAtom(obj):

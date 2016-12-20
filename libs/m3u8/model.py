@@ -363,11 +363,15 @@ def quoted(string):
     return '"%s"' % string
 
 def _urijoin(base_uri, path):
+    #print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> base_uri[%s] path[%s]" % (base_uri, path))
     if parser.is_url(base_uri):
         parsed_url = urlparse.urlparse(base_uri)
         prefix = parsed_url.scheme + '://' + parsed_url.netloc
         new_path = os.path.normpath(parsed_url.path + '/' + path)
-        return urlparse.urljoin(prefix, new_path.strip('/'))
+        full_uri = urlparse.urljoin(prefix, new_path.strip('/'))
+        if not parser.is_url(full_uri): 
+            full_uri = urlparse.urljoin(prefix, '/' + new_path.strip('/'))
+        return full_uri
     else:
         return os.path.normpath(os.path.join(base_uri, path.strip('/')))
 

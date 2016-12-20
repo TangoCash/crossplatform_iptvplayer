@@ -53,10 +53,11 @@ def GetConfigList():
 ###################################################
 
 class PierwszaTVApi:
-    MAIN_URL   = 'http://pierwsza.tv/'
-    HTTP_HEADER  = { 'User-Agent':'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36', 'Referer': MAIN_URL }
-    
+
     def __init__(self):
+        self.MAIN_URL    = 'http://pierwsza.tv/'
+        self.HTTP_HEADER = { 'User-Agent':'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36', 'Referer': self.MAIN_URL }
+    
         self.COOKIE_FILE = GetCookieDir('pierwszatv.cookie')
         self.COOKIE_FILE2 = GetCookieDir('pierwszatv2.cookie')
         self.COOKIE_FILE3 = GetCookieDir('pierwszatv3.cookie')
@@ -67,6 +68,50 @@ class PierwszaTVApi:
         self.http_params2 = {'header': dict(self.HTTP_HEADER), 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE2}
         self.http_params3 = {'header': dict(self.HTTP_HEADER), 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE3}
         self.cacheList = {}
+        
+        self.mainConnectData = {}
+        
+    def getWindowDict(self, varData):
+        printDBG("PierwszaTVApi.fillMainConnectData")
+        window = {'isPromoMode':'', 'utype':'', 'u0td':'', 'u1td':'', 'uTypeRoute':''} 
+        for key in window:
+            val = self.cm.ph.getSearchGroups(varData, '''window\.%s[^'^"]*?=([^;]+?);''' % key, 1, True)[0].strip()
+            if val.startswith("'") and val.endswith("'"):
+                val = val[1:-1]
+            if val.startswith('"') and val.endswith('"'):
+                val = val[1:-1]
+            window[key] = val
+        return window
+        
+    def fillMainConnectData(self):
+        printDBG("PierwszaTVApi.fillMainConnectData")
+        self.mainConnectData = {}
+        
+        sts, data = self.cm.getPage(self.MAIN_URL, self.http_params)
+        if not sts: return False
+        
+        self.mainConnectData = self.getWindowDict(data)
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'connectToLive(', ')', False)[1]
+        tmp = self.cm.ph.getSearchGroups(tmp, '''['"]([^'^"]+?)['"][^'^"]+?['"]([^'^"]+?)['"]''', 2, True)
+        self.mainConnectData['connect_to_live_url'] = tmp[0]
+        self.mainConnectData['connect_to_live_token'] = tmp[1]
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'setItem(', ')', False)[1]
+        tmp = self.cm.ph.getSearchGroups(tmp, '''['"]([^'^"]+?)['"][^'^"]+?['"]([^'^"]+?)['"]''', 2, True)
+        self.mainConnectData[tmp[0]] = tmp[1]
+        
+        jsUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]*?/build/[^'^"]+?\.js)['"]''')[0])
+        sts, data = self.cm.getPage(jsUrl, self.http_params)
+        if not sts: 
+            self.mainConnectData['api_path'] = ''
+        else:
+            self.mainConnectData['api_path'] = self.cm.ph.getSearchGroups(data, '''['"]?apiPath['"]?\s*:\s*["'](http[^'^"]+?)["']''')[0]
+        
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fillMainConnectData start")
+        printDBG(self.mainConnectData)
+        printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< fillMainConnectData end")
+        
         
     def cryptoJS_AES_decrypt(self, encrypted, password, salt):
         def derive_key_and_iv(password, salt, key_length, iv_length):
@@ -90,7 +135,9 @@ class PierwszaTVApi:
         return e
         
     def getFullUrl(self, url):
-        if url.startswith('http'):
+        if url.strip() == '': 
+            return ''
+        elif self.cm.isValidUrl(url):
             return url
         elif url.startswith('//'):
             return 'http:' + url
@@ -113,86 +160,115 @@ class PierwszaTVApi:
             else:
                 self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
         
-        channelsTab = []
-        sts, data = self.cm.getPage(self.MAIN_URL + 'player/watch?show=active')
+        self.fillMainConnectData()
+        
+        liveChannelsTab = []
+        sts, data = self.cm.getPage(self.getFullUrl('player/watch?show=active'), self.http_params)
         if not sts: return []
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, 'window.sources =', ';', False)[1].strip()
-        #data = self.cm.ph.getAllItemsBeetwenMarkers(data, '{', '}')
+        url = self.mainConnectData.get('api_path', '') + "/sources?watchToken=" + self.mainConnectData.get('wt', '')
+        sts, data = self.cm.getPage(url, self.http_params2)
+        if not sts: return []
+        
+        scheduledChannelsTab = []
         try:
-            data = byteify(json.loads(data))
+            data = byteify(json.loads(data))['sources']
             for idx in range(200):
                 try:
                     if isinstance(data, list):
                         item = data[idx]
                     else: item = data[str(idx)] 
                 except Exception: continue
-                printDBG(item)
-                printDBG("===============================================")
-                url   = self.getFullUrl( 'player/watch/{0}'.format(item['id']) )
-                if None != item.get('thumb_url', ''):
-                    icon  = self.getFullUrl( item.get('thumb_url', '') )
-                else:
-                    icon = ''
+                #printDBG(item)
+                #printDBG("===============================================")
+                url = strwithmeta(self.getFullUrl('player/watch/{0}'.format(item['id'])), {'id':item['id']})
+                icon = ''
+                icon = item.get('thumbUrl', '')
+                if icon == None: icon = ''
+                
                 title = self.cleanHtmlStr( item['name'] )
-                desc  = self.cleanHtmlStr( item.get('author', '') + ' ' + item.get('updated_at', '') )
-                if not url.startswith('http'): continue
+                desc  = []
+                try:
+                    if 'scheduleStartIn' in item:
+                        d = item['scheduleStartIn']
+                        desc.append('Start za: %s:%s:%s' % (str(d['hours']).zfill(2), str(d['minutes']).zfill(2), str(d['seconds']).zfill(2)) )
+                except Exception:
+                    printExc()
+                for d in ['author', 'updated_at']: #, 'scheduleStartAt', 'scheduleEndAt'
+                    if item.get(d, None) != None: desc.append(str(item[d]))
+                
                 params = dict(cItem)
-                params.update({'title':title, 'url':url, 'icon':icon, 'desc':desc})
-                channelsTab.append(params)
+                params.update({'title':title, 'url':url, 'icon':self.getFullUrl(icon), 'desc':'[/br]'.join(desc)})
+                
+                if item.get('transmiting', False) and not item.get('isScheduled', False):
+                    liveChannelsTab.append(params)
+                elif item.get('isScheduled', False):
+                    scheduledChannelsTab.append(params)
         except Exception:
+            SetIPTVPlayerLastHostError('Błąd w parsowaniu danych z serwera.')
             printExc()
-        return channelsTab
+        liveChannelsTab.extend(scheduledChannelsTab)
+        return liveChannelsTab
         
     def getVideoLink(self, cItem):
         printDBG("TelewizjadaNetApi.getVideoLink")
-        params    = {'header' : self.HTTP_HEADER, 'cookiefile' : self.COOKIE_FILE, 'save_cookie' : True}
-        sts, data = self.cm.getPage(cItem['url'], params)
+        url = cItem['url']
+        sourceId = str(url.meta['id'])
+        
+        mainCon = {'url':self.mainConnectData.get('connect_to_live_url', ''), 'token':self.mainConnectData.get('connect_to_live_token', '')}
+        
+        sts, data = self.cm.getPage(cItem['url'], self.http_params)
         if not sts: return []
         
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'connectToLive(', ')', False)[1]
-        tmp = self.cm.ph.getSearchGroups(tmp, '''['"]([^'^"]+?)['"][^'^"]+?['"]([^'^"]+?)['"]''', 2, True)
-        mainCon = {'url':tmp[0], 'token':tmp[1]}
+        params = dict(self.http_params)
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = cItem['url']
+        params['header']['Origin']  = self.MAIN_URL[:-1]
         
-        varData = data #self.cm.ph.getDataBeetwenMarkers(data, 'window.', 'var items')[1]
-        window = {'streamUrl':'', 'endpoints':'', 'sourceId':'', 'sourceType':'', 'sourcePlayer':'', 'streamId':'', 'streamToken':'', 'serverId':''} 
-        for key in window:
-            val = self.cm.ph.getSearchGroups(varData, '''window\.%s[^'^"]*?=([^;]+?);''' % key, 1, True)[0].strip()
-            if val.startswith("'") and val.endswith("'"):
-                val = val[1:-1]
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            window[key] = val
+        liveCon = {}
+        url = self.mainConnectData.get('api_path', '') + '/live?wt=' + self.mainConnectData.get('wt', '')
+        sts, data = self.cm.getPage(url, self.http_params2)
+        if not sts: return []
+        try:
+            liveCon = byteify(json.loads(data))
+        except Exception:
+            printExc()
+            return []
         
-        window['urls'] = {}
-        for keyUrl in ['playRecord', 'player', 'sync', 'multiLogin', 'reportError', 'reportOk', 'bumpToken']:
-            window['urls'][keyUrl] = self.cm.ph.getSearchGroups(varData, '''window\.urls\['[^']+?\@%s'\][\s]*?=[\s]*?['"]([^'^"]+?)['"]''' % keyUrl, 1, True)[0].strip()
+        url = self.mainConnectData.get('api_path', '') + "/play?id=%swatchToken=%s" % (sourceId, self.mainConnectData.get('wt', ''))
+        sts, data = self.cm.getPage(url, self.http_params2)
+        if not sts: return []
         
-        for keyUrl in ['requestStream']:
-            window['urls'][keyUrl] = self.cm.ph.getSearchGroups(varData, '''window\.routes\['[^']+?\@%s'\][\s]*?=[\s]*?['"]([^'^"]+?)['"]''' % keyUrl, 1, True)[0].strip()
+        try:
+            def to_byte_array(inArray):
+                import struct
+                outArray = []
+                for item in inArray:
+                    outArray.append(struct.pack('>l', item))
+                return ''.join(outArray)
+            
+            data = byteify(json.loads(data))
+            ciphertext = to_byte_array(data['window']['encServers']['ciphertext']['words'])
+            iv = to_byte_array(data['window']['encServers']['iv']['words'])
+            key = to_byte_array(data['window']['encServers']['key']['words'])
+            salt = to_byte_array(data['window']['encServers']['salt']['words'])
+            
+            tmp = self.cryptoJS_AES_decrypt(ciphertext, 'number-one', salt)
+            printDBG(tmp)
+            tmp = byteify(json.loads(tmp))
+        
+        except Exception:
+            printExc()
+            return []
         
         urlsTab = []
         try:
-            printDBG(window)
-            if '' != window['streamUrl']:
-                tmp = window['streamUrl'].replace('\\"', '"')
-            else:
-                tmp = window['endpoints'].replace('\\"', '"')
-            streamUrl = byteify(json.loads(tmp))
-            ciphertext = base64.b64decode(streamUrl['ct'])
-            iv         = a2b_hex(streamUrl['iv'])
-            salt       = a2b_hex(streamUrl['s'])
-            
-            tmp = self.cryptoJS_AES_decrypt(ciphertext, 'number-one', salt)
-            tmp = byteify(json.loads(tmp))
-            tmp = byteify(json.loads(tmp))
-            
             if isinstance(tmp, list):
                 tmp = tmp[0]
             
             if isinstance(tmp, dict):
-                baseUrl1     = mainCon['url']
-                streamToken1 = mainCon['token']
+                baseUrl1     = liveCon['url']
+                streamToken1 = liveCon['token']
                 baseUrl2     = tmp['server']
                 streamToken2 = tmp['token']
                 
@@ -266,7 +342,7 @@ class PierwszaTVApi:
                 t2 = self.getTimestamp(time()*1000)
                 url = baseUrl2.replace(":8000",":8004") + '/socket.io/?EIO=3&transport=polling&t={0}&sid={1}'.format(t2, baseParams2['sid'])
                 self.http_params3['raw_post_data'] = True
-                sts, data = self.cm.getPage(url, self.http_params3, '102:42["authorize","%s"]' % streamToken2)
+                sts, data = self.cm.getPage(url, self.http_params3, '82:42["authorize","%s"]' % streamToken2)
                 printDBG("=========================================================")
                 printDBG([data])
                 printDBG("=========================================================")
@@ -280,8 +356,8 @@ class PierwszaTVApi:
                 printDBG([data])
                 printDBG("=========================================================")
                 
-                n = sha256(serverId + '_' + window['sourceId'] + '_' + stoken + '_rabbit_foot').hexdigest()
-                url = window['urls']["requestStream"] + "?token=" + streamToken2 + "&server=" + serverId + "&source=" + window['sourceId'] + "&cs=" + n
+                n = sha256(serverId + '_' + sourceId + '_' + stoken + '_rabbit_foot').hexdigest()
+                url = self.mainConnectData['api_path'] + '/request-stream' + "?token=" + streamToken2 + "&server=" + serverId + "&source=" + sourceId + "&cs=" + n
                 sts, data = self.cm.getPage(url, self.http_params)
                 data = byteify( json.loads(data) ) 
                 streamId = str(data['id'])
@@ -323,7 +399,7 @@ class PierwszaTVApi:
         
         _token = self.cm.ph.getSearchGroups(data, '''_token"[\s]*?value="([^"]+?)"''', 1, True)[0]
         
-        HTTP_HEADER= dict(PierwszaTVApi.HTTP_HEADER)
+        HTTP_HEADER= dict(self.HTTP_HEADER)
         HTTP_HEADER.update( {'Referer':loginUrl} )
         
         post_data = {'email' : login, 'password' : password, '_token' : _token, 'remember_me' : 'on' }

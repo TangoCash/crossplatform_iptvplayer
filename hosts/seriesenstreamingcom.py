@@ -135,7 +135,7 @@ class SeriesEnStreamingCom(CBaseHostClass):
         
         for item in [('series','fa-television', '/liste-'), \
                      ('movies', 'fa-film', '/liste-'), \
-                     ('mangas', 'fa-video-camera', '/streaming-')]:
+                     ('mangas', 'fa-youtube-play', '/streaming-')]:
             key = item[0]
             self.cache[key] = []
             tmp = self.cm.ph.getDataBeetwenMarkers(data, item[1], '</ul>', False)[1]

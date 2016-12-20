@@ -51,14 +51,14 @@ class IPTVDMWidget(Screen):
          <ePixmap position="385,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
          <ePixmap position="590,9" zPosition="4" size="35,30" pixmap="%s" transparent="1" alphatest="on" />
          <widget render="Label" source="key_red"    position="45,9"  size="140,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-         <widget render="Label" source="key_yellow" position="225,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
-         <widget render="Label" source="key_green"  position="425,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
+         <widget render="Label" source="key_green"  position="225,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
+         <widget render="Label" source="key_yellow" position="425,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
          <widget render="Label" source="key_blue"   position="635,9" size="300,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />            
          <widget name="list" position="5,100" zPosition="2" size="%d,%d" scrollbarMode="showOnDemand" transparent="0"  backgroundColor="#00000000" enableWrapAround="1" />
          <widget name="titel" position="5,47" zPosition="1" size="%d,23" font="Regular;20" transparent="1"  backgroundColor="#00000000"/>
         </screen>""" %(_("IPTV Player download manager"),
             sz_w, sz_h, # size
-            GetIconDir('red.png'), GetIconDir('yellow.png'), GetIconDir('green.png'), GetIconDir('blue.png'),
+            GetIconDir('red.png'), GetIconDir('green.png'), GetIconDir('yellow.png'), GetIconDir('blue.png'),
             sz_w - 10, sz_h - 20, # size list
             sz_w - 135, # size titel
             )
