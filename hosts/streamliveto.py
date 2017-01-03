@@ -3,14 +3,14 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.components.iptvmultipleinputbox import IPTVMultipleInputBox
-from Plugins.Extensions.IPTVPlayer.components.iptvinputbox import IPTVInputBoxWidget
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvmultipleinputbox import IPTVMultipleInputBox
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvinputbox import IPTVInputBoxWidget
 ###################################################
 
 ###################################################
@@ -29,7 +29,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 

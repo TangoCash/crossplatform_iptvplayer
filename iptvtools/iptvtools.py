@@ -1102,9 +1102,20 @@ def IsSubtitlesParserExtensionCanBeUsed():
     except Exception:
         printExc()
     return False
+    
+def IsBrokenDriver(filePath):
+    # workaround for broken DVB driver mbtwinplus:
+    # root@mbtwinplus:~# cat /proc/stb/video/policy2
+    # Segmentation fault
+    try:
+        return 'video/policy' in filePath and not fileExists('/proc/stb/video/aspect_choices')
+    except Exception:
+        printExc()
+    return False
         
 def GetE2OptionsFromFile(filePath):
     options = []
+    if IsBrokenDriver(filePath): return []
     try:
         if fileExists(filePath):
             with open(filePath, 'r') as f:
@@ -1121,6 +1132,7 @@ def GetE2OptionsFromFile(filePath):
     return options
 
 def SetE2OptionByFile(filePath, value):
+    if IsBrokenDriver(filePath): return False
     sts = False
     try:
         with open(filePath, 'w') as f:

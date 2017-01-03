@@ -31,15 +31,15 @@ from enigma import getDesktop, eTimer
 ####################################################
 #                   IPTV components
 ####################################################
-from Plugins.Extensions.IPTVPlayer.components.iptvconfigmenu import ConfigMenu, GetMoviePlayer
-from Plugins.Extensions.IPTVPlayer.components.confighost import ConfigHostMenu
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.confighost import ConfigHostMenu
 
-from Plugins.Extensions.IPTVPlayer.components.iptvfavouriteswidgets import IPTVFavouritesAddItemWidget, IPTVFavouritesMainWidget
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvfavouriteswidgets import IPTVFavouritesAddItemWidget, IPTVFavouritesMainWidget
  
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import IsUrlDownloadable
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvtools_FreeSpace, \
                                                           mkdirs as iptvtools_mkdirs, GetIPTVPlayerVerstion, GetVersionNum, \
                                                           printDBG, printExc, iptv_system, GetHostsList, IsHostEnabled, \
@@ -53,20 +53,20 @@ from Plugins.Extensions.IPTVPlayer.iptvupdate.updatemainwindow import IPTVUpdate
 
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit, GetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.setup.iptvsetupwidget import IPTVSetupMainWidget
-from Plugins.Extensions.IPTVPlayer.components.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
-from Plugins.Extensions.IPTVPlayer.components.iptvextmovieplayer import IPTVExtMoviePlayer
-from Plugins.Extensions.IPTVPlayer.components.iptvpictureplayer import IPTVPicturePlayerWidget
-from Plugins.Extensions.IPTVPlayer.components.iptvlist import IPTVMainNavigatorList
-from Plugins.Extensions.IPTVPlayer.components.articleview import ArticleView
-from Plugins.Extensions.IPTVPlayer.components.iptvarticlerichvisualizer import IPTVArticleRichVisualizer
-from Plugins.Extensions.IPTVPlayer.components.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, ArticleContent, CFavItem
-from Plugins.Extensions.IPTVPlayer.components.iconmenager import IconMenager
-from Plugins.Extensions.IPTVPlayer.components.cover import Cover, Cover3
-from Plugins.Extensions.IPTVPlayer.components.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvextmovieplayer import IPTVExtMoviePlayer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvpictureplayer import IPTVPicturePlayerWidget
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.articleview import ArticleView
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvarticlerichvisualizer import IPTVArticleRichVisualizer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, ArticleContent, CFavItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iconmenager import IconMenager
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover, Cover3
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
 import Plugins.Extensions.IPTVPlayer.components.asynccall as asynccall
 
 # SULGE TEMP
-#from Plugins.Extensions.IPTVPlayer.components.iptvsubdownloader import IPTVSubDownloaderWidget
+#from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvsubdownloader import IPTVSubDownloaderWidget
 
 ######################################################
 gDownloadManager = None

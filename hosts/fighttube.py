@@ -3,7 +3,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser

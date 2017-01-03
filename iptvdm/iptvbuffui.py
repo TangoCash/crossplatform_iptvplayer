@@ -8,11 +8,11 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.cover import SimpleAnimatedCover
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import SimpleAnimatedCover
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, touch, eConnectCallback
-from Plugins.Extensions.IPTVPlayer.components.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
-from Plugins.Extensions.IPTVPlayer.components.iptvextmovieplayer import IPTVExtMoviePlayer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvextmovieplayer import IPTVExtMoviePlayer
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import DownloaderCreator
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _

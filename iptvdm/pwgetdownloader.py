@@ -9,7 +9,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, iptv_system, eConnectCallback, E2PrioFix
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import enum
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import enum
 from Plugins.Extensions.IPTVPlayer.iptvdm.basedownloader import BaseDownloader
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 ###################################################

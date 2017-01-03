@@ -10,7 +10,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIconDir
-from Plugins.Extensions.IPTVPlayer.components.cover import Cover3, Cover2
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover3, Cover2
 ###################################################
 
 ###################################################

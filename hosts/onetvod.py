@@ -4,12 +4,12 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 import Plugins.Extensions.IPTVPlayer.libs.crypto
 import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetLogoDir, byteify
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################

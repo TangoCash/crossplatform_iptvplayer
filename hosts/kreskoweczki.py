@@ -3,12 +3,12 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -29,7 +29,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -57,7 +57,7 @@ class KreskoweczkiPL(CBaseHostClass):
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
         self.MAIN_URL      = 'http://www.kreskoweczki.pl/'
-        self.SEARCH_URL    = self.MAIN_URL + 'search.php?keywords='
+        self.SEARCH_URL    = self.MAIN_URL + 'szukaj'
         self.DEFAULT_ICON  = "http://www.kreskoweczki.pl/uploads/custom-logo.png"
 
         self.MAIN_CAT_TAB = [{'icon':self.DEFAULT_ICON, 'category':'list_abc',        'title': 'Alfabetycznie',   'url':self.MAIN_URL + 'index.html'},
@@ -102,26 +102,29 @@ class KreskoweczkiPL(CBaseHostClass):
             if '?' in url:
                 url += '&page=%d' % page
             else:
-                url += '?page=%d' % page
+                url += '/strona-%d' % page
         
-        sts, data = self.cm.getPage(url)
+        post_data = cItem.get('post_data', None)
+        sts, data = self.cm.getPage(url, {}, post_data)
         if not sts: return
         
-        #nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<div class="loop-nav-inner">', '</div>', False)[1]
-        if 'page,{0}/'.format(page+1) in data:
+        nextPage = self.cm.ph.getSearchGroups(data, '''strona\-(%s)[^0-9]''' % (page + 1))[0]
+        if nextPage == '': nextPage = self.cm.ph.getSearchGroups(data, '''page\,(%s)[^0-9]''' % (page + 1))[0]
+        if nextPage != '':
             nextPage = True
         else: 
             nextPage = False
         
         video = True
-        m1 = '<div class="pm-li-video"'
-        if m1 not in data: 
-            m1 = '<a class="category-item"'
-            video = False
+        m1 = '<a class="item" '
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, m1, '</li>')
-        for item in data:   
+        for item in data:
+            video = True
+            if '' == self.cm.ph.getSearchGroups(item, '''/([0-9]+?)/''')[0]:
+                video = False
             # icon
             icon  = self.cm.ph.getSearchGroups(item, '''url\(['"]([^'^"]+?)['"]''')[0]
+            if icon == '': icon = self.cm.ph.getSearchGroups(item, '''data-bg-url=['"]([^'^"]+?\.jpe?g)['"]''')[0]
             if icon == '': icon = cItem.get('icon', '')
             # url
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
@@ -133,7 +136,9 @@ class KreskoweczkiPL(CBaseHostClass):
             title = self.cm.ph.getDataBeetwenMarkers(item, '<span class="pm-category-name', '</span>')[1] + ' ' + title
             
             params = dict(cItem)
+            params.pop('post_data', None)
             params.update({'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon)})
+            printDBG(icon)
             if video:
                 params.update({'desc':self.cleanHtmlStr(item)})
                 self.addVideo(params)
@@ -149,53 +154,40 @@ class KreskoweczkiPL(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("KreskoweczkiPL.getLinksForVideo [%s]" % cItem)
         urlTab = []
-
-        vid = self.cm.ph.getSearchGroups(cItem['url'], '''kreskowka/([0-9]+?)/''')[0]
-        if '' == vid: return []
         
-        HEADER = dict(self.HEADER)
-        HEADER['Referer'] = cItem['url']
-        post_data = {'vid' : vid}
-        sts, data = self.cm.getPage('http://www.kreskoweczki.pl/fullscreen/', {'header': HEADER}, post_data)
+        
+        sts, data = self.cm.getPage(cItem['url'])
         if not sts: return []
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '</iframe>', caseSensitive=False)
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>', caseSensitive=False)
         for item in data:
-            videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', ignoreCase=True)[0])
-            if 1 != self.up.checkHostSupport(videoUrl): continue 
-            urlTab.append({'name':self.up.getHostName(videoUrl), 'url':videoUrl.replace('&amp;', '&'), 'need_resolve':1})
-            
-        return urlTab
-
-        sts, videoData = self.cm.ph.getDataBeetwenMarkers(data, 'Loader.skipBanners', 'Loader.skipBanners', False)
-        if sts:
-            videoUrl = self.cm.ph.getSearchGroups(videoData, '''Loader.loadFlashFile."([^"]+?)"''')[0]
-            if '' == videoUrl:
-                videoUrl = self.cm.ph.getSearchGroups(videoData, '''src="(.+?)"''')[0]
+            url = self.cm.ph.getSearchGroups(item, '''action="([^"]+?)"''')[0]
+            vid = self.cm.ph.getSearchGroups(item, '''value="([0-9]+?)"''')[0]
+            if url != '' and vid != '':
+                url = strwithmeta(self.getFullUrl(url), {'Referer':cItem['url'], 'vid':vid})
+                urlTab.append({'name':self.cleanHtmlStr(item), 'url':url, 'need_resolve':1})
         
-        if 'src=' in  videoUrl:
-            videoUrl = self.cm.ph.getSearchGroups(videoUrl, '''src="(.+?)"''')[0]
-            
-        videoData = self.cm.ph.getSearchGroups(videoUrl, "/embed/proxy[^.]+?.php")
-        if '' != videoData:
-            sts, data = self.cm.getPage(videoUrl)
-            if not sts: return []
-            videoUrl = self.cm.ph.getSearchGroups(data, '''url: "[^?^"]+?\?url=([^"]+?)"''')[0]
-            if videoUrl.split('?')[0].endswith('.m3u8'):
-                urlTab = getDirectM3U8Playlist(videoUrl)
-                for idx in len(urlTab):
-                    urlTab[idx]['need_resolve'] = 0
-        else: 
-            if videoUrl.startswith('//'):
-                videoUrl = 'http:' + videoUrl
-            urlTab.append({'name':self.up.getHostName(videoUrl), 'url':videoUrl.replace('&amp;', '&'), 'need_resolve':1})
         return urlTab
         
     def getVideoLinks(self, videoUrl):
         printDBG("KreskoweczkiPL.getVideoLinks [%s]" % videoUrl)
-        urlTab = []
+
+        videoUrl = strwithmeta(videoUrl)
+        vid = videoUrl.meta.get('vid', '')
+        ref = videoUrl.meta.get('Referer', '')
+        if '' == vid: return []
         
-        if videoUrl.startswith('http'):
+        HEADER = dict(self.HEADER)
+        HEADER['Referer'] = ref
+        post_data = {'source_id' : vid}
+        sts, data = self.cm.getPage(videoUrl, {'header': HEADER}, post_data)
+        if not sts: return []
+        
+        urlTab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '</iframe>', caseSensitive=False)
+        for item in data:
+            videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', ignoreCase=True)[0])
+            if 1 != self.up.checkHostSupport(videoUrl): continue 
             urlTab.extend( self.up.getVideoLinkExt(videoUrl) )
         
         return urlTab
@@ -203,7 +195,8 @@ class KreskoweczkiPL(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("KreskoweczkiPL.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
-        cItem['url'] = self.SEARCH_URL + urllib.quote(searchPattern) 
+        cItem['url'] = self.SEARCH_URL
+        cItem['post_data'] = {'query':searchPattern}
         self.listItems(cItem)
         
     def getFavouriteData(self, cItem):
@@ -251,67 +244,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         # for now we must disable favourites due to problem with links extraction for types other than movie
         CHostBase.__init__(self, KreskoweczkiPL(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-

@@ -3,12 +3,12 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -26,7 +26,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -75,9 +75,9 @@ class AlltubeTV(CBaseHostClass):
     def getIconUrl(self, url):
         url = self.getFullUrl(url.strip())
         if url == '': return ''
-        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID'])
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
-            
+        
     def _listFilters(self, cItem, data):
         printDBG("AlltubeTV._listFilters")
         ret = False
@@ -421,6 +421,7 @@ class AlltubeTV(CBaseHostClass):
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
         
+        self.cm.clearCookie(self.COOKIE_FILE, ['PHPSESSID', '__cfduid', 'cf_clearance'])
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})

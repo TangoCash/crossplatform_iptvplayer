@@ -8,14 +8,14 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.ihost import ArticleContent
-from Plugins.Extensions.IPTVPlayer.components.cover import SimpleAnimatedCover, Cover
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import SimpleAnimatedCover, Cover
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIconDir, eConnectCallback
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import DownloaderCreator
-from Plugins.Extensions.IPTVPlayer.components.cover import Cover, Cover3
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover, Cover3
 ###################################################
 
 ###################################################
@@ -305,7 +305,7 @@ class IPTVArticleRichVisualizer(Screen):
             self["dsc_text_{0}".format(idx+1)].setText(text)
             
     def newPage(self, page):
-        if page != self.richDesc['page']:
+        if page != self.richDesc['page'] and 'page_item_start_x' in self.richDesc and 'page_item_start_y' in self.richDesc:
             self.richDesc['page'] = page
             self.setRichDesc()
             

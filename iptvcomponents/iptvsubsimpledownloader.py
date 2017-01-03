@@ -6,9 +6,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, GetTmpDir, GetSubtitlesDir, GetIconDir, RemoveDisallowedFilenameChars, iptv_system, MapUcharEncoding
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.components.ihost import CDisplayListItem
-from Plugins.Extensions.IPTVPlayer.components.iptvlist import IPTVMainNavigatorList
-from Plugins.Extensions.IPTVPlayer.components.cover import Cover3
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover3
 
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import DownloaderCreator

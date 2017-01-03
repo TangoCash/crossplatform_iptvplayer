@@ -3485,3 +3485,18 @@ msgstr "Wird geöffnet. Bitte warten..."
 
 msgid "Closing. Please wait..."
 msgstr "Wird geschlossen. Bitte warten..."
+
+msgid "Enable reordering"
+msgstr "Aktiviere Sortiermodus"
+
+msgid "Disable reordering"
+msgstr "Deaktiviere Sortiermodus"
+
+msgid "Alternative proxy server (1)"
+msgstr "Alternativer Proxy Server (1)"
+
+msgid "Alternative proxy server (2)"
+msgstr "Alternativer Proxy Server (2)"
+
+msgid "Use proxy server:"
+msgstr "Benutze Proxy Server:"

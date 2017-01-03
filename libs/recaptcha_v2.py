@@ -5,10 +5,10 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetTmpDir, GetCookieDir
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.components.asynccall import iptv_execute, MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import iptv_execute, MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.recaptcha_v2widget import UnCaptchaReCaptchaWidget
 
 ###################################################

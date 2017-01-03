@@ -3,10 +3,10 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -28,7 +28,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -300,9 +300,15 @@ class TreeTv(CBaseHostClass):
         sts, data = self.cm.getPage(sourceUrl, params)
         if not sts: return []
         
+        printDBG('url[%s]' % url)
+        printDBG('sourceUrl[%s]' % sourceUrl)
         printDBG('filmId[%s]' % filmId)
         printDBG('fileId[%s]' % fileId)
         printDBG('source[%s]' % source)
+        
+        uri = self.up.getDomain(sourceUrl, False) + 'm3u8/{0}.m3u8'.format(fileId)
+        return getDirectM3U8Playlist(uri, checkContent=True)
+        
         # sometimes return string is not valid json
         try:
             data = re.compile('''"src"\s*:\s*"([^"]+?)"''').findall(data)

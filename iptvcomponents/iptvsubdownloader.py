@@ -8,15 +8,15 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
                                                           GetTmpDir, GetSubtitlesDir, GetIconDir, GetSkinsDir, \
                                                           GetIPTVPlayerVerstion, eConnectCallback, GetPluginDir, \
                                                           iptv_system, IsSubtitlesParserExtensionCanBeUsed
-from Plugins.Extensions.IPTVPlayer.tools.iptvfavourites import IPTVFavourites
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvfavourites import IPTVFavourites
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.components.ihost import CDisplayListItem, RetHost
-from Plugins.Extensions.IPTVPlayer.components.isubprovider import ISubProvider
-from Plugins.Extensions.IPTVPlayer.components.iptvlist import IPTVMainNavigatorList
-from Plugins.Extensions.IPTVPlayer.components.cover import Cover3
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CDisplayListItem, RetHost
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.isubprovider import ISubProvider
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover3
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 from Components.Language import language
 from Components.config import config
 ###################################################
@@ -45,7 +45,7 @@ from enigma import getDesktop, eTimer
 #                   IPTV components
 ####################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit, GetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 import Plugins.Extensions.IPTVPlayer.components.asynccall as asynccall
 ###################################################
 

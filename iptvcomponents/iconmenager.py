@@ -12,7 +12,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import mkdirs, \
                       printDBG, printExc, RemoveOldDirsIcons, RemoveAllFilesIconsFromPath, \
                       RemoveAllDirsIconsFromPath, GetIconsFilesFromDir, GetNewIconsDirName, \
                       GetIconsDirs, RemoveIconsDirByPath
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################

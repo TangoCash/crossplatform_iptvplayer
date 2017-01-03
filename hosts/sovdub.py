@@ -6,14 +6,14 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, \
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, \
     CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, \
     GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -27,7 +27,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -41,7 +41,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'SovDub'
+    return 'http://sovdub.ru/'
 
 
 class Sovdub(CBaseHostClass):
@@ -157,7 +157,8 @@ class Sovdub(CBaseHostClass):
         desc = self.cleanHtmlStr(desc).replace('  ', '')
         url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=["']([^"^']+?)['"]''', 1, True)[0]
         url = url.replace('amp;', '')
-        if url.startswith('http'):
+        url = self.getFullUrl(url)
+        if self.cm.isValidUrl(url):
             params = dict(cItem)
             params['desc'] = desc
             params['url'] = url

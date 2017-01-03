@@ -2,7 +2,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.ihost import ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 ###################################################
 

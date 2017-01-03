@@ -5,11 +5,11 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsValidFileName, GetFavouritesDir, GetIconDir
-from Plugins.Extensions.IPTVPlayer.tools.iptvfavourites import IPTVFavourites
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvfavourites import IPTVFavourites
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.components.ihost import CFavItem, CDisplayListItem
-from Plugins.Extensions.IPTVPlayer.components.iptvmultipleinputbox import IPTVMultipleInputBox
-from Plugins.Extensions.IPTVPlayer.components.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CFavItem, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvmultipleinputbox import IPTVMultipleInputBox
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
 ###################################################
 
 ###################################################

@@ -6,10 +6,11 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.moonwalkcc import MoonwalkParser
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.hdgocc import HdgoccParser
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################
@@ -55,6 +56,7 @@ class Kinotan(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history': 'Kinotan', 'cookie': 'Kinotan.cookie'})
         self.moonwalkParser = MoonwalkParser()
+        self.hdgocc = HdgoccParser()
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
@@ -218,48 +220,38 @@ class Kinotan(CBaseHostClass):
         hostName = self.up.getHostName(url)
         if hostName in ['serpens.nl', '37.220.36.15']:
             hostName = 'moonwalk.cc'
+            
+        params.update({'category': category, 'serie_title': title}) 
         if hostName == 'moonwalk.cc' and '/serial/' in url:
-            params.update({'category': category, 'serie_title': title})
-            season = self.moonwalkParser.getSeasonsList(url)
-            for item in season:
+            seasons = self.moonwalkParser.getSeasonsList(url)
+            for item in seasons:
                 param = dict(params)
                 param.update(
                     {'host_name': 'moonwalk', 'title': item['title'], 'season_id': item['id'], 'url': item['url']})
                 self.addDir(param)
             return
         elif hostName == 'hdgo.cc':
-            if '/video/' in url:
-                params = dict(cItem)
-                params.update({'url': strwithmeta(url, {'Referer':cItem['url']})})
-                self.addVideo(params)
-            else:
-                HEADER = dict(self.HEADER)
-                HEADER['Referer'] = cItem['url']
-                sts, data = self.getPage(url, {'header':HEADER})
-                if not sts: return
-                urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
-                HEADER['Referer'] = url
-                sts, data = self.getPage(urlNext, {'header':HEADER})
-                if not sts: return
-                
-                printDBG("==========================================")
-                printDBG(data)
-                printDBG("==========================================")
-                
-                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '</option>', '</div>', True)[1])
-                itemTitle = self.cm.ph.getSearchGroups(data, '''createTextNode\([^'^"]*?['"]([^'^"]+?)['"]''')[0]
-                data = self.cm.ph.getDataBeetwenMarkers(data, 'season_list[0] =', ';', False)[1]
-                printDBG("==========================================")
-                printDBG(data)
-                printDBG("==========================================")
-                data = re.compile('''['"](http[^'^"]+?)['"]''').findall(data)
-                idx = 0
-                for idx in range(len(data)):
-                    vidUrl = data[idx] 
-                    params = dict(cItem)
-                    params.update({'title': '%s: %s%s' % (title, itemTitle, idx+1), 'url': strwithmeta(vidUrl, {'Referer':url})})
-                    self.addVideo(params)
-            return
+            url = strwithmeta(url, {'Referer':cItem['url']})
+            seasons = self.hdgocc.getSeasonsList(url)
+            for item in seasons:
+                param = dict(params)
+                param.update(
+                    {'host_name': 'hdgo.cc', 'title': item['title'], 'season_id': item['id'], 'url': item['url']})
+                self.addDir(param)
+            
+            if 0 != len(seasons):
+                return
+            
+            seasonUrl = url
+            episodes = self.hdgocc.getEpiodesList(seasonUrl, -1)
+            for item in episodes:
+                param = dict(params)
+                param.update(
+                    {'title': '{0} - {1} - s01e{2} '.format(title, item['title'], item['id']), 'url': item['url']})
+                self.addVideo(param)
+            
+            if 0 != len(episodes):
+                return
         
         if 1 == self.up.checkHostSupport(url):
             self.addVideo(params)
@@ -282,17 +274,19 @@ class Kinotan(CBaseHostClass):
     def listEpisodes(self, cItem):
         printDBG("Kinotan.listEpisodes")
 
+        title = cItem['serie_title']
+        id = cItem['season_id']
         hostName = cItem['host_name']
+        episodes = []
         if hostName == 'moonwalk':
-            title = cItem['serie_title']
-            id = cItem['season_id']
             episodes = self.moonwalkParser.getEpiodesList(cItem['url'], id)
-
-            for item in episodes:
-                params = dict(cItem)
-                params.update(
-                    {'title': '{0} - s{1}e{2} {3}'.format(title, id, item['id'], item['title']), 'url': item['url']})
-                self.addVideo(params)
+        elif hostName == 'hdgo.cc':
+            episodes = self.hdgocc.getEpiodesList(cItem['url'], id)
+        
+        for item in episodes:
+            params = dict(cItem)
+            params.update( {'title': '{0} - s{1}e{2} {3}'.format(title, id, item['id'], item['title']), 'url': item['url']})
+            self.addVideo(params)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         searchPattern = urllib.quote_plus(searchPattern)

@@ -3,12 +3,12 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.tools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -29,7 +29,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -201,7 +201,7 @@ class HDFilmeTV(CBaseHostClass):
         trailerUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a[^>]*?class="btn btn-xemnow pull-right"[^>]*?href=['"]([^'^"]+?)['"][^>]*?>Trailer<''')[0])
         if trailerUrl.startswith('http'):
             params = dict(cItem)
-            params.update({'title':_('Trailer'), 'urls':[{'name':'trailer', 'url':trailerUrl, 'need_resolve':1}]})
+            params.update({'title':_('Trailer'), 'urls':[{'name':'trailer', 'url':trailerUrl.replace('&amp;', '&'), 'need_resolve':1}]})
             self.addVideo(params)
         
         episodesTab = []
@@ -219,7 +219,7 @@ class HDFilmeTV(CBaseHostClass):
                 if episodeName not in episodesTab:
                     episodesTab.append(episodeName)
                     episodesLinks[episodeName] = []
-                episodesLinks[episodeName].append({'name':serverName, 'url':episodeUrl, 'need_resolve':1})
+                episodesLinks[episodeName].append({'name':serverName, 'url':episodeUrl.replace('&amp;', '&'), 'need_resolve':1})
         
         season = self.cm.ph.getSearchGroups(cItem['url'], '''staf[f]+?el-([0-9]+?)-''')[0]
         try: episodesTab.sort(key=lambda item: int(item))
@@ -245,7 +245,7 @@ class HDFilmeTV(CBaseHostClass):
         if not sts: return []
         
         googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
-        if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''sources[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
+        if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
         printDBG(googleUrls)
         
         if googleUrls != '':

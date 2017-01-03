@@ -22,7 +22,7 @@ except Exception: import simplejson as json
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-#from Plugins.Extensions.IPTVPlayer.components.asynccall import MainSessionWrapper
+#from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
