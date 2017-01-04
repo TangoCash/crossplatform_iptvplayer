@@ -9,7 +9,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVMainNavigatorList
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, mkdir, IsValidFileName, GetBinDir, eConnectCallback, E2PrioFix
 ###################################################
  

@@ -6,7 +6,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CFavItem
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CFavItem
 ###################################################
 
 ###################################################
@@ -17,7 +17,7 @@ from os import path as os_path, remove as os_remove
 try: import json
 except Exception: import simplejson as json
 
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CFavItem
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CFavItem
 ###################################################
 
 

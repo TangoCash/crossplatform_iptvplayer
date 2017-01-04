@@ -6,7 +6,7 @@
 ###################################################
 from pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetCookieDir, byteify, formatBytes, GetPyScriptCmd, GetTmpDir, rm, GetDefaultLang
 from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.md5Hash import MD5
 
@@ -37,7 +37,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerPar
                                                                unicode_escape, JS_FromCharCode, pythonUnescape
 from Plugins.Extensions.IPTVPlayer.libs.jjdecode import JJDecoder
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import iptv_execute, MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute, MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 # FOREIGN import
@@ -2838,7 +2838,7 @@ class pageParser:
                     if not ret.get('sts'):
                         SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
                         return False
-                    from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvmultipleinputbox import IPTVMultipleInputBox
+                    from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
                     from copy import deepcopy
                     params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
                     params['accep_label'] = _('Send')

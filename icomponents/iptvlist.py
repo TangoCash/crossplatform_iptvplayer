@@ -9,7 +9,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIconDir, eConnectCallback
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CDisplayListItem
 ###################################################
 
 ###################################################

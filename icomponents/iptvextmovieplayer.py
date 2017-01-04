@@ -10,20 +10,20 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover3
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover3
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIPTVDMImgDir, GetBinDir, GetSubtitlesDir, eConnectCallback, \
                                                           GetE2VideoAspectChoices, GetE2VideoAspect, SetE2VideoAspect, GetE2VideoPolicyChoices, \
                                                           GetE2VideoPolicy, SetE2VideoPolicy, GetDefaultLang, GetPolishSubEncoding, E2PrioFix, iptv_system, \
                                                           GetE2AudioCodecMixOption, SetE2AudioCodecMixOption, CreateTmpFile, GetTmpDir, IsExecutable, MapUcharEncoding
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvsubtitles import IPTVSubtitlesHandler, IPTVEmbeddedSubtitlesHandler
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvmoviemetadata import IPTVMovieMetaDataHandler
+from Plugins.Extensions.IPTVPlayer.itools.iptvsubtitles import IPTVSubtitlesHandler, IPTVEmbeddedSubtitlesHandler
+from Plugins.Extensions.IPTVPlayer.itools.iptvmoviemetadata import IPTVMovieMetaDataHandler
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvsubdownloader import IPTVSubDownloaderWidget
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvsubsimpledownloader import IPTVSubSimpleDownloaderWidget
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvdirbrowser import IPTVFileSelectorWidget
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.configextmovieplayer import ConfigExtMoviePlayerBase, ConfigExtMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvsubdownloader import IPTVSubDownloaderWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvsubsimpledownloader import IPTVSubSimpleDownloaderWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvdirbrowser import IPTVFileSelectorWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.configextmovieplayer import ConfigExtMoviePlayerBase, ConfigExtMoviePlayer
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 ###################################################

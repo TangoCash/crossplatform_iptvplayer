@@ -10,7 +10,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, GetIPTVDMImgDir, GetIconDir
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVListComponentBase
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVListComponentBase
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 ###################################################
 

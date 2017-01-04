@@ -10,7 +10,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetHostsList, IsHostEnabled, SaveHostsOrderList, SortHostsList, \
                                                           GetE2VideoAspectChoices, GetE2VideoAspect, SetE2VideoAspect, GetE2VideoPolicyChoices, \
                                                           GetE2VideoPolicy, SetE2VideoPolicy, GetE2AudioCodecMixChoices, GetE2AudioCodecMixOption, IsExecutable
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.configbase import ConfigBaseWidget, ConfigIPTVFileSelection
+from Plugins.Extensions.IPTVPlayer.icomponents.configbase import ConfigBaseWidget, ConfigIPTVFileSelection
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 ###################################################
 

@@ -8,14 +8,14 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import ArticleContent
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import SimpleAnimatedCover, Cover
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import ArticleContent
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import SimpleAnimatedCover, Cover
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIconDir, eConnectCallback
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import DownloaderCreator
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover, Cover3
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover, Cover3
 ###################################################
 
 ###################################################

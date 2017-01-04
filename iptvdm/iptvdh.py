@@ -8,9 +8,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetPluginDir
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import enum
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import enum
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 ###################################################
 

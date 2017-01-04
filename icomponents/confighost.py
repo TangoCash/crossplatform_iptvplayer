@@ -8,7 +8,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetHostsList, IsHostEnabled, SaveHostsOrderList, SortHostsList
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.configbase import ConfigBaseWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.configbase import ConfigBaseWidget
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 ###################################################
 

@@ -9,9 +9,9 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, eConnectCallback, GetIconDir, GetBinDir, E2PrioFix
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvextmovieplayer import IPTVExtMoviePlayer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvextmovieplayer import IPTVExtMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper, DMItemBase

@@ -31,15 +31,15 @@ from enigma import getDesktop, eTimer
 ####################################################
 #                   IPTV components
 ####################################################
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.confighost import ConfigHostMenu
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.confighost import ConfigHostMenu
 
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvfavouriteswidgets import IPTVFavouritesAddItemWidget, IPTVFavouritesMainWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvfavouriteswidgets import IPTVFavouritesAddItemWidget, IPTVFavouritesMainWidget
  
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import IsUrlDownloadable
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvtools_FreeSpace, \
                                                           mkdirs as iptvtools_mkdirs, GetIPTVPlayerVerstion, GetVersionNum, \
                                                           printDBG, printExc, iptv_system, GetHostsList, IsHostEnabled, \
@@ -53,20 +53,20 @@ from Plugins.Extensions.IPTVPlayer.iptvupdate.updatemainwindow import IPTVUpdate
 
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit, GetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.setup.iptvsetupwidget import IPTVSetupMainWidget
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvextmovieplayer import IPTVExtMoviePlayer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvpictureplayer import IPTVPicturePlayerWidget
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvlist import IPTVMainNavigatorList
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.articleview import ArticleView
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvarticlerichvisualizer import IPTVArticleRichVisualizer
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, ArticleContent, CFavItem
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iconmenager import IconMenager
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover, Cover3
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
-import Plugins.Extensions.IPTVPlayer.components.asynccall as asynccall
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvextmovieplayer import IPTVExtMoviePlayer
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvpictureplayer import IPTVPicturePlayerWidget
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVMainNavigatorList
+from Plugins.Extensions.IPTVPlayer.icomponents.articleview import ArticleView
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvarticlerichvisualizer import IPTVArticleRichVisualizer
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, ArticleContent, CFavItem
+from Plugins.Extensions.IPTVPlayer.icomponents.iconmenager import IconMenager
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover, Cover3
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
+import Plugins.Extensions.IPTVPlayer.icomponents.asynccall as asynccall
 
 # SULGE TEMP
-#from Plugins.Extensions.IPTVPlayer.iptvcomponents.iptvsubdownloader import IPTVSubDownloaderWidget
+#from Plugins.Extensions.IPTVPlayer.icomponents.iptvsubdownloader import IPTVSubDownloaderWidget
 
 ######################################################
 gDownloadManager = None

@@ -12,7 +12,7 @@ from Tools.LoadPixmap import LoadPixmap
 from Components.Label import Label
 from skin import parseColor
 
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.cover import Cover2, Cover3
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover2, Cover3
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetIconDir
 
 

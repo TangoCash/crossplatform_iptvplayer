@@ -5,16 +5,16 @@
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.asynccall import MainSessionWrapper, iptv_execute
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_execute
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSearchHistoryHelper, GetCookieDir, printDBG, printExc, GetTmpDir, \
                                                           MapUcharEncoding, GetPolishSubEncoding, GetUchardetPath, GetDefaultLang, \
                                                           rm, rmtree, mkdirs
-from Plugins.Extensions.IPTVPlayer.iptvtools.iptvsubtitles import IPTVSubtitlesHandler
+from Plugins.Extensions.IPTVPlayer.itools.iptvsubtitles import IPTVSubtitlesHandler
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 
-from Plugins.Extensions.IPTVPlayer.iptvcomponents.ihost import CDisplayListItem, RetHost
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CDisplayListItem, RetHost
 
 import re
 import urllib
