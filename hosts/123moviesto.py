@@ -83,7 +83,7 @@ class T123MoviesTO(CBaseHostClass):
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
             else:
                 proxy = config.plugins.iptvplayer.alternative_proxy2.value
-            url = strwithurl(url, {'iptv_http_proxy':proxy})
+            url = strwithmeta(url, {'iptv_http_proxy':proxy})
         return url
         
     def selectDomain(self):

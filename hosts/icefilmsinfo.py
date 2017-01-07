@@ -58,9 +58,18 @@ class IceFilms(CBaseHostClass):
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        
-        self.MAIN_URL = 'http://www.icefilms.info/'
         self.DEFAULT_ICON_URL = 'http://whatyouremissing.weebly.com/uploads/1/9/6/3/19639721/144535_orig.jpg'
+        self.MAIN_URL = None
+        
+    def selectDomain(self):
+        for domain in ['http://www.icefilms.info/', 'https://icefilms.unblocked.onl/']:
+            sts, data = self.getPage(domain)
+            if sts and 'donate.php' in data:
+                self.MAIN_URL = domain
+                break
+        
+        if self.MAIN_URL == None:
+            self.MAIN_URL = 'http://www.icefilms.info/'
         
         self.MAIN_CAT_TAB = [{'category':'list_filters',    'title': _('TV Shows'),                       'url':self.getFullUrl('tv/popular/1'),      'f_idx':0},
                              {'category':'list_filters',    'title': _('Movies'),                         'url':self.getFullUrl('movies/popular/1'),  'f_idx':0},
@@ -420,7 +429,9 @@ class IceFilms(CBaseHostClass):
         printDBG('handleService start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
-
+        if self.MAIN_URL == None:
+            self.selectDomain()
+        
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')

@@ -363,7 +363,24 @@ class CSelOneLink():
         sortList.sort( self._cmpLinks )
         if len(self.listOfLinks) < 2 or None == self.maxRes:
             return self.listOfLinks
-
+        
+        if defaultFirst:
+            # split links to two groups 
+            # first gorup will meet maxRes
+            # second group not
+            group1 = []
+            group2 = []
+            for idx in range(len(self.listOfLinks)):
+                if  self.getQualiyFun( self.listOfLinks[idx] ) <= self.maxRes:
+                    group1.append(self.listOfLinks[idx])
+                else:
+                    group2.append(self.listOfLinks[idx])
+            group1.sort( self._cmpLinks )
+            group1.reverse()
+            group2.sort( self._cmpLinks )
+            group1.extend(group2)
+            return group1
+        
         defIdx = -1
         for idx in range(len(sortList)):
             linkRes = self.getQualiyFun( sortList[idx] )

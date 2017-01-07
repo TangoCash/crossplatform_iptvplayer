@@ -18,7 +18,7 @@ from Plugins.Extensions.IPTVPlayer.libs.purecastnet       import PurecastNetApi,
 from Plugins.Extensions.IPTVPlayer.libs.wagasworld        import WagasWorldApi
 from Plugins.Extensions.IPTVPlayer.libs.ustvnow           import UstvnowApi, GetConfigList as Ustvnow_GetConfigList
 #from Plugins.Extensions.IPTVPlayer.libs.telewizjadanet    import TelewizjadaNetApi, GetConfigList as TelewizjadaNet_GetConfigList
-from Plugins.Extensions.IPTVPlayer.libs.iklubnet          import IKlubNetApi, GetConfigList as IKlubNet_GetConfigList
+#from Plugins.Extensions.IPTVPlayer.libs.iklubnet          import IKlubNetApi, GetConfigList as IKlubNet_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.telewizjacom      import TeleWizjaComApi
 from Plugins.Extensions.IPTVPlayer.libs.meteopl           import MeteoPLApi, GetConfigList as MeteoPL_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.edemtv            import EdemTvApi, GetConfigList as EdemTv_GetConfigList
@@ -76,9 +76,9 @@ def GetConfigList():
     try:    optionList.extend( PierwszaTV_GetConfigList() )
     except Exception: printExc()
     
-    optionList.append(getConfigListEntry("-----------------iklub.net------------------", config.plugins.iptvplayer.fake_separator))
-    try:    optionList.extend( IKlubNet_GetConfigList() )
-    except Exception: printExc()
+    #optionList.append(getConfigListEntry("-----------------iklub.net------------------", config.plugins.iptvplayer.fake_separator))
+    #try:    optionList.extend( IKlubNet_GetConfigList() )
+    #except Exception: printExc()
     
     optionList.append(getConfigListEntry("------------------meteo.pl------------------", config.plugins.iptvplayer.fake_separator))
     try:    optionList.extend( MeteoPL_GetConfigList() )
@@ -131,7 +131,7 @@ class HasBahCa(CBaseHostClass):
     HTTP_HEADER= { 'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3 Gecko/2008092417 Firefox/3.0.3' }
     MAIN_GROUPED_TAB = [{'alias_id':'weeb.tv',                 'name': 'weeb.tv',             'title': 'WeebTV',                            'url': '',                                                                   'icon': 'http://xmtvplayer.com/wp-content/uploads/2014/07/weebtv.png'}, \
                         {'alias_id':'videostar.pl',            'name': 'videostar.pl',        'title': 'VideoStar',                         'url': '',                                                                   'icon': 'https://static-videostar1.4vod.tv/assets/images/logo.png'}, \
-                        {'alias_id':'iklub.net',               'name': 'iklub.net',           'title': 'iKlub.net',                         'url': '',                                                                   'icon': 'http://iklub.net/wp-content/uploads/2015/11/klub2.png'}, \
+                        #{'alias_id':'iklub.net',               'name': 'iklub.net',           'title': 'iKlub.net',                         'url': '',                                                                   'icon': 'http://iklub.net/wp-content/uploads/2015/11/klub2.png'}, \
                         {'alias_id':'tele-wizja.com',          'name': 'tele-wizja.com',      'title': 'tele-wizja.com',                    'url': '',                                                                   'icon': 'http://htk.net.pl/wp-content/uploads/2016/07/cache_2422349465.jpg'}, \
                         {'alias_id':'pierwsza.tv',             'name': 'pierwsza.tv',         'title': 'Pierwsza.TV',                       'url': '',                                                                   'icon': 'http://pierwsza.tv/img/logo.png'}, \
                         #{'alias_id':'telewizjada.net',         'name': 'telewizjada.net',     'title': 'Telewizjada.net',                   'url': '',                                                                   'icon': 'http://www.btv.co/newdev/images/rokquickcart/samples/internet-tv.png'}, \
@@ -177,7 +177,7 @@ class HasBahCa(CBaseHostClass):
         self.ustvnowApi   = None
         self.purecastNetApi    = None
         self.telewizjadaNetApi = None
-        self.iKlubNetApi       = None
+        #self.iKlubNetApi       = None
         self.yooanimeComApi    = None
         self.teleWizjaComApi   = None
         self.meteoPLApi        = None
@@ -749,21 +749,21 @@ class HasBahCa(CBaseHostClass):
         urlsTab = self.telewizjadaNetApi.getVideoLink(cItem)
         return urlsTab
         
-    def getIKlubNetList(self, cItem):
-        printDBG("getIKlubNetList start")
-        if None == self.iKlubNetApi:
-            self.iKlubNetApi = IKlubNetApi()
-        tmpList = self.iKlubNetApi.getList(cItem)
-        for item in tmpList:
-            if 'video' == item['type']:
-                self.addVideo(item) 
-            else:
-                self.addDir(item)
+    #def getIKlubNetList(self, cItem):
+    #    printDBG("getIKlubNetList start")
+    #    if None == self.iKlubNetApi:
+    #        self.iKlubNetApi = IKlubNetApi()
+    #    tmpList = self.iKlubNetApi.getList(cItem)
+    #    for item in tmpList:
+    #        if 'video' == item['type']:
+    #            self.addVideo(item) 
+    #        else:
+    #            self.addDir(item)
         
-    def getIKlubNetLink(self, cItem):
-        printDBG("getIKlubNetLink start")
-        urlsTab = self.iKlubNetApi.getVideoLink(cItem)
-        return urlsTab
+    #def getIKlubNetLink(self, cItem):
+    #    printDBG("getIKlubNetLink start")
+    #    urlsTab = self.iKlubNetApi.getVideoLink(cItem)
+    #    return urlsTab
         
     def getYooanimeComtList(self, cItem):
         printDBG("getYooanimeComtList start")
@@ -1013,8 +1013,8 @@ class HasBahCa(CBaseHostClass):
         elif name == 'telewizjada.net':
             self.getTelewizjadaNetList(self.currItem)
     #iklub.net items
-        elif name == 'iklub.net':
-            self.getIKlubNetList(self.currItem)
+    #    elif name == 'iklub.net':
+    #        self.getIKlubNetList(self.currItem)
     #yooanime.com items
         elif name == 'yooanime.com':
             self.getYooanimeComtList(self.currItem)
@@ -1113,8 +1113,8 @@ class IPTVHost(CHostBase):
             urlList = self.host.getPurecastNetLink(cItem)
         elif name == 'telewizjada.net':
             urlList = self.host.getTelewizjadaNetLink(cItem)
-        elif name == 'iklub.net':
-            urlList = self.host.getIKlubNetLink(cItem)
+        #elif name == 'iklub.net':
+        #    urlList = self.host.getIKlubNetLink(cItem)
         elif name == 'yooanime.com':
             urlList = self.host.getYooanimeComLink(cItem)
         elif name == 'tele-wizja.com':

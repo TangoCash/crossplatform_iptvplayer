@@ -46,6 +46,7 @@ config.plugins.iptvplayer.tvpVodDefaultformat = ConfigSelection(default = "59000
                                                                                                ("9100000", "1920x1080") ])
 config.plugins.iptvplayer.tvpVodUseDF    = ConfigYesNo(default = True)
 config.plugins.iptvplayer.tvpVodNextPage = ConfigYesNo(default = True)
+config.plugins.iptvplayer.tvpVodPreferedformat = ConfigSelection(default = "m3u8", choices = [("mp4",  "MP4"), ("m3u8",  "HLS/m3u8")])
 
 ###################################################
 # Config options for HOST
@@ -57,8 +58,9 @@ def GetConfigList():
     if config.plugins.iptvplayer.tvpvod_premium.value:
         optionList.append(getConfigListEntry("  email:", config.plugins.iptvplayer.tvpvod_login))
         optionList.append(getConfigListEntry("  hasło:", config.plugins.iptvplayer.tvpvod_password))
-    optionList.append(getConfigListEntry("Domyślny format video",           config.plugins.iptvplayer.tvpVodDefaultformat))
-    optionList.append(getConfigListEntry("Używaj domyślnego format video:", config.plugins.iptvplayer.tvpVodUseDF))
+    optionList.append(getConfigListEntry("Peferowany format wideo",               config.plugins.iptvplayer.tvpVodPreferedformat))
+    optionList.append(getConfigListEntry("Domyślna jakość wideo",           config.plugins.iptvplayer.tvpVodDefaultformat))
+    optionList.append(getConfigListEntry("Używaj domyślnej jakości wideo:", config.plugins.iptvplayer.tvpVodUseDF))
     optionList.append(getConfigListEntry("Korzystaj z proxy?",              config.plugins.iptvplayer.tvpVodProxyEnable))
     optionList.append(getConfigListEntry("Więcej jako następna strona",     config.plugins.iptvplayer.tvpVodNextPage))
     return optionList
@@ -68,7 +70,7 @@ def gettytul():
     return 'vod.tvp.pl'
 
 class TvpVod(CBaseHostClass):
-    DEFAULT_ICON = 'http://sd-xbmc.org/repository/xbmc-addons/tvpvod.png'
+    DEFAULT_ICON_URL = 'http://sd-xbmc.org/repository/xbmc-addons/tvpvod.png'
     PAGE_SIZE = 12
     ALL_FORMATS = [{"video/mp4":"mp4"}, {"application/x-mpegurl":"m3u8"}, {"video/x-ms-wmv":"wmv"}] 
     REAL_FORMATS = {'m3u8':'ts', 'mp4':'mp4', 'wmv':'wmv'}
@@ -77,15 +79,15 @@ class TvpVod(CBaseHostClass):
     SEARCH_VOD_URL = MAIN_VOD_URL + 'szukaj?query=%s'
     HTTP_HEADERS = {}
     
-    VOD_CAT_TAB  = [{'icon':DEFAULT_ICON, 'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
-                    {'icon':DEFAULT_ICON, 'category':'streams',             'title':'TVP na żywo',               'url':'http://tvpstream.tvp.pl/'},
-                    {'icon':DEFAULT_ICON, 'category':'vods_list_items1',    'title':'Polecamy',                  'url':MAIN_VOD_URL},
-                    {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Polecane',                  'marker':'Polecane'},
-                    {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'VOD',                       'marker':'VOD'},
-                    {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Programy',                  'marker':'Programy'},
-                    {'icon':DEFAULT_ICON, 'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
-                    {'icon':DEFAULT_ICON, 'category':'search',          'title':_('Search'), 'search_item':True},
-                    {'icon':DEFAULT_ICON, 'category':'search_history',  'title':_('Search history')} ]
+    VOD_CAT_TAB  = [{'icon':DEFAULT_ICON_URL, 'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'streams',             'title':'TVP na żywo',               'url':'http://tvpstream.tvp.pl/'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'vods_list_items1',    'title':'Polecamy',                  'url':MAIN_VOD_URL},
+                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Polecane',                  'marker':'Polecane'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'VOD',                       'marker':'VOD'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Programy',                  'marker':'Programy'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
+                    {'icon':DEFAULT_ICON_URL, 'category':'search',          'title':_('Search'), 'search_item':True},
+                    {'icon':DEFAULT_ICON_URL, 'category':'search_history',  'title':_('Search history')} ]
     
     def __init__(self):
         printDBG("TvpVod.__init__")
@@ -96,6 +98,8 @@ class TvpVod(CBaseHostClass):
                           'mjakmilosc.tvp.pl':     'http://vod.tvp.pl/1654521/m-jak-milosc',
                           'barwyszczescia.tvp.pl': 'http://vod.tvp.pl/8514286/barwy-szczescia',
                           'nasygnale.tvp.pl':      'http://vod.tvp.pl/13883615/na-sygnale'}
+        self.FormatBitrateMap = [ ("360000",  "320x180"), ("590000",  "398x224"), ("820000",  "480x270"), ("1250000", "640x360"),
+                                  ("1750000", "800x450"), ("2850000", "960x540"), ("5420000", "1280x720"), ("6500000", "1600x900"), ("9100000", "1920x1080") ]
         
     def _getPage(self, url, addParams = {}, post_data = None):
         
@@ -141,15 +145,20 @@ class TvpVod(CBaseHostClass):
         return url
         
     def getFormatFromBitrate(self, bitrate):
-        tab = [ ("360000",  "320x180"), ("590000",  "398x224"), ("820000",  "480x270"), ("1250000", "640x360"),
-                ("1750000", "800x450"), ("2850000", "960x540"), ("5420000", "1280x720"), ("6500000", "1600x900"), ("9100000", "1920x1080") ]
         ret = ''
-        for item in tab:
+        for item in self.FormatBitrateMap:
             if int(bitrate) == int(item[0]):
                 ret = item[1]
         if '' == ret: ret = 'Bitrate[%s]' % bitrate
         return ret
-            
+        
+    def getBitrateFromFormat(self, format):
+        ret = 0
+        for item in self.FormatBitrateMap:
+            if format == item[1]:
+                ret = int(item[0])
+        return ret
+     
     def tryTologin(self):
         email = config.plugins.iptvplayer.tvpvod_login.value
         password = config.plugins.iptvplayer.tvpvod_password.value
@@ -519,6 +528,9 @@ class TvpVod(CBaseHostClass):
                 if 1 < len(videoTab):
                     max_bitrate = int(config.plugins.iptvplayer.tvpVodDefaultformat.value)
                     def __getLinkQuality( itemLink ):
+                        if 'with' in itemLink and 'heigth' in itemLink:
+                            bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['with'], itemLink['heigth']))
+                            if bitrate != 0: return bitrate
                         return int(itemLink['bitrate'])
                     oneLink = CSelOneLink(videoTab, __getLinkQuality, max_bitrate)
                     if config.plugins.iptvplayer.tvpVodUseDF.value:
@@ -567,6 +579,9 @@ class TvpVod(CBaseHostClass):
                 if 1 < len(videoTab):
                     max_bitrate = int(config.plugins.iptvplayer.tvpVodDefaultformat.value)
                     def __getLinkQuality( itemLink ):
+                        if 'with' in itemLink and 'heigth' in itemLink:
+                            bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['with'], itemLink['heigth']))
+                            if bitrate != 0: return bitrate
                         return int(itemLink['bitrate'])
                     oneLink = CSelOneLink(videoTab, __getLinkQuality, max_bitrate)
                     if config.plugins.iptvplayer.tvpVodUseDF.value:
@@ -575,7 +590,12 @@ class TvpVod(CBaseHostClass):
                         videoTab = oneLink.getSortedLinks()
                 return videoTab
             
-            for item in TvpVod.ALL_FORMATS:
+            preferedFormats  = []
+            if config.plugins.iptvplayer.tvpVodPreferedformat.value == 'm3u8':
+                preferedFormats = [TvpVod.ALL_FORMATS[1], TvpVod.ALL_FORMATS[0], TvpVod.ALL_FORMATS[2]]
+            else:
+                preferedFormats = TvpVod.ALL_FORMATS
+            for item in preferedFormats:
                 videoTab = _getVideoLink(data, item )
                 if len(videoTab):
                     break
@@ -676,58 +696,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, TvpVod(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            name = self.host._getStr( item["name"] )
-            url  = item["url"]
-            retlist.append(CUrlItem(name, url, need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  self.host._getStr( cItem.get('title', '') )
-        description =  self.host._getStr( cItem.get('desc', '') ).strip()
-        icon        =  self.host._getStr( cItem.get('icon', '') )
-        if '' == icon: icon = TvpVod.DEFAULT_ICON
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                description = description,
-                                type = type,
-                                urlItems = hostLinks,
-                                urlSeparateRequest = 1,
-                                iconimage = icon,
-                                possibleTypesOfSearch = possibleTypesOfSearch,
-                                isGoodForFavourites = isGoodForFavourites)

@@ -3007,9 +3007,22 @@ class pageParser:
             vidTab.append({'name': 'http://vshare.io/stream ', 'url':stream})
             
         if 0 == len(vidTab):
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'clip:', '}', False)[1]
-            url = byteify(json.loads('"%s"' % self.cm.ph.getSearchGroups(data, '''['"](http[^"^']+?)['"]''')[0]))
-            vidTab.append({'name': 'http://vshare.io/ ', 'url':url})
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, 'clip:', '}', False)[1]
+            url = byteify(json.loads('"%s"' % self.cm.ph.getSearchGroups(tmp, '''['"](http[^"^']+?)['"]''')[0]))
+            if url != '': vidTab.append({'name': 'http://vshare.io/ ', 'url':url})
+        
+        if 0 == len(vidTab):
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source', '>', False, False)
+            for item in tmp:
+                if 'video/mp4' in item or '.mp4' in item:
+                    label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+                    res = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
+                    if label == '': label = res
+                    url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+                    if url.startswith('//'): url = 'http:' + url
+                    if not self.cm.isValidUrl(url): continue
+                    vidTab.append({'name':'vshare.io ' + label, 'url':strwithmeta(url, {'Referer':baseUrl})})
+            
         return vidTab
             
     def parserVIDSSO(self, url):

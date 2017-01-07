@@ -29,6 +29,11 @@ import datetime
 # One instance of this class can be used only for 
 # one download
 ###################################################
+
+def DebugToFile(message, file="/home/sulge/tmp/m3u8.txt"):
+    with open(file, "a") as myfile:
+        myfile.write(message+"\n")
+
 class M3U8Downloader(BaseDownloader):
     MIN_REFRESH_DELAY = 1
     MAX_RETRIES = 3
@@ -145,7 +150,7 @@ class M3U8Downloader(BaseDownloader):
                         if 0 < len(m3u8Obj.segments):
                             newFragments = [self._segUri(seg.absolute_uri) for seg in m3u8Obj.segments]
                             #self.mergeFragmentsList(newFragments)
-                            self.mergeFragmentsListWithChecking(newFragments, m3u8Obj.media_sequence)
+                            self.mergeFragmentsListWithChecking(newFragments, m3u8Obj.media_sequence + len(m3u8Obj.segments))
                             printDBG('m3u8 _updateM3U8Finished list updated ---')
                 except Exception:
                     printDBG("m3u8 _updateM3U8Finished exception url[%s] data[%s]" % (self.m3u8Url, self.M3U8ListData))
@@ -196,6 +201,7 @@ class M3U8Downloader(BaseDownloader):
             
     def mergeFragmentsListWithChecking(self, newFragments, media_sequence=-1):
         tmpList = []
+        #DebugToFile('last[%s] new[%s] = %s' % (self.lastMediaSequence, media_sequence, newFragments))
         if self.lastMediaSequence > 0 and media_sequence > 0:
             if media_sequence > self.lastMediaSequence:
                 toAdd = media_sequence - self.lastMediaSequence
@@ -210,7 +216,8 @@ class M3U8Downloader(BaseDownloader):
                 
                 idx = tmpNewFragments.index(tmpCurrFragmentList[-1])
                 newFragments = newFragments[idx+1:]
-            except Exception: printDBG('m3u8 update thread - last fragment from last list not available in new list!')
+            except Exception:
+                printDBG('m3u8 update thread - last fragment from last list not available in new list!')
             
             for item in reversed(newFragments):
                 if item in self.fragmentList:
@@ -224,6 +231,7 @@ class M3U8Downloader(BaseDownloader):
                 self.fragmentList = self.fragmentList[idx:]
                 self.currentFragment = 20
             self.fragmentList.extend(tmpList)
+            #DebugToFile(">> %s" % self.fragmentList)
     
     '''
     def fixFragmentsList(self, newFragments):
@@ -317,10 +325,7 @@ class M3U8Downloader(BaseDownloader):
             printDBG("Download cmd[%s]" % cmd)
             self.console.execute( E2PrioFix( cmd ) )
             
-            #with open("/home/sulge/tmp/m3u8.txt", "a") as myfile:
-            #with open("/hdd/dbg_m3u8.txt", "a") as myfile:
-            #    myfile.write(currentFragment+"\n")
-                
+            #DebugToFile(currentFragment)
             return DMHelper.STS.DOWNLOADING
         else:
             if self.liveStream:
@@ -417,7 +422,7 @@ class M3U8Downloader(BaseDownloader):
                                     if len(m3u8Obj.segments) == len(self.fragmentList) and len(self.fragmentList) > self.skipFirstSegFromList:
                                         self.fragmentList = self.fragmentList[self.skipFirstSegFromList:]
                                     
-                                    self.lastMediaSequence = m3u8Obj.media_sequence
+                                self.lastMediaSequence = m3u8Obj.media_sequence + len(m3u8Obj.segments)
                                 # start update fragment list loop
                                 #self.fragmentList = self.fixFragmentsList(self.fragmentList)
                                 self._updateM3U8Finished(-1)

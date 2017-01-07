@@ -153,7 +153,7 @@ class Host:
         self.history = CSearchHistoryHelper('xxx')
         self.sessionEx = MainSessionWrapper() 
         self.currList = []
-        _url = 'https://gitlab.com/iptv-host-xxx/iptv-host-xxx/blob/master/IPTVPlayer/hosts/hostXXX.pyqpa'
+        _url = 'https://gitlab.com/iptv-host-xxx/iptv-host-xxx/blob/master/IPTVPlayer/hosts/hostXXX.pyDISABLED'
         query_data = { 'url': _url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
         try:
            data = self.cm.getURLRequestData(query_data)

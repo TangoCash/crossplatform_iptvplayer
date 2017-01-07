@@ -66,7 +66,7 @@ class ZalukajCOM(CBaseHostClass):
     FILMS_URL  = MAIN_URL + '/gatunek,%d/%s,%s,strona-%d'
     SEARCH_URL = MAIN_URL + '/szukaj'
     LOGIN_URL  = MAIN_URL + '/account.php'
-    DEFAULT_ICON = 'http://www.userlogos.org/files/logos/8596_famecky/zalukaj.png'
+    DEFAULT_ICON_URL = 'http://www.userlogos.org/files/logos/8596_famecky/zalukaj.png'
     MAIN_CAT_TAB = [{'category':'films_sub_menu', 'title':"Filmy",   'url': ''},
                     {'category':'series_sub_menu','title':"Seriale", 'url': MAIN_URL},
                     {'category':'search',         'title':"Szukaj filmu", 'search_item':True},
@@ -126,7 +126,7 @@ class ZalukajCOM(CBaseHostClass):
             SetIPTVPlayerLastHostError(self.cleanHtmlStr(data))
         return sts, data
         
-    def getIconUrl(self, url):
+    def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
         if self.DOMAIN in url and self.isNeedProxy():
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
@@ -309,8 +309,21 @@ class ZalukajCOM(CBaseHostClass):
                     
             if not premium:
                 printDBG( 'No premium link data[%s]' % data)
+                tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source', '>', False, False)
+                for item in tmp:
+                    if 'video/mp4' in item or '.mp4' in item:
+                        label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+                        res = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
+                        if label == '': label = res
+                        url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+                        if url.startswith('//'): url = 'http:' + url
+                        if not self.cm.isValidUrl(url): continue
+                        urlTab.append({'name':'vshare.io ' + label, 'url':strwithmeta(url, {'Referer':cItem['url']})})
+                        premium = True
+            if not premium:
                 url = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'iframe src="([^"]+?)" width=', 1)[0] )
-                urlTab.extend(self.up.getVideoLinkExt(url))
+                if self.cm.isValidUrl(url):
+                    urlTab.extend(self.up.getVideoLinkExt(url))
                 # premium link should be checked at first, so if we have free link here break
                 if len(urlTab):
                     break
@@ -398,68 +411,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, ZalukajCOM(), True)
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen <= Index or Index < 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] not in ['audio', 'video']:
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-
-        retlist = []
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            name = self.host.cleanHtmlStr( item["name"] )
-            url  = item["url"]
-            retlist.append(CUrlItem(name, url, need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def convertList(self, cList):
-        hostList = []
-        searchTypesOptions = []
-        
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-            possibleTypesOfSearch = None
-
-            if 'category' == cItem['type']:
-                if cItem.get('search_item', False):
-                    type = CDisplayListItem.TYPE_SEARCH
-                    possibleTypesOfSearch = searchTypesOptions
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-            elif 'more' == cItem['type']:
-                type = CDisplayListItem.TYPE_MORE
-            elif 'audio' == cItem['type']:
-                type = CDisplayListItem.TYPE_AUDIO
-                
-            if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-                
-            title       =  self.host.cleanHtmlStr( cItem.get('title', '') )
-            description =  self.host.cleanHtmlStr( cItem.get('desc', '') )
-            icon        =  self.host.getIconUrl(cItem.get('icon', ''))
-            if icon == '': icon = self.host.DEFAULT_ICON
-            
-            hostItem = CDisplayListItem(name = title,
-                                        description = description,
-                                        type = type,
-                                        urlItems = hostLinks,
-                                        urlSeparateRequest = 1,
-                                        iconimage = icon,
-                                        possibleTypesOfSearch = possibleTypesOfSearch)
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
