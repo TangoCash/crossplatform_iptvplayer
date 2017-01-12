@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rm -rf /var/tuxbox/plugins/neutrinoIPTV 2>/dev/null
+rm -rf /var/tuxbox/plugins/updateNeutrinoIPTV 2>/dev/null

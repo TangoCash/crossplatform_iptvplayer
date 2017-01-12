@@ -1,0 +1,6 @@
+#!/bin/sh
+wget -q http://127.0.0.1/control/reloadplugins -O /dev/null
+if [ -e /usr/share/E2emulator/Plugins/Extensions/IPTVPlayer/ ];then
+  chmod 755 /usr/share/E2emulator/Plugins/Extensions/IPTVPlayer/IPTVdaemon*
+fi
+rm -f /tmp/neutrino-iptvplayer-by-j00zek* 2>/dev/null
