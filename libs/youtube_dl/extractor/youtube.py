@@ -106,11 +106,13 @@ class CVevoSignAlgoExtractor:
         
     def _extract_object(self, objname):
         obj = {}
+        objData = self.cm.ph.getDataBeetwenReMarkers(self.playerData, re.compile('var\s+%s\s*=' % objname),  re.compile('}\s*;'))[1]
+        if objData == '': objData = self.playerData
         obj_m = re.search(
             (r'(?:var\s+)?%s\s*=\s*\{' % re.escape(objname)) +
             r'\s*(?P<fields>([a-zA-Z$0-9]+\s*:\s*function\(.*?\)\s*\{.*?\}(?:,\s*)?)*)' +
             r'\}\s*;',
-            self.playerData)
+            objData)
         fields = obj_m.group('fields')
         # Currently, it only supports function definitions
         fields_m = re.finditer(

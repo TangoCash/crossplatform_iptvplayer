@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "20.0.25.0"
+    XXXversion = "20.1.0.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -749,7 +749,7 @@ class Host:
                   if channels:
                      valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [phUrl],'xhamster-clips', '', None)) 
            valTab.sort(key=lambda poz: poz.name)
-           valTab.insert(0,CDisplayListItem("--- Kamerki ---",       "Kamerki",       CDisplayListItem.TYPE_CATEGORY,["http://xhamster.com/cams"], 'xhamster-cams', 'https://cdn.stripchat.com/assets/common/images/favicon_xh.png',None))
+           #valTab.insert(0,CDisplayListItem("--- Kamerki ---",       "Kamerki",       CDisplayListItem.TYPE_CATEGORY,["http://xhamster.com/cams"], 'xhamster-cams', 'https://cdn.stripchat.com/assets/common/images/favicon_xh.png',None))
            valTab.insert(0,CDisplayListItem("--- New ---",       "New",       CDisplayListItem.TYPE_CATEGORY,["http://xhamster.com/"], 'xhamster-clips', '',None))
            self.SEARCH_proc='xhamster-search'
            valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
@@ -770,13 +770,13 @@ class Host:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
+           printDBG( 'Host listsItems data: '+data )
            if re.search('vDate', data, re.S):
               parse = re.search('<div\sclass="vDate(.*)</html>', data, re.S)
            else:
               parse = re.search('searchRes2(.*)</tr></table>', data, re.S)
            if not parse: return valTab
-           phMovies = re.findall('<a\shref="(.*?/movies/.*?)".*?<img\ssrc=\'(.*?)\'.*?alt="(.*?)".*?start2.*?<b>(.*?)</b>', parse.group(1), re.S)
+           phMovies = re.findall('video.*?<a\shref="(.*?/movies/.*?)".*?<img\ssrc=\'(.*?)\'.*?alt="(.*?)".*?start2.*?<b>(.*?)</b>', parse.group(1), re.S)
            if phMovies:
               for (phUrl, phImage, phTitle, phRuntime) in phMovies:
                   printDBG( 'Host listsItems phUrl: '  +phUrl )
@@ -3106,6 +3106,7 @@ class Host:
         if url.startswith('http://www.xvideos.com'):         return 'http://www.xvideos.com'
         if url.startswith('http://hentaigasm.com'):          return 'http://hentaigasm.com'
         if url.startswith('http://xhamster.com'):            return 'http://xhamster.com'
+        if url.startswith('https://xhamster.com'):            return 'http://xhamster.com'
         if url.startswith('http://www.eporner.com'):         return 'http://www.eporner.com'
         if url.startswith('http://www.4tube.com'):           return 'http://www.4tube.com'
         if url.startswith('http://www.hdporn.net'):          return 'http://www.hdporn.net'

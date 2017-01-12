@@ -46,7 +46,7 @@ config.plugins.iptvplayer.tvpVodDefaultformat = ConfigSelection(default = "59000
                                                                                                ("9100000", "1920x1080") ])
 config.plugins.iptvplayer.tvpVodUseDF    = ConfigYesNo(default = True)
 config.plugins.iptvplayer.tvpVodNextPage = ConfigYesNo(default = True)
-config.plugins.iptvplayer.tvpVodPreferedformat = ConfigSelection(default = "m3u8", choices = [("mp4",  "MP4"), ("m3u8",  "HLS/m3u8")])
+config.plugins.iptvplayer.tvpVodPreferedformat = ConfigSelection(default = "mp4", choices = [("mp4",  "MP4"), ("m3u8",  "HLS/m3u8")])
 
 ###################################################
 # Config options for HOST
@@ -382,14 +382,14 @@ class TvpVod(CBaseHostClass):
             if len(data): del data[0]
             for item in data:
                 icon = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
-                desc = self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</div>', False)[1]
+                desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</div>', False)[1])
                 tmp  = self.cm.ph.getDataBeetwenMarkers(item, '<strong class="fullTitle">', '</strong>', False)[1]
                 if '' == tmp: tmp = self.cm.ph.getDataBeetwenMarkers(tmp, '<strong class="shortTitle">', '</strong>', False)[1]
                 tmp = self.cm.ph.getSearchGroups(tmp, 'href="([^"]+?)"[^>]+?>([^<]+?)<', 2)
                 url = tmp[0]
                 # quick fix
                 url = self.fixUrlMap.get(self.up.getDomain(url), url)
-                title = tmp[1]
+                title = self.cleanHtmlStr(tmp[1])
                 if 'class="new"' in item: title += _(', nowość')
                 if 'class="pay"' in item: title += _(', materiał płatny')
                 duration = self.cm.ph.getSearchGroups(item, 'class="duration[^>]+?>([^<]+?)</li>')[0]

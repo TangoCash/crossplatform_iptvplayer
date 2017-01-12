@@ -111,6 +111,25 @@ class Ninateka:
             printDBG("getVideoUrl except")
             return linksTab
         
+        try:
+            arg = self.cm.ph.getDataBeetwenMarkers(data, '(playerOptionsWithMainSource,', ')', False)[1].strip()
+            arg = int(arg)
+            def _repFun(matchObj):
+                url = ''
+                item = matchObj.group(1) 
+                
+                if not self.cm.isValidUrl(item):
+                    for c in item:
+                        url += chr(arg ^ ord(c))
+                else:
+                    url = item
+                
+                printDBG(">>>> " + url)
+                return matchObj.group(0).replace(matchObj.group(1), url) 
+            data = re.sub('{"file":"([^"]+?)"}', _repFun, data)
+        except Exception:
+            printExc()
+        
         match = re.search( '{"file":"([^"]+?.mp4)"}', data )
         if match: 
             linksTab.append( {'name': 'mp4', 'url': match.group(1)} )

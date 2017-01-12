@@ -4190,6 +4190,8 @@ class pageParser:
         printDBG("parserMYVIRU linkUrl[%s]" % linkUrl)
         COOKIE_FILE = GetCookieDir('myviru.cookie')
         params  = {'cookiefile':COOKIE_FILE, 'use_cookie': True, 'save_cookie':True}
+        if linkUrl.startswith('https://'):
+            linkUrl = 'http' + linkUrl[5:]
         videoTab = []
         if '/player/flash/' in linkUrl:
             videoId = linkUrl.split('/')[-1]
@@ -4212,6 +4214,8 @@ class pageParser:
             elif data.startswith("/"): linkUrl = "http://myvi.ru" + data
             elif data.startswith("http"): linkUrl = data
             else: return videoTab 
+            if linkUrl.startswith('https://'):
+                linkUrl = 'http' + linkUrl[5:]
             sts, data = self.cm.getPage(linkUrl, params)
             if not sts: return videoTab
             try:
@@ -6243,24 +6247,37 @@ class pageParser:
         ##########################################################
         # new algo 2016-12-04 ;)
         ##########################################################
-        varName = self.cm.ph.getSearchGroups(tmp, '''window.r=['"]([^'^"]+?)''', ignoreCase=True)[0]
+        varName = self.cm.ph.getSearchGroups(tmp, '''window.r=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
         encTab = re.compile('''<span[^>]+?id="%s[^"]*?"[^>]*?>([^<]+?)<\/span>''' % varName).findall(data)
+        printDBG(">>>>>>>>>>>> varName[%s] encTab[%s]" % (varName, encTab) )
+        ok = False
         for enc in encTab:
-            dec = ''
-            try:
-                a = int(enc[0:2])
-                idx = 2
-                while idx < len(enc):
-                    dec += chr(int(enc[idx:idx+3]) - a * int(enc[idx+3:idx+3+2]))
-                    idx += 5
-            except Exception:
-                printExc()
-                continue
-                
-            videoUrl = 'https://openload.co/stream/{0}?mime=true'.format(dec)
-            params = dict(HTTP_HEADER)
-            params['external_sub_tracks'] = subTracks
-            return urlparser.decorateUrl(videoUrl, params)
+            for fs in [-1, 1]:
+                for fe in [-1, 1]:
+                    dec = ''
+                    try:
+                        s = int(enc[0:3]) * fs
+                        e = int(enc[3:5]) * fe
+                        idx = 5
+                        while idx < len(enc):
+                            dec += chr(int(enc[idx:idx+3]) + s + e * int(enc[idx+3:idx+3+2]))
+                            idx += 5
+                        if re.compile('~[0-9]{10}~').search(dec):
+                            ok = True
+                            break
+                    except Exception:
+                        continue
+                if ok:
+                    break
+            if ok:
+                break
+        
+        printDBG(dec)
+        if not ok: return False
+        videoUrl = 'https://openload.co/stream/{0}?mime=true'.format(dec)
+        params = dict(HTTP_HEADER)
+        params['external_sub_tracks'] = subTracks
+        return urlparser.decorateUrl(videoUrl, params)
         ##########################################################
         # new algo 2016-12-04 end ;)
         ##########################################################

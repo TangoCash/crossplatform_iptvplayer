@@ -611,7 +611,7 @@ msgid "Email"
 msgstr "Эл. адрес"
 
 msgid "Enable reordering mode"
-msgstr "Включить режим переназначения"
+msgstr "Включить режим перемещения"
 
 msgid "English"
 msgstr "Английский"
@@ -1877,7 +1877,7 @@ msgstr ""
 "Вышла новая версия плагина. Вы хотите, обновить? \n"
 "Ваша версия [%s], новая версия на сервере [%s]."
 
-msgid "There is no favourites groups."
+msgid "There are no other favourite groups"
 msgstr "Там нет группы избранное."
 
 msgid "There is no free space on the drive [%s]."
@@ -4067,6 +4067,120 @@ msgstr "IPTVПлеер - Запуск"
 
 msgid "Info..."
 msgstr "Информация"
+
+msgid "Sort Myfreecams :"
+msgstr "Сортировка Myfreecams :"
+
+msgid "Global search :"
+msgstr "Глобальный поиск :"
+
+msgid "Global sorting :"
+msgstr "Глобальная сортировка :"
+
+msgid "External player use software decoder for the AC3"
+msgstr "Применить наружный декодер для AC3"
+
+msgid "External player use software decoder for the EAC3"
+msgstr "Применить наружный декодер для EAC3"
+
+msgid "External player use software decoder for the MP3"
+msgstr "Применить наружный декодер для MP3"
+
+msgid ""
+"Using this host in your country can be illegal.\n"
+"Do you want to continue at your own risk?"
+msgstr ""
+"Используя этот хост в вашей стране может быть незаконным.\n"
+"Вы хотите продолжить на свой страх и риск?"
+
+msgid "http://tree.tv/"
+msgstr "tree"
+
+msgid "Live TV"
+msgstr "Прямой эфир"
+
+msgid "Live Radio"
+msgstr "Радио в прямом эфире"
+
+msgid "Icons quality"
+msgstr "Качество иконки"
+
+msgid "Your language preference:"
+msgstr "Ваши предпочтения языка:"
+
+msgid "By title"
+msgstr "По названию"
+
+msgid "Dokumentalne"
+msgstr "Документальный"
+
+msgid "Dla dzieci"
+msgstr "Для детей"
+
+msgid "Verify"
+msgstr "Проверить"
+
+msgid "Stand-Up"
+msgstr "Встаньте"
+
+msgid ""
+"Please remember to visit http://www.sport365.live/ and watch a few "
+"advertisements.\n"
+"This will fix problem, if your playback is constantly interrupted."
+msgstr ""
+"Пожалуйста, не забудьте посетить http://www.sport365.live/ и посмотреть "
+"несколько рекламных объявлений.\n"
+"Это позволит устранить проблему, если воспроизведение постоянно прерывается."
+
+msgid "Anime list"
+msgstr "Список аниме"
+
+msgid "Movies list"
+msgstr "Список фильмов"
+
+msgid "Opening. Please wait..."
+msgstr "Открытие. Пожалуйста , подождите ..."
+
+msgid "Closing. Please wait..."
+msgstr "Закрытие. Пожалуйста , подождите ..."
+
+msgid "Alternative proxy server (2)"
+msgstr "Альтернативный прокси - сервер (2)"
+
+msgid "Alternative proxy server (1)"
+msgstr "Альтернативный прокси - сервер (1)"
+
+msgid "Use proxy server:"
+msgstr "Использовать прокси - сервер:"
+
+msgid "Any"
+msgstr "Любые"
+
+msgid "Year: "
+msgstr "Год: "
+
+msgid "Connection to server failed!"
+msgstr "Подключение к серверу не удалось!"
+
+msgid "Enable reordering"
+msgstr "Включить перемещения"
+
+msgid "Disable reordering"
+msgstr "Отключить перемещения"
+
+msgid ""
+"To watch videos from http://vk.com/ you need to login.\n"
+"Please fill your login and password in the IPTVPlayer configuration."
+msgstr ""
+"Для просмотра видео с http://vk.com/ необходимо авторизоваться на сайте.\n"
+"Пожалуйста , заполните свой логин и пароль в конфигурации IPTVPlayer."
+
+msgid ""
+"Login user \"%s\" to http://vk.com/ failed!\n"
+"Please check your login data in the IPTVPlayer configuration."
+msgstr ""
+"Логин пользователя \"%s\" войти http://vk.com/ не удалось!\n"
+"Пожалуйста , проверьте свои данные для входа в конфигурации IPTVPlayer."
 
 msgid "Trailers"
 msgstr "Трейлеры"

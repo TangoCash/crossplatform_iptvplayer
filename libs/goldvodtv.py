@@ -90,7 +90,7 @@ class GoldVodTVApi:
         channelsTab = []
         
         nameMap = {'3':'Eleven','2':'TVP 1 HD','4':'Polsat HD','5':'Polsat 2 HD','6':'Canal+ Sport HD','7':'Eleven Sports',
-        '8':'Canal+ Sport 2 HD','9':'Canal+ HD','10':'TVN Meteo Active','11':'Eurosport 2 HD','12':'nSport HD',
+        '8':'Canal+ Sport 2 HD','9':'Canal+ HD','10':'HGTV','11':'Eurosport 2 HD','12':'nSport HD',
         '13':'Eurosport HD','14':'Nickelodeon','15':'Comedy Central','16':'National Geographic Channel HD','17':'MTV',
         '18':'Polsat Sport News','19':'TTV','20':'TVN 7 HD','21':'MiniMini+','22':'Discovery Channel HD','23':'BBC Earth',
         '24':'Nat Geo Wild HD','25':'AXN HD','26':'TVP Seriale','27':'TVP Info','28':'Fokus TV','29':'TV Puls',
@@ -111,7 +111,8 @@ class GoldVodTVApi:
         '165':'Discovery life', '169':'Nat Geo Wild HD', '170':'Superstacja', '179':'4Fun TV', '126':'Polsat Play', '140':'Polsat Sport News',
         '206':'VOX Music TV', '193':'Filmbox', '192':'Filmbox Premium', '191':'8TV', '190':'Disco Polo Music', '202':'Polsat Sport Extra',
         '203':'Polsat Sport HD', '194':'Filmbox Family', '181':'Polsat 2', '204':'Polsat HD', '120':'Discovery Science', '205':'Canal+',
-        '172':'Eleven Extra HD', '171':'Cartoon Network', '211':'13 Ulica HD', '212':'Lifetime HD', '213':'Universal Channel HD', '214':'BBC HD'}
+        '172':'Eleven Extra HD', '171':'Cartoon Network', '211':'13 Ulica HD', '212':'Lifetime HD', '213':'Universal Channel HD', '214':'BBC HD',
+        '215':'FOX Comedy HD'}
 
         sts, data = self.cm.getPage(self.MAIN_URL + 'kanaly.html?show=on', self.http_params)
         if not sts: return []

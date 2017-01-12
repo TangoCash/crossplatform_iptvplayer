@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -230,7 +230,9 @@ class T123MoviesTO(CBaseHostClass):
         if len(urlTab): return urlTab
         self.cacheLinks = {}
         
-        sts, data = self.getPage(cItem['url'])
+        rm(self.COOKIE_FILE)
+        
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
         # get trailer
@@ -266,9 +268,9 @@ class T123MoviesTO(CBaseHostClass):
                     name = serverTitle + ': ' + title
                 else:
                     name = ''
-                urlTab.append({'name':name, 'title':title, 'server_title':serverTitle, 'url':serverId + '|' + episodeId, 'server_id':serverId, 'episode_id':episodeId, 'need_resolve':1})
+                urlTab.append({'name':name, 'title':title, 'server_title':serverTitle, 'url':serverId + '|' + episodeId + '|' + cItem['url'], 'server_id':serverId, 'episode_id':episodeId, 'need_resolve':1})
             
-        if len(urlTab) and trailer.startswith('http'):
+        if len(urlTab) and self.cm.isValidUrl(trailer) and len(trailer) > 10:
             urlTab.insert(0, {'name':'Trailer', 'title':'Trailer', 'server_title':'Trailer', 'url':trailer, 'need_resolve':1})
         
         self.cacheLinks[cItem['url']] = urlTab
@@ -301,13 +303,27 @@ class T123MoviesTO(CBaseHostClass):
         printDBG("T123MoviesTO.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
-        if videoUrl.startswith('http'):
+        if self.cm.isValidUrl(videoUrl):
             return self.up.getVideoLinkExt(videoUrl)
         
         tmp = videoUrl.split('|')
-        if len(tmp) != 2: return []
-        serverId = tmp[0]
+        if len(tmp) != 3: return []
+        serverId  = tmp[0]
         episodeId = tmp[1]
+        referer   = tmp[2]
+        
+        sts, data = self.getPage(referer, self.defaultParams)
+        if not sts: return []
+        
+        rm(self.COOKIE_FILE)
+        
+        url = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^"^']*?resources/images/[^"^']*?)['"]''')[0] )
+        params = dict(self.defaultParams)
+        params['header'] = dict(self.HEADER)
+        params['header']['Referer'] = referer
+        sts, data = self.getPage(url, params)
+        if not sts: return []
+        cookie = self.cm.getCookieHeader(self.COOKIE_FILE)
         
         if serverId in ['12', '13', '14', '15']:
             url = 'ajax/load_embed/' + episodeId
@@ -331,7 +347,7 @@ class T123MoviesTO(CBaseHostClass):
 
             params = {}
             params['header'] = dict(self.AJAX_HEADER)
-            params['header']['Cookie'] = '%s=%s;' % (cookieName, cookieValue)
+            params['header']['Cookie'] = cookie + ' %s=%s;' % (cookieName, cookieValue)
             sts, data = self.getPage(url, params)
             if not sts: return []
             
@@ -418,6 +434,8 @@ class T123MoviesTO(CBaseHostClass):
         
     def getLinksForFavourite(self, fav_data):
         printDBG('T123MoviesTO.getLinksForFavourite')
+        if self.MAIN_URL == None:
+            self.selectDomain()
         links = []
         try:
             cItem = byteify(json.loads(fav_data))
@@ -427,6 +445,8 @@ class T123MoviesTO(CBaseHostClass):
         
     def setInitListFromFavouriteItem(self, fav_data):
         printDBG('T123MoviesTO.setInitListFromFavouriteItem')
+        if self.MAIN_URL == None:
+            self.selectDomain()
         try:
             params = byteify(json.loads(fav_data))
         except Exception: 

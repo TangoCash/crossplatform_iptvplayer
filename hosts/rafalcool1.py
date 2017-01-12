@@ -3,10 +3,11 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.components.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.tools.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetLogoDir, FreeSpace as iptvtools_FreeSpace, GetIconDirBaseName, GetNewIconsDirName, mkdirs
-from Plugins.Extensions.IPTVPlayer.tools.iptvfilehost import IPTVFileHost
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetLogoDir, FreeSpace as iptvtools_FreeSpace, GetIconDirBaseName, GetNewIconsDirName, mkdirs
+#from Plugins.Extensions.IPTVPlayer.itools.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetLogoDir, FreeSpace as iptvtools_FreeSpace, GetIconDirBaseName, GetNewIconsDirName, mkdirs
+from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
