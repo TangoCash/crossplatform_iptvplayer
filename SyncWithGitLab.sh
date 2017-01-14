@@ -1,9 +1,11 @@
 #!/bin/bash
 . /DuckboxDisk/j00zek-NP/activePaths.config
 
-daemonDir=$NPpath/plugins/IPTVplayer-port/IPTVdaemon
-pluginDir=$NPpath/plugins/neutrinoIPTV/neutrinoIPTV
-publicGitDir=$GITroot/crossplatform_iptvplayer/IPTVplayer
+publicGitRoot=$GITroot/crossplatform_iptvplayer
+daemonDir=$publicGitRoot/IPTVdaemon
+KaddonDir=$publicGitRoot/addon4KODI/neutrinoIPTV
+NpluginDir=$publicGitRoot/addon4neutrino/neutrinoIPTV
+publicGitDir=$publicGitRoot/IPTVplayer
 
 ############################## Syncing GITLAB ##############################
 if [ ! -d ~/Archive/iptvplayer-GitLab-master-version ];then
@@ -52,8 +54,8 @@ done
 cp -a ~/Archive/iptvplayerXXX-GitLab-master-version/IPTVPlayer/hosts/* $publicGitDir/hosts/
 cp -f ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/version.py $publicGitDir
 wersja=`cat ./IPTVPlayer/version.py|grep 'IPTV_VERSION='|cut -d '"' -f2`
-sed -i "s/^name=.*$/name=IPTV for Neutrino @j00zek v.$wersja/" $pluginDir/neutrinoIPTV.cfg
-sed -i "s/^name.polski=.*$/name.polski=IPTV dla Neutrino @j00zek w.$wersja/" $pluginDir/neutrinoIPTV.cfg
+sed -i "s/^name=.*$/name=IPTV for Neutrino @j00zek v.$wersja/" $NpluginDir/neutrinoIPTV.cfg
+sed -i "s/^name.polski=.*$/name.polski=IPTV dla Neutrino @j00zek w.$wersja/" $NpluginDir/neutrinoIPTV.cfg
 echo "$wersja">$daemonDir/version
 ############################## logos structure & names ##############################
 rm -f $publicGitDir/icons/*
@@ -90,13 +92,6 @@ sed -i 's;\(^.*ListaGraficzna.*default[ ]*=[ ]*\)True\(.*$\);\1False\2;
   s;\(^.*f4mdumppath.*default = \)"";\1"f4mdump"; 
   s;\(^.*rtmpdumppath.*default = \)"";\1"rtmpdump"; 
   ' $myFile
-
-############################## making paths unique also on fat partitions #######################################################################
-subDIRs="cache icomponents icons hosts libs scripts itools iptvdm locale"
-for subDIR in $subDIRs
-do
-  [ -e $daemonDir/$subDIR ] || ln -sf $publicGitDir/$subDIR $daemonDir/$subDIR
-done
 
 ############################## cleaning unused components #######################################################################################
 echo 'Cleaning not used components from scripts...'
@@ -159,7 +154,6 @@ do
   rm -rf ./hosts/*$myfile*
   rm -rf ./icons/*$myfile*
 done
-cp -f $NPpath/plugins/IPTVplayer-port/hostrafalcool1.py $publicGitDir/hosts/rafalcool1.py
 ############################## copying to GIT public repo to fit license ##############################
 #echo 'Syncing public GIT...'
 #cp -a $publicGitDir/* $GITroot/cmdline_iptvplayer/
@@ -170,7 +164,7 @@ cp -f $NPpath/plugins/IPTVplayer-port/hostrafalcool1.py $publicGitDir/hosts/rafa
 
 ###################### step 2 create lua list with titles
 cd $publicGitDir
-echo "HostsList={ ">$pluginDir/luaScripts/hostslist.lua
+echo "HostsList={ ">$NpluginDir/luaScripts/hostslist.lua
 echo "# -*- coding: utf-8 -*-
 HostsList=[ ">$daemonDir/dToolsSet/hostslist.py
 for myfile in `cd ./hosts;ls ./*.py|grep -v '_init_'|sort -fi`
@@ -188,13 +182,13 @@ do
       #tytul=`echo $tytul|cut -d "'" -f2|sed "s;http://;;"|sed "s;/$;;"|sed "s;www\.;;"`
       tytul=`echo $tytul|sed "s/^.*['\"]\(.*\)['\"].*$/\1/"|sed 's/^ *//;s/ *$//;s/http[s]*://;s/\///g;s/www\.//'`
     fi
-    #echo "	{id=\"$fileNameRoot\", title=\"$tytul\", fileName=\"hosts/$fileNameRoot.py\", logoName=\"icons/$fileNameRoot.png\", type=\"py\"},">>$pluginDir/luaScripts/hostslist.lua
-    echo "      {id=\"$fileNameRoot\", title=\"$tytul\", type=\"py\"},">>$pluginDir/luaScripts/hostslist.lua
+    #echo "	{id=\"$fileNameRoot\", title=\"$tytul\", fileName=\"hosts/$fileNameRoot.py\", logoName=\"icons/$fileNameRoot.png\", type=\"py\"},">>$NpluginDir/luaScripts/hostslist.lua
+    echo "      {id=\"$fileNameRoot\", title=\"$tytul\", type=\"py\"},">>$NpluginDir/luaScripts/hostslist.lua
     echo "	(\"$fileNameRoot\", \"$tytul\"),">>$daemonDir/dToolsSet/hostslist.py
 done
 echo "	]">>$daemonDir/dToolsSet/hostslist.py
 ##################### step 3 the same for lua scripts
-cd $pluginDir
+cd $NpluginDir
 for myfile in `cd ./luaHosts;ls ./*.lua|sort -fi`
 do
     fileNameRoot=`echo $myfile|sed 's/\.\/\(.*\)\.lua/\1/'`
@@ -204,6 +198,6 @@ do
     else
       tytul=`echo $tytul|cut -d "'" -f2|sed "s;http://;;"|sed "s;/$;;"|sed "s;www\.;;"`
     fi
-    echo "	{id=\"$fileNameRoot\", title=\"$tytul\", fileName=\"luaHosts/$fileNameRoot.lua\", logoName=\"luaHosts/$fileNameRoot.png\", type=\"lua\"},">>$pluginDir/luaScripts/hostslist.lua
+    echo "	{id=\"$fileNameRoot\", title=\"$tytul\", fileName=\"luaHosts/$fileNameRoot.lua\", logoName=\"luaHosts/$fileNameRoot.png\", type=\"lua\"},">>$NpluginDir/luaScripts/hostslist.lua
 done
-echo "	}">>$pluginDir/luaScripts/hostslist.lua
+echo "	}">>$NpluginDir/luaScripts/hostslist.lua

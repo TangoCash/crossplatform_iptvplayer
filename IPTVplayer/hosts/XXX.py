@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "20.1.0.0"
+    XXXversion = "21.0.0.1"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -1236,17 +1236,13 @@ class Host:
         if 'pornusy' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://www.pornway.com' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornusy.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': 'http://www.pornway.com', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
-              printDBG( 'Host listsItems query error cookie' )
+              printDBG( 'Host query error url: '+url )
               return valTab
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-           except:
-              printDBG( 'Host getResolvedURL query error' )
-              printDBG( 'Host getResolvedURL query error url: '+url )
-              return valTab
-           phMovies = re.findall('<li class="video".*?<a href="(.*?)" title="(.*?)".*?data-src="(.*?)"', data, re.S)
+           printDBG( 'Host listsItems data: '+data )
+           phMovies = re.findall('<li class="video".*?<a href="(.*?)".*?itle="(.*?)".*?data-src="(.*?)"', data, re.S)
            if phMovies:
               for (phUrl, phTitle, phImage ) in phMovies:
                   printDBG( 'Host listsItems phImage: '+phImage )
@@ -2356,8 +2352,8 @@ class Host:
         if 'BONGACAMS' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'https://pl.bongacams.com' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'bongacams.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url:'+url )
@@ -2374,8 +2370,8 @@ class Host:
 
         if 'BONGACAMS-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'bongacams.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
@@ -3262,13 +3258,13 @@ class Host:
            else: return ''
   
         if parser == 'http://www.pornway.com':
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornusy.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
-           #printDBG( 'Host getResolvedURL data: '+data )
+           printDBG( 'Host getResolvedURL data: '+data )
            parse = re.search('<iframe.*?src="(.*?)"', data, re.S)
            if parse:
               if parse.group(1).startswith('http://www.pornway.com'):

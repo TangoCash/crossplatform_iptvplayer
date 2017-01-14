@@ -1,0 +1,898 @@
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/configbase.py ./IPTVPlayer/components/configbase.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/configbase.py	2015-12-27 07:42:31.328793000 +0100
++++ ./IPTVPlayer/components/configbase.py	2016-02-23 20:52:53.311585000 +0100
+@@ -8,10 +8,10 @@
+ ###################################################
+ # LOCAL import
+ ###################################################
+-from Plugins.Extensions.IPTVPlayer.tools.iptvtools import printDBG, printExc
+-from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVDirectorySelectorWidget, IPTVFileSelectorWidget
++from Plugins.Extensions.IPTVPlayer.tools.iptvtools import printDBG, printExc, IsExecutable, GetBinDir
++from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVFileSelectorWidget
+ ###################################################
+-
++from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import *
+ ###################################################
+ # FOREIGN import
+ ###################################################
+@@ -252,6 +261,12 @@
+         elif isinstance(currItem, ConfigDirectory):
+             def SetDirPathCallBack(curIndex, newPath):
+                 if None != newPath: self["config"].list[curIndex][1].value = newPath
++            if IsExecutable(GetBinDir('lsdir')):
++                printDBG('lsdir found, starting iptv browser') 
++                from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVDirectorySelectorWidget
++            else:
++                printDBG('No lsdir utility, starting generic browser') 
++                from Plugins.Extensions.IPTVPlayer.components.filebrowserwidget.py import DirectorySelectorWidget as IPTVDirectorySelectorWidget
+             self.session.openWithCallback(boundFunction(SetDirPathCallBack, curIndex), IPTVDirectorySelectorWidget, currDir=currItem.value,  title=_('Select the directory'))
+             return
+         elif isinstance(currItem, ConfigText):
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvconfigmenu.py ./IPTVPlayer/components/iptvconfigmenu.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvconfigmenu.py	2016-02-17 05:05:39.501766999 +0100
++++ ./IPTVPlayer/components/iptvconfigmenu.py	2016-02-23 20:52:53.311585000 +0100
+@@ -8,12 +8,11 @@
+ # LOCAL import
+ ###################################################
+ from Plugins.Extensions.IPTVPlayer.tools.iptvtools import printDBG, printExc, GetSkinsList, GetHostsList, GetEnabledHostsList, \
+-                                                          IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize
++                                                          IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize, GetBinDir
+ from Plugins.Extensions.IPTVPlayer.iptvupdate.updatemainwindow import IPTVUpdateWindow, UpdateMainAppImpl
+ from Plugins.Extensions.IPTVPlayer.components.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit
+ from Plugins.Extensions.IPTVPlayer.components.configbase import ConfigBaseWidget
+ from Plugins.Extensions.IPTVPlayer.components.confighost import ConfigHostsMenu
+-from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVDirectorySelectorWidget
+ from Plugins.Extensions.IPTVPlayer.setup.iptvsetupwidget import IPTVSetupMainWidget
+ ###################################################
+ 
+@@ -47,7 +46,7 @@
+ config.plugins.iptvplayer.uchardetpath    = ConfigText(default = "", fixed_size = False)
+ config.plugins.iptvplayer.set_curr_title  = ConfigYesNo(default = False)
+ config.plugins.iptvplayer.curr_title_file = ConfigText(default = "", fixed_size = False) 
+-config.plugins.iptvplayer.plarform        = ConfigSelection(default = "auto", choices = [("auto", "auto"),("mipsel", _("mipsel")),("sh4", _("sh4")),("i686", _("i686")), ("armv7", _("armv7")), ("unknown", _("unknown"))])
++config.plugins.iptvplayer.plarform        = ConfigSelection(default = "auto", choices = [("auto", "auto"),("mipsel", _("mipsel")),("sh4", _("sh4")),("i686", _("i686")), ("armv7", _("armv7")),("arm", _("arm")),("unknown", _("unsupported"))])
+ 
+ config.plugins.iptvplayer.showcover          = ConfigYesNo(default = True)
+ config.plugins.iptvplayer.deleteIcons        = ConfigSelection(default = "3", choices = [("0", _("after closing")),("1", _("after day")),("3", _("after three days")),("7", _("after a week"))]) 
+@@ -92,6 +91,10 @@
+ #i686
+ config.plugins.iptvplayer.defaultI686MoviePlayer0        = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
+ config.plugins.iptvplayer.alternativeI686MoviePlayer0    = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
++
++#arm
++config.plugins.iptvplayer.defaultARMMoviePlayer0        = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
++config.plugins.iptvplayer.alternativeARMMoviePlayer0    = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
+ # end without buffering mode players
+ 
+ #armv7
+@@ -114,6 +117,9 @@
+ #armv7
+ config.plugins.iptvplayer.defaultARMV7MoviePlayer      = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer'),ConfigPlayer('exteplayer')])
+ config.plugins.iptvplayer.alternativeARMV7MoviePlayer  = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer'),ConfigPlayer('exteplayer')])
++#arm
++config.plugins.iptvplayer.defaultARMMoviePlayer        = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
++config.plugins.iptvplayer.alternativeARMMoviePlayer    = ConfigSelection(default = "auto", choices = [ConfigPlayer("auto"),ConfigPlayer("mini"),ConfigPlayer("standard"),ConfigPlayer('extgstplayer')])
+ # end with buffering mode players
+ 
+ config.plugins.iptvplayer.SciezkaCache = ConfigDirectory(default = "/hdd/IPTVCache/") #, fixed_size = False)
+@@ -172,7 +178,9 @@
+ config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (1, 1000000))
+ 
+ ###################################################
+-
++j00zekFork=True
++from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import AlternateOptionsList, ExtendConfigsList, RemoveDuplicatesFromList
++ExtendConfigsList()
+ ########################################################
+ # Generate list of hosts options for Enabling/Disabling
+ ########################################################
+@@ -220,6 +228,8 @@
+         
+     @staticmethod
+     def fillConfigList(list, hiddenOptions=False):
++        if 'j00zekFork' in globals():
++            AlternateOptionsList(list)
+         if hiddenOptions:
+             list.append( getConfigListEntry(_("Last checked version"), config.plugins.iptvplayer.updateLastCheckedVersion) )
+             list.append( getConfigListEntry(_("Show all version in the update menu"), config.plugins.iptvplayer.hiddenAllVersionInUpdate) )
+@@ -332,6 +332,17 @@
+             list.append(getConfigListEntry(_("Second movie player in buffering mode"), config.plugins.iptvplayer.alternativeARMV7MoviePlayer))
+             players.append(config.plugins.iptvplayer.alternativeARMV7MoviePlayer)
+             
++        elif 'arm' == config.plugins.iptvplayer.plarform.value:
++            list.append(getConfigListEntry(_("First move player without buffering mode"), config.plugins.iptvplayer.defaultARMMoviePlayer0))
++            players.append(config.plugins.iptvplayer.defaultARMMoviePlayer0)
++            list.append(getConfigListEntry(_("Second move player without buffering mode"), config.plugins.iptvplayer.alternativeARMMoviePlayer0))
++            players.append(config.plugins.iptvplayer.alternativeARMMoviePlayer0)
++            
++            list.append(getConfigListEntry(_("First move player in buffering mode"), config.plugins.iptvplayer.defaultARMMoviePlayer))
++            players.append(config.plugins.iptvplayer.defaultARMMoviePlayer)
++            list.append(getConfigListEntry(_("Second move player in buffering mode"), config.plugins.iptvplayer.alternativeARMMoviePlayer))
++            players.append(config.plugins.iptvplayer.alternativeARMMoviePlayer)
++            
+         else: 
+             list.append(getConfigListEntry(_("Movie player"), config.plugins.iptvplayer.NaszPlayer))
+         
+@@ -348,6 +369,8 @@
+         list.append(getConfigListEntry(_("Debug logs"), config.plugins.iptvplayer.debugprint))
+         list.append(getConfigListEntry(_("Allow downgrade"), config.plugins.iptvplayer.downgradePossible))
+         list.append(getConfigListEntry(_("Update packet type"), config.plugins.iptvplayer.possibleUpdateType))
++        if 'j00zekFork' in globals():
++            RemoveDuplicatesFromList(list)
+ 
+     def runSetup(self):
+         self.list = []
+@@ -371,6 +394,10 @@
+             self.doUpdate()
+ 
+     def doUpdate(self, forced=False):
++        if 'j00zekFork' in globals():
++            from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import j00zekIPTVPlayerConsole, j00zekRunUpdateList
++            self.session.open(j00zekIPTVPlayerConsole, title = _("Updating plugin"), cmdlist = j00zekRunUpdateList)
++            return
+         printDBG("ConfigMenu.doUpdate")
+         if not forced:
+             self.session.open(IPTVUpdateWindow, UpdateMainAppImpl(self.session))
+     def save(self):
+@@ -391,7 +418,12 @@
+         if isinstance(currItem, ConfigDirectory):
+             def SetDirPathCallBack(curIndex, newPath):
+                 if None != newPath: self["config"].list[curIndex][1].value = newPath
+-            self.session.openWithCallback(boundFunction(SetDirPathCallBack, curIndex), IPTVDirectorySelectorWidget, currDir=currItem.value, title="Wybierz katalog")
++            if IsExecutable(GetBinDir('lsdir')):
++                from Plugins.Extensions.IPTVPlayer.components.iptvdirbrowser import IPTVDirectorySelectorWidget
++                self.session.openWithCallback(boundFunction(SetDirPathCallBack, curIndex), IPTVDirectorySelectorWidget, currDir=currItem.value, title="Wybierz katalog")
++            else:
++                from Plugins.Extensions.IPTVPlayer.components.filebrowserwidget import DirectorySelectorWidget
++                self.session.openWithCallback(boundFunction(SetDirPathCallBack, curIndex), DirectorySelectorWidget, currDir=currItem.value, title="Wybierz katalog")
+         elif config.plugins.iptvplayer.fakePin == currItem:
+             self.changePin(start = True)
+         elif config.plugins.iptvplayer.fakeUpdate == currItem:
+@@ -434,6 +466,11 @@
+             players.append(config.plugins.iptvplayer.alternativeI686MoviePlayer0)
+             players.append(config.plugins.iptvplayer.defaultI686MoviePlayer)
+             players.append(config.plugins.iptvplayer.alternativeI686MoviePlayer)
++        elif 'arm' == config.plugins.iptvplayer.plarform.value:
++            players.append(config.plugins.iptvplayer.defaultARMMoviePlayer0)
++            players.append(config.plugins.iptvplayer.alternativeARMMoviePlayer0)
++            players.append(config.plugins.iptvplayer.defaultARMMoviePlayer)
++            players.append(config.plugins.iptvplayer.alternativeARMMoviePlayer)
+         else:
+             players.append(config.plugins.iptvplayer.NaszPlayer)
+         tab.extend(players)
+@@ -520,6 +557,14 @@
+         else:
+             player = config.plugins.iptvplayer.defaultI686MoviePlayer0
+             alternativePlayer = config.plugins.iptvplayer.alternativeI686MoviePlayer0
++            
++    elif 'arm' == config.plugins.iptvplayer.plarform.value:
++        if buffering:
++            player = config.plugins.iptvplayer.defaultARMMoviePlayer
++            alternativePlayer = config.plugins.iptvplayer.alternativeARMMoviePlayer
++        else:
++            player = config.plugins.iptvplayer.defaultARMMoviePlayer0
++            alternativePlayer = config.plugins.iptvplayer.alternativeARMMoviePlayer0
+     else:
+         player = config.plugins.iptvplayer.NaszPlayer
+         alternativePlayer = config.plugins.iptvplayer.NaszPlayer
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvextmovieplayer.py ./IPTVPlayer/components/iptvextmovieplayer.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvextmovieplayer.py	2016-02-23 20:49:15.795585000 +0100
++++ ./IPTVPlayer/components/iptvextmovieplayer.py	2016-02-23 20:52:53.315585000 +0100
+@@ -1489,7 +1489,7 @@
+             
+             if config.plugins.iptvplayer.aac_software_decode.value:
+                 cmd += ' -a -p 10'
+-            elif config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7'):
++            elif config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'arm'):
+                 cmd += ' -p 2'
+             audioTrackIdx = self.metaHandler.getAudioTrackIdx()
+             printDBG(">>>>>>>>>>>>>>>>>>>>>>>> audioTrackIdx[%d]" % audioTrackIdx)
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvplayerwidget.py ./IPTVPlayer/components/iptvplayerwidget.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/components/iptvplayerwidget.py	2016-02-23 20:49:15.795585000 +0100
++++ ./IPTVPlayer/components/iptvplayerwidget.py	2016-02-23 21:04:20.351585000 +0100
+@@ -12,6 +12,10 @@
+ from random import shuffle as random_shuffle
+ 
+ ####################################################
++#                  j00zek E2
++####################################################
++j00zekFork=True
++####################################################
+ #                   E2 components
+ ####################################################
+ from Screens.Screen import Screen
+@@ -135,14 +139,21 @@
+             except: printExc("Skin read error: " + path)
+                 
+         Screen.__init__(self, session)
+-        self.recorderMode = False #j00zek
++        if 'j00zekFork' in globals():
++            self.recorderMode = self.recorderMode = config.plugins.iptvplayer.recorderMode.value #j00zek
++            if self.recorderMode == False:
++                self["key_green"]  = StaticText(_("Player > Recorder"))
++            else:
++                self["key_green"]  = StaticText(_("Recorder > Player"))
++        else:
++            self.recorderMode = False #j00zek
++            self["key_green"]  = StaticText(_("Player > Recorder"))
+ 
+         self.currentService = self.session.nav.getCurrentlyPlayingServiceReference()
+         if config.plugins.iptvplayer.disable_live.value:
+             self.session.nav.stopService()
+ 
+         self["key_red"]    = StaticText(_("Exit"))
+-        self["key_green"]  = StaticText(_("Player > Recorder"))
+         self["key_yellow"] = StaticText(_("Refresh"))
+         self["key_blue"]   = StaticText(_("More"))
+ 
+@@ -923,10 +934,14 @@
+         self.askUpdateAvailable(self.selectHost)
+     
+     def __requestCheckUpdate(self):
+-        lastVerUrl = 'http://iptvplayer.pl/download/update/lastversion.php'
+         if config.plugins.iptvplayer.autoCheckForUpdate.value:
+             self.checkUpdateTimer.start(self.checkUpdateTimer_interval, True)
+             if IsExecutable( DMHelper.GET_WGET_PATH() ):
++                if 'j00zekFork' in globals():
++                    lastVerUrl = 'https://raw.githubusercontent.com/j00zek/iptvplayer-for-e2-fork/master/jVersion.txt'
++                    #cmd = '%s -q "%s" -O -|grep IPTV_VERSION|grep -o "[0-9][0-9]\.[0-9][0-9]\.[0-9][0-9]\.[0-9][0-9]" 2> /dev/null ' % (DMHelper.GET_WGET_PATH(), lastVerUrl)
++                else:
++                    lastVerUrl = 'http://iptvplayer.pl/download/update/lastversion.php'
+                 cmd = '%s "%s" -O - 2> /dev/null ' % (DMHelper.GET_WGET_PATH(), lastVerUrl)
+                 if None != self.checkUpdateConsole: self.checkUpdateConsole.terminate()
+                 printDBG("__requestCheckUpdate cmd[%r]" % cmd)
+@@ -940,7 +955,7 @@
+     def askUpdateAvailable(self, NoUpdateCallback):
+         if  config.plugins.iptvplayer.autoCheckForUpdate.value \
+             and  0 < GetVersionNum( self.lastPluginVersion ) \
+-            and GetVersionNum( self.lastPluginVersion ) > GetVersionNum( GetIPTVPlayerVerstion() ) \
++            and GetVersionNum( self.lastPluginVersion ) > GetVersionNum( GetIPTVPlayerVerstion().replace('j','') ) \
+             and self.lastPluginVersion != config.plugins.iptvplayer.updateLastCheckedVersion.value:
+             
+             message = _('There is a new version available do you want to update? \nYour version [%s], latest version on server [%s]') % (GetIPTVPlayerVerstion(), self.lastPluginVersion)
+@@ -1005,7 +1020,10 @@
+         return
+ 
+     def displayListOfHosts(self, arg = None):
+-        if config.plugins.iptvplayer.ListaGraficzna.value == False or 0 == GetAvailableIconSize():
++        if 'j00zekFork' in globals() and config.plugins.iptvplayer.j00zekTreeHostsSelector.value == True:
++            from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekHostTreeSelector import j00zekHostTreeSelector
++            self.session.openWithCallback(self.selectHostCallback, j00zekHostTreeSelector, list = self.displayHostsList)
++        elif config.plugins.iptvplayer.ListaGraficzna.value == False or 0 == GetAvailableIconSize():
+             self.session.openWithCallback(self.selectHostCallback, ChoiceBox, title=_("Select service"), list = self.displayHostsList)
+         else:
+             from playerselector import PlayerSelectorWidget
+@@ -1043,7 +1061,11 @@
+                 self.close()
+                 return
+             elif ret[1] == "update":
+-                self.session.openWithCallback(self.displayListOfHosts, IPTVUpdateWindow, UpdateMainAppImpl(self.session))
++                if 'j00zekFork' in globals():
++                    from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import j00zekIPTVPlayerConsole, j00zekRunUpdateList
++                    self.session.openWithCallback(self.displayListOfHosts, j00zekIPTVPlayerConsole, title = _("Updating plugin"), cmdlist = j00zekRunUpdateList)
++                else:
++                    self.session.openWithCallback(self.displayListOfHosts, IPTVUpdateWindow, UpdateMainAppImpl(self.session))
+                 return
+             elif ret[1] == "IPTVDM":
+                 self.runIPTVDM(self.selectHost)
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/hosts/hosturllist.py ./IPTVPlayer/hosts/hosturllist.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/hosts/hosturllist.py	2016-01-22 10:18:06.044897000 +0100
++++ ./IPTVPlayer/hosts/hosturllist.py	2016-02-23 20:52:53.319585000 +0100
+@@ -5,7 +5,7 @@
+ ###################################################
+ from Plugins.Extensions.IPTVPlayer.components.iptvplayerinit import TranslateTXT as _
+ from Plugins.Extensions.IPTVPlayer.components.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
+-from Plugins.Extensions.IPTVPlayer.tools.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
++from Plugins.Extensions.IPTVPlayer.tools.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, FreeSpace as iptvtools_FreeSpace
+ from Plugins.Extensions.IPTVPlayer.tools.iptvfilehost import IPTVFileHost
+ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
+@@ -22,6 +22,11 @@
+ import time
+ ###################################################
+ 
++j00zekFork=True
++from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.md5Hash import MD5
++from Plugins.Extensions.IPTVPlayer.tools.iptvtools import FreeSpace as iptvtools_FreeSpace, GetIconDirBaseName, GetNewIconsDirName, mkdirs
++from binascii import hexlify
++from os import path, system, remove
+ 
+ ###################################################
+ # E2 GUI COMMPONENTS 
+@@ -36,6 +41,8 @@
+ config.plugins.iptvplayer.grupujurllist  = ConfigYesNo(default = True)
+ config.plugins.iptvplayer.sortuj         = ConfigYesNo(default = True)
+ config.plugins.iptvplayer.urllist_showrafalcool1 = ConfigYesNo(default = True)
++if 'j00zekFork' in globals():
++    config.plugins.iptvplayer.useTMDB = ConfigYesNo(default = True)
+ 
+ def GetConfigList():
+     optionList = [] 
+@@ -43,11 +50,16 @@
+     optionList.append(getConfigListEntry(_('Show recommended by Rafalcool1:'), config.plugins.iptvplayer.urllist_showrafalcool1))
+     optionList.append(getConfigListEntry(_('Sort the list:'), config.plugins.iptvplayer.sortuj))
+     optionList.append(getConfigListEntry(_('Group links into categories: '), config.plugins.iptvplayer.grupujurllist))
++    if 'j00zekFork' in globals():
++        optionList.append(getConfigListEntry(_('Download missing cover and descr from tmdb:'), config.plugins.iptvplayer.useTMDB))    
+     return optionList
+ ###################################################
+ 
+ def gettytul():
+-    return (_('Urllists player'))
++    if 'j00zekFork' in globals():
++        return (_('Urllists from %s') % config.plugins.iptvplayer.Sciezkaurllist.value)
++    else:
++        return (_('Urllists player'))
+ 
+ class Urllist(CBaseHostClass):
+     RAFALCOOL1_FILE  = 'urllist.rafalcool1'
+@@ -161,15 +173,30 @@
+                     self.addVideo(params)
+         elif 'group' in cItem:
+             tmpList = self.currFileHost.getItemsInGroup(cItem['group'], sortList)
++            if 'j00zekFork' in globals():
++                if iptvtools_FreeSpace(config.plugins.iptvplayer.SciezkaCache.value, 10):
++                    downloadPath = config.plugins.iptvplayer.SciezkaCache.value
++                    cacheTMDB = True
++                else:
++                    downloadPath = config.plugins.iptvplayer.NaszaTMP.value
++                    cacheTMDB = False
+             for item in tmpList:
+                 if '' == item['title_in_group']:
+                     title = item['full_title']
+                 else:
+                     title = item['title_in_group']
+-                desc = (_("Hosting: %s, %s")) % (self._getHostingName(item['url']), item['url'])
+-                if item.get('desc', '') != '':
+-                    desc = item['desc']
+-                params = {'title':title, 'url':item['url'], 'desc': desc, 'icon':item.get('icon', '')}
++                if 'j00zekFork' in globals():
++                    if item.get('desc', '') == '' and item.get('icon', '') == '' and config.plugins.iptvplayer.useTMDB.value == True:
++                        desc, cover = downloadData(item['url'], title, config.plugins.iptvplayer.wgetpath.value, downloadPath, cacheTMDB )
++                    else:
++                        desc = item.get('desc', '')
++                        cover = item.get('icon', '')
++                    params = {'title':title, 'url':item['url'], 'desc': desc, 'icon':cover}
++                else:
++                    desc = (_("Hosting: %s, %s")) % (self._getHostingName(item['url']), item['url'])
++                    if item.get('desc', '') != '':
++                        desc = item['desc']
++                    params = {'title':title, 'url':item['url'], 'desc': desc, 'icon':item.get('icon', '')}
+                 self.addVideo(params)
+                 
+     def getLinksForVideo(self, cItem):
+@@ -313,4 +340,95 @@
+             printDBG('setSearchPattern EXCEPTION')
+             self.searchPattern = ''
+             self.searchType = ''
+-        return
+\ No newline at end of file
++        return
++        
++#####################################################################################################
++def ClearMemory(): #avoid GS running os.* (e.g. os.system) on tuners with small RAM
++    with open("/proc/sys/vm/drop_caches", "w") as f: f.write("1\n")
++
++def cleanFile(text):
++    #text=getNameWithoutExtension(text)
++    cutlist = ['x264','h264','720p','1080p','1080i','PAL','GERMAN','ENGLiSH','ENG', 'RUS', 'WS','DVDRiP','UNRATED','RETAIL','Web-DL','DL','LD','MiC','MD','DVDR','BDRiP','BLURAY','DTS','UNCUT',
++                'ANiME','AC3MD','AC3','AC3D','TS','DVDSCR','COMPLETE','INTERNAL','DTSD','XViD','DIVX','DUBBED','LINE.DUBBED','DD51','DVDR9','DVDR5','AVC','WEBHDTVRiP','WEBHDRiP','WEBRiP',
++                'WEBHDTV','WebHD','HDTVRiP','HDRiP','HDTV','ITUNESHD','REPACK','SYNC','REAL','PL']
++    
++    for word in cutlist:
++        #text = re.sub('(\_|\-|\.|\+)'+word+'(\_|\-|\.|\+)','+', text, flags=re.I)
++        text = re.sub('(\_|\-|\.|\+)'+word+'.*','.', text, flags=re.I) #assumtion is everything after garbage is garbadge too. ;)
++    #text = re.sub('(\_|\-|\.|\+)[12][0-9][0-9][0-9]\+.*','', text, flags=re.I) #if there is plus sign after date, date is most probably the garbage, so removing it ;)
++    
++    #let's take a year, if exists
++    try:
++        movieYear=re.sub('(\_|\-|\.|\+|\()','', re.search('(\_|\-|\.|\+|\()[12][09][0-9][0-9]', text, flags=re.I).group() ) #for future use
++    except:
++        movieYear=''
++    
++    #removing exact character combinations
++    ExactCutList = ['(\_|\-|\.|\+|\()[12][09][0-9][0-9](\_|\-|\.|\+|\))','^psig-','^[12][09][0-9]* [0-9][0-9]* - .* - ', '-[ ]*zwiastun']
++    for word in ExactCutList:
++        text = re.sub(word,'', text, flags=re.I) #assumtion is everything after garbage is garbadge too. ;)
++        
++    text = re.sub('(\_|\-|\.|\+)',' ', text, flags=re.I) #cleaning
++    text = re.sub('(  [ ]*)',' ', text, flags=re.I) #merge multiple (2+) spaces into one
++
++    return text, movieYear
++    
++def DecodeNationalLetters(text):
++    #polskie litery
++    text = text.replace('ą','a').replace('ę','e').replace('ś','s').replace('ć','c').replace('ż','z').replace('ź','z').replace('ł','l').replace('ń','n')
++    text = text.replace('Ą','A').replace('Ę','E').replace('Ś','S').replace('Ć','C').replace('Ż','Z').replace('Ź','Z').replace('Ł','L').replace('Ń','N')
++    return text.strip()
++
++def ConvertChars(text):
++    CharsTable={ '\xC2\xB1': '\xC4\x85','\xC2\xB6': '\xC5\x9b','\xC4\xBD': '\xC5\xba'}
++    for i, j in CharsTable.iteritems():
++        text = text.replace(i, j)
++    return text
++
++def downloadData(movieUrl, movieTitle, wgetpath, downloadPath, cacheTMDB = False ):
++    if cacheTMDB == False:
++        cachedDataFileName = '%s/rafalcool1.tmdb' % downloadPath
++    else:
++        hashAlg = MD5()
++        fullPath= '%s/%s1444444441.144441/'.replace('//','/') % (downloadPath, GetIconDirBaseName() )
++        cachedDataFileName = fullPath + hexlify(hashAlg(movieUrl[7:])) + '.jpg'
++        if not path.exists(fullPath):
++            mkdirs(fullPath)
++        
++    descr = ''
++    coverUrl = ''
++    ClearMemory()
++    Webmovie, movieYear =cleanFile(movieTitle)
++    Webmovie=DecodeNationalLetters(Webmovie)
++    Webmovie=ConvertChars(Webmovie)
++    url = "http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=pl" % Webmovie
++    if cacheTMDB == False:
++        system('rm -f %s;%s "%s" -O %s' % (cachedDataFileName, wgetpath, url, cachedDataFileName))
++    else:
++        if not path.exists(cachedDataFileName):
++            system('%s "%s" -O %s' % (wgetpath, url, cachedDataFileName))
++    if path.exists(cachedDataFileName):
++        with open(cachedDataFileName,'r') as tmdbDATA: myData = tmdbDATA.read()
++        list = re.findall('"poster_path":"(.*?)".*?"overview":"(.*?)".*?"release_date":"(.*?)".*?"id":(.*?),.*?"original_title":"(.*?)".*?"original_language":"(.*?)".*?"title":"(.*?)".*?"popularity":([\.0-9]*).*?"vote_average":([\.0-9]*).*?', myData, re.S)
++
++        myData=None # some cleanup, just in case
++        if list is None or len(list) == 0:
++            remove(cachedDataFileName) # kasujemy z cache pliki nie zawierajace danych
++        else:
++            if movieYear != '':
++                printDBG("filtering movies list by release year %s" % movieYear)
++                for coverPath,overview,release_date,id,otitle,original_language,title,popularity,vote_average in list:
++                    if movieYear in release_date:
++                        coverUrl = "http://image.tmdb.org/t/p/w185%s" % coverPath
++                        coverUrl = coverUrl.replace('\/','/')
++                        #print "[CoverFind] " + title, coverUrl
++                        descr=overview + '<br/>' + 'Premiera: ' + release_date + '<br/>' + 'Popularność: ' + popularity + '<br/>' + 'Ocena: ' + vote_average
++                        return descr, coverUrl
++                            
++            coverPath,overview,release_date,id,otitle,original_language,title,popularity,vote_average = list[0]
++            coverUrl = "http://image.tmdb.org/t/p/w185%s" % coverPath
++            coverUrl = coverUrl.replace('\/','/')
++            print "[CoverFind] " + title, coverUrl
++            descr=overview + '<br/>' + 'Premiera: ' + release_date + '<br/>' + 'Popularność: ' + popularity + '<br/>' + 'Ocena: ' + vote_average
++
++    return descr, coverUrl
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/iptvupdate/updatemainwindow.py ./IPTVPlayer/iptvupdate/updatemainwindow.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/iptvupdate/updatemainwindow.py	2015-12-27 07:42:31.332790999 +0100
++++ ./IPTVPlayer/iptvupdate/updatemainwindow.py	2016-02-23 20:52:53.319585000 +0100
+@@ -21,7 +21,7 @@
+ from Plugins.Extensions.IPTVPlayer.libs.pCommon             import common
+ from Plugins.Extensions.IPTVPlayer.components.iptvplayerinit import TranslateTXT as _
+ ###################################################
+-
++from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import *
+ ###################################################
+ # FOREIGN import
+ ###################################################
+@@ -37,7 +37,6 @@
+ try:    import json
+ except: import simplejson as json
+ 
+-from os import path as os_path, remove as os_remove, listdir as os_listdir
+ ###################################################
+ 
+ 
+@@ -90,6 +89,7 @@
+         self["list"].setList([])
+ 
+     def layoutFinished(self):
++        self.close()
+         self.setTitle( self.updateObjImpl.getTitle() )
+         self["sub_title"].setText( self.updateObjImpl.getSubTitle() )
+         self["list"].setSelectionState(enabled = False)
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/keymap.xml ./IPTVPlayer/keymap.xml
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/keymap.xml	2016-01-23 20:36:13.231667530 +0100
++++ ./IPTVPlayer/keymap.xml	2016-02-23 20:52:53.323585000 +0100
+@@ -26,4 +26,23 @@
+                 <key id="KEY_MENU"  mapto="menu"         flags="m" />
+                 <key id="KEY_8"     mapto="loop"         flags="m" />
+         </map> 
++  <map context="j00zekHostTreeSelector">
++    <key id="KEY_OK"    mapto="selectHost" flags="m" />
++    <key id="KEY_EXIT" mapto="ExitHostSelector" flags="m" />
++    <key id="KEY_HOME" mapto="ExitHostSelector" flags="m" />
++    <key id="KEY_ESC"  mapto="ExitHostSelector" flags="m" />
++    <key id="KEY_RED"  mapto="ExitHostSelector" flags="m" />
++    <key id="KEY_GREEN" mapto="addHostToCategory" flags="m" />
++    <key id="KEY_YELLOW" mapto="deleteCategory" flags="m" />
++    <key id="KEY_BLUE" mapto="newCategory" flags="m" />
++    <key id="KEY_UP" mapto="lineUp" flags="mr" />
++    <key id="KEY_DOWN" mapto="lineDown" flags="mr" />
++    <key id="KEY_LEFT" mapto="pageUp" flags="m" />
++    <key id="KEY_RIGHT" mapto="pageDown" flags="m" />
++    <key id="KEY_PAGEUP" mapto="pageUp" flags="m" />
++    <key id="KEY_PAGEDOWN" mapto="pageDown" flags="m" />
++    <key id="KEY_MENU" mapto="showConfig" flags="m" />
++    <key id="KEY_PLAY" mapto="showLocalMedia" flags="m" />
++    <key id="KEY_RECORD" mapto="showDownloadManager" flags="m" />
++  </map>
+ </keymap>
+\ No newline at end of file
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/locale/pl/LC_MESSAGES/IPTVPlayer.po ./IPTVPlayer/locale/pl/LC_MESSAGES/IPTVPlayer.po
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/locale/pl/LC_MESSAGES/IPTVPlayer.po	2016-02-23 20:49:15.823585000 +0100
++++ ./IPTVPlayer/locale/pl/LC_MESSAGES/IPTVPlayer.po	2016-02-23 21:06:07.423585000 +0100
+@@ -14,6 +14,132 @@
+ "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+ "X-Poedit-SearchPath-0: ../plugin\n"
+ 
++msgid "Urllists player"
++msgstr "lokalne listy z filmami"
++
++msgid "Urllists from %s"
++msgstr "Listy filmów z %s"
++
++msgid "Required program 'curl' is not installed. Trying to install it via OPKG."
++msgstr "Wymagany program 'curl jest niezainstalowany. Próbuję go zainstalować z OPKG."
++
++msgid "Required program 'curl' is not available. Please install it first manually."
++msgstr "Wymagany program 'curl' jest niedostępny. Proszę zainstaluj go ręcznie."
++
++msgid "Checking installation mode..."
++msgstr "Sprawdzam tryb instalacji..."
++
++msgid "Starting custom script"
++msgstr "Uruchamiam skrypt użytkownika"
++
++msgid "IPTVPlayer controlled by OPKG. Please use it for updates."
++msgstr "IPTVPlayer jest kontrolowany przez OPKG. Użyj OPKG do aktualizacji."
++
++msgid "IPTVPlayer has been updated. Please restart GUI"
++msgstr "IPTVPlayer został zaktualizowany. Proszę zrestartuj tuner."
++
++msgid "Latest version already installed"
++msgstr "Najnowsza wersja jest już zainstalowana"
++
++msgid "Update type:"
++msgstr "Typ aktualizacji:"
++
++msgid "Checking internet connection..."
++msgstr "Sprawdzam połączenie internetowe..."
++
++msgid "github server unavailable, update impossible!!!"
++msgstr "Serwer github niedostępny, aktualizacja niemożliwa!!!"
++
++msgid "Checking web version..."
++msgstr "Sprawdzam wersję na web..."
++
++msgid "Version installed:"
++msgstr "Wersja zainstalowana:"
++
++msgid "Version available:"
++msgstr "Wersja dostępna:"
++
++msgid "Error checking web version"
++msgstr "Błąd sprawdzania wersji na web"
++
++msgid "Latest version already installed. Press OK to close the window"
++msgstr "Najnowsza wersja jest już zainstalowana. Naciśnij OK, aby zamknąć okno"
++
++msgid "Vew version available on the web"
++msgstr "Nowa wersja dostępna na web"
++
++msgid "Downloading latest plugin version..."
++msgstr "Pobieram najnowszą wersję wtyczki..."
++
++msgid "Archive downloaded improperly"
++msgstr "Błąd pobierania archiwum"
++
++msgid "No archive downloaded, check your curl version"
++msgstr "Nie pobrano archiwum, sprawdź swoją wersję programu 'curl'"
++
++msgid "Unpacking new version..."
++msgstr "Rozpakowywanie nowej wersji..."
++
++msgid "Archive unpacked improperly"
++msgstr "Archiwum rozpakowane niepoprawnie"
++
++msgid "Installing new version..."
++msgstr "Instalacja nowej wersji..."
++
++msgid "Success: Restart GUI manually to use new plugin version"
++msgstr "Sukces: zrestartuj tuner ręcznie, aby uruchomić najnowszą wersję wtyczki"
++
++msgid "IPTV Player"
++msgstr "Odtwarzacz IPTV"
++
++msgid "Delete Category"
++msgstr "Usuń kategorię"
++
++msgid "New Category"
++msgstr "Nowa kategoria"
++
++msgid "Disable Host"
++msgstr "Wyłącz serwis"
++
++msgid "Assign to category"
++msgstr "Dodaj do kategorii"
++
++msgid "--- General options ---"
++msgstr "--- Opcje podstawowe ---"
++
++msgid "Detected platform"
++msgstr "Wykryta platforma"
++
++msgid "Enable hosts tree selector"
++msgstr "Aktywuj drzewo wyboru serwisów"
++
++msgid "Use only hosts tree selector"
++msgstr "Korzystaj tylko z drzewa wyboru"
++
++msgid "--- Paths to utilities ---"
++msgstr "--- Ścieżki do narzędzi ---"
++
++msgid "wgetpath"
++msgstr "wget"
++
++msgid "rtmpdumppath"
++msgstr "rtmpdump"
++
++msgid "f4mdumppath"
++msgstr "f4mdump"
++
++msgid "uchardetpath"
++msgstr "uchardet"
++
++msgid "exteplayer3path"
++msgstr "odtwarzacz ffmpeg"
++
++msgid "gstplayerpath"
++msgstr "odtwarzacz gst"
++
++msgid "--- Debug ---"
++msgstr "--- Raportowanie błędów ---"
++
+ msgid "Watch video materials from IPTV services"
+ msgstr "Oglądanie materiałów z serwisów IPTV"
+ 
+@@ -57,7 +183,7 @@
+ msgstr "Pobieranie listy..."
+ 
+ msgid "Configure host"
+-msgstr "Konfiguracja hosta"
++msgstr "Konfiguracja serwisu"
+ 
+ msgid "Info"
+ msgstr "Informacje"
+@@ -269,7 +395,7 @@
+ msgstr "Platforma"
+ 
+ msgid "Services configuration"
+-msgstr "Konfiguracja hostów"
++msgstr "Konfiguracja serwisów"
+ 
+ msgid "Pin protection for plugin"
+ msgstr "Chronić wtyczkę kodem pin"
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/plugin.py ./IPTVPlayer/plugin.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/plugin.py	2015-11-17 06:34:21.247824000 +0100
++++ ./IPTVPlayer/plugin.py	2016-02-23 20:52:53.323585000 +0100
+@@ -73,7 +73,9 @@
+     #print config.plugins.iptvplayer.rtmpdumppath.value
+     #print config.plugins.iptvplayer.f4mdumppath.value
+     platform     = config.plugins.iptvplayer.plarform.value
+-    if platform in ["auto", "unknown"] or not wgetpath or not rtmpdumppath or not f4mdumppath:
++    if platform in ["unknown"]:
++        doRunMain(session)
++    elif platform in ["auto"] or not wgetpath or not rtmpdumppath or not f4mdumppath:
+         session.openWithCallback(boundFunction(doRunMain, session), IPTVSetupMainWidget)
+     elif IPTVPlayerNeedInit():
+         session.openWithCallback(boundFunction(doRunMain, session), IPTVSetupMainWidget, True)
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/setup/iptvsetupimpl.py ./IPTVPlayer/setup/iptvsetupimpl.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/setup/iptvsetupimpl.py	2016-01-31 15:22:07.737906001 +0100
++++ ./IPTVPlayer/setup/iptvsetupimpl.py	2016-02-23 20:52:53.323585000 +0100
+@@ -7,7 +7,8 @@
+ from Plugins.Extensions.IPTVPlayer.setup.iptvsetuphelper     import CBinaryStepHelper, CCmdValidator, SetupDownloaderCmdCreator
+ from Plugins.Extensions.IPTVPlayer.components.iptvplayerinit import TranslateTXT as _
+ ###################################################
+-
++j00zekFork=True
++from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import isGraterlia
+ ###################################################
+ # FOREIGN import
+ ###################################################
+@@ -33,56 +34,88 @@
+         self.termination  = False
+         
+         self.tmpDir = GetTmpDir()
+-        self.resourceServers = ["http://iptvplayer.pl/resources/", "http://iptvplayer.vline.pl/resources/"]
++        self.resourceServers = ["http://hybrid.xunil.pl/IPTVPlayer_resources/", "http://iptvplayer.pl/resources/", "http://iptvplayer.vline.pl/resources/"]
+         
+         self.ffmpegVersion = ""
+         self.gstreamerVersion = ""
+         self.openSSLVersion = ""
+-        self.supportedPlatforms = ["sh4", "mipsel", "i686", "armv7"]
++        self.supportedPlatforms = ["sh4", "mipsel", "i686", "armv7", "arm"]
+         self.platform = "unknown"
+         
+         # wget members
+         self.wgetVersion = 15 # 1.15 
+         self.wgetpaths = ["wget", "/usr/bin/wget", "/usr/bin/fullwget", GetBinDir("wget", "")]
+-        self._wgetInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/fullwget " + _("recommended")), "/usr/bin/fullwget"),
+-                                       (_('Install into the "%s".') % "IPTVPlayer/bin/wget", GetBinDir("wget", "")),
+-                                       (_('Install into the "%s".') % "/usr/bin/wget", "/usr/bin/wget"),
+-                                       (_("Do not install (not recommended)"), "")]
++        if isGraterlia() == True:
++            self._wgetInstallChoiseList = [(_('Install into the "%s".') % ("IPTVPlayer/bin/wget" + _("recommended")), GetBinDir("wget", "")),
++                                            (_('Install into the "%s".') % "/usr/bin/fullwget ", "/usr/bin/fullwget"),
++                                            (_('Install into the "%s".') % "/usr/bin/wget", "/usr/bin/wget"),
++                                            (_("Do not install (not recommended)"), "")]
++        else:
++            self._wgetInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/fullwget " + _("recommended")), "/usr/bin/fullwget"),
++                                            (_('Install into the "%s".') % "IPTVPlayer/bin/wget", GetBinDir("wget", "")),
++                                            (_('Install into the "%s".') % "/usr/bin/wget", "/usr/bin/wget"),
++                                            (_("Do not install (not recommended)"), "")]
+         # rtmpdump members
+-        self.rtmpdumpVersion = {'armv7':'K-S-V patch', 'default':"Compiled by samsamsam@o2.pl 2015-01-11"}
++        self.rtmpdumpVersion = {'arm':'K-S-V patch', 'armv7':'K-S-V patch', 'default':"Compiled by samsamsam@o2.pl 2015-01-11"}
+         self.rtmpdumppaths = ["/usr/bin/rtmpdump", "rtmpdump"]
+         
+         # f4mdump member
+         self.f4mdumpVersion = "F4MDump v0.50"
+         self.f4mdumppaths = ["/usr/bin/f4mdump", GetBinDir("f4mdump", "")]
+-        self._f4mdumpInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/f4mdump (%s)" % _("recommended")), "/usr/bin/f4mdump"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/f4mdump", GetBinDir("f4mdump", "")),
+-                                          (_("Do not install (not recommended)"), "")]
+-        self._f4mdumpInstallChoiseList2 = [(_('Install into the "%s".') % ("/usr/bin/f4mdump static libstdc++ (%s)" % _("recommended")), "/usr/bin/f4mdump"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/f4mdump _static_libstdc++", GetBinDir("f4mdump", "")),
+-                                          (_("Do not install (not recommended)"), "")]
++        if isGraterlia() == True:
++            self._f4mdumpInstallChoiseList = [(_('Install into the "%s".') % ("IPTVPlayer/bin/f4mdump (%s)" % _("recommended")), GetBinDir("f4mdump", "")),
++                                              (_('Install into the "%s".') % "/usr/bin/f4mdump", "/usr/bin/f4mdump"),
++                                              (_("Do not install (not recommended)"), "")]
++            self._f4mdumpInstallChoiseList2 = [(_('Install into the "%s".') % ("IPTVPlayer/bin/f4mdump _static_libstdc++ (%s)" % _("recommended")), GetBinDir("f4mdump", "")),
++                                              (_('Install into the "%s".') % "/usr/bin/f4mdump static libstdc++", "/usr/bin/f4mdump"),
++                                              (_("Do not install (not recommended)"), "")]
++        else:
++            self._f4mdumpInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/f4mdump (%s)" % _("recommended")), "/usr/bin/f4mdump"),
++                                              (_('Install into the "%s".') % "IPTVPlayer/bin/f4mdump", GetBinDir("f4mdump", "")),
++                                              (_("Do not install (not recommended)"), "")]
++            self._f4mdumpInstallChoiseList2 = [(_('Install into the "%s".') % ("/usr/bin/f4mdump static libstdc++ (%s)" % _("recommended")), "/usr/bin/f4mdump"),
++                                              (_('Install into the "%s".') % "IPTVPlayer/bin/f4mdump _static_libstdc++", GetBinDir("f4mdump", "")),
++                                              (_("Do not install (not recommended)"), "")]
+                                           
+         # uchardet member
+-        self.uchardetVersion = "Version 0.0.2"
++        self.uchardetVersion = 2
+         self.uchardetpaths = ["/usr/bin/uchardet", GetBinDir("uchardet", "")]
+-        self._uchardetInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/uchardet (%s)" % _("recommended")), "/usr/bin/uchardet"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/uchardet", GetBinDir("uchardet", "")),
+-                                          (_("Do not install (not recommended)"), "")]
+-        self._uchardetInstallChoiseList2 = [(_('Install into the "%s".') % ("/usr/bin/uchardet static libstdc++ (%s)" % _("recommended")), "/usr/bin/uchardet"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/uchardet _static_libstdc++", GetBinDir("uchardet", "")),
+-                                          (_("Do not install (not recommended)"), "")]
++        if isGraterlia() == True:
++            self._uchardetInstallChoiseList = [(_('Install into the "%s".') % ("IPTVPlayer/bin/uchardet (%s)" % _("recommended")), GetBinDir("uchardet", "")),
++                                                (_('Install into the "%s".') % "/usr/bin/uchardet", "/usr/bin/uchardet"),
++                                                (_("Do not install (not recommended)"), "")]
++            self._uchardetInstallChoiseList2 = [(_('Install into the "%s".') % ("IPTVPlayer/bin/uchardet _static_libstdc++ (%s)" % _("recommended")), GetBinDir("uchardet", "")),
++                                                (_('Install into the "%s".') % "/usr/bin/uchardet static libstdc++", "/usr/bin/uchardet"),
++                                                (_("Do not install (not recommended)"), "")]
++        else:
++            self._uchardetInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/uchardet (%s)" % _("recommended")), "/usr/bin/uchardet"),
++                                                (_('Install into the "%s".') % "IPTVPlayer/bin/uchardet", GetBinDir("uchardet", "")),
++                                                (_("Do not install (not recommended)"), "")]
++            self._uchardetInstallChoiseList2 = [(_('Install into the "%s".') % ("/usr/bin/uchardet static libstdc++ (%s)" % _("recommended")), "/usr/bin/uchardet"),
++                                                (_('Install into the "%s".') % "IPTVPlayer/bin/uchardet _static_libstdc++", GetBinDir("uchardet", "")),
++                                                (_("Do not install (not recommended)"), "")]
+         # gstplayer
+         self.gstplayerVersion = {'0.10':20, '1.0':10021}
+         self.gstplayerpaths = ["/usr/bin/gstplayer", GetBinDir("gstplayer", "")]
+-        self._gstplayerInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/gstplayer (%s)" % _("recommended")), "/usr/bin/gstplayer"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/gstplayer", GetBinDir("gstplayer", "")),
+-                                          (_("Do not install (not recommended)"), "")]
++        if isGraterlia() == True:
++            self._gstplayerInstallChoiseList = [(_('Install into the "%s".') % ("IPTVPlayer/bin/gstplayer (%s)" % _("recommended")), GetBinDir("gstplayer", "")),
++                                                (_('Install into the "%s".') % "/usr/bin/gstplayer", "/usr/bin/gstplayer"),
++                                                (_("Do not install (not recommended)"), "")]
++        else:
++            self._gstplayerInstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/gstplayer (%s)" % _("recommended")), "/usr/bin/gstplayer"),
++                                                (_('Install into the "%s".') % "IPTVPlayer/bin/gstplayer", GetBinDir("gstplayer", "")),
++                                                (_("Do not install (not recommended)"), "")]
+         # exteplayer3
+-        self.exteplayer3Version = {'sh4': 9, 'mipsel': 22, 'armv7': 21}
++        self.exteplayer3Version = {'sh4': 9, 'mipsel': 22, 'armv7': 21, 'armv': 20}
+         self.exteplayer3paths = ["/usr/bin/exteplayer3", GetBinDir("exteplayer3", "")]
+-        self._exteplayer3InstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/exteplayer3 (%s)" % _("recommended")), "/usr/bin/exteplayer3"),
+-                                          (_('Install into the "%s".') % "IPTVPlayer/bin/exteplayer3", GetBinDir("exteplayer3", "")),
+-                                          (_("Do not install (not recommended)"), "")]
++        if isGraterlia() == True:
++            self._exteplayer3InstallChoiseList = [(_('Install into the "%s".') % ("IPTVPlayer/bin/exteplayer3 (%s)" % _("recommended")), GetBinDir("exteplayer3", "")),
++                                                  (_('Install into the "%s".') % "/usr/bin/exteplayer3", "/usr/bin/exteplayer3"),
++                                                  (_("Do not install (not recommended)"), "")]
++        else:
++            self._exteplayer3InstallChoiseList = [(_('Install into the "%s".') % ("/usr/bin/exteplayer3 (%s)" % _("recommended")), "/usr/bin/exteplayer3"),
++                                                  (_('Install into the "%s".') % "IPTVPlayer/bin/exteplayer3", GetBinDir("exteplayer3", "")),
++                                                  (_("Do not install (not recommended)"), "")]
+                                           
+         # flumpegdemux
+         self.flumpegdemuxVersion = "0.10.85"
+@@ -136,7 +169,18 @@
+     ###################################################
+     def platformDetect(self):
+         printDBG("IPTVSetupImpl.platformDetect")
+-        self.setInfo(_("Detection of the platform."), _("Plugin can be run on one of the following platforms: sh4, mipsel, i686, armv7."))
++        self.setInfo(_("Detection of the platform."), _("Plugin can be run on one of the following platforms: sh4, mipsel, i686, arm."))
++        if 'j00zekFork' in globals():
++            from Plugins.Extensions.IPTVPlayer.j00zekScripts.j00zekToolSet import getPlatform
++            platform = getPlatform()
++            if platform != 'unknown':
++                self.platform = platform
++                config.plugins.iptvplayer.plarform.value = self.platform
++                printDBG("IPTVSetupImpl.j00zekFork platform[%s]" % self.platform)
++                config.plugins.iptvplayer.plarform.save()
++                configfile.save()
++                self.setOpenSSLVersion()
++                return
+         cmdTabs = []
+         for platform in self.supportedPlatforms:
+             platformtesterPath = resolveFilename(SCOPE_PLUGINS, "Extensions/IPTVPlayer/bin/%s/platformtester" % platform)
+@@ -209,6 +253,8 @@
+         def _verValidator(code, data):
+             if 'libgstbase-' in data: 
+                 return True,False
++            elif 'libgstreamer-' in data: 
++                return True,False
+             elif 'GStreamer Core Library version ' in data: 
+                 return True,False
+             else: 
+@@ -227,6 +273,10 @@
+                 self.gstreamerVersion = "1.0"
+             elif 'libgstbase-0.10.so' in dataTab[-1]:
+                 self.gstreamerVersion = "0.10"
++            elif 'libgstreamer-1.0' in dataTab[-1]:
++                self.gstreamerVersion = "1.0"
++            elif 'libgstreamer-0.10' in dataTab[-1]:
++                self.gstreamerVersion = "0.10"
+             elif ' version 1.' in dataTab[-1]:
+                 self.gstreamerVersion = "1.0"
+             elif ' version 0.' in dataTab[-1]:
+@@ -337,7 +387,9 @@
+         def _detectValidator(code, data):
+             if self.binaryInstalledSuccessfully: self.stepHelper.setInstallChoiseList( self._uchardetInstallChoiseList2 )
+             else: self.stepHelper.setInstallChoiseList( self._uchardetInstallChoiseList )
+-            if self.uchardetVersion in data: return True,False
++            try: ver = int(re.search("Version ([0-9]+?\.[0-9]+?\.[0-9]+?)", data).group(1).replace('.',''))
++            except: ver = 0
++            if ver >= self.uchardetVersion: return True,False
+             else: return False,True
+         def _deprecatedHandler(paths, stsTab, dataTab):
+             sts, retPath = False, ""
+@@ -413,7 +465,7 @@
+             self.exteplayer3Step()
+         elif self.platform in ['mipsel'] and self.ffmpegVersion in ['2.8', '2.8.1', '2.8.3', '2.8.5', '3.0']:
+             self.exteplayer3Step()
+-        elif self.platform in ['armv7'] and self.ffmpegVersion in ['2.8.5']:
++        elif self.platform in ['armv7', 'armv'] and self.ffmpegVersion in ['2.8.5']:
+             self.exteplayer3Step()
+         elif "" != self.gstreamerVersion: self.gstplayerStep()
+         else: self.finish()
+diff -Naur -X ./exclude.pats /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/tools/iptvtools.py ./IPTVPlayer/tools/iptvtools.py
+--- /home/j00zek/iptvplayer-GitLab-master-version/IPTVPlayer/tools/iptvtools.py	2016-02-08 06:39:17.448495999 +0100
++++ ./IPTVPlayer/tools/iptvtools.py	2016-02-23 20:52:53.323585000 +0100
+@@ -47,7 +47,7 @@
+     return nice
+     
+ def E2PrioFix(cmd):
+-    if config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7'):
++    if config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'arm'):
+         return 'nice -n %d %s' % (GetNice()+2, cmd)
+     else:
+         return cmd
+@@ -418,9 +418,9 @@
+ #####################################################
+ # get host list based on files in /hosts folder
+ #####################################################
+-def GetHostsList(fromList=True, fromHostFolder=True):
++def GetHostsList(fromList=True, fromHostFolder=True, subfolder = '' ):
+     printDBG('getHostsList begin')
+-    HOST_PATH = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/')
++    HOST_PATH = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/%s' % subfolder)
+     BLOCKED_MARKER = '_blocked_'  
+     lhosts = [] 
+     

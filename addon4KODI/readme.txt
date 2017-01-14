@@ -1,1 +1,0 @@
-addon for KODI using E2emulator and IPTVplayer for E2

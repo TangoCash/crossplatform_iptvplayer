@@ -60,7 +60,6 @@ HostsList={
       {id="pinkbike", title="pinkbike.com", type="py"},
       {id="playpuls", title="PlayPuls", type="py"},
       {id="plwwecom", title="pl.wwe.com", type="py"},
-      {id="rafalcool1", title="Rafalcoo1 proponuje", type="py"},
       {id="serialnet", title="SerialNet.pl", type="py"},
       {id="serienstreamto", title="serienstream.to", type="py"},
       {id="seriesenstreamingcom", title="series-en-streaming.com", type="py"},

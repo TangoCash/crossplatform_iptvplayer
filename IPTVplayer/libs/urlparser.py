@@ -3831,22 +3831,48 @@ class pageParser:
         
         post_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', data))
         post_data.pop('method_premium', None)
-        params['return_data'] = False
+        #params['return_data'] = False
         
         try:
-            sleep_time = self.cm.ph.getSearchGroups(data, '>([0-9])</span> seconds<')[0]
+            sleep_time = self.cm.ph.getSearchGroups(data, '>([0-9]+?)</span> seconds<')[0]
             if '' != sleep_time: time.sleep(int(sleep_time))
         except Exception:
             printExc()
+            
         
-        sts, response = self.cm.getPage(baseUrl, params, post_data)
-        videoUrl = response.geturl()
-        response.close()
-        printDBG(videoUrl)
-        if videoUrl != baseUrl:
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '</tr>', '</table>', caseSensitive=False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<span style', '</span>')
+        
+        def _cmpLinksBest(item1, item2):
+            val1 = int(self.cm.ph.getSearchGroups(item1, '''left\:([0-9]+?)px''')[0])
+            val2 = int(self.cm.ph.getSearchGroups(item2, '''left\:([0-9]+?)px''')[0])
+            printDBG("%s %s" % (val1, val2))
+            if val1 < val2:   ret = -1
+            elif val1 > val2: ret = 1
+            else:             ret = 0
+            return ret
+        
+        data.sort(_cmpLinksBest)
+        data = clean_html(''.join(data)).strip()
+        if data != '': post_data['code'] = data
+        
+        sts, data = self.cm.getPage(baseUrl, params, post_data)
+        if not sts: return False
+        
+        # get JS player script code from confirmation page
+        sts, tmp = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
+        if sts:
+            try:
+                tmp = unpackJSPlayerParams(tmp, VIDUPME_decryptPlayerParams)
+                data += tmp
+            except Exception: printExc()
+        
+        videoUrl = self.cm.ph.getSearchGroups(data, 'type="video[^>]*?src="([^"]+?)"')[0]
+        if videoUrl.startswith('http'):
             return videoUrl
         return False
-        
+    
     def parserUPLOAD(self, baseUrl):
         printDBG("parserUPLOAD baseUrl[%s]" % baseUrl)
         HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
