@@ -36,9 +36,9 @@ class IPTVArticleRichVisualizer(Screen):
     MAX_RICH_DESC_ROW_NUM = 5
     def __prepareSkin(self):
         skin =  """
-                    <screen name="IPTVArticleRichVisualizerWidget" position="center,center" size="1050,525" title="Info...">
-                        <widget name="title" position="5,10"  zPosition="1" size="1040,40"  font="Regular;30" halign="center" valign="center"   transparent="1" backgroundColor="transparent" foregroundColor="#000E83F5" shadowColor="black" shadowOffset="-1,-1" />
-                        <widget name="cover"     zPosition="1" position="10,80"   size="236,357" alphatest="blend" borderWidth="2" borderColor="white" backgroundColor="black" />
+                    <screen name="IPTVArticleRichVisualizerWidget" position="center,center" size="1050,625" title="Info...">
+                        <widget name="title" position="5,10"  zPosition="1" size="1040,70"  font="Regular;30" halign="center" valign="center"   transparent="1" backgroundColor="transparent" foregroundColor="#000E83F5" shadowColor="black" shadowOffset="-1,-1" />
+                        <widget name="cover"     zPosition="1" position="10,110"  size="236,357" alphatest="blend" borderWidth="2" borderColor="white" backgroundColor="black" />
                         <widget name="spinner"   zPosition="3" position="98,232"  size="16,16"   transparent="1"  alphatest="blend" />
                         <widget name="spinner_1" zPosition="2" position="98,232"  size="16,16"   transparent="1"  alphatest="blend" />
                         <widget name="spinner_2" zPosition="2" position="114,232" size="16,16"   transparent="1"  alphatest="blend" />
@@ -50,7 +50,7 @@ class IPTVArticleRichVisualizer(Screen):
         self.richDesc['row_label_w'] = 190
         self.richDesc['row_text_x']  = 455
         self.richDesc['row_text_w']  = 590
-        self.richDesc['row_y']       = 80
+        self.richDesc['row_y']       = 110
         self.richDesc['row_h']       = 30
         
         y = self.richDesc['row_y'] 
@@ -59,7 +59,7 @@ class IPTVArticleRichVisualizer(Screen):
             skin += """<widget name="dsc_text_%d"  noWrap="1" position="%d,%d"  zPosition="1" size="%d,%d"  font="Regular;20" halign="left"  valign="center"   transparent="1" backgroundColor="transparent" foregroundColor="#00EFEFEF" shadowColor="black" shadowOffset="-1,-1" />""" % (idx+1, self.richDesc['row_text_x'], y, self.richDesc['row_text_w'], self.richDesc['row_h'])
             y += self.richDesc['row_h']
         if y != self.richDesc['row_y']: y += self.richDesc['row_h']
-        skin += """<widget name="text"        position="260,%d" zPosition="1" size="780,%d" font="Regular;26" halign="left"  valign="top"      transparent="1" backgroundColor="transparent" foregroundColor="#00EFEFEF" />""" % (y, 525 - y - 5)
+        skin += """<widget name="text"        position="260,%d" zPosition="1" size="780,%d" font="Regular;26" halign="left"  valign="top"      transparent="1" backgroundColor="transparent" foregroundColor="#00EFEFEF" />""" % (y, 625 - y - 5)
         
         # adds pagination items
         if self.richDesc['pages_count'] > 1:

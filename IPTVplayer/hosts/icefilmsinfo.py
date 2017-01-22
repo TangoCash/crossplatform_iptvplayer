@@ -62,7 +62,7 @@ class IceFilms(CBaseHostClass):
         self.MAIN_URL = None
         
     def selectDomain(self):
-        for domain in ['http://www.icefilms.info/', 'https://icefilms.unblocked.onl/']:
+        for domain in ['http://www.icefilms.info/', 'https://icefilms.unblocked.ink/']:
             sts, data = self.getPage(domain)
             if sts and 'donate.php' in data:
                 self.MAIN_URL = domain

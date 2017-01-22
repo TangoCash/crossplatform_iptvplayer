@@ -13,7 +13,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 # FOREIGN import
 ###################################################
 from Components.config import config, ConfigInteger, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from binascii import hexlify
 import re
 import urllib
@@ -76,7 +76,9 @@ class TvpVod(CBaseHostClass):
     REAL_FORMATS = {'m3u8':'ts', 'mp4':'mp4', 'wmv':'wmv'}
     MAIN_VOD_URL = "http://vod.tvp.pl/"
     LOGIN_URL = "https://www.tvp.pl/sess/ssologin.php"
+    STREAMS_URL_TEMPLATE = 'http://www.api.v3.tvp.pl/shared/tvpstream/listing.php?parent_id=13010508&type=epg_item&direct=false&filter={%22release_date_dt%22:%22[iptv_date]%22,%22epg_play_mode%22:{%22$in%22:[0,1,3]}}&count=-1&dump=json'
     SEARCH_VOD_URL = MAIN_VOD_URL + 'szukaj?query=%s'
+    IMAGE_URL = 'http://s.v3.tvp.pl/images/%s/%s/%s/uid_%s_width_500_gs_0.%s'
     HTTP_HEADERS = {}
     
     VOD_CAT_TAB  = [{'icon':DEFAULT_ICON_URL, 'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
@@ -88,6 +90,10 @@ class TvpVod(CBaseHostClass):
                     {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
                     {'icon':DEFAULT_ICON_URL, 'category':'search',          'title':_('Search'), 'search_item':True},
                     {'icon':DEFAULT_ICON_URL, 'category':'search_history',  'title':_('Search history')} ]
+                    
+    STREAMS_CAT_TAB = [{'icon':DEFAULT_ICON_URL, 'category':'tvp3_streams', 'title':'TVP 3',     'url':'http://tvpstream.tvp.pl/', 'icon':'http://ncplus.pl/~/media/n/npl/kanaly/logo%20na%20strony%20kanalow/tvp3.png?bc=white&w=480'},
+                       {'icon':DEFAULT_ICON_URL, 'category':'week_epg',     'title':'TVP SPORT', 'url':STREAMS_URL_TEMPLATE,       'icon':'https://upload.wikimedia.org/wikipedia/commons/9/9d/TVP_Sport_HD_Logo.png'},
+                      ]
     
     def __init__(self):
         printDBG("TvpVod.__init__")
@@ -100,6 +106,23 @@ class TvpVod(CBaseHostClass):
                           'nasygnale.tvp.pl':      'http://vod.tvp.pl/13883615/na-sygnale'}
         self.FormatBitrateMap = [ ("360000",  "320x180"), ("590000",  "398x224"), ("820000",  "480x270"), ("1250000", "640x360"),
                                   ("1750000", "800x450"), ("2850000", "960x540"), ("5420000", "1280x720"), ("6500000", "1600x900"), ("9100000", "1920x1080") ]
+    
+    def getJItemStr(self, item, key, default=''):
+        v = item.get(key, None)
+        if None == v:
+            return default
+        return str(v)
+    
+    def getImageUrl(self, item):
+        keys = ['logo_4x3', 'image_16x9', 'image_4x3', 'image_ns954', 'image_ns644', 'image']
+        iconFile = ""
+        for key in keys:
+            if None != item.get(key, None):
+                iconFile = self.getJItemStr( item[key][0], 'file_name')
+            if len(iconFile):
+                tmp = iconFile.split('.')
+                return self.IMAGE_URL % (iconFile[0], iconFile[1], iconFile[2], tmp[0], tmp[1])
+        return ''
         
     def _getPage(self, url, addParams = {}, post_data = None):
         
@@ -227,8 +250,8 @@ class TvpVod(CBaseHostClass):
                     
         return self._getFullUrl(url)
         
-    def listStreams(self, cItem):
-        printDBG("TvpVod.listStreams")
+    def listTVP3Streams(self, cItem):
+        printDBG("TvpVod.listTVP3Streams")
         sts, data = self._getPage(cItem['url'], self.defaultParams)
         if not sts: return
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="button', '</div>', withMarkers=True, caseSensitive=False)
@@ -242,6 +265,40 @@ class TvpVod(CBaseHostClass):
                 params.update({'title':title, 'url':'http://tvpstream.tvp.pl/sess/tvplayer.php?object_id=%s&autoplay=true' % id, 'icon':icon, 'desc':desc})
                 self.addVideo(params)
                 
+    def listWeekEPG(self, cItem, nextCategory):
+        printDBG("TvpVod.listWeekEPG")
+        urlTemplate = cItem['url']
+        
+        d = datetime.today()
+        for i in range(7):
+            url    = urlTemplate.replace('[iptv_date]', d.strftime('%Y-%m-%d'))
+            title  = d.strftime('%a %d.%m.%Y')
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':title, 'url':url})
+            self.addDir(params)
+            d += timedelta(days=1)
+            
+    def listEPGItems(self, cItem):
+        printDBG("TvpVod.listEPGItems")
+        sts, data = self._getPage(cItem['url'], self.defaultParams)
+        if not sts: return
+        try:
+            #date.fromtimestamp(item['release_date']['sec']).strftime('%H:%M')
+            data = byteify(json.loads(data))
+            data['items'].sort(key=lambda item: item['release_date_hour'])
+            for item in data['items']:
+                if not item.get('is_live', False): continue 
+                title = str(item['title'])
+                desc  = str(item['lead'])
+                asset_id  = str(item['asset_id'])
+                asset_id  = str(item['video_id'])
+                icon  = self.getImageUrl(item)
+                desc  = item['release_date_hour'] + ' - ' + item['broadcast_end_date_hour'] + '[/br]' + desc 
+                self.addVideo({'title':title, 'url':'', 'object_id':asset_id, 'icon':icon, 'desc':desc})
+            printDBG(data)
+        except Exception:
+            printExc()
+        
     def listTVPSportCategories(self, cItem, nextCategory):
         printDBG("TvpVod.listTVPSportCategories")
         sts, data = self._getPage(cItem['url'], self.defaultParams)
@@ -656,7 +713,13 @@ class TvpVod(CBaseHostClass):
             self.listsTab(TvpVod.VOD_CAT_TAB, {'name':'category'})
     # STREAMS
         elif category == 'streams':
-            self.listStreams(self.currItem)
+            self.listsTab(TvpVod.STREAMS_CAT_TAB, self.currItem)
+        elif category == 'tvp3_streams':
+            self.listTVP3Streams(self.currItem)
+        elif category == 'week_epg':
+            self.listWeekEPG(self.currItem, 'epg_items')
+        elif category == 'epg_items':
+            self.listEPGItems(self.currItem)
     # TVP SPORT
         elif category == 'tvp_sport':    
             self.listTVPSportCategories(self.currItem, 'tvp_sport_list_items')

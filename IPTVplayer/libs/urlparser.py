@@ -6128,8 +6128,11 @@ class pageParser:
         sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
         if not sts: return False
         
-        if 'We are sorry!' in data:
-            SetIPTVPlayerLastHostError(clean_html(self.cm.ph.getDataBeetwenMarkers(data, '<p class="lead"', '</p>')[1]).strip())
+        if 'content-blocked' in data:
+            msg = clean_html(self.cm.ph.getDataBeetwenMarkers(data, '<img class="image-blocked"', '</div>')[1]).strip()
+            if msg == '': msg = clean_html(self.cm.ph.getDataBeetwenMarkers(data, '<p class="lead"', '</p>')[1]).strip()
+            if msg == '': msg = _("We can't find the file you are looking for. It maybe got deleted by the owner or was removed due a copyright violation.")
+            SetIPTVPlayerLastHostError(msg)
         
         subTracksData = self.cm.ph.getAllItemsBeetwenMarkers(data, '<track ', '>', False, False)
         subTracks = []
@@ -7280,9 +7283,11 @@ class pageParser:
         # remove old cookie file
         rm(COOKIEFILE)
         params = {'header':HTTP_HEADER, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': COOKIEFILE}
-        sts, data = self.cm.getPage('http://hqq.tv/player/ip.php?type=json', params)
+        sts, ipData = self.cm.getPage('http://hqq.tv/player/ip.php?type=json', params)
+        ipData = byteify(json.loads(ipData)) #{"ip":"MTc4LjIzNS40My4zNw==","ip_blacklist":0}
+
         printDBG("=================================================================")
-        printDBG(data)
+        printDBG(ipData)
         printDBG("=================================================================")
         
         #http://hqq.tv/player/hash.php?hash=229221213221211228239245206208212229194271217271255
@@ -7297,21 +7302,55 @@ class pageParser:
         
         #HTTP_HEADER['Referer'] = url
         sts, data = self.cm.getPage(playerUrl, params)
-        data = base64.b64decode(re.search('base64\,([^"]+?)"', data).group(1))
-        #printDBG(data)
-        l01 = re.search("='([^']+?)'", data).group(1)
-        _0x84de = re.search("var _0x84de=\[([^]]+?)\]", data).group(1)
-        _0x84de = re.compile('"([^"]*?)"').findall(_0x84de)
         
-        data = MYOBFUSCATECOM_OIO( MYOBFUSCATECOM_0ll(l01, _0x84de[1]), _0x84de[0], _0x84de[1])
-        data = re.search("='([^']+?)'", data).group(1).replace('%', '\\').decode('unicode-escape').encode('UTF-8')
+        tmpData = self.cm.ph.getDataBeetwenMarkers(data, "eval(", '</script>', True)[1]
+        printDBG(tmpData)
+        while 'eval' in tmpData:
+            tmp = tmpData.split('eval(')
+            if len(tmp): del tmp[0]
+            tmpData = ''
+            for item in tmp:
+                for decFun in [VIDEOWEED_decryptPlayerParams, SAWLIVETV_decryptPlayerParams]:
+                    tmpData = unpackJSPlayerParams('eval('+item, decFun, 0)
+                    if '' != tmpData:   
+                        break
+                printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
+                printDBG(tmpData)
+                printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
+                
+        iss = '' #ipData['ip']
+        need_captcha = '0' #str(ipData['ip_blacklist'])
         
-        data = re.compile('<input name="([^"]+?)" [^>]+? value="([^"]+?)">').findall(data)
-        post_data = {}
-        for idx in range(len(data)):
-            post_data[ data[idx][0] ] = data[idx][1]
+        def _getVar(tmp, varName):
+            val = self.cm.ph.getSearchGroups(tmp, 'var\s*%s\s*=([^;]+?);' % varName, ignoreCase=True)[0].strip()
+            return val.replace('"', '').replace("'", '')
+        vid          = _getVar(tmpData, 'vid')
+        at           = _getVar(tmpData, 'at')
+        autoplayed   = _getVar(tmpData, 'autoplayed')
+        referer      = _getVar(tmpData, 'referer')
+        passwd       = _getVar(tmpData, 'pass')
+        embed_from   = _getVar(tmpData, 'embed_from')
+        http_referer = _getVar(tmpData, 'http_referer')
+                
+        secPlayerUrl = "http://hqq.tv/sec/player/embed_player.php?iss="+iss+"&vid="+vid+"&at="+at+"&autoplayed="+autoplayed+"&referer="+referer+"&http_referer="+http_referer+"&pass="+passwd+"&embed_from="+embed_from+"&need_captcha="+need_captcha
+        post_data = None
+        if False:
+            data = base64.b64decode(re.search('base64\,([^"]+?)"', data).group(1))
+            #printDBG(data)
+            l01 = re.search("='([^']+?)'", data).group(1)
+            _0x84de = re.search("var _0x84de=\[([^]]+?)\]", data).group(1)
+            _0x84de = re.compile('"([^"]*?)"').findall(_0x84de)
+            
+            data = MYOBFUSCATECOM_OIO( MYOBFUSCATECOM_0ll(l01, _0x84de[1]), _0x84de[0], _0x84de[1])
+            data = re.search("='([^']+?)'", data).group(1).replace('%', '\\').decode('unicode-escape').encode('UTF-8')
+            
+            data = re.compile('<input name="([^"]+?)" [^>]+? value="([^"]+?)">').findall(data)
+            post_data = {}
+            for idx in range(len(data)):
+                post_data[ data[idx][0] ] = data[idx][1]
+            
+            secPlayerUrl = "http://hqq.tv/sec/player/embed_player.php?vid=%s&at=%s&autoplayed=%s&referer=on&http_referer=%s&pass=" % (vid, post_data.get('at', ''),  post_data.get('autoplayed', ''), urllib.quote(referer))
         
-        secPlayerUrl = "http://hqq.tv/sec/player/embed_player.php?vid=%s&at=%s&autoplayed=%s&referer=on&http_referer=%s&pass=" % (vid, post_data.get('at', ''),  post_data.get('autoplayed', ''), urllib.quote(referer))
         HTTP_HEADER['Referer'] = referer
         sts, data = self.cm.getPage(secPlayerUrl, params, post_data)
         

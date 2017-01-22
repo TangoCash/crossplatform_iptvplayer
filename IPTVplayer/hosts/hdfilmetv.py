@@ -52,7 +52,7 @@ class HDFilmeTV(CBaseHostClass):
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
     MAIN_URL      = 'http://hdfilme.tv/'
-    SEARCH_URL    = MAIN_URL + 'movie/search'
+    SEARCH_URL    = MAIN_URL + 'movie-search'
     DEFAULT_ICON  = "https://raw.githubusercontent.com/StoneOffStones/plugin.video.xstream/c88b2a6953febf6e46cf77f891d550a3c2ee5eea/resources/art/sites/hdfilme.png" #"http://hdfilme.tv/public/site/images/logo.png"
 
     MAIN_CAT_TAB = [{'icon':DEFAULT_ICON, 'category':'list_filters',    'filter':'genre',    'title': _('Movies'),  'url':MAIN_URL+'movie-movies'},
@@ -154,9 +154,9 @@ class HDFilmeTV(CBaseHostClass):
         url       = cItem['url']
         
         if 'search_pattern' in cItem:
-            url += '?key=%s&per_page=%s' % (cItem['search_pattern'], (page-1)*itemsPerPage)
+            url += '?key=%s&page=%s' % (cItem['search_pattern'], (page))
         else:
-            url += '?cat=%s&country=%s&order_f=%s&per_page=%s&order_d=desc' % (cItem['genre'], cItem['country'], cItem['sort'], (page-1)*itemsPerPage)
+            url += '?cat=%s&country=%s&order_f=%s&page=%s&order_d=desc' % (cItem['genre'], cItem['country'], cItem['sort'], (page))
         
         sts, data = self.getPage(url, self.defaultParams)
         if not sts: return

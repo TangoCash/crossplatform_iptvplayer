@@ -29,6 +29,16 @@ try:
 except Exception: pass
 ###################################################
 
+class NoRedirection(urllib2.HTTPRedirectHandler):
+    def http_error_302(self, req, fp, code, msg, headers):
+        infourl = urllib.addinfourl(fp, headers, req.get_full_url())
+        infourl.status = code
+        infourl.code = code
+        return infourl
+    http_error_300 = http_error_302
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
 
 class MultipartPostHandler(urllib2.BaseHandler):
     handler_order = urllib2.HTTPHandler.handler_order - 10
@@ -640,6 +650,10 @@ class common:
             except Exception:
                 printExc()
             customOpeners.append( urllib2.HTTPCookieProcessor(cj) )
+            
+        if params.get('no_redirection', False):
+            customOpeners.append( NoRedirection() )
+        
         # debug 
         #customOpeners.append(urllib2.HTTPSHandler(debuglevel=1))
         #customOpeners.append(urllib2.HTTPHandler(debuglevel=1))

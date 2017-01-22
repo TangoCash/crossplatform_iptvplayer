@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.0.0.1"
+    XXXversion = "21.0.0.5"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -449,7 +449,7 @@ class Host:
            except:
               printDBG( 'Host error url: '+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            sex = ''
            hash = ''
            ph1 = re.search('var streams = (.*?)}];', data, re.S)
@@ -472,27 +472,6 @@ class Host:
                      if str(item["accType"])<>'1':
                         valTab.append(CDisplayListItem(str(item["nick"])+'    {'+sex+'}',str(item["nick"]),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', streamUrl, 0)], 0, phImage, None)) 
               printDBG( 'Host listsItems end' )
-           return valTab
-
-        if 'showup' == name:
-           printDBG( 'Host listsItems begin name='+name )
-           self.MAIN_URL = 'http://showup.tv' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'showup.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': 'http://showup.tv/site/accept_rules/yes?ref=http://showup.tv/', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-           except:
-              printDBG( 'Host listsItems query error cookie' )
-              return valTab
-           #printDBG( 'Host listsItems data: '+data )
-           phMovies = re.findall('class="stream-meta".*?data-original="(.*?)".*?href="(.*?)".*?class="stream-name">(.*?)<.*?class="stream-desc">(.*?)<', data, re.S)
-           if phMovies:
-              for (phImage, phUrl, phTitle, phDesc ) in phMovies:
-                  printDBG( 'Host listsItems phImage: '+phImage )
-                  printDBG( 'Host listsItems phUrl: '  +phUrl )
-                  printDBG( 'Host listsItems phTitle: '+phTitle )
-                  printDBG( 'Host listsItems phDesc: '+phDesc )
-                  phImage = self.MAIN_URL+'/'+phImage
-                  valTab.append(CDisplayListItem(phTitle,phDesc,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
-           printDBG( 'Host listsItems end' )
            return valTab
 
         if 'xvideos' == name:
@@ -626,7 +605,7 @@ class Host:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            phCats = re.findall('sublist-item\'><a href="(/category/.*?)".*?">(.*?)</a', data, re.S)
            if phCats:
               for (phUrl, phTitle) in phCats:
@@ -719,7 +698,7 @@ class Host:
                   printDBG( 'Host listsItems phImage: '+phImage )
                   printDBG( 'Host listsItems phRuntime: '+phRuntime )
                   printDBG( 'Host listsItems phViews: '+phViews )
-                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] ['+phViews+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
+                  valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+phRuntime+'] ['+phViews+'] '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
            match = re.findall('<link rel="next" href="(.*?)"', data, re.S)
            if match:
               valTab.append(CDisplayListItem('Next', match[0], CDisplayListItem.TYPE_CATEGORY, [match[0]], name, '', None))                
@@ -770,7 +749,7 @@ class Host:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            if re.search('vDate', data, re.S):
               parse = re.search('<div\sclass="vDate(.*)</html>', data, re.S)
            else:
@@ -797,8 +776,8 @@ class Host:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://xhamsterlive.com' 
            url='http://xhamsterlive.com/api/front/models'
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'xhamstercams.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
@@ -1241,7 +1220,7 @@ class Host:
            except:
               printDBG( 'Host query error url: '+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            phMovies = re.findall('<li class="video".*?<a href="(.*?)".*?itle="(.*?)".*?data-src="(.*?)"', data, re.S)
            if phMovies:
               for (phUrl, phTitle, phImage ) in phMovies:
@@ -1703,8 +1682,8 @@ class Host:
         if 'CAM4-KAMERKI' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://www.cam4.pl' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'cam4.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': 'http://www.cam4.pl', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url:'+url )
@@ -1722,8 +1701,8 @@ class Host:
 
         if 'CAM4-KAMERKI-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'cam4.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
@@ -2022,8 +2001,8 @@ class Host:
         if 'LIVEJASMIN-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://new.livejasmin.com' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'livejasmin.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error cookie' )
               return valTab
@@ -2310,14 +2289,9 @@ class Host:
         if 'RAMPANT' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'https://www.rampant.tv' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'rampant.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': 'https://www.rampant.tv', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-           except:
-              printDBG( 'Host listsItems query error' )
-              printDBG( 'Host listsItems query error url:'+url )
-              return valTab
-           #printDBG( 'Host listsItems data: '+data )
-           try: data = self.cm.getURLRequestData({ 'url': 'https://www.rampant.tv/channels', 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           url = 'https://www.rampant.tv/channels'
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
@@ -2345,7 +2319,7 @@ class Host:
                      #printDBG( 'Host listsItems showtime: '  +showtime )
                      Url = 'rtmp://%s/%s/ playpath=%s swfUrl=https://static.rampant.tv/swf/player.swf pageUrl=https://www.rampant.tv/channels live=1 ' % (Url, appli, Stremname)
                      printDBG( 'Host listsItems Url rtmp: ' +Url )
-                     valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, phImage, None)) 
+                     valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, phImage, None)) 
            printDBG( 'Host listsItems end' )
            return valTab 
 
@@ -2657,12 +2631,28 @@ class Host:
                   printDBG( 'Host listsItems phUrl: '  +phUrl )
                   printDBG( 'Host listsItems phTitle: '+phTitle )
                   printDBG( 'Host listsItems Time: '+Time ) 
-                  valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+Time+']    '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+                  #valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+Time+']    '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+                  valTab.append(CDisplayListItem(decodeHtml(phTitle), '['+Time+']    '+decodeHtml(phTitle), CDisplayListItem.TYPE_CATEGORY, [phUrl], 'PORNFROMCZECH-serwer', phImage, catUrl))                
            match = re.search('rel="next" href="(.*?)"', data, re.S)
            if match:
               phUrl = match.group(1)
               valTab.append(CDisplayListItem('Next ', 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', catUrl))                
            printDBG( 'Host listsItems end' )
+           return valTab
+        if 'PORNFROMCZECH-serwer' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error' )
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           #printDBG( 'Host listsItems data: '+data )
+           Movies = re.findall('<iframe src="(.*?)"', data, re.S) 
+           if Movies:
+              for (phUrl) in Movies:
+                 valTab.append(CDisplayListItem(phUrl,phUrl,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, '', None)) 
            return valTab
 
         if 'FILMYPORNO' == name:
@@ -2829,12 +2819,12 @@ class Host:
         if 'PORNOHUB' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://pornohub.su' 
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error cookie' )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            parse = re.search('<a href="#">Categories<(.*?)pornohub.su/my-list/', data, re.S)
            if parse:
               phCats = re.findall('href="(.*?)"', parse.group(1), re.S) 
@@ -2860,8 +2850,8 @@ class Host:
            return valTab
         if 'PORNOHUB-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
@@ -2901,8 +2891,8 @@ class Host:
            return valTab
         if 'PORNOHUB-pornstars' == name:
            printDBG( 'Host listsItems begin name='+name )
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
@@ -2927,8 +2917,8 @@ class Host:
            return valTab
         if 'PORNOHUB-pornstars-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'pornohub.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
@@ -2965,7 +2955,7 @@ class Host:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
            Cats = re.findall('href="(/categories/.*?)".*?click\',\s\'(.*?)\'', data, re.S) 
            if Cats:
               for (phUrl, phTitle) in Cats:
@@ -3136,9 +3126,10 @@ class Host:
         if url.startswith('http://www.azzzian.com'):         return 'http://www.katestube.com'
         if url.startswith('https://openload.co'):            return 'xxxlist.txt'
         if url.startswith('http://openload.co'):             return 'xxxlist.txt'
+        if url.startswith('https://oload.tv'):               return 'xxxlist.txt'
         if url.startswith('http://www.cda.pl'):              return 'xxxlist.txt'
-        if url.startswith('http://tvtoya.pl'):               return 'xxxlist.txt'
-        if url.startswith('http://polskikarting.pl'):        return 'xxxlist.txt'
+        if url.startswith('https://vidlox.tv'):              return 'https://vidlox.tv'
+        if url.startswith('http://hqq.tv'):                  return 'xxxlist.txt'
         if url.startswith('https://www.rapidvideo.com'):     return 'xxxlist.txt'
         if url.startswith('http://videomega.tv'):            return 'xxxlist.txt'
         if url.startswith('http://www.flashx.tv'):           return 'xxxlist.txt'
@@ -3173,6 +3164,8 @@ class Host:
         if url.startswith('http://www.pornroxxx.com'):       return "0p'  : '"
         if url.startswith('http://www.hd21.com'):            return "0p'  : '"
         if url.startswith('http://www.txxx.com'):            return "file': '"
+        if url.startswith('http://www.pornrox.com'):         return "0p'  : '"
+        if url.startswith('http://www.flyflv.com'):          return "0p'  : '"
 
         return ''
 
@@ -3264,7 +3257,7 @@ class Host:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
-           printDBG( 'Host getResolvedURL data: '+data )
+           #printDBG( 'Host getResolvedURL data: '+data )
            parse = re.search('<iframe.*?src="(.*?)"', data, re.S)
            if parse:
               if parse.group(1).startswith('http://www.pornway.com'):
@@ -3273,24 +3266,6 @@ class Host:
               return self.getResolvedURL(parse.group(1))
            else: return ''
 
-        if parser == 'http://showup.tv':
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'showup.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-           except:
-              printDBG( 'Host getResolvedURL query error' )
-              printDBG( 'Host getResolvedURL query error url: '+url )
-              return ''
-           #printDBG( 'Host getResolvedURL data: '+data )
-           parse = re.search("var streamID = '(.*?)'.*?var srvE = '(.*?)'", data, re.S)
-           if parse:
-              printDBG( 'Host gr1: '+ parse.group(1))
-              printDBG( 'Host gr2: '+ parse.group(2))
-              videoUrl = parse.group(2)+' playpath='+parse.group(1)+' swfUrl=http://showup.tv/flash/suStreamer.swf?cache=20&autoReconnect=1&id='+parse.group(1)+'&swfObjectID=video&sender=false&token=&address='+parse.group(2)[7:-9]+'@liveedge live=1 pageUrl='+url+ ' conn=S:OK --live'
-              #videoUrl = parse.group(2)+' playpath='+parse.group(1)+' swfUrl=http://showup.tv/flash/suStreamer.swf?cache=10&id='+parse.group(1)+'&swfObjectID=video&sender=false&token=&address='+parse.group(2)[7:-9]+'@liveedge live=1 pageUrl='+url
-              printDBG( 'Host videoUrl: '+ videoUrl)
-              return videoUrl
-           return ''
-        
         def base_myfreecam(serwer, url):
            data =''
            newurl = 'http://video%s.myfreecams.com:1935/NxServer/mfc_%s.f4v_aac/playlist.m3u8' % (serwer, url)
@@ -3345,8 +3320,8 @@ class Host:
            return ''
 
         if parser == 'http://new.livejasmin.com':
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'livejasmin.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
@@ -3360,8 +3335,8 @@ class Host:
            return ''
 
         if parser == 'http://www.cam4.pl':
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'cam4.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host getResolvedURL query error' )
               printDBG( 'Host getResolvedURL query error url: '+url )
@@ -3413,8 +3388,8 @@ class Host:
 
         if parser == 'http://xhamster.com/cams':
            config='http://xhamsterlive.com/api/front/config'
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'xhamstercams.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': config, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': config, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
@@ -3423,14 +3398,14 @@ class Host:
            parse = re.search('"sessionHash":"(.*?)"', data, re.S) 
            if not parse: return ''
            sessionHash = parse.group(1) 
+           printDBG( 'Host sessionHash: '+sessionHash )
 
            models='http://xhamsterlive.com/api/front/models'
-           COOKIEFILE = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/cache/') + 'xhamstercams.cookie'
-           try: data = self.cm.getURLRequestData({ 'url': models, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           query_data = { 'url': models, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
-              printDBG( 'Host listsItems query error' )
-              printDBG( 'Host listsItems query error url: '+url )
-              return valTab
+              printDBG( 'Host listsItems query error models: '+models )
+              return ''
            #printDBG( 'Host listsItems data: '+data )
            parse = re.search('"models":(.*?),"ttl":', data, re.S) 
            if not parse: return ''
@@ -3470,20 +3445,31 @@ class Host:
            else: return ''
 
         if parser == 'http://www.redtube.com':
-           host = 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3'
-           header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'} 
+           host = 'Mozilla/5.0 (Windows NT 6.1; rv:44.0) Gecko/20100101 Firefox/44.0'
+           header = {'User-Agent': host, 'Accept':'application/json', 'Accept-Language':'de,en-US;q=0.7,en;q=0.3', 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded'} 
            query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
            try:
               data = self.cm.getURLRequestData(query_data)
            except:
               return valTab
-           printDBG( 'Host listsItems data: '+data )
+           #printDBG( 'Host listsItems data: '+data )
+           videoPage = re.search('sources.*?"\d+":"(.*?)"', data, re.S)
+           if videoPage:
+              videos = videoPage.group(1)
+              videos = videos.replace(r"\/",r"/")
+              if videos[:2] == "//":
+                 videos = "http:" + videos
+              videos = videos.replace('&amp;','&')
+              printDBG( 'Host listsItems first' )
+              return videos
            videoPage = re.search('<source\ssrc="(.*?)"\stype="video/mp4">', data, re.S)
            if videoPage:
               videos = urllib.unquote(videoPage.group(1))
               videos = videos.replace(r"\/",r"/")
               if videos[:2] == "//":
                  videos = "http:" + videos
+              videos = videos.replace('&amp;','&')
+              printDBG( 'Host listsItems second' )
               return videos
            return ''
    
@@ -3517,7 +3503,6 @@ class Host:
            if videoPage:
               return videoPage[-1]
            return ''
-
 
         if parser == "0p'  : '":
            videoPage = re.findall("0p'  : '(http.*?)'", data, re.S)   
@@ -3554,7 +3539,7 @@ class Host:
            return ''
 
         if parser == 'https://chaturbate.com':
-           videoPage = re.findall("src='(.*?)'", data, re.S)  
+           videoPage = re.findall("Fast = '(http[s]?://.*?.stream.highwebmedia.com.*?m3u8)'", data, re.S)  
            if videoPage:
               printDBG( 'Host chaturbate videoPage:'+videoPage[-1])
               return videoPage[-1]
@@ -3826,9 +3811,9 @@ class Host:
            return match[0]
 
         if parser == 'http://www.youjizz.com':
-           videoPage = re.findall('Add To Favorites.*?href="(.*?)"', data, re.S)   
+           videoPage = re.findall('<source src="(.*?)"', data, re.S)   
            if videoPage:
-              printDBG( 'Host videoPage:'+decodeUrl(videoPage[0]))
+              if videoPage[0].startswith('//'): videoPage[0] = 'http:' + videoPage[0]
               return decodeUrl(videoPage[0])
            return ''
 
@@ -4068,6 +4053,11 @@ class Host:
               fetchurl = fetchurl.replace(r"\/",r"/")
               if fetchurl.startswith('//'): fetchurl = 'http:' + fetchurl
               return fetchurl 
+           return ''
+
+        if parser == 'https://vidlox.tv':
+           parse = re.search('sources.*?"(http.*?)"', data, re.S) 
+           if parse: return parse.group(1)
            return ''
 
         printDBG( 'Host getResolvedURL end' )

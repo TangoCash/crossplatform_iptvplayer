@@ -320,7 +320,7 @@ def VIDUPME_decryptPlayerParams(p=None, a=None, c=None, k=None, e=None, d=None):
 ###############################################################################
 # VIDEOWEED HELPER FUNCTIONS
 ###############################################################################
-def VIDEOWEED_decryptPlayerParams(w, i, s, e):
+def VIDEOWEED_decryptPlayerParams(w, i, s=None, e=None):
     lIll = 0
     ll1I = 0
     Il1l = 0

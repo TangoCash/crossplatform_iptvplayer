@@ -15,6 +15,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import re
 import time
 import urllib
+import urllib2
 import string
 import base64
 try:    import json
@@ -64,7 +65,7 @@ class SerienStreamTo(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'http://serienstream.to/'
-        self.DEFAULT_ICON_URL = 'http://www.kodid.de/KodiDE/addons/plugin.video.serienstream/icon.png'
+        self.DEFAULT_ICON_URL = 'http://serienstream.to/public/img/facebook.jpg'
         
         self.MAIN_CAT_TAB = [{'category':'list_abc',          'title': _('A-Z'),                          'url':self.MAIN_URL                       },
                              {'category':'list_genres',       'title': _('Genres'),                       'url':self.MAIN_URL                       },
@@ -280,6 +281,20 @@ class SerienStreamTo(CBaseHostClass):
                         self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
         
         if self.cm.isValidUrl(videoUrl):
+            if 1 != self.up.checkHostSupport(videoUrl):
+                params = dict(self.defaultParams)
+                try:
+                    params['return_data'] = False
+                    params['no_redirection'] = True
+                    sts, response = self.cm.getPage(videoUrl, params)
+                    for key in response.info():
+                        if key.upper() == 'LOCATION':
+                            url = response.info()[key]
+                    response.close()
+                    videoUrl = url
+                except Exception:
+                    printExc()
+                
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         
@@ -348,74 +363,4 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, SerienStreamTo(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item.get('need_resolve', False)))
 
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-        
-    def convertList(self, cList):
-        self.host.refreshCookieHeader()
-        return CHostBase.convertList(self, cList)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("By title"),   "by_title"))
-        #searchTypesOptions.append((_("TV Shows"), "series"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        if icon == '':  icon = self.host.DEFAULT_ICON_URL
-        else: icon = self.host.getIconUrl(icon, False)
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem

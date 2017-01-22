@@ -88,14 +88,14 @@ class T123MoviesTO(CBaseHostClass):
         
     def selectDomain(self):
     
-        for domain in ['http://123movies.moscow/', 'http://123movies.to/', 'http://123movies.ru/', 'http://123movies.is/']:
+        for domain in ['http://123movies.moscow/', 'https://123movies.ru/', 'https://123movies.is/']:
             sts, data = self.getPage(domain)
             if sts and 'genre/action/' in data:
                 self.MAIN_URL = domain
                 break
         
         if self.MAIN_URL == None:
-            self.MAIN_URL = 'http://123movies.to/' # first domain is default one
+            self.MAIN_URL = 'https://123movies.is/' # first domain is default one
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
