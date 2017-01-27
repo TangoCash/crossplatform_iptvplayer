@@ -57,52 +57,9 @@ class TelewizjaLiveComApi(CBaseHostClass):
         
         self.cacheList = {}
         
-    def _getMainList(self, cItem):
-        printDBG("TelewizjaLiveComApi._getMainList")
-        channelsTab = []
-        
-        sts, data = self.cm.getPage(self.MAIN_URL, self.http_params)
-        if not sts: return []
-        
-        nextCatTtile = ''
-        catData = self.cm.ph.getDataBeetwenMarkers(data, '<div id="menu">', '</div>', False)[1]
-        catData = catData.split('<ul class="submenu">')
-        for item in catData:
-            channels = []
-            catTitle = nextCatTtile
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<li>', '</a>')
-            if len(tmp) > 0:
-                nextCatTtile = self.cleanHtmlStr(tmp[-1])
-            del tmp[-1]
-            for channelItem in tmp:
-                url   = self.cm.ph.getSearchGroups(channelItem, '''href=['"]([^'^"]+?)['"]''')[0]
-                icon  = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''src=['"]([^'^"]+?)['"]''')[0])
-                title = self.cleanHtmlStr(channelItem)
-                if '' == icon: icon = cItem.get('icon', '')
-                params = dict(cItem)
-                params.update({'type':'video', 'title':title, 'url':url, 'icon':icon})
-                channels.append(params)
-            if len(channels):
-                self.cacheList[catTtile] = channels
-                params = dict(cItem)
-                params.update({'init_list':False, 'url':catTtile, 'title':catTtile})
-                channelsTab.append(params)
-        
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="content">', '</div>', False)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
-        for channelItem in data:
-            url   = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''href=['"]([^'^"]+?)['"]''')[0])
-            icon  = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''src=['"]([^'^"]+?)['"]''')[0])
-            title = self.cleanHtmlStr(channelItem)
-            try: 
-                if title == '': title = '.'.join(icon.split('/')[-1].split('.')[:-1]).title()
-            except Exception: printExc()
-            if '' == icon: icon = cItem.get('icon', '')
-            params = dict(cItem)
-            params.update({'type':'video', 'title':title, 'url':url, 'icon':icon})
-            channelsTab.append(params)
-        return channelsTab
+    def getFullUrl(self, url):
+        url  = CBaseHostClass.getFullUrl(self, url)
+        return url.replace(' ', '%20')
         
     def getList(self, cItem):
         printDBG("TelewizjaLiveComApi.getChannelsList")
@@ -118,51 +75,43 @@ class TelewizjaLiveComApi(CBaseHostClass):
             if not sts: return []
             
             channels = []
-            tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div id="content">', '</div>', False)[1]
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="m_title">Kategorie</div>', '</div>', False)[1]
             catTitle = self.cleanHtmlStr(tmp)
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
-            for channelItem in tmp:
-                url   = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''href=['"]([^'^"]+?)['"]''')[0])
-                icon  = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''src=['"]([^'^"]+?)['"]''')[0])
-                title = self.cleanHtmlStr(channelItem)
-                try: 
-                    if title == '': title = '.'.join(icon.split('/')[-1].split('.')[:-1]).title()
-                except Exception: printExc()
-                if '' == icon: icon = cItem.get('icon', '')
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</b>')
+            for item in tmp:
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                title = self.cleanHtmlStr(item)
                 params = dict(cItem)
-                params.update({'type':'video', 'title':title, 'url':url, 'icon':icon})
-                channels.append(params)
-            if len(channels):
-                self.cacheList[catTitle] = channels
+                params.update({'init_list':False, 'url':url, 'title':title})
+                channelsTab.append(params)
+            if len(channelsTab):
+                for item in [{'title':'Najnowsze', 'url':self.getFullUrl('/najnowsze/')}, 
+                             {'title':'Najlepsze', 'url':self.getFullUrl('/najlepsze/')}]:
+                    params = dict(cItem)
+                    params.update({'init_list':False})
+                    params.update(item)
+                    channelsTab.insert(0, params)
+        else:
+            sts, data = self.cm.getPage(cItem['url'], self.http_params)
+            if not sts: return []
+            
+            nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a\s*href="([^"]+?)"[^>]*?>></a>''')[0])
+            
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div style="width:150px;', '</div>')
+            for item in data:
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<b>([^<]+?)</b>''')[0])
+                icon  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
+                desc  = self.cleanHtmlStr(item)
                 params = dict(cItem)
-                params.update({'init_list':False, 'url':catTitle, 'title':catTitle})
+                params.update({'type':'video', 'title':title, 'url':url, 'desc':desc, 'icon':icon})
+                channelsTab.append(params)
+                
+            if nextPage != '':
+                params = dict(cItem)
+                params.update({'title':_('Next page'), 'url':nextPage})
                 channelsTab.append(params)
             
-            nextCatTtile = ''
-            catData = self.cm.ph.getDataBeetwenMarkers(data, '<div id="menu">', '</div>', False)[1]
-            catData = catData.split('<ul class="submenu">')
-            for item in catData:
-                channels = []
-                catTitle = nextCatTtile
-                tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<li>', '</a>')
-                if len(tmp) > 0:
-                    nextCatTtile = self.cleanHtmlStr(tmp[-1])
-                del tmp[-1]
-                for channelItem in tmp:
-                    url   = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''href=['"]([^'^"]+?)['"]''')[0])
-                    icon  = self.getFullUrl(self.cm.ph.getSearchGroups(channelItem, '''src=['"]([^'^"]+?)['"]''')[0])
-                    title = self.cleanHtmlStr(channelItem)
-                    if '' == icon: icon = cItem.get('icon', '')
-                    params = dict(cItem)
-                    params.update({'type':'video', 'title':title, 'url':url, 'icon':icon})
-                    channels.append(params)
-                if len(channels):
-                    self.cacheList[catTitle] = channels
-                    params = dict(cItem)
-                    params.update({'init_list':False, 'url':catTitle, 'title':catTitle})
-                    channelsTab.append(params)
-        else:
-            channelsTab = self.cacheList.get(cItem.get('url', 'None'), [])
         return channelsTab
         
     def _getAttrVal(self, data, attr):

@@ -216,7 +216,7 @@ class TvpVod(CBaseHostClass):
         data = re.findall('href="([^"]+?)"[^>]*?>([^<]+?)<', data)
         for item in data:
             params = dict(cItem)
-            params.update({'category':category, 'title':item[1], 'url':item[0]})
+            params.update({'category':category, 'title':self.cleanHtmlStr(item[1]), 'url':item[0]})
             self.addDir(params)
             
     def _getAjaxUrl(self, parent_id, location):

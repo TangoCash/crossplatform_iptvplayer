@@ -140,7 +140,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.0.0.5"
+    XXXversion = "21.0.0.6"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -1018,7 +1018,7 @@ class Host:
                   printDBG( 'Host listsItems phTitle: '+phTitle )
                   printDBG( 'Host listsItems phRuntime: '+phRuntime )
                   if phUrl.startswith('/videos/'):
-                      valTab.append(CDisplayListItem(phTitle,phRuntime+' '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
+                      valTab.append(CDisplayListItem(phTitle,'['+phRuntime+']  '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
            match = re.findall('<a class="page " href="(.*?)"', data, re.S)
            if match:
               for (phPageUrl) in match: 
@@ -1601,15 +1601,15 @@ class Host:
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
            #printDBG( 'Host listsItems data: '+data )
-           parse = re.search('class="categoryList"><h2>Darmowe(.*?)class="adSpace"', data,re.S)
+           parse = re.search('id="category-page-page-digit(.*?)class="legal-information">', data,re.S)
            if parse:
-              phCats = re.findall('href="(.*?)".*?"_self">(.*?)<', parse.group(1), re.S) 
+              phCats = re.findall('href="(/kategorie/.*?)".*?"_self">(.*?)<', parse.group(1), re.S) 
               if phCats:
                  for (phUrl, phTitle) in phCats: 
-                     printDBG( 'Host listsItems phUrl: '  +phUrl )
-                     printDBG( 'Host listsItems phTitle: '+phTitle )
-                     valTab.append(CDisplayListItem(phTitle,self.MAIN_URL+phUrl,CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl],'PORNOORZEL-clips', '', self.MAIN_URL+phUrl)) 
-                     valTab.sort(key=lambda poz: poz.name)
+                    printDBG( 'Host listsItems phUrl: '  +phUrl )
+                    printDBG( 'Host listsItems phTitle: '+phTitle )
+                    valTab.append(CDisplayListItem(phTitle,self.MAIN_URL+phUrl,CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl],'PORNOORZEL-clips', '', self.MAIN_URL+phUrl)) 
+                    valTab.sort(key=lambda poz: poz.name)
            printDBG( 'Host listsItems end' )
            return valTab
         if 'PORNOORZEL-clips' == name:
@@ -1621,25 +1621,20 @@ class Host:
               printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
-           Movies = re.findall('\'bla\', \'(.*?)\'.*?u=(.*?)".*?\stitle="(.*?)".*?src="(.*?)"', data, re.S) 
+           printDBG( 'Host listsItems data: '+data )
+           Movies = re.findall('class="thumb sub".*?u=(.*?)".*?title="(.*?)".*?src="(.*?)".*?class="source">(.*?)<', data, re.S) 
            if Movies:
-              for (serwer, Url, Title, Image) in Movies:
+              for (Url, Title, Image, serwer) in Movies:
                   Url = decodeUrl(Url)
                   printDBG( 'Host listsItems Url: '  +Url )
                   printDBG( 'Host listsItems Title: '  +Title )
                   printDBG( 'Host listsItems Image: '  +Image )
                   valTab.append(CDisplayListItem(serwer+'  ->  '+Title,serwer+'  ->  '+Title,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, Image, None)) 
-           match = re.findall('pageNumbers.*?pageOrder', data, re.S)
+           match = re.search('class="next".*?href="(.*?)"', data, re.S)
            if match:
-              printDBG( 'Host listsItems page match: '+match[0] )
-              match = re.findall('href="(.*?)">(.*?)<', match[0], re.S)
-           if match:
-              for (phUrl, phTitle) in match:
-                  printDBG( 'Host listsItems page phUrl: '+phUrl )
-                  printDBG( 'Host listsItems page phTitle: '+phTitle )
-                  if phTitle == ' > ':
-                     valTab.append(CDisplayListItem('Next '+phTitle, 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', None))                
+              phUrl = match.group(1)
+              printDBG( 'Host listsItems page phUrl: '+phUrl )
+              valTab.append(CDisplayListItem('Next', 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl], name, '', None))                
            printDBG( 'Host listsItems end' )
            return valTab
 
@@ -3166,6 +3161,7 @@ class Host:
         if url.startswith('http://www.txxx.com'):            return "file': '"
         if url.startswith('http://www.pornrox.com'):         return "0p'  : '"
         if url.startswith('http://www.flyflv.com'):          return "0p'  : '"
+        if url.startswith('http://www.pornerbros.com'):      return "0p'  : '"
 
         return ''
 

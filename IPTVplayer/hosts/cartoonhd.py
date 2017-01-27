@@ -56,7 +56,7 @@ class CartoonHD(CBaseHostClass):
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
     MAIN_URL = 'http://cartoonhd.online/'
-    SEARCH_URL = MAIN_URL + 'api/v2/cautare/evokjaqbb8'
+    SEARCH_URL = 'http://api.cartoonhd.online/api/v1/0A6ru35yevokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
                     {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php',    'icon':''},
@@ -356,10 +356,10 @@ class CartoonHD(CBaseHostClass):
         #    type = 'getMovieEmb'
         #else: type = 'getEpisodeEmb'
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<select', '</select>', False)[1]
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select', '</select>', False)[1]
         hostings = []
-        data = re.compile('<option[^>]*?value="([^"]+?)"[^>]*?>([^<]+?)</option>').findall(data)
-        for item in data:
+        tmp = re.compile('<option[^>]*?value="([^"]+?)"[^>]*?>([^<]+?)</option>').findall(tmp)
+        for item in tmp:
             hostings.append({'id':item[0], 'name':item[1]})
         
         httpParams = dict(self.defaultParams)
@@ -368,8 +368,12 @@ class CartoonHD(CBaseHostClass):
         __utmx = getCookieItem('__utmx')
         httpParams['header']['Authorization'] = 'Bearer ' + urllib.unquote(__utmx)
         
+        requestLinks = ['ajax/tnembeds.php']
+        if 'class="play"' in data and 'id="updateSources"' not in data:
+            requestLinks.append('ajax/embeds.php')
+        
         #httpParams['header']['Cookie'] = '%s=%s; PHPSESSID=%s; flixy=%s;'% (elid, urllib.quote(encElid), getCookieItem('PHPSESSID'), getCookieItem('flixy'))
-        for url in ['ajax/tnembeds.php', 'ajax/embeds.php']:
+        for url in requestLinks:
             post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid)}
             sts, data = self.cm.getPage(self.getFullUrl(url), httpParams, post_data)
             if not sts: continue

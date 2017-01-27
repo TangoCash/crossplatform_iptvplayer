@@ -4537,17 +4537,19 @@ class pageParser:
         
         tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?counter[^'^"]+?)['"]""")[0]
         if tmpUrl == '': tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?jquery2[^'^"]+?)['"]""")[0]
-        #tmpUrls = re.compile("""['"]([^'^"]+?fastcontentdelivery[^'^"]+?\.js[^'^"]+?)['"]""").findall(data)
-        #for tmpUrl in tmpUrls:
-        if tmpUrl.startswith('.'):
-            tmpUrl = tmpUrl[1:]
-        if tmpUrl.startswith('//'):
-            tmpUrl = 'http:' + tmpUrl
-        if tmpUrl.startswith('/'):
-            tmpUrl = 'http://www.flashx.tv' + tmpUrl
-        if tmpUrl != '':
-            sts, tmp = self.cm.getPage(tmpUrl, params)
-        sts, tmp = self.cm.getPage(tmpUrl, params)
+        tmpUrls = re.compile("""['"]([^'^"]+?[^'^"]+?\.js[^'^"]+?)['"]""").findall(data)
+        for tmpUrl in tmpUrls:
+            if tmpUrl.startswith('.'):
+                tmpUrl = tmpUrl[1:]
+            if tmpUrl.startswith('//'):
+                tmpUrl = 'http:' + tmpUrl
+            if tmpUrl.startswith('/'):
+                tmpUrl = 'http://www.flashx.tv' + tmpUrl
+            if tmpUrl != '':
+                printDBG('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+                printDBG(tmpUrl)
+                sts, tmp = self.cm.getPage(tmpUrl, params)
+        #sts, tmp = self.cm.getPage(tmpUrl, params)
         
         sts, tmp = self.cm.getPage('https://www.flashx.tv/js/code.js', params)
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'function', ';');
@@ -5187,8 +5189,16 @@ class pageParser:
             url += ' playpath=%s swfUrl=%s token=%s pageUrl=%s live=1 ' % (file, swfUrl, '#ed%h0#w@1', baseUrl)
             printDBG(url)
             return url
-        elif file.startswith('http') and file.split('?')[0].endswith('.m3u8'):
-            return getDirectM3U8Playlist(file)
+        else:
+            data = re.compile('''["'](http[^'^"]+?\.m3u8[^'^"]*?)["']''').findall(data)
+            data.reverse()
+            printDBG(data)
+            data.insert(0, file)
+            data.reverse()
+            for file in data:
+                if file.startswith('http') and file.split('?')[0].endswith('.m3u8'):
+                    tab = getDirectM3U8Playlist(file, checkContent=True)
+                    if len(tab): return tab
         return False
         
     def saveGet(self, b, a):

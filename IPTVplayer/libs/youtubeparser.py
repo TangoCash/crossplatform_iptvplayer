@@ -193,8 +193,8 @@ class YouTubeParser():
                         if correctUrlTab[i].startswith('https:'):
                             correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
 
-                title = clean_html(title.decode("utf-8")).encode("utf-8")
-                desc  = clean_html(desc.decode("utf-8")).encode("utf-8")
+                title = clean_html(title)
+                desc  = clean_html(desc)
                 params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1], 'time': time, 'desc': desc}
                 currList.append(params)
 
@@ -235,7 +235,8 @@ class YouTubeParser():
                 if '1' == page:
                     sts,data = CParsingHelper.getDataBeetwenMarkers(data, 'id="pl-video-list"', 'footer-container', False)
                 else:
-                    data = unescapeHTML(data.decode('unicode-escape')).encode('utf-8').replace('\/', '/')
+                    data = json.loads(data)
+                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
                     
                 # nextPage
                 match = re.search('data-uix-load-more-href="([^"]+?)"', data)
@@ -273,7 +274,8 @@ class YouTubeParser():
                 if '1' == page:
                     sts,data = CParsingHelper.getDataBeetwenMarkers(data, 'feed-item-container', 'footer-container', False)
                 else:
-                    data = unescapeHTML(data.decode('unicode-escape')).encode('utf-8').replace('\/', '/')
+                    data = json.loads(data)
+                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
                     
                 # nextPage
                 match = re.search('data-uix-load-more-href="([^"]+?)"', data)
