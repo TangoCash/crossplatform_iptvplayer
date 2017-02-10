@@ -17,6 +17,8 @@ import time
 import urllib
 import string
 import base64
+import math
+import random
 try:    import json
 except Exception: import simplejson as json
 from datetime import datetime
@@ -226,6 +228,7 @@ class TreeTv(CBaseHostClass):
         data = data.split(marker)
         for item in data:
             baseTitle = self.cleanHtmlStr(item.split('<div class="accordion_content')[0])
+            linksTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
             tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(item, '<div class="quality">', '<div class="clear">', withMarkers=True)
             for tmp in tmpTab:
                 title = baseTitle #+ ' - ' + self.cleanHtmlStr(tmp.split('<div class="film_actions">')[0])
@@ -233,11 +236,11 @@ class TreeTv(CBaseHostClass):
                 key = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<a ', '</a>', withMarkers=True)[1]).upper()
                 if key not in keyTab:
                     keyTab.append(key)
-                    linksTab[key] = []
-                linksTab[key].append({'name':title, 'url':url})
+                    linksTab[key] = {'urls':[], 'title':linksTitle}
+                linksTab[key]['urls'].append({'name':title, 'url':url})
         
         for key in keyTab:
-            self.addVideo({'good_for_fav': False, 'title':cItem['title'] + ' ' + key, 'icon':cItem['icon'], 'urls':linksTab[key]})
+            self.addVideo({'good_for_fav': False, 'title':linksTab[key]['title'], 'desc': key, 'icon':cItem['icon'], 'urls':linksTab[key]['urls']})
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("TreeTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
@@ -297,7 +300,47 @@ class TreeTv(CBaseHostClass):
         
         params['header'] = dict(self.AJAX_HEADER)
         params['header']['Referer'] = str(url)
-        sts, data = self.cm.getPage(sourceUrl, params)
+        
+        playerKeyParams = {'key':'', 'g':2, 'p':293}
+        serverData = {'g':-1, 'p':-1, 's_key':''}
+        tmpurl = 'http://player.tree.tv/guard'
+        tries = 0
+        try:
+            while tries < 5:
+                if serverData['g'] != playerKeyParams['g'] or serverData['p'] != playerKeyParams['p']:
+                    playerKeyParams['g'] = serverData['g']
+                    playerKeyParams['p'] = serverData['p']
+                
+                    playerKeyParams['key'] = random.randrange(1, 8)
+                    numClient = math.pow(playerKeyParams['g'], playerKeyParams['key']);
+                    clientKey = math.fmod(numClient, playerKeyParams['p']);
+                
+                    post_data = {'key':int(clientKey)}
+                    sts, data = self.cm.getPage(tmpurl, params, post_data)
+                    if not sts: return []
+                    serverData = byteify(json.loads(data))
+                    printDBG("++++++++++++++")
+                    printDBG(serverData)
+                    printDBG("++++++++++++++")
+                else:
+                    break
+                
+                tries += 1
+                
+            if serverData['g'] != playerKeyParams['g'] or serverData['p'] != playerKeyParams['p']:
+                printDBG("WRONG DATA")
+                printDBG("serverData [%s]" % serverData)
+                printDBG("playerKeyParams [%s]" % playerKeyParams)
+                return []
+                
+            b =  math.pow(serverData['s_key'], playerKeyParams['key']);
+            skc = int(math.fmod(b, serverData['p']))
+        except Exception:
+            printExc()
+            return []
+        
+        post_data = {'file':fileId, 'source':source, 'skc':skc}
+        sts, data = self.cm.getPage(sourceUrl, params, post_data)
         if not sts: return []
         
         printDBG('url[%s]' % url)
@@ -306,20 +349,28 @@ class TreeTv(CBaseHostClass):
         printDBG('fileId[%s]' % fileId)
         printDBG('source[%s]' % source)
         
-        uri = self.up.getDomain(sourceUrl, False) + 'm3u8/{0}.m3u8'.format(fileId)
-        return getDirectM3U8Playlist(uri, checkContent=True)
+        printDBG(data)
+        
+        #uri = self.up.getDomain(sourceUrl, False) + 'm3u8/{0}.m3u8'.format(fileId)
+        #return getDirectM3U8Playlist(uri, checkContent=True)
         
         # sometimes return string is not valid json
         try:
-            data = re.compile('''"src"\s*:\s*"([^"]+?)"''').findall(data)
-            printDBG(data)
-            for uri in data: 
-                printDBG('uri[%s]' % uri)
-                if '/{0}.'.format(fileId) in uri or 1 == len(data):
-                    if uri.split('?')[0].endswith('.m3u8'):
-                        return getDirectM3U8Playlist(uri)
-                    elif source == '3' and self.cm.isValidUrl(uri):
-                        return [{'name':'', 'url':uri}]
+            name = self.cm.ph.getSearchGroups(data, '''['"]?name['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
+            data = re.compile('''['"]?sources['"]?\s*\:\s*\[([^\]]+?)\]''').findall(data)
+            for sources in data:
+                sources = sources.split('}') 
+                for item in sources:
+                    uri = self.cm.ph.getSearchGroups(item, '''['"]?src['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
+                    if not self.cm.isValidUrl(uri): continue
+                    point = self.cm.ph.getSearchGroups(item, '''['"]?point['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
+                    label = self.cm.ph.getSearchGroups(item, '''['"]?label['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
+                    if label == '': label = name
+                    if str(fileId) == str(point) or point == '':
+                        if '/playlist/' in uri:
+                            urlTab.extend( getDirectM3U8Playlist(uri, checkExt=False, cookieParams=params, checkContent=True) )
+                        elif source == '3':
+                            urlTab.extend( [{'name':label, 'url':uri}] )
         except Exception:
             printExc()
         return urlTab

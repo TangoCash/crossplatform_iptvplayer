@@ -5,15 +5,17 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 from Components.config import config, ConfigInteger, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Tools.Directories import fileExists
 from datetime import timedelta
 from binascii import hexlify
 import re
@@ -28,7 +30,7 @@ except Exception: import json
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute, MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -95,6 +97,33 @@ class ZalukajCOM(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'ZalukajCOM', 'cookie':'zalukajtv.cookie'})
         self.loggedIn = None
         self.needProxy = None
+        self.WGET_COOKIE_FILE = GetCookieDir('zalukajtv2.cookie')
+        
+    def _getPageWget(self, url, params={}, post_data=None):
+        cmd = DMHelper.getBaseWgetCmd(params.get('header', {})) +  (" '%s' " % url)
+        if post_data != None:
+            if params.get('raw_post_data', False):
+                post_data_str = post_data
+            else:
+                post_data_str = urllib.urlencode(post_data)
+            cmd += " --post-data '{0}' ".format(post_data_str)
+        
+        if params.get('use_cookie', False):
+            cmd += " --keep-session-cookies "
+            cookieFile = str(params.get('cookiefile', ''))
+            if params.get('load_cookie', False) and fileExists(cookieFile):
+                cmd += "  --load-cookies '%s' " %  cookieFile
+            if params.get('save_cookie', False):
+                cmd += "  --save-cookies '%s' " %  cookieFile
+        cmd += ' -O - 2> /dev/null'
+        
+        printDBG('_getPageWget request: [%s]' % cmd)
+        
+        data = iptv_execute()( cmd )
+        if not data['sts'] or 0 != data['code']: 
+            return False, None
+        else:
+            return True, data['data']
         
     def isNeedProxy(self):
         if self.needProxy == None:
@@ -284,8 +313,14 @@ class ZalukajCOM(CBaseHostClass):
             if '' == url:
                 printDBG( 'No href in data[%s]' % '')
                 continue
-            sts, data = self._getPage(url, loggedIn=loggedIn)
-            if not sts: continue
+                
+            if loggedIn and self.isNeedProxy():
+                params   = { 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.WGET_COOKIE_FILE }
+                sts, data = self._getPageWget(url, params)
+                if not sts: continue
+            else:
+                sts, data = self._getPage(url, loggedIn=loggedIn)
+                if not sts: continue
             
             # First check for premium link
             premium = False
@@ -318,7 +353,7 @@ class ZalukajCOM(CBaseHostClass):
                         url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
                         if url.startswith('//'): url = 'http:' + url
                         if not self.cm.isValidUrl(url): continue
-                        urlTab.append({'name':'vshare.io ' + label, 'url':strwithmeta(url, {'Referer':cItem['url']})})
+                        urlTab.append({'name':'zalukaj.tv premium ' + label, 'url':strwithmeta(url, {'Referer':cItem['url']})})
                         premium = True
             if not premium:
                 url = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'iframe src="([^"]+?)" width=', 1)[0] )
@@ -331,13 +366,22 @@ class ZalukajCOM(CBaseHostClass):
         
     def tryTologin(self):
         printDBG('ZalukajCOM.tryTologin start')
+        rm(self.COOKIE_FILE)
+        rm(self.WGET_COOKIE_FILE)
         sts,msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % config.plugins.iptvplayer.zalukajtv_login.value
         post_data = {'login': config.plugins.iptvplayer.zalukajtv_login.value, 'password': config.plugins.iptvplayer.zalukajtv_password.value}
         params    = { 'host': ZalukajCOM.HOST, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
-        sts,data  = self.getPage(ZalukajCOM.LOGIN_URL, params, post_data)
+        params2   = { 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.WGET_COOKIE_FILE }
+        sts, data  = self.getPage(ZalukajCOM.LOGIN_URL, params, post_data)
+        if sts: sts, data2 = self._getPageWget(ZalukajCOM.LOGIN_URL, params2, post_data)
         if sts:
             printDBG( 'Host getInitList: chyba zalogowano do premium...' )
-            sts,data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
+            sts, data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
+            
+            if sts: 
+                params2.update({'save_cookie':False, 'load_cookie':True})
+                sts, data2 = self._getPageWget(self.getFullUrl('/libs/ajax/login.php?login=1'), params2)
+
             if sts:
                 printDBG(data)
                 sts,tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Typ Konta:', '</p>', False)

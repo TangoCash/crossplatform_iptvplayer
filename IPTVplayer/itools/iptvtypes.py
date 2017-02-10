@@ -7,7 +7,7 @@ def enum(**enums):
 # Posible args and values for strwithmeta used for url:
 
 # If meta data exists the at least "iptv_proto" MUST by added to them
-#   "iptv_proto":           "m3u8" | "f4m" | "rtmp" | "https" | "http" | "rtsp" | "merge"
+#   "iptv_proto":           "m3u8" | "f4m" | "mpd" | "rtmp" | "https" | "http" | "rtsp" | "merge"
 #   "iptv_format":          "mp4" | "ts" | "flv" | "wmv" 
 #   "iptv_urlwithlimit":    True | False
 #   "iptv_livestream":      True | False
@@ -22,7 +22,8 @@ def enum(**enums):
 #   "iptv_wget_continue"    True | False - default False 
 #   "iptv_wget_timeout"     in second, default 30s when iptv_wget_continue == True
 #   "iptv_wget_waitretry"   in second, default 1s when iptv_wget_continue == True
-
+#   "iptv_audio_rep_idx"    audio representation index in mpd
+#   "iptv_video_rep_idx"    video representation index in mpd
 
 # Force buffering settings, generally this field should 
 # be used only to materials that we know that they do 

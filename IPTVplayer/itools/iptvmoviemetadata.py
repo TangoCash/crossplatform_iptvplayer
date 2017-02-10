@@ -35,7 +35,7 @@ from copy import deepcopy
 #        }
 #    },
 #"aspect_ratio":-1,
-#"video_options":{"aspect":"4:3", "policy":None, "policy2":None}
+#"video_options":{"aspect":"4:3", "policy":None, "policy2":None, "videomode":None}
 #"last_position":0
 #}
 
@@ -252,7 +252,7 @@ class IPTVMovieMetaDataHandler():
         ret = None
         if 'video_options' in self.data:
             try:
-                return self.data['video_options'][option]
+                return self.data['video_options'].get(option, None)
             except Exception:
                 printExc()
         return ret

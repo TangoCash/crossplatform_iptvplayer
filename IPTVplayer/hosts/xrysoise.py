@@ -92,7 +92,8 @@ class XrysoiSE(CBaseHostClass):
         sts, data = self.cm.getPage(self.MAIN_URL)
         if not sts: return
 
-        moviesTab = [{'title':'2016', 'url':self._getFullUrl('category/2016/')},
+        moviesTab = [{'title':'2017', 'url':self._getFullUrl('category/tainiesonline/2017/')},
+                     {'title':'2016', 'url':self._getFullUrl('category/2016/')},
                      {'title':'2013-2015', 'url':self._getFullUrl('category/new-good/')},
                      {'title':'Ελληνικές Ταινίες', 'url':self._getFullUrl('category/ελλ-ταινίες/')}]
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '>Ταινιες<', '</ul>', False)[1]
@@ -135,14 +136,14 @@ class XrysoiSE(CBaseHostClass):
             nextPage = True
         else: nextPage = False
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<h1 class=', '<div class="filmborder">', False)[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<h1 class=', 'class="filmborder">', False)[1]
         data = data.split('class="moviefilm">')
         for item in data:
             url  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
             icon = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
             title  = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0])
-            if 'search' == cItem.get('mode'):
-                if '-collection' in url: continue
+            #if 'search' == cItem.get('mode'):
+            #    if '-collection' in url: continue
             if url.startswith('http'):
                 params = dict(cItem)
                 params.update({'category':nextCategory, 'good_for_fav': True, 'title':title, 'url':url, 'icon':icon})
@@ -192,12 +193,13 @@ class XrysoiSE(CBaseHostClass):
         episodes = []
         if '-collection' in cItem['url']:
             mode = 'collect_item'
-            spTab = ['<div class="separator" style="text-align: center;">', '<div style="text-align: center;">']
+            spTab = [re.compile('<b>'), re.compile('<div[\s]+class="separator"[\s]+style="text-align\:[\s]+center;">'), re.compile('<div[\s]+style="text-align\:[\s]+center;">')]
             for sp in spTab:
-                if sp in linksData: break
+                if None != sp.search(linksData): break
             
-            collectionItems = linksData.split(sp)
+            collectionItems = sp.split(linksData)
             if len(collectionItems) > 0: del collectionItems[0]
+            linksData = ''
             for item in collectionItems:
                 itemTitle = item.find('<')
                 if itemTitle < 0: continue
@@ -363,87 +365,8 @@ class XrysoiSE(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
+
 class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, XrysoiSE(), True, favouriteTypes=[]) 
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-        
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        hList = self.host.getArticleContent(self.host.currList[Index])
-        for item in hList:
-            title      = item.get('title', '')
-            text       = item.get('text', '')
-            images     = item.get("images", [])
-            othersInfo = item.get('other_info', '')
-            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        if icon == '': icon = self.host.DEFAULT_ICON_URL
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem

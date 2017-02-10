@@ -3,9 +3,11 @@
 ###################################################
 # LOCAL import
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, rm
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
+from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 import Plugins.Extensions.IPTVPlayer.libs.xppod as xppod
+
 ###################################################
 
 ###################################################
@@ -18,14 +20,13 @@ import urllib2
 
 class AnyFilesVideoUrlExtractor:
     COOKIEFILE  = GetCookieDir('anyfiles.cookie')
-    MAINURL     = 'http://video.anyfiles.pl'
+    MAINURL     = 'http://anyfiles.pl'
     LOGIN_URL_2 = MAINURL + '/j_security_check'
     LOGIN_URL   = MAINURL + '/Logo?op=l'
     
     def __init__(self):
         self.cm = common()
-        self.ytp = YouTubeParser()
-        self.ytformats = 'mp4'
+        self.up = urlparser()
         self.defaultParams = {'header':{'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0'}, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': AnyFilesVideoUrlExtractor.COOKIEFILE}
         self.logged = False
     
@@ -59,16 +60,6 @@ class AnyFilesVideoUrlExtractor:
         self.logged = False
         return False
 
-    def getYTVideoUrl(self, url):
-        printDBG("getYTVideoUrl url[%s]" % url)
-        tmpTab = self.ytp.getDirectLinks(url, self.ytformats)
-        
-        movieUrls = []
-        for item in tmpTab:
-            movieUrls.append({ 'name': 'YouTube: ' + item['format'] + '\t' + item['ext'] , 'url':item['url'].encode('UTF-8') })
-        
-        return movieUrls
-
     def getVideoUrl(self, url):
         #show adult content
         #self.cm.addCookieItem(COOKIEFILE, {'name': 'AnyF18', 'value': 'mam18', 'domain': 'video.anyfiles.pl'}, False)
@@ -87,26 +78,28 @@ class AnyFilesVideoUrlExtractor:
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: 
             return []
-        fUrl = self.MAINURL + "/w.jsp?id=%s&width=620&height=349&pos=0&skin=0" % vidID
+        fUrl = self.MAINURL + "/w.jsp?id=%s&width=640&height=360&start=0&skin=0&label=false&autostart=false" % vidID
         COOKIE_JSESSIONID = self.cm.getCookieItem(self.COOKIEFILE,'JSESSIONID')
-        HEADER = {'Referer' : url, 'Cookie' : 'JSESSIONID=' + COOKIE_JSESSIONID + ';', 'User-Agent': "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"}
+        HEADER = {'Referer' : url, 'Cookie' : 'JSESSIONID=' + COOKIE_JSESSIONID + ';', 'User-Agent': self.defaultParams['header']['User-Agent']}
         request_param = {'header':HEADER}
+        
         sts, data = self.cm.getPage(fUrl, request_param)
         if not sts: return []
+        
         HEADER['Referer'] = fUrl
-        config = CParsingHelper.getSearchGroups(data, 'src="/?(pcs\?code=[^"]+?)"', 1)[0]
+        
+        tmp = re.compile('''['"](/video-js[^'^"]+?\.js)['"]''').findall(data)
+        for item in tmp:
+            sts, item = self.cm.getPage( self.MAINURL + item,  {'header': HEADER})
+        
+        linksTab = []
+        config = CParsingHelper.getSearchGroups(data, '''['"](/AutocompleteData[^'^"]+?)['"]''', 1)[0]
         if '' != config:
-            sts,data = self.cm.getPage( self.MAINURL + '/' + config,  {'header': HEADER})
+            sts, data = self.cm.getPage( self.MAINURL + config.replace('&amp;', '&'),  {'header': HEADER})
+            printDBG(data)
             if sts:
-                #var source = "<source src=\"http://50.7.220.66/video/60ExQvchsi4PbqMLr--I7A/1433518629/5e638de7a15c7a8dc7c979044cd2a953_147325.mp4\" type=\"video/mp4\" />";
-                #var track = "<track label=\"izombie.112...\" srclang=\"pl\" kind=\"captions\"  src=\"http://video.anyfiles.pl/subtit/1433508336949.srt\"></track>\n";
-                data = data.replace('\\"', '"')
-                #printDBG(data)
-                difSourcesSrc = CParsingHelper.getSearchGroups(data, '''difSourcesSrc[^=]*?=[^"']*?["'](http[^'^"]+?)['"]''', 1)[0] 
-                url    = CParsingHelper.getSearchGroups(data, '''<source[^>]+?src=["'](http[^'^"]+?)['"]''', 1)[0]
-                subUrl = CParsingHelper.getSearchGroups(data, '''<track[^>]+?src=["'](http[^'^"]+?)['"]''', 1)[0]
-                if 'youtube' in difSourcesSrc: 
-                    return self.getYTVideoUrl(difSourcesSrc)
-                else:
-                    return [{'name':'AnyFiles.pl', 'url':url}]
-        return []
+                source  = self.cm.ph.getSearchGroups(data, '''source\s*=\s*['"]([^'^"]+?)['"]''', 1)[0]
+                extlink = self.cm.ph.getSearchGroups(data, '''extlink\s*=\s*['"]([^'^"]+?)['"]''', 1)[0]
+                if self.cm.isValidUrl(extlink): linksTab.extend(self.up.getVideoLinkExt(extlink))
+                if self.cm.isValidUrl(source): return [{'name':'AnyFiles.pl', 'url':source}]
+        return linksTab

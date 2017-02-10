@@ -50,7 +50,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://kisscartoon.me/'
+    return 'http://kisscartoon.se/'
 
 class KissCartoonMe(CBaseHostClass):
     USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36'
@@ -58,13 +58,13 @@ class KissCartoonMe(CBaseHostClass):
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL = 'http://kisscartoon.me/'
-    DEFAULT_ICON = "http://kisscartoon.so/wp-content/uploads/2015/12/logo.png"
+    MAIN_URL = 'http://kisscartoon.se/'
+    DEFAULT_ICON_URL = "http://justifynow.com/wp-content/uploads/2016/12/logo.png"
     
-    MAIN_CAT_TAB = [{'category':'home',            'title': _('Home'),              'url':MAIN_URL,                     'icon':DEFAULT_ICON},
-                    {'category':'list_cats',       'title': _('Catrtoon list'),     'url':MAIN_URL+'CartoonList',       'icon':DEFAULT_ICON},
-                    {'category':'search',          'title': _('Search'), 'search_item':True,                            'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),                                        'icon':DEFAULT_ICON} ]
+    MAIN_CAT_TAB = [{'category':'home',            'title': _('Home'),              'url':MAIN_URL,               },
+                    {'category':'list_cats',       'title': _('Catrtoon list'),     'url':MAIN_URL+'CartoonList', },
+                    {'category':'search',          'title': _('Search'), 'search_item':True,                      },
+                    {'category':'search_history',  'title': _('Search history'),                                  } ]
     SORT_BY_TAB = [{'title':_('Sort by alphabet')},
                    {'title':_('Sort by popularity'), 'sort_by':'MostPopular'},
                    {'title':_('Latest update'),      'sort_by':'LatestUpdate'},
@@ -400,7 +400,7 @@ class KissCartoonMe(CBaseHostClass):
         tmpTab = self.cm.ph.getDataBeetwenMarkers(data, '<select id="selectQuality">', '</select>', False)[1]
         tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(tmpTab, '<option', '</option>')
         if len(tmpTab):
-            password = self.getPage('http://kisscartoon.me/External/RSK', post_data={})[1]
+            password = self.getPage(self.getFullUrl('/External/RSK'), post_data={})[1]
         for item in tmpTab:
             url  = self.cm.ph.getSearchGroups(item, '''value="([^"]+?)"''')[0]
             if '' == url: continue
@@ -491,98 +491,8 @@ class KissCartoonMe(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
+
 class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, KissCartoonMe(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('kisscartoonmelogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

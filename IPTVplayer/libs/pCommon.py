@@ -27,6 +27,7 @@ try:
     except Exception: from StringIO import StringIO 
     import gzip
 except Exception: pass
+from Tools.Directories import fileExists
 ###################################################
 
 class NoRedirection(urllib2.HTTPRedirectHandler):
@@ -392,6 +393,54 @@ class common:
             status = False
             
         return (status, response)
+        
+    def getPageWithWget(self, url, params={}, post_data=None):
+        from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
+        cmd = DMHelper.getBaseWgetCmd(params.get('header', {})) +  (" '%s' " % url)
+        if post_data != None:
+            if params.get('raw_post_data', False):
+                post_data_str = post_data
+            else:
+                post_data_str = urllib.urlencode(post_data)
+            cmd += " --post-data '{0}' ".format(post_data_str)
+        
+        if params.get('use_cookie', False):
+            cmd += " --keep-session-cookies "
+            cookieFile = str(params.get('cookiefile', ''))
+            if params.get('load_cookie', False) and fileExists(cookieFile):
+                cmd += "  --load-cookies '%s' " %  cookieFile
+            if params.get('save_cookie', False):
+                cmd += "  --save-cookies '%s' " %  cookieFile
+        cmd += ' -O - 2> /dev/null'
+        
+        printDBG('_getPageWget request: [%s]' % cmd)
+        from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute
+        
+        data = iptv_execute()( cmd )
+        
+        if params.get('use_cookie', False) and params.get('save_cookie', False) and fileExists(cookieFile):
+            # fix cookie 
+            
+            try:
+                f = open(cookieFile, "r")
+                cookieStr = f.read()
+                f.close()
+                
+                marker = '# HTTP cookie file.'
+                if cookieStr.startswith(marker):
+                    cookieStr = cookieStr.replace(marker, '# HTTP Cookie File.')
+                    f = open(cookieFile, "w")
+                    f.write(cookieStr)
+                    f.close()
+            except Exception:
+                printExc()
+            
+        
+        if not data['sts'] or 0 != data['code']: 
+            return False, None
+        else:
+            return True, data['data']
+        
         
     def calcAnswer(self, data):
         sourceCode = data

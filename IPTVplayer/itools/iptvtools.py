@@ -1197,3 +1197,17 @@ def GetE2AudioCodecMixOption(codec):
     
 def SetE2AudioCodecMixOption(codec, value):
     return SetE2OptionByFile('/proc/stb/audio/%s' % codec, value)
+
+# videomode
+def GetE2VideoModeChoices():
+    # return 'pal ntsc 480i 576i 480p 576p 720p50 720p 1080i50 1080i 1080p24 1080p25 1080p30 720p24 720p25 720p30 1080p50 1080p'.split(' ')
+    return GetE2OptionsFromFile('/proc/stb/video/videomode_choices')
+    
+def GetE2VideoMode():
+    # return '1080p50'
+    options = GetE2OptionsFromFile('/proc/stb/video/videomode')
+    if 1 == len(options): return options[0]
+    return None
+    
+def SetE2VideoMode(value):
+    return SetE2OptionByFile('/proc/stb/video/videomode', value)

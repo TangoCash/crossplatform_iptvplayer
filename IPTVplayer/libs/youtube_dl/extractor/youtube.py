@@ -157,9 +157,14 @@ class CVevoSignAlgoExtractor:
             #match = re.search("signature=([$a-zA-Z]+)", self.playerData)
             #if not match:
             #get main function name 
-            match = re.search(r'\.sig\|\|([a-zA-Z0-9\$]+)\(', self.playerData)
+
+            for rgx in [r'(["\'])signature\1\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(', r'\.sig\|\|(?P<sig>[a-zA-Z0-9$]+)\(']:
+                match = re.search(rgx, self.playerData)
+                if match:
+                    break
+            
             if match:
-                mainFunName = match.group(1)
+                mainFunName = match.group('sig')
                 printDBG('Main signature function name = "%s"' % mainFunName)
             else: 
                 printDBG('Can not get main signature function name')
@@ -1082,8 +1087,12 @@ class YoutubeIE(InfoExtractor):
                             match = re.search('"([^"]+?(?:www|player)-([^/]+)/base\.js)"', video_webpage)
                         if match:
                             playerUrl = match.group(1).replace('\\', '').replace('https:', 'http:')
-                            if not playerUrl.startswith('http'):
+                            if playerUrl.startswith('//'):
                                 playerUrl = 'http:' + playerUrl
+                            elif playerUrl.startswith('/'):
+                                playerUrl = 'http://www.youtube.com' + playerUrl
+                            elif not playerUrl.startswith('http'):
+                                playerUrl = 'http://www.youtube.com/' + playerUrl
                             global SignAlgoExtractorObj
                             if None == SignAlgoExtractorObj:
                                 SignAlgoExtractorObj = CVevoSignAlgoExtractor()

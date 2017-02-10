@@ -40,6 +40,11 @@ class InfoExtractor():
     def xmlGetText(self, data, name, withMarkers=False):
         return self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<%s[^>]*?>' % name), re.compile('</%s>' % name), withMarkers)[1]
         
+    def xmlGetAllNodes(self, data, name):
+        nodes = self.cm.ph.getAllItemsBeetwenMarkers(data, '<' + name, '</%s>' % name)
+        if 0 == len(nodes): nodes = self.cm.ph.getAllItemsBeetwenMarkers(data, '<' + name, '/>')
+        return nodes
+        
     def _search_regex(self, pattern, string, name, default=NO_DEFAULT, fatal=True, flags=0, group=None):
         """
         Perform a regex search on the given string, using a single or a list of

@@ -43,14 +43,14 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://greekdocumentaries3.blogspot.gr/'
+    return 'http://greekdocumentaries2.blogspot.gr/'
 
 class GreekDocumentaries3(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL      = 'http://greekdocumentaries3.blogspot.gr/'
+    MAIN_URL      = 'http://greekdocumentaries2.blogspot.gr/'
     SEARCH_URL    = MAIN_URL + '/search?sitesearch=http%3A%2F%2Fjohny-jossbanget.blogspot.com&q='
     DEFAULT_ICON  = "http://3.bp.blogspot.com/-s80VMsgUq0w/VsYj0rd4nrI/AAAAAAAAAAw/y-ix9jhy1Gg/s1600-r/%25CF%2586%25CE%25BF%25CF%2584%25CE%25BF%2Bblog%2BHeader.png"
     

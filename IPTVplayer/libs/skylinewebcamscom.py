@@ -119,7 +119,7 @@ class WkylinewebcamsComApi:
         for item in data:
             url    = self.cm.ph.getSearchGroups(item, '''href="([^"]+?)"''', 1, True)[0]
             icon   = self.cm.ph.getSearchGroups(item, '''src="([^"]+?)"''', 1, True)[0]
-            if not url.startswith('http'): continue
+            if url == '': continue
             title  = self.cleanHtmlStr(item)
             params = dict(cItem)
             params.update({'title':title, 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon), 'type':'video'})

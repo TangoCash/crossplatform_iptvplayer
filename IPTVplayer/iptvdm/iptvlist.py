@@ -20,6 +20,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from enigma import eListboxPythonMultiContent, eListbox, gFont, RT_HALIGN_LEFT, RT_HALIGN_RIGHT, RT_VALIGN_CENTER
 from Tools.LoadPixmap import LoadPixmap
 import skin
+from datetime import timedelta
 ###################################################
 
 class IPTVDownloadManagerList(IPTVListComponentBase):
@@ -75,7 +76,19 @@ class IPTVDownloadManagerList(IPTVListComponentBase):
         info1 = formatBytes(item.downloadedSize)
         
         # File Size
-        if item.fileSize > 0: info1 += "/" + formatBytes(item.fileSize)
+        if item.fileSize > 0:
+            info1 += "/" + formatBytes(item.fileSize)
+        
+        elif item.totalFileDuration > 0 and item.downloadedFileDuration > 0:
+            totalDuration = item.totalFileDuration
+            downloadDuration = item.downloadedFileDuration
+            totalDuration = str(timedelta(seconds=totalDuration))
+            downloadDuration = str(timedelta(seconds=downloadDuration))
+            if totalDuration.startswith('0:'):
+                totalDuration = totalDuration[2:]
+            if downloadDuration.startswith('0:'):
+                downloadDuration = downloadDuration[2:]
+            info1 = "{0}/{1} ({2})".format(downloadDuration, totalDuration, info1)
 
         # Downloaded Procent
         if item.downloadedProcent >= 0: info1 += ", " + str(item.downloadedProcent) + "%"

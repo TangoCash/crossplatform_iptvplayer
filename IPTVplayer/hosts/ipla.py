@@ -48,7 +48,7 @@ except Exception: import simplejson as json
 ###################################################
 config.plugins.iptvplayer.iplacachexml      = ConfigSelection(default = "12", choices = [("0", "nigdy"), ("6", "przez 6 godzin"), ("12", "przez 12 godzin"),("24", "przez dzień")])
 config.plugins.iptvplayer.iplaDefaultformat = ConfigSelection(default = "400", choices = [("200", "bitrate: 200"),("400", "bitrate: 400"),("900", "bitrate: 900"),("1900", "bitrate: 1900")])
-config.plugins.iptvplayer.iplaUseDF         = ConfigYesNo(default = True)
+config.plugins.iptvplayer.iplaUseDF         = ConfigYesNo(default = False)
 
 def GetConfigList():
     optionList = []

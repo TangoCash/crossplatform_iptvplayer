@@ -15,7 +15,8 @@ from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover3
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIPTVDMImgDir, GetBinDir, GetSubtitlesDir, eConnectCallback, \
                                                           GetE2VideoAspectChoices, GetE2VideoAspect, SetE2VideoAspect, GetE2VideoPolicyChoices, \
                                                           GetE2VideoPolicy, SetE2VideoPolicy, GetDefaultLang, GetPolishSubEncoding, E2PrioFix, iptv_system, \
-                                                          GetE2AudioCodecMixOption, SetE2AudioCodecMixOption, CreateTmpFile, GetTmpDir, IsExecutable, MapUcharEncoding
+                                                          GetE2AudioCodecMixOption, SetE2AudioCodecMixOption, CreateTmpFile, GetTmpDir, IsExecutable, MapUcharEncoding, \
+                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode
 from Plugins.Extensions.IPTVPlayer.itools.iptvsubtitles import IPTVSubtitlesHandler, IPTVEmbeddedSubtitlesHandler
 from Plugins.Extensions.IPTVPlayer.itools.iptvmoviemetadata import IPTVMovieMetaDataHandler
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
@@ -347,9 +348,9 @@ class IPTVExtMoviePlayer(Screen):
         self.hideSubSynchroControl()
         
         # VIDEO options
-        self.defVideoOptions  = {'aspect':None, 'aspect_choices':[], 'policy':None, 'policy_choices':[], 'policy2':None, 'policy2_choices':[]}
+        self.defVideoOptions  = {'aspect':None, 'aspect_choices':[], 'policy':None, 'policy_choices':[], 'policy2':None, 'policy2_choices':[], 'videomode':additionalParams.get('defaul_videomode', None), 'videomode_choices':GetE2VideoModeChoices()}
         self.videoOptSetters  = {'aspect':SetE2VideoAspect, 'policy':SetE2VideoPolicy, 'policy2':SetE2VideoPolicy} 
-        self.currVideoOptions = {'aspect':None, 'policy':None, 'policy2':None}
+        self.currVideoOptions = {'aspect':None, 'policy':None, 'policy2':None, 'videomode':None}
         
         # AUDIO options
         self.defAudioOptions  = {'ac3':None, 'aac':None}
@@ -567,7 +568,7 @@ class IPTVExtMoviePlayer(Screen):
         printDBG("selectVideoOptions")
         options = []
         currIdx = 0
-        optionsTab = [{'title':_('Policy'), 'name': 'policy'}, {'title':_('Policy2'), 'name': 'policy2'}, {'title':_('Aspect'), 'name': 'aspect'}]
+        optionsTab = [{'title':_('Policy'), 'name': 'policy'}, {'title':_('Policy2'), 'name': 'policy2'}, {'title':_('Aspect'), 'name': 'aspect'}, {'title':_('Video mode'), 'name': 'videomode'}]
         for option in optionsTab:
             if len(self.defVideoOptions[option['name']+'_choices' ]) < 2: continue
             if None == self.defVideoOptions[option['name']]: continue
@@ -591,12 +592,50 @@ class IPTVExtMoviePlayer(Screen):
         currValue = self.currVideoOptions[option]
         if None == currValue: currValue = self.defVideoOptions[option]
         
-        for item in choices:
-            if item == currValue:
-                currIdx = len(options)
-            options.append(IPTVChoiceBoxItem(_(item), "", item))
-        self.openChild(boundFunction(self.childClosed, self.selectVideoOptionCallback), IPTVChoiceBoxWidget, {'selection_changed':self.videoOptionSelectionChanged, 'width':500, 'current_idx':currIdx, 'title':_("Select %s") % ret.name, 'options':options})
-
+        if option != 'videomode':
+            for item in choices:
+                if item == currValue:
+                    currIdx = len(options)
+                options.append(IPTVChoiceBoxItem(_(item), "", item))
+            self.openChild(boundFunction(self.childClosed, self.selectVideoOptionCallback), IPTVChoiceBoxWidget, {'selection_changed':self.videoOptionSelectionChanged, 'width':500, 'current_idx':currIdx, 'title':_("Select %s") % ret.name, 'options':options})
+        else:
+            printDBG('choices %s' % (choices))
+            filteredChoices = []
+            for item in choices:
+                if item in [self.defVideoOptions['videomode'], self.currVideoOptions['videomode']] or item.startswith('1080') or item.startswith('2160'):
+                    filteredChoices.append(item)
+            
+            for idx in range(len(filteredChoices)):
+                item = IPTVChoiceBoxItem(_(filteredChoices[idx]), "", filteredChoices[idx])
+                if filteredChoices[idx] == currValue:
+                    item.type = IPTVChoiceBoxItem.TYPE_ON
+                    currIdx = idx
+                else:
+                    item.type = IPTVChoiceBoxItem.TYPE_OFF
+                options.append( item )
+            self.openChild(boundFunction(self.childClosed, self.selectVideoModeCallback), IPTVChoiceBoxWidget, {'width':500, 'current_idx':currIdx, 'title':_("Select %s") % ret.name, 'options':options})
+        
+    def selectVideoModeCallback(self, ret=None):
+        printDBG("selectVideoModeCallback ret[%r]" % [ret])
+        if isinstance(ret, IPTVChoiceBoxItem):
+            currValue = self.currVideoOptions['videomode']
+            if None == currValue: currValue = self.defVideoOptions['videomode']
+            if ret.privateData in self.defVideoOptions['videomode_choices'] and ret.privateData != currValue:
+                SetE2VideoMode(ret.privateData)
+                self.openChild(boundFunction(self.childClosed, self.confirmVideoModeCallback), MessageBox, text=_("Is this message displayed correctly?"), type=MessageBox.TYPE_YESNO, timeout=10, default=False)
+                return
+        self.selectVideoOptions()
+        
+    def confirmVideoModeCallback(self, ret=None):
+        printDBG("confirmVideoModeCallback ret[%r]" % [ret])
+        if ret:
+            curVideoMode = GetE2VideoMode()
+            self.currVideoOptions['videomode'] = curVideoMode
+            self.metaHandler.setVideoOption('videomode', curVideoMode)
+        else:
+            SetE2VideoMode(self.currVideoOptions['videomode'])
+        self.selectVideoOptions()
+        
     def videoOptionSelectionChanged(self, ret=None):
         printDBG("videoOptionSelectionChanged ret[%s]" % [ret])
         if isinstance(ret, IPTVChoiceBoxItem):
@@ -1538,9 +1577,9 @@ class IPTVExtMoviePlayer(Screen):
         
         self.close(sts, currentTime)
         
-    def openChild(self, *args):
+    def openChild(self, *args, **kwargs):
         self.childWindowsCount += 1
-        self.session.openWithCallback(*args)
+        self.session.openWithCallback(*args, **kwargs)
     
     def childClosed(self, callback, *args):
         self.childWindowsCount -= 1
@@ -1620,6 +1659,16 @@ class IPTVExtMoviePlayer(Screen):
         self.initGuiComponentsPos()
         self.metaHandler.load()
         self.loadLastPlaybackTime()
+        
+        defVideoMode = self.defVideoOptions['videomode']
+        videoModes = self.defVideoOptions['videomode_choices']
+        
+        if defVideoMode != None and defVideoMode in videoModes:
+            curVideoMode = GetE2VideoMode()
+            videoMode    = self.metaHandler.getVideoOption('videomode')
+            if videoMode != curVideoMode and videoMode in videoModes:
+                SetE2VideoMode(videoMode)
+            self.currVideoOptions['videomode'] = GetE2VideoMode()
         
         if None != self.downloader:
             self.downloader.subscribeFor_Finish(self.onDownloadFinished)
@@ -1735,6 +1784,12 @@ class IPTVExtMoviePlayer(Screen):
             if audioUri != '':
                 cmd += ' -x "%s" ' % audioUri
             
+            if 'iptv_video_rep_idx' in tmpUri.meta:
+                cmd += ' -0 %s ' % tmpUri.meta['iptv_video_rep_idx']
+            
+            if 'iptv_audio_rep_idx' in tmpUri.meta:
+                cmd += ' -1 %s ' % tmpUri.meta['iptv_audio_rep_idx']
+            
             cmd += (' "%s"' % videoUri) + " > /dev/null"
         
         self.console = eConsoleAppContainer()
@@ -1760,7 +1815,7 @@ class IPTVExtMoviePlayer(Screen):
                 self.currVideoOptions[opt] = playerDefOptions[opt]
         
         videoOptionChange = False
-        self.defVideoOptions = self.getE2VideoOptions()
+        self.defVideoOptions.update(self.getE2VideoOptions())
         for opt in videoOptions:
             val = self.currVideoOptions[opt]
             if val in self.defVideoOptions['%s_choices' % opt] and val != self.defVideoOptions[opt]:
@@ -1771,7 +1826,7 @@ class IPTVExtMoviePlayer(Screen):
         
         if videoOptionChange:
             self.applyVideoOptions(self.currVideoOptions)
-            
+        
         # SET Audio option
         self.defAudioOptions = self.getE2AudioOptions()
         playerDefOptions = self.configObj.getDefaultAudioOptions()

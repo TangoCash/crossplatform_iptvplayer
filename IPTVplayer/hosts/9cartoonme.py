@@ -246,11 +246,16 @@ class CartoonME(CBaseHostClass):
         printDBG("CartoonME.getLinksForVideo [%s]" % cItem)
         urlTab = [] 
         
-        if '9cartoon.me' not in cItem['url']:
+        if self.up.getDomain(self.MAIN_URL) not in cItem['url']:
             return [{'name':'', 'url':cItem['url'], 'need_resolve':1}]
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
+        
+        if '#player_load' not in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+            sts, data = self.getPage(url)
+            if not sts: return []
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '#player_load', 'success', False)[1]
         url       = self.cm.ph.getSearchGroups(data, '''url: ['"]([^'^"]+?)['"]''')[0]
@@ -261,10 +266,21 @@ class CartoonME(CBaseHostClass):
         
         printDBG(data)
         
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'Download', '<script ', False)[1]
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '>Download', '<script ', False)[1]
         tmp = re.compile('''<a[^>]+?href=['"](http[^"^']+?)['"][^>]*?>([^<]+?)<''').findall(tmp)
         for item in tmp:
             urlTab.append({'name':item[1], 'url':item[0], 'need_resolve':1})
+            
+        if 0 == len(urlTab):
+            titles = re.compile('selectquality[^>]*?>([^<]+?)<').findall(data)
+            urls   = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s+part\s+='), re.compile('\]'), False)[1]
+            urls   = re.compile('"(https?://[^"]+?)"').findall(urls)
+            printDBG(titles)
+            printDBG(urls)
+            if len(urls) == len(titles):
+                for idx in range(len(titles)):
+                    urlTab.append({'name':titles[idx], 'url':urls[idx], 'need_resolve':1})
+                
         if 0 == len(urlTab):
             tmp = self.cm.ph.getDataBeetwenMarkers(data, 'player', '</script>', False)[1]
             if 'docid=' in tmp:
@@ -278,7 +294,7 @@ class CartoonME(CBaseHostClass):
         printDBG("CartoonME.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
-        if '/vload/' in videoUrl or 'redirector.googlevideo.com' in videoUrl:
+        if '/vload/' in videoUrl or 'redirector.googlevideo.com' in videoUrl or ('9cartoon.me' in videoUrl and 'token' in videoUrl):
             header = {'Referer':videoUrl, 'User-Agent':self.USER_AGENT, 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language':'pl,en-US;q=0.7,en;q=0.3', 'Accept-Encoding':'gzip, deflate'}
             params= {'return_data':False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':header}
             try:

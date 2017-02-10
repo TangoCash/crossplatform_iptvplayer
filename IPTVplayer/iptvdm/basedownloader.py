@@ -77,6 +77,9 @@ class BaseDownloader:
         # False - if it downloading vod, 
         # None - no information
         return None
+    
+    def hasDurationInfo(self):
+        return False
 
     def getFullFileName(self):
         return self.filePath

@@ -36,6 +36,8 @@ class DMItemBase:
         self.downloadedSize = 0
         self.downloadedProcent = -1
         self.downloadedSpeed = 0
+        self.totalFileDuration = -1
+        self.downloadedFileDuration = -1
         
         self.status = DMHelper.STS.WAITING
         self.tries = DMHelper.DOWNLOAD_TYPE.INITIAL

@@ -502,9 +502,14 @@ class M3U8Downloader(BaseDownloader):
         if not terminated:
             self.onFinish()
     
+    def hasDurationInfo(self):
+        return True
+    
     def getTotalFileDuration(self):
+        # total duration in seconds
         return int(self.totalDuration)
 
     def getDownloadedFileDuration(self):
+        # downloaded duration in seconds
         return int(self.downloadDuration)
         

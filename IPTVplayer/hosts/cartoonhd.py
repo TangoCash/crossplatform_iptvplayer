@@ -382,11 +382,16 @@ class CartoonHD(CBaseHostClass):
             printDBG('===============================================================')
             printDBG(hostings)
             try:
+                keys = re.compile('"(_[0-9]+?)"').findall(data)
                 data = byteify(json.loads(data))
-                for item in data:
-                    url  = data[item]['embed'].replace('\\/', '/')
+                for key in data.keys():
+                    if key not in keys:
+                        keys.append(key)
+                for key in keys:
+                    if key not in keys: continue
+                    url  = data[key]['embed'].replace('\\/', '/')
                     url  = self.cm.ph.getSearchGroups(url, '''src=['"]([^"^']+?)['"]''', 1, ignoreCase=True)[0]
-                    name = data[item]['type'] 
+                    name = data[key]['type'] 
                     if 'googlevideo.com' in url or 'googleusercontent.com' in url:
                         need_resolve = 0
                     elif 1 == self.up.checkHostSupport(url):

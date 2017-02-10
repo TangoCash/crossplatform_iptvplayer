@@ -184,16 +184,16 @@ class HDFilmeTV(CBaseHostClass):
             desc = self.cleanHtmlStr(item)
             
             params = dict(cItem)
-            params.update({'category':nextCategory, 'title':title, 'url':self.getFullUrl(url), 'icon':self.getIconUrl(icon), 'desc':desc})
+            params.update({'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':self.getFullUrl(url), 'icon':self.getIconUrl(icon), 'desc':desc})
             self.addDir(params)
         
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':page+1})
+            params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
             
     def exploreItem(self, cItem):
-        printDBG("HDFilmeTV.listItems")
+        printDBG("HDFilmeTV.exploreItem")
         
         sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
@@ -201,7 +201,7 @@ class HDFilmeTV(CBaseHostClass):
         trailerUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a[^>]*?class="btn btn-xemnow pull-right"[^>]*?href=['"]([^'^"]+?)['"][^>]*?>Trailer<''')[0])
         if trailerUrl.startswith('http'):
             params = dict(cItem)
-            params.update({'title':_('Trailer'), 'urls':[{'name':'trailer', 'url':trailerUrl.replace('&amp;', '&'), 'need_resolve':1}]})
+            params.update({'good_for_fav': False, 'title':_('Trailer'), 'urls':[{'name':'trailer', 'url':trailerUrl.replace('&amp;', '&'), 'need_resolve':1}]})
             self.addVideo(params)
         
         episodesTab = []
@@ -228,9 +228,9 @@ class HDFilmeTV(CBaseHostClass):
         for episode in episodesTab:
             title = cItem['title']
             if season != '': title += ': ' + 's%se%s'% (season.zfill(2), episode.zfill(2))
-            else: title += ': ' + 'e%s'% (episode.zfill(2))
+            elif len(episodesTab) > 1: title += ': ' + 'e%s'% (episode.zfill(2))
             params = dict(cItem)
-            params.update({'title':title, 'urls':episodesLinks[episode]})
+            params.update({'good_for_fav': False, 'title':title, 'urls':episodesLinks[episode]})
             self.addVideo(params)
         
     def getLinksForVideo(self, cItem):
@@ -267,6 +267,29 @@ class HDFilmeTV(CBaseHostClass):
             urlTab.extend( self.up.getVideoLinkExt(vidUrl) )
         
         return urlTab
+        
+    def getFavouriteData(self, cItem):
+        printDBG('HDFilmeTV.getFavouriteData')
+        return json.dumps(cItem)
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('HDFilmeTV.getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('HDFilmeTV.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("HDFilmeTV.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
@@ -370,32 +393,7 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         # for now we must disable favourites due to problem with links extraction for types other than movie
-        CHostBase.__init__(self, HDFilmeTV(), True, favouriteTypes=[]) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('hdfilmetvlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
+        CHostBase.__init__(self, HDFilmeTV(), True, favouriteTypes=[])
     
     def getArticleContent(self, Index = 0):
         retCode = RetHost.ERROR
@@ -413,69 +411,3 @@ class IPTVHost(CHostBase):
             othersInfo = item.get('other_info', '')
             retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
         return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

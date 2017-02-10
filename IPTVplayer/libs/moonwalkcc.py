@@ -63,6 +63,8 @@ class MoonwalkParser():
         cd = self.cm.ph.getSearchGroups(data, 'var condition_detected = ([^;]+?);')[0]
         if 'true' == cd: cd = 1
         else: cd = 0
+        
+        allData = data
         data = self.cm.ph.getDataBeetwenMarkers(data, '/sessions/new_session', '.success', False)[1]
         partner = self.cm.ph.getSearchGroups(data, 'partner: ([^,]+?),')[0]
         if 'null' in partner: partner = ''
@@ -86,6 +88,42 @@ class MoonwalkParser():
         sec_header['X-CSRF-Token'] = csrfToken
         sec_header['X-Requested-With'] = 'XMLHttpRequest'
         post_data = {}
+        
+        allVariables = re.compile("[,\s]([^:^,^\s]+?)\s*:\s*([^,^\s]+?)[,\s]").findall(data)
+        allVariables.extend( re.compile("session_params\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
+        
+        for item in allVariables:
+            varName  = item[0].strip()
+            varValue = item[1].strip()
+            printDBG('>>>>> [%s] [%s] ' % (varName, varValue) )
+            if varName not in ['cd', 'ad_attr', 'partner', 'd_id', 'video_token', 'content_type', 'access_key', 'mw_pid', 'mw_did', 'mw_key', 'mw_domain_id', 'uuid', 'debug']:
+                try:
+                    tmp = int(varName)
+                    continue
+                except Exception: pass
+                if varValue.startswith('"') or varValue.startswith("'"):
+                    post_data[varName] = varValue[1:-1]
+                elif varValue in ['true', 'false']:
+                    post_data[varName] = varValue
+                else:
+                    try: 
+                        post_data[varName] = int(varValue)
+                        continue
+                    except Exception:
+                        pass
+                    printDBG('+++++++ [%s] [%s] ' % (varName, varValue) )
+                    tmpVal = self.cm.ph.getSearchGroups(data, r'var\s+' + varValue + '\s*=\s*([^;]+?);')[0]
+                    if tmpVal == '': tmpVal = self.cm.ph.getSearchGroups(allData, r'var\s+' + varValue + '\s*=\s*([^;]+?);')[0]
+                        
+                    printDBG('+++++++ [%s] [%s] [%s]' % (varName, varValue, tmpVal) )
+                    if tmpVal.startswith('"') or tmpVal.startswith("'"):
+                        post_data[varName] = tmpVal[1:-1]
+                    elif tmpVal in ['true', 'false']:
+                        post_data[varName] = tmpVal
+                    else:
+                        try:post_data[varName] = int(tmpVal)
+                        except Exception: pass
+        
         if 'cd:' in data: post_data['cd'] = cd
         if 'ad_attr:' in data: post_data['ad_attr'] = cd
         if 'partner:' in data: post_data['partner'] = partner
@@ -100,6 +138,8 @@ class MoonwalkParser():
         if 'uuid:' in data: post_data['uuid'] = uuid
         if 'debug:' in data: post_data['debug'] = debug   
         #post_data['ad_attr'] =0
+        
+        printDBG(allData)
         
         return sec_header, post_data
 

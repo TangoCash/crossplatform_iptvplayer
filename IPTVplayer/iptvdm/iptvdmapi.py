@@ -161,6 +161,8 @@ class IPTVDMApi():
             #item.fileSize = -1
             item.downloadedSize = 0
             item.downloadedProcent = -1
+            item.totalFileDuration = -1
+            item.downloadedFileDuration = -1
             item.downloadedSpeed = 0
             item.timeToFinish = -1
             
@@ -180,6 +182,8 @@ class IPTVDMApi():
             item.fileSize = -1 
             item.downloadedSize = 0
             item.downloadedProcent = -1
+            item.totalFileDuration = -1
+            item.downloadedFileDuration = -1
             item.downloadedSpeed = 0
             item.timeToFinish = -1
         
@@ -321,7 +325,7 @@ class IPTVDMApi():
         # dItem - copy only for reading filed
         dItem = self.queueUD[listUDIdx]
                 
-        if 100 == dItem.downloadedProcent:
+        if dItem.downloadedProcent > 99:
             self.queueUD[listUDIdx].status = DMHelper.STS.DOWNLOADED
         else:           
             if dItem.downloadedSize > 0:
@@ -338,9 +342,16 @@ class IPTVDMApi():
         self.queueUD[listUDIdx].downloadedSize  = self.queueUD[listUDIdx].downloader.getLocalFileSize()
         self.queueUD[listUDIdx].fileSize        = self.queueUD[listUDIdx].downloader.getRemoteFileSize()
         self.queueUD[listUDIdx].downloadedSpeed = self.queueUD[listUDIdx].downloader.getDownloadSpeed()
+        
+        if self.queueUD[listUDIdx].downloader.hasDurationInfo():
+            self.queueUD[listUDIdx].totalFileDuration = self.queueUD[listUDIdx].downloader.getTotalFileDuration()
+            self.queueUD[listUDIdx].downloadedFileDuration = self.queueUD[listUDIdx].downloader.getDownloadedFileDuration()
+        
         # calculate downloadedProcent
         if self.queueUD[listUDIdx].fileSize > 0 and self.queueUD[listUDIdx].downloadedSize > 0:
             self.queueUD[listUDIdx].downloadedProcent = (100 * self.queueUD[listUDIdx].downloadedSize) / self.queueUD[listUDIdx].fileSize
+        elif self.queueUD[listUDIdx].totalFileDuration > 0 and self.queueUD[listUDIdx].downloadedFileDuration > 0:
+            self.queueUD[listUDIdx].downloadedProcent = (100 * self.queueUD[listUDIdx].downloadedFileDuration) / self.queueUD[listUDIdx].totalFileDuration
         return True
             
     def updateDownloadItemsStatus(self):

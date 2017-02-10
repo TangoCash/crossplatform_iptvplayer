@@ -49,6 +49,7 @@ class Pinkbike(CBaseHostClass):
     MAIN_URL     = 'http://www.pinkbike.com/'
     VID_MAIN_URL = MAIN_URL + 'video/'
     VID_SRCH_URL = VID_MAIN_URL + 'search/?q='
+    DEFAULT_ICON_URL = 'http://ep1.pinkbike.org/p2pb10472249/p2pb10472249.jpg'
 
     MAIN_CAT_TAB = [{'category':'best_video_categories', 'title':_('Best Pinkbike Videos') },
                     {'category':'video_categories',      'title':_('Categories') },
@@ -139,7 +140,7 @@ class Pinkbike(CBaseHostClass):
             desc  = self.cleanHtmlStr(item[1])
             url   = self.cm.ph.getSearchGroups(item[1], 'href="([^"]+?)"')[0]
             title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item[1], 'title="([^"]+?)"')[0] + ' ' + self.cm.ph.getSearchGroups(item[1], '<a [^>]+?>(.+?)</a>')[0] )
-            self.addVideo({'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            self.addVideo({'title':title, 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon), 'desc':desc})
 
         if nextPage:
             params = dict(cItem)
@@ -162,7 +163,7 @@ class Pinkbike(CBaseHostClass):
         if not sts: return urlTab
         data = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>', False)[1].replace('\\"', '"')
         data = re.compile('data-quality="([^"]+?)"[^>]+?src="([^"]+?)"').findall(data)
-        for item in data: urlTab.append({'name':item[0], 'url':item[1]})
+        for item in data: urlTab.append({'name':item[0], 'url':self.getFullUrl(item[1])})
         return urlTab
         
     def getFavouriteData(self, cItem):
@@ -206,85 +207,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, Pinkbike(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('pinkbikelogo.png')])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            name = item["name"]
-            url  = item["url"]
-            retlist.append(CUrlItem(name, url, need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                description = description,
-                                type = type,
-                                urlItems = hostLinks,
-                                urlSeparateRequest = 1,
-                                iconimage = icon,
-                                possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

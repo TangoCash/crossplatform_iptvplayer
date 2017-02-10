@@ -85,8 +85,11 @@ def _parse_key(line, data):
         data['key'][normalize_attribute(name)] = remove_quotes(value)
 
 def _parse_extinf(line, data, state):
-    duration, title = line.replace(extinf + ':', '').split(',')
-    state['segment'] = {'duration': float(duration), 'title': remove_quotes(title)}
+    val = line.replace(extinf + ':', '').split(',')
+    if len(val) > 1: title = val[1]
+    else: title = ""
+        
+    state['segment'] = {'duration': float(val[0]), 'title': remove_quotes(title)}
 
 def _parse_ts_chunk(line, data, state):
     segment = state.pop('segment')

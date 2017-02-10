@@ -45,7 +45,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           printDBG, printExc, iptv_system, GetHostsList, IsHostEnabled, \
                                                           eConnectCallback, GetSkinsDir, GetIconDir, GetPluginDir,\
                                                           SortHostsList, GetHostsOrderList, CSearchHistoryHelper, IsExecutable, \
-                                                          CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize
+                                                          CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
+                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import IPTVPlayerBufferingWidget
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdmapi import IPTVDMApi, DMItem
@@ -290,6 +291,8 @@ class IPTVPlayerWidget(Screen):
         
         self.activePlayer = None
         self.canRandomizeList = False
+        
+        self.prevVideoMode = None
     #end def __init__(self, session):
         
     def __del__(self):
@@ -1349,7 +1352,9 @@ class IPTVPlayerWidget(Screen):
                 else:
                     self.stopAutoPlaySequencer()
             else:
-                gstAdditionalParams = {'host_name':self.hostName, 'external_sub_tracks':url.meta.get('external_sub_tracks', []), 'iptv_refresh_cmd':url.meta.get('iptv_refresh_cmd', '') } #default_player_videooptions
+                self.prevVideoMode = GetE2VideoMode()
+                printDBG("Current video mode [%s]" % self.prevVideoMode)
+                gstAdditionalParams = {'defaul_videomode':self.prevVideoMode, 'host_name':self.hostName, 'external_sub_tracks':url.meta.get('external_sub_tracks', []), 'iptv_refresh_cmd':url.meta.get('iptv_refresh_cmd', '') } #default_player_videooptions
                 if self.currItem.type == CDisplayListItem.TYPE_AUDIO:
                     gstAdditionalParams['show_iframe'] = config.plugins.iptvplayer.show_iframe.value
                     gstAdditionalParams['iframe_file_start'] = config.plugins.iptvplayer.iframe_file.value
@@ -1396,6 +1401,11 @@ class IPTVPlayerWidget(Screen):
         
     def leaveMoviePlayer(self, answer = None, lastPosition = None, *args, **kwargs):
         self.writeCurrentTitleToFile("")
+        videoMode = GetE2VideoMode()
+        printDBG("Current video mode [%s], previus video mode [%s]" % (videoMode, self.prevVideoMode))
+        if None not in [self.prevVideoMode, videoMode] and self.prevVideoMode != videoMode:
+            printDBG("Restore previus video mode")
+            SetE2VideoMode(self.prevVideoMode)
         if not config.plugins.iptvplayer.disable_live.value:
             self.session.nav.playService(self.currentService)
         self.checkAutoPlaySequencer()

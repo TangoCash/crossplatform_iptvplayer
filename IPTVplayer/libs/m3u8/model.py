@@ -193,12 +193,19 @@ class BasePathMixin(object):
     @property
     def absolute_uri(self):
         if parser.is_url(self.uri):
-            return self.uri
+            uri = self.uri
         else:
             if self.base_uri is None:
                 raise ValueError('There can not be `absolute_uri` with no `base_uri` set')
-            return _urijoin(self.base_uri, self.uri)
-
+            uri = _urijoin(self.base_uri, self.uri)
+        
+        # ugly workaround to be fixed
+        proxyUri = 'englandproxy.co.uk'
+        if proxyUri in self.base_uri and proxyUri not in uri:
+            try: uri = 'http://www.englandproxy.co.uk/' + uri[uri.find('://')+3:]
+            except Exception: pass
+        return uri
+            
     @property
     def base_path(self):
         return os.path.dirname(self.uri)
@@ -363,8 +370,12 @@ def quoted(string):
     return '"%s"' % string
 
 def _urijoin(base_uri, path):
-    #print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> base_uri[%s] path[%s]" % (base_uri, path))
-    if parser.is_url(base_uri):
+    if parser.is_url(path):
+        return path
+    elif parser.is_url(base_uri):
+        if path.startswith('/'):
+            return urlparse.urljoin(base_uri, path)
+        
         parsed_url = urlparse.urlparse(base_uri)
         prefix = parsed_url.scheme + '://' + parsed_url.netloc
         new_path = os.path.normpath(parsed_url.path + '/' + path)
