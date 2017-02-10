@@ -154,6 +154,9 @@ do
   rm -rf ./hosts/*$myfile*
   rm -rf ./icons/*$myfile*
 done
+
+###change some default values
+sed -i "s;\(config\.plugins\.iptvplayer\.\iplaUseDF.*ConfigYesNo.default[ ]*=[ ]*\)True;\1False;" $publicGitDir/hosts/ipla.py
 ############################## copying to GIT public repo to fit license ##############################
 #echo 'Syncing public GIT...'
 #cp -a $publicGitDir/* $GITroot/cmdline_iptvplayer/

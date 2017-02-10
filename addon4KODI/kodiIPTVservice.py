@@ -80,6 +80,20 @@ def configureE2():
     SaveE2ConfFile(os.path.join(E2root, 'config', 'E2settings.conf'))
     return
 
+def configureHOST(hostname):
+    logState('Configuring HOST %s settings..\n' % hostname)
+    with open(xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/settings.xml'), 'r') as settingsFile:
+        for line in settingsFile:
+            if line.find('id="%s.config.' % hostname ) > 0:
+                mySetting = line.split('id="')[1].split('"')[0][len(hostname)+1:]
+                mySettingValue = myAddon.getSetting(mySetting).replace('\\','/') #to avoid issues on Windows
+                if mySettingValue != '' and mySettingValue[-1] == '/':
+                    mySettingValue = mySettingValue[:-1]
+                logState('\t%s=%s\n' % (mySetting,mySettingValue))
+                exec("%s.value='%s';%s.save()" %(mySetting, mySettingValue, mySetting))
+    SaveE2ConfFile(os.path.join(E2root, 'config', 'E2settings.conf'))
+    return
+
 class MyDaemon():
     def __init__(self, pidfile='/dev/null', stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', hostName='', clientType='PYTHON'):
         self.stdin = stdin
@@ -110,6 +124,7 @@ class MyDaemon():
 
         hostconfig = __import__('hosts.' + self.hostName, globals(), locals(), ['GetConfigList'], -1)
         ConfList = hostconfig.GetConfigList()
+        configureHOST(self.hostName)
 
         monitor = xbmc.Monitor()
         while not monitor.abortRequested() or xbmcgui.Window(10000).getProperty('plugin.video.IPTVplayer.HOST') == self.hostName:
