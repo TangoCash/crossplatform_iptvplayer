@@ -401,6 +401,7 @@ class urlparser:
                        'uptobox.com':          self.pp.parserUPTOSTREAMCOM  ,
                        'fastplay.cc':          self.pp.parserFASTPLAYCC     ,
                        'spruto.tv':            self.pp.parserSPRUTOTV       ,
+                       'raptu.com':            self.pp.parserRAPTUCOM       ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -2419,6 +2420,30 @@ class pageParser:
         sts, data = self.cm.getPage(baseUrl)
         if not sts: return False
         return self._findLinks(data, serverName='spruto.tv', linkMarker=r'''['"]?file['"]?[ ]*:[ ]*['"](http[^"^']+)['"][,}]''', m1='Uppod(', m2=')', contain='.mp4')
+        
+    def parserRAPTUCOM(self, baseUrl):
+        printDBG("parserRAPTUCOM baseUrl[%r]" % baseUrl)
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return False
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ');', False)
+        data = byteify(json.loads(data))
+        
+    def parserRAPTUCOM(self, baseUrl):
+        printDBG("parserRAPTUCOM baseUrl[%r]" % baseUrl)
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return False
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ');', False)[1].strip()
+        data = self.cm.ph.getDataBeetwenMarkers(data, '"sources":', ']', False)[1].strip()
+        data = byteify(json.loads(data+']'))
+        printDBG(data)
+        retTab = []
+        for item in data:
+            try: retTab.append({'name':'raptu.com ' + item.get('label', item.get('res', '')), 'url':item['file']})
+            except Exception: pass
+        return retTab[::-1]
+        
         
     def parserUPTOSTREAMCOM(self, baseUrl):
         printDBG("parserUPTOSTREAMCOM baseUrl[%r]" % baseUrl)
@@ -5503,46 +5528,33 @@ class pageParser:
         printDBG("parserNOSVIDEO baseUrl[%s]" % baseUrl)
         # code from https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/nosvideo.py
         HTTP_HEADER= { 'User-Agent':"Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10", 'Referer':baseUrl }
-        _VALID_URL = r'https?://(?:www\.)?nosvideo\.com/' + \
-                 '(?:embed/|\?v=)(?P<id>[A-Za-z0-9]{12})/?'
-        _PLAYLIST_URL = 'http://nosvideo.com/xml/{0}.xml'
-        try:
-            mobj = re.match(_VALID_URL, baseUrl)
-            video_id = mobj.group('id')
-            post_data = {
-                'id': video_id,
-                'op': 'download1',
-                'method_free': 'Continue to Video',
-            }
-            sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER}, post_data)
-            if not sts: return False
-            
-            id = self.cm.ph.getSearchGroups(data, 'php\|([^\|]+)\|')[0]
-            url = _PLAYLIST_URL.format(id)
-            
-            sts, data = self.cm.getPage(url, {'header':HTTP_HEADER})
-            if not sts: return False
-            
-            videoUrl = CParsingHelper.getDataBeetwenMarkers(data, '<file>', '</file>', False)[1]
-        except Exception:
-            videoUrl = ''
-            pass
-        if '' == videoUrl:
-            printDBG(">>>> [%s]" % baseUrl)
-            video_id = self.cm.ph.getSearchGroups(baseUrl+'/', '[^A-F^a-f^0-9]([A-Fa-f0-9]{16})[^A-F^a-f^0-9]')[0]
-            if '' == video_id:
-                url = baseUrl
-            else:
-                url = 'http://nosvideo.com/vj/video.php?u=%s&w=640&h=380' % video_id
-            
-            sts, data = self.cm.getPage(url)
-            if not sts: return False
-            
-            videoUrl = self.cm.ph.getSearchGroups(data, '''tracker:[^'^"]*?['"]([^'^"]+?)['"]''')[0]
-            videoUrl = base64.b64decode(videoUrl)
-            if videoUrl.startswith('http'): 
-                return urlparser.decorateUrl(videoUrl)
-        return False
+
+        if 'embed' not in baseUrl:
+            videoID = self.cm.ph.getSearchGroups(baseUrl+'/', '[^A-Za-z0-9]([A-Za-z0-9]{12})[^A-Za-z0-9]')[0]
+            videoUrl = 'http://nosvideo.com/embed/' + videoID
+        else:
+            videoUrl = baseUrl
+        sts, data = self.cm.getPage(videoUrl, {'header':HTTP_HEADER})
+        if not sts: return False
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, ">eval(", '</script>', False)[1]
+        mark1 = "}("
+        idx1 = data.find(mark1)
+        if -1 == idx1: return False
+        idx1 += len(mark1)
+        data = unpackJS(data[idx1:-3], VIDUPME_decryptPlayerParams)
+        
+        videoUrl = self.cm.ph.getSearchGroups(data, r"""['"]?playlist['"]?[ ]*?\:[ ]*?['"]([^"^']+?)['"]""")[0]
+        sts, data = self.cm.getPage(videoUrl, {'header':HTTP_HEADER})
+        if not sts: return False
+        
+        printDBG(data)
+        
+        videoUrl = self.cm.ph.getDataBeetwenMarkers(data, '<file>', '</file>', False)[1]
+        if not self.cm.isValidUrl(videoUrl):
+            videoUrl = self.cm.ph.getSearchGroups(data, 'file="(http[^"]+?)"')[0]
+
+        return videoUrl
         
     def parserPUTSTREAM(self, baseUrl):
         printDBG("parserPUTSTREAM baseUrl[%s]" % baseUrl)

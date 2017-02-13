@@ -131,7 +131,7 @@ class HDFilmeTV(CBaseHostClass):
                 value = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
                 if value == '': continue
                 self.filtersCache[filter['key']].append({'title':title, filter['key']:value})
-            if len(self.filtersCache[filter['key']]):
+            if len(self.filtersCache[filter['key']]) and filter['key'] != 'sort':
                 self.filtersCache[filter['key']].insert(0, {'title':_('--All--'), filter['key']:''})
             
     def listFilters(self, cItem, nextCategory, nextFilter):

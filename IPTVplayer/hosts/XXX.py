@@ -21,7 +21,7 @@ except:
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry, ConfigPIN, ConfigDirectory
 from time import sleep
-from os import remove as os_remove, path as os_path 
+from os import remove as os_remove, path as os_path, system as os_system
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
@@ -141,7 +141,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.0.1.7"
+    XXXversion = "21.0.2.1"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -211,7 +211,7 @@ class Host:
            valTab.append(CDisplayListItem('EPORNER',        'www.eporner.com',    CDisplayListItem.TYPE_CATEGORY, ['http://www.eporner.com/categories/'],   'eporner', 'http://static.eporner.com/new/logo.png', None)) 
            valTab.append(CDisplayListItem('TUBE8',          'www.tube8.com',      CDisplayListItem.TYPE_CATEGORY, ['http://www.tube8.com/categories.html'], 'fulltube8',   'http://cdn1.static.tube8.phncdn.com/images/t8logo.png', None)) 
            valTab.append(CDisplayListItem('YOUPORN',        'wwww.youporn.com',   CDisplayListItem.TYPE_CATEGORY, ['http://www.youporn.com/categories/alphabetical/'],'fullyouporn', 'http://cdn1.static.youporn.phncdn.com/cb/bundles/youpornwebfront/images/l_youporn_black.png', None)) 
-           valTab.append(CDisplayListItem('PORNHUB',        'www.pornhub.com',    CDisplayListItem.TYPE_CATEGORY, ['http://www.pornhub.com/categories'],    'fullpornhub', 'http://cdn1.static.pornhub.phncdn.com/images/pornhub_logo.png', None)) 
+           valTab.append(CDisplayListItem('PORNHUB',        'www.pornhub.com',    CDisplayListItem.TYPE_CATEGORY, ['http://www.pornhub.com/categories'],    'pornhub', 'http://cdn1.static.pornhub.phncdn.com/images/pornhub_logo.png', None)) 
            valTab.append(CDisplayListItem('HDPORN',         'www.hdporn.net',     CDisplayListItem.TYPE_CATEGORY, ['http://www.hdporn.net/channels/'],      'hdporn',  'http://www.hdporn.com/gfx/logo-404.jpg', None)) 
            valTab.append(CDisplayListItem('REDTUBE',        'www.redtube.com',    CDisplayListItem.TYPE_CATEGORY, ['http://www.redtube.com/channels'],      'redtube', 'http://img02.redtubefiles.com/_thumbs/design/logo/redtube_260x52_black.png', None)) 
            valTab.append(CDisplayListItem('XHAMSTER',       'xhamster.com',       CDisplayListItem.TYPE_CATEGORY, ['http://xhamster.com/channels.php'],     'xhamster','http://eu-st.xhamster.com/images/tpl2/logo.png', None)) 
@@ -309,6 +309,10 @@ class Host:
 
               valtemp = self.listsItems(-1, url, 'THUMBZILLA-search')
               for item in valtemp: item.name='THUMBZILLA - '+item.name              
+              valTab = valTab + valtemp
+
+              valtemp = self.listsItems(-1, url, 'pornhub-search')
+              for item in valtemp: item.name='pornhub - '+item.name              
               valTab = valTab + valtemp
 
               return valTab
@@ -445,7 +449,8 @@ class Host:
         if 'zbiornik' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://zbiornik.com' 
-           try: data = self.cm.getURLRequestData({ 'url': 'http://zbiornik.tv', 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True })
+           COOKIEFILE = os_path.join(GetCookieDir(), 'zbiornik.cookie')
+           try: data = self.cm.getURLRequestData({ 'url': 'http://zbiornik.tv/accept/yes/Lw==', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
            except:
               printDBG( 'Host error url: '+url )
               return valTab
@@ -455,6 +460,7 @@ class Host:
            ph1 = re.search('var streams = (.*?)}];', data, re.S)
            if ph1: 
               ph1 = ph1.group(1)+'}]'
+              #printDBG( 'Host listsItems json: '+ph1 )
               result = simplejson.loads(ph1)
               if result:
                  for item in result:
@@ -465,7 +471,7 @@ class Host:
                      if str(item["accType"])=='3': sex = 'couple'
                      printDBG( 'Host listsItems nick: '+item["nick"] )
                      printDBG( 'Host listsItems broadcasturl: '+item["broadcasturl"] )
-                     phImage = 'http://ctn.zbiornik.com/cams/'+str(item["broadcasturl"])+'-224.jpg'
+                     phImage = 'http://camshot.zbiornik.com/'+str(item["broadcasturl"])+'-224.jpg'
                      printDBG( 'Host listsItems phImage: '+phImage )
                      streamUrl = 'rtmp://'+str(item["server"])+'/videochat/?'+hash+' playpath='+str(item["broadcasturl"])+' swfUrl=http://zbiornik.tv/wowza.swf?v50&b=100 pageUrl=http://zbiornik.tv/'+str(item["nick"])+' live=1'
                      printDBG( 'Host listsItems streamUrl: '+streamUrl )
@@ -882,14 +888,12 @@ class Host:
            printDBG( 'Host listsItems end' )
            return valTab
 
-        if 'fullpornhub' == name:
+        if 'pornhub' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://www.pornhub.com' 
-           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-           try:
-              data = self.cm.getURLRequestData(query_data)
+           COOKIEFILE = os_path.join(GetCookieDir(), 'pornhub.cookie')
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
            except:
-              printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
            #printDBG( 'Host listsItems data: '+data )
@@ -899,23 +903,29 @@ class Host:
                   printDBG( 'Host listsItems phUrl: '  +phUrl )
                   printDBG( 'Host listsItems phImage: '+phImage )
                   printDBG( 'Host listsItems phTitle: '+phTitle )
-                  valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl],'fullpornhub-clips', phImage, None)) 
+                  valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+phUrl],'pornhub-clips', phImage, None)) 
                   valTab.sort()
            valTab.sort(key=lambda poz: poz.name)
-           valTab.insert(0,CDisplayListItem("--- HD ---",         "HD",          CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?c=38"], 'fullpornhub-clips', 'http://cdn1a.static.pornhub.phncdn.com/images/categories/38.jpg',None))
-           valTab.insert(0,CDisplayListItem("--- Longest ---",    "Longest",     CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=lg"], 'fullpornhub-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Top Rated ---",  "Top Rated",   CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=tr"], 'fullpornhub-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Most Viewed ---","Most Viewed", CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=mv"], 'fullpornhub-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Most Recent ---","Most Recent", CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=mr"], 'fullpornhub-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- HD ---",         "HD",          CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?c=38"], 'pornhub-clips', 'http://cdn1a.static.pornhub.phncdn.com/images/categories/38.jpg',None))
+           valTab.insert(0,CDisplayListItem("--- Longest ---",    "Longest",     CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=lg"], 'pornhub-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Top Rated ---",  "Top Rated",   CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=tr"], 'pornhub-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Most Viewed ---","Most Viewed", CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=mv"], 'pornhub-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Most Recent ---","Most Recent", CDisplayListItem.TYPE_CATEGORY,["http://www.pornhub.com/video?o=mr"], 'pornhub-clips', '',None))
+           self.SEARCH_proc='pornhub-search'
+           valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
+           valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
            printDBG( 'Host listsItems end' )
            return valTab
-        if 'fullpornhub-clips' == name:
+        if 'pornhub-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-           try:
-              data = self.cm.getURLRequestData(query_data)
+           valTab = self.listsItems(-1, 'http://www.pornhub.com/video/search?search=%s' % url, 'pornhub-clips')
+           printDBG( 'Host listsItems end' )
+           return valTab    
+        if 'pornhub-clips' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           COOKIEFILE = os_path.join(GetCookieDir(), 'pornhub.cookie')
+           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
            except:
-              printDBG( 'Host listsItems query error' )
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
            printDBG( 'Host listsItems data: '+data )
@@ -1156,7 +1166,7 @@ class Host:
            try:
               output.write(self.cm.getURLRequestData(query_data))
               output.close()
-              iptv_system ('sync')
+              os_system ('sync')
               printDBG( 'HostXXX pobieranie iptv-host-xxx.tar.gz' )
            except:
               if os_path.exists(source):
@@ -1171,15 +1181,18 @@ class Host:
 
            cmd = 'tar -xzf "%s" -C "%s" 2>&1' % ( source, dest )  
            try: 
-              iptv_system (cmd)
-              iptv_system ('sync')
+              os_system (cmd)
+              os_system ('sync')
               printDBG( 'HostXXX rozpakowanie  ' + cmd )
            except:
               printDBG( 'HostXXX Błąd rozpakowania iptv-host-xxx.tar.gz' )
-              iptv_system ('rm -f %s' % source)
-              iptv_system ('rm -rf %siptv-host-xxx*' % dest)
+              os_system ('rm -f %s' % source)
+              os_system ('rm -rf %siptv-host-xxx*' % dest)
               valTab.append(CDisplayListItem('ERROR - Blad rozpakowania %s' % source,   'ERROR', CDisplayListItem.TYPE_CATEGORY, [''], '', '', None)) 
               return valTab
+
+           printDBG( 'HostXXX sleep 5' )
+           sleep(5)
 
            try:
               import commands
@@ -1194,22 +1207,22 @@ class Host:
            except:
               printDBG( 'HostXXX error commands.getoutput ' )
 
-           printDBG( 'HostXXX sleep 10' )
-           sleep(10)
+           printDBG( 'HostXXX sleep 5' )
+           sleep(5)
 
            try:
-              iptv_system ('cp -rf %siptv-host-xxx*/IPTVPlayer/* /usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/' % dest)
-              iptv_system ('sync')
-              printDBG( 'HostXXX kopiowanie hostXXX do IPTVPlayer: '+'cp -rf %s%s/IPTVPlayer/* /usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/' % (dest, katalog) )
+              os_system ('cp -rf %siptv-host-xxx*/IPTVPlayer/* /usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/' % dest)
+              os_system ('sync')
+              printDBG( 'HostXXX kopiowanie hostXXX do IPTVPlayer: '+'cp -rf %siptv-host-xxx*/IPTVPlayer/* /usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/' % dest )
            except:
               printDBG( 'HostXXX blad kopiowania' )
-              iptv_system ('rm -f %s' % source)
-              iptv_system ('rm -rf %siptv-host-xxx*' % dest)
+              os_system ('rm -f %s' % source)
+              os_system ('rm -rf %siptv-host-xxx*' % dest)
               valTab.append(CDisplayListItem('ERROR - blad kopiowania',   'ERROR', CDisplayListItem.TYPE_CATEGORY, [''], '', '', None)) 
               return valTab
 
-           printDBG( 'HostXXX sleep 10' )
-           sleep(10)
+           printDBG( 'HostXXX sleep 5' )
+           sleep(5)
 
            try:
               cmd = '/usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/hosts/hostXXX.py'
@@ -1224,8 +1237,8 @@ class Host:
 
 
            printDBG( 'HostXXX usuwanie plikow tymczasowych' )
-           iptv_system ('rm -f %s' % source)
-           iptv_system ('rm -rf %siptv-host-xxx*' % dest)
+           os_system ('rm -f %s' % source)
+           os_system ('rm -rf %siptv-host-xxx*' % dest)
 
            if url:
               try:
@@ -3789,22 +3802,17 @@ class Host:
            return ''
         
         if parser == 'http://www.pornhub.com':
-           m = re.search('player_quality_720p.*?="(.*?)".*?player_quality_720p.*?="(.*?)"', data, re.S)
-           if m: 
-              printDBG( 'Host getResolvedURL 1: '+m.group(1))
-              printDBG( 'Host getResolvedURL 2: '+m.group(2))
-              if m.group(1).startswith('http://'):
-                 return m.group(1)+m.group(2)
-              if m.group(2).startswith('http://'):
-                 return m.group(2)+m.group(1)
-           m = re.search('player_quality_480p.*?="(.*?)".*?player_quality_480p.*?="(.*?)"', data, re.S)
-           if m: 
-              printDBG( 'Host getResolvedURL 1: '+m.group(1))
-              printDBG( 'Host getResolvedURL 2: '+m.group(2))
-              if m.group(1).startswith('http://'):
-                 return m.group(1)+m.group(2)
-              if m.group(2).startswith('http://'):
-                 return m.group(2)+m.group(1)
+           embed = re.search('="(http[s]?://www.pornhub.com/embed/.*?)"', data, re.S)
+           url = embed.group(1)
+           try:    data = self.cm.getURLRequestData({'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+           except: 
+              printDBG( 'Host getResolvedURL query error xml' )
+              return ''
+           #printDBG( 'Host data embed: '+data )
+           videoPage = re.findall('quality_720p":"(.*?)"', data, re.S)
+           if videoPage: return videoPage[0].replace('\/','/')
+           videoPage = re.findall('quality_480p":"(.*?)"', data, re.S)
+           if videoPage: return videoPage[0].replace('\/','/')
            return ''
 
         if parser == 'http://www.4tube.com':
@@ -4232,7 +4240,7 @@ def decodeHtml(text):
 	return text	
 
 ############################################
-# functions for fullpornhub
+# functions for pornhub
 ############################################
 def decrypt(ciphertext, password, nBits):
     printDBG( 'decrypt begin ' )

@@ -993,11 +993,13 @@ class IPTVExtMoviePlayer(Screen):
     def updateInfo(self):
         self.extPlayerCmddDispatcher.doUpdateInfo()
         if None != self.downloader:
-            if self.downloader.getName() == "wget m3u8" and self.downloader.getTotalFileDuration() > 0:
+            if "m3u8" in self.downloader.getName() and self.downloader.getTotalFileDuration() > 0:
                 totalDuration = self.downloader.getTotalFileDuration()
                 downloadDuration = self.downloader.getDownloadedFileDuration()
                 if 0 < totalDuration and 0 < downloadDuration:
                     self['bufferingBar'].value = (downloadDuration * 100000) / totalDuration
+                    if self.playback['Length'] < totalDuration:
+                        self.setPlaybackLength(totalDuration)
                 return
         
             remoteFileSize = self.downloader.getRemoteFileSize()
@@ -1034,6 +1036,11 @@ class IPTVExtMoviePlayer(Screen):
     def waitEOSAbortedFixTimeoutCallback(self):
         if self.waitEOSAbortedFix['EOSaborted_received']:
             self.extPlayerCmddDispatcher.stop()
+            
+    def setPlaybackLength(self, newLength):
+        self.playback['Length'] = newLength
+        self['progressBar'].range = (0, newLength)
+        self['lengthTimeLabel'].setText( str(timedelta(seconds=newLength)) )
         
     def playbackUpdateInfo(self, stsObj):
         for key, val in stsObj.iteritems():
@@ -1052,19 +1059,12 @@ class IPTVExtMoviePlayer(Screen):
                         self.lastPosition = 0
                     tmpLength = self.playback['CurrentTime']
                     if val > self.playback['CurrentTime']: tmpLength = val
-                    if 0 < tmpLength:
-                        if None != self.downloader and self.downloader.getName() == "wget m3u8"\
-                           and self.downloader.getTotalFileDuration() > tmpLength:
-                           tmpLength = self.downloader.getTotalFileDuration()
-                        self.playback['Length'] = tmpLength
-                        self['progressBar'].range = (0, tmpLength)
-                        self['lengthTimeLabel'].setText( str(timedelta(seconds=tmpLength)) )
+                    if self.playback['Length'] < tmpLength:
+                        self.setPlaybackLength(tmpLength)
                     self.playback['LengthFromPlayerReceived'] = True
             elif 'CurrentTime' == key:
                 if self.playback['Length'] < val:
-                    self.playback['Length'] = val
-                    self['progressBar'].range = (0, val)
-                    self['lengthTimeLabel'].setText( str(timedelta(seconds=val)) )
+                    self.setPlaybackLength(val)
                 self['progressBar'].value = val
                 self.playback['CurrentTime'] = stsObj['CurrentTime']
                 if 0 < self.playback['CurrentTime']: self.playback['StartGoToSeekTime'] = self.playback['CurrentTime']
@@ -1180,7 +1180,7 @@ class IPTVExtMoviePlayer(Screen):
     def key_down_repeat(self):  self.goSubSynchroKey(1, 'repeat')
     
     def doSeek(self, val):
-        if None != self.downloader and self.downloader.getName() == "wget m3u8" \
+        if None != self.downloader and "m3u8" in self.downloader.getName() \
            and self.playback['CurrentTime'] >= 0 and self.playback['Length'] > 10:
             val += self.playback['CurrentTime']
             if val < 0: val = 0

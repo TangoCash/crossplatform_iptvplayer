@@ -92,6 +92,10 @@ class DMHelper:
     @staticmethod
     def GET_F4M_PATH():
         return config.plugins.iptvplayer.f4mdumppath.value
+        
+    @staticmethod
+    def GET_HLSDL_PATH():
+        return config.plugins.iptvplayer.hlsdlpath.value
     
     @staticmethod
     def GET_RTMPDUMP_PATH():
@@ -256,4 +260,25 @@ class DMHelper:
             
         cmd = DMHelper.GET_WGET_PATH() + wgetContinue + defaultHeader + ' --no-check-certificate ' + headerOptions + proxyOptions
         printDBG("getBaseWgetCmd return cmd[%s]" % cmd)
+        return cmd
+        
+    @staticmethod
+    def getBaseHLSDLCmd(downloaderParams = {}):
+        printDBG("getBaseWgetCmd downloaderParams[%r]" % downloaderParams)
+        headerOptions = ''
+        proxyOptions = ''
+        
+        userAgent = ' -u "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0" '
+        for key, value in downloaderParams.items():
+            if value != '':
+                if key in DMHelper.HANDLED_HTTP_HEADER_PARAMS:
+                    if key == 'User-Agent':
+                        userAgent = ' -u "%s" ' % value
+                    else:
+                        headerOptions += ' -h "%s: %s" ' % (key, value)
+                elif key == 'http_proxy':
+                    proxyOptions += ' -e use_proxy=yes -e http_proxy="%s" -e https_proxy="%s" ' % (value, value)
+        
+        cmd = DMHelper.GET_HLSDL_PATH() + ' -q -f -b ' + userAgent + headerOptions + proxyOptions
+        printDBG("getBaseHLSDLCmd return cmd[%s]" % cmd)
         return cmd

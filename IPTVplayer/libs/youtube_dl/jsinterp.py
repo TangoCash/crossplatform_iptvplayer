@@ -235,11 +235,7 @@ class JSInterpreter(object):
             r'(?P<key>[a-zA-Z$0-9]+)\s*:\s*function'
             r'\((?P<args>[a-z,]+)\){(?P<code>[^}]+)}',
             fields)
-        
         for f in fields_m:
-            printDBG("====================================================")
-            printDBG('def %s.%s(%s)\n%s' % (objname, f.group('key'), f.group('args'), f.group('code')))
-            printDBG("====================================================")
             argnames = f.group('args').split(',')
             obj[f.group('key')] = self.build_function(argnames, f.group('code'))
 
