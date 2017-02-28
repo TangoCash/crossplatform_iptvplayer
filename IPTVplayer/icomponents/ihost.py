@@ -559,7 +559,7 @@ class CBaseHostClass:
         return url
         
     def getFullIconUrl(self, url):
-        return url
+        return self.getFullUrl(url)
         
     def getDefaulIcon(self, cItem=None):
         try: return self.DEFAULT_ICON_URL

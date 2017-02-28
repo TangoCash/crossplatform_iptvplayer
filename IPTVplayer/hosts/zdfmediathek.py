@@ -355,6 +355,10 @@ class ZDFmediathek(CBaseHostClass):
                 url = item['url']
                 name = item['quality_name'] + ' ' + item['format_name']
                 if '' != url:
+                    if 'live' in str(live):
+                        live = True
+                    else: 
+                        live = False
                     urlTab.append({'need_resolve':0, 'name':name, 'url':self.up.decorateUrl(url, {'iptv_livestream':live})})
                     if onelinkmode: break
             printDBG(tmpUrlTab)

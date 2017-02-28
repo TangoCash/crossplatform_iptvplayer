@@ -19,7 +19,7 @@ try:
 except:
     import json as simplejson   
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry, ConfigPIN, ConfigDirectory
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, ConfigInteger, getConfigListEntry, ConfigPIN, ConfigDirectory
 from time import sleep
 from os import remove as os_remove, path as os_path, system as os_system
 ###################################################
@@ -36,6 +36,7 @@ config.plugins.iptvplayer.xxxsortuj = ConfigYesNo(default = True)
 config.plugins.iptvplayer.xxxsearch = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xxxsortmfc = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xxxsortall = ConfigYesNo(default = True)
+config.plugins.iptvplayer.delay = ConfigInteger(5, (0, 5))   
 
 def GetConfigList():
     optionList = []
@@ -45,6 +46,8 @@ def GetConfigList():
     optionList.append( getConfigListEntry( "Sortuj Myfreecams :", config.plugins.iptvplayer.xxxsortmfc) )
     optionList.append( getConfigListEntry( "Globalne wyszukiwanie :", config.plugins.iptvplayer.xxxsearch) )
     optionList.append( getConfigListEntry( "Globalne sortowanie :", config.plugins.iptvplayer.xxxsortall) )
+    optionList.append( getConfigListEntry( "UPDATE delay :", config.plugins.iptvplayer.delay) )
+
 
     return optionList
 ###################################################
@@ -141,7 +144,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.0.2.1"
+    XXXversion = "21.0.2.5"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -235,7 +238,7 @@ class Host:
            valTab.append(CDisplayListItem('EXTREMETUBE',     'http://www.extremetube.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.extremetube.com/video-categories'],'EXTREMETUBE', 'http://www.wp-tube-plugin.com/feed-images/extremetube.png', None)) 
            valTab.append(CDisplayListItem('RUPORN',     'http://ruporn.video/', CDisplayListItem.TYPE_CATEGORY, ['http://ruporn.video/categories.html'],'RUSPORN', 'http://ruporn.video/App_Themes/ruporn/img/logo.png?12013', None)) 
            valTab.append(CDisplayListItem('PORN720',     'http://porn720.net/', CDisplayListItem.TYPE_CATEGORY, ['http://porn720.net/'],'PORN720', 'http://porn720.net/wp-content/themes/porn720/img/logo.png', None)) 
-           valTab.append(CDisplayListItem('PORNTREX',     'http://www.porntrex.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.porntrex.com/categories'],'PORNTREX', 'http://www.porntrex.com/templates/frontend/porntrex/img/logo.png', None)) 
+           #valTab.append(CDisplayListItem('PORNTREX',     'http://www.porntrex.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.porntrex.com/categories'],'PORNTREX', 'http://www.porntrex.com/templates/frontend/porntrex/img/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNDOE',     'http://www.porndoe.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.porndoe.com/categories'],'PORNDOE', 'http://porndoe.com/themes/frontend/white/assets/images/logo_fb.jpg', None)) 
            valTab.append(CDisplayListItem('PORNfromCZECH',     'http://www.pornfromczech.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornfromczech.com/'],'PORNFROMCZECH', 'http://pornfromczech.com/wp-content/uploads/2013/03/PfC_logo.png', None)) 
            valTab.append(CDisplayListItem('FILMYPORNO',     'http://www.filmyporno.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.filmyporno.tv/channels/'],'FILMYPORNO', 'http://www.filmyporno.tv/templates/default_tube2016/images/logo.png', None)) 
@@ -252,7 +255,7 @@ class Host:
            valTab.append(CDisplayListItem('XHAMSTERLIVE',       "Kamerki",       CDisplayListItem.TYPE_CATEGORY,['http://xhamsterlive.com'], 'xhamster-cams', 'https://cdn.stripchat.com/assets/common/images/favicon_xh.png',None))
            valTab.append(CDisplayListItem('CAM4 - KAMERKI',     'http://www.cam4.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.cam4.pl/female'],'CAM4-KAMERKI', 'http://edgecast.cam4s.com/web/images/cam4-wh.png', None)) 
            valTab.append(CDisplayListItem('MY_FREECAMS',     'http://www.myfreecams.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.myfreecams.com/#Homepage'],'MYFREECAMS', 'http://goatcheesedick.com/wp-content/uploads/2015/08/myfreecams-logo1.png', None)) 
-           #valTab.append(CDisplayListItem('LIVEJASMIN',     'https://www.livejasmin.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/girl/free+chat?selectedFilters=12'],'LIVEJASMIN', 'http://livejasmins.fr/livejasmin-france.png', None)) 
+           valTab.append(CDisplayListItem('LIVEJASMIN',     'http://new.livejasmin.com', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/girl/free+chat?selectedFilters=12'],'LIVEJASMIN', 'http://livejasmins.fr/livejasmin-france.png', None)) 
            valTab.append(CDisplayListItem('BONGACAMS',     'https://pl.bongacams.com/', CDisplayListItem.TYPE_CATEGORY, ['https://pl.bongacams.com/'],'BONGACAMS', 'http://i.bongacams.com/images/bongacams_logo3_header.png', None)) 
            valTab.append(CDisplayListItem('RAMPANT',     'https://www.rampant.tv/channel/', CDisplayListItem.TYPE_CATEGORY, ['https://www.rampant.tv/channel/'],'RAMPANT', 'https://www.rampant.tv/new-images/rampant_logo.png', None)) 
            valTab.append(CDisplayListItem('SHOWUP   - live cams',       'showup.tv',          CDisplayListItem.TYPE_CATEGORY, ['http://showup.tv'],                     'showup',  'http://showup.tv/images/logo.gif', None)) 
@@ -928,11 +931,12 @@ class Host:
            except:
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           printDBG( 'Host listsItems data: '+data )
-           phMovies = re.findall('<div\sclass="wrap">.*?<a\shref="(.*?)".*?itle="(.*?)".*?class="duration">(.*?)</var>.*?data-title="(.*?)".*?data-mediumthumb="(.*?)".*?class="views"><var>(.*?)<.*?class="added">(.*?)<', data, re.S)
+           #printDBG( 'Host listsItems data: '+data )
+           phMovies = re.findall('class="videoblock.*?<a\shref="(.*?)".*?title="(.*?)".*?class="duration">(.*?)</var>.*?data-mediumthumb="(.*?)".*?<span\sclass="views"><var>(.*?)<.*?<var\sclass="added">(.*?)</var>', data, re.S)
            if phMovies:
-              for (phUrl, phTitle, phRuntime, prem, phImage, phViews, phAdded) in phMovies:
+              for (phUrl, phTitle, phRuntime, phImage, phViews, phAdded) in phMovies:
                   phUrl = self.MAIN_URL+phUrl
+                  prem = ''
                   printDBG( 'Host listsItems phUrl: '  +phUrl )
                   printDBG( 'Host listsItems phTitle: '+phTitle )
                   printDBG( 'Host listsItems phImage: '+phImage )
@@ -1157,7 +1161,6 @@ class Host:
         if 'UPDATE-NOW' == name:
            printDBG( 'HostXXX listsItems begin name='+name )
            tmpDir = GetTmpDir() 
-           #import os
            source = os_path.join(tmpDir, 'iptv-host-xxx.tar.gz') 
            dest = os_path.join(tmpDir , '') 
            _url = 'https://gitlab.com/iptv-host-xxx/iptv-host-xxx/repository/archive.tar.gz?ref=master'              
@@ -1191,8 +1194,8 @@ class Host:
               valTab.append(CDisplayListItem('ERROR - Blad rozpakowania %s' % source,   'ERROR', CDisplayListItem.TYPE_CATEGORY, [''], '', '', None)) 
               return valTab
 
-           printDBG( 'HostXXX sleep 5' )
-           sleep(5)
+           printDBG( 'HostXXX sleep %s' % str(config.plugins.iptvplayer.delay.value) )
+           sleep(config.plugins.iptvplayer.delay.value)
 
            try:
               import commands
@@ -1207,8 +1210,8 @@ class Host:
            except:
               printDBG( 'HostXXX error commands.getoutput ' )
 
-           printDBG( 'HostXXX sleep 5' )
-           sleep(5)
+           printDBG( 'HostXXX sleep %s' % str(config.plugins.iptvplayer.delay.value) )
+           sleep(config.plugins.iptvplayer.delay.value)
 
            try:
               os_system ('cp -rf %siptv-host-xxx*/IPTVPlayer/* /usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/' % dest)
@@ -1221,8 +1224,8 @@ class Host:
               valTab.append(CDisplayListItem('ERROR - blad kopiowania',   'ERROR', CDisplayListItem.TYPE_CATEGORY, [''], '', '', None)) 
               return valTab
 
-           printDBG( 'HostXXX sleep 5' )
-           sleep(5)
+           printDBG( 'HostXXX sleep %s' % str(config.plugins.iptvplayer.delay.value) )
+           sleep(config.plugins.iptvplayer.delay.value)
 
            try:
               cmd = '/usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/hosts/hostXXX.py'
@@ -1499,11 +1502,6 @@ class Host:
            return valTab
         if 'CHATURBATE-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           next = re.search('(.*?).page', url, re.S)
-           if next:
-              next = next.group(1)
-           else:
-              next = url
            query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
            try:
               data = self.cm.getURLRequestData(query_data)
@@ -1512,7 +1510,6 @@ class Host:
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
            #printDBG( 'Host listsItems data: '+data )
-           self.page += 1
            parse = re.search('class="list">(.*)class="paging">', data, re.S)
            if parse:
               Movies = re.findall('<li>.*?<a\shref="(.*?)".*?<img\ssrc="(.*?)".*?gender(\w)">(\d+)</span>.*?<li\stitle="(.*?)">.*?location.*?>(.*?)</li>.*?class="cams">(.*?)</li>.*?</div>.*?</li>', parse.group(1), re.S) 
@@ -1526,7 +1523,7 @@ class Host:
                      printDBG( 'Host listsItems Location: '+Location )
                      printDBG( 'Host listsItems Viewers: '+Viewers )
 
-           match = re.search('<link rel="next" href="(.*?)"', data, re.S)
+           match = re.search('class="endless_separator".*?<li><a href="(.*?)"', data, re.S)
            if match:
               printDBG( 'Host listsItems Next: '  +match.group(1) )
               valTab.append(CDisplayListItem('Next', match.group(1), CDisplayListItem.TYPE_CATEGORY, [self.MAIN_URL+match.group(1)], name, '', None))                
@@ -1977,24 +1974,24 @@ class Host:
 
         if 'LIVEJASMIN' == name:
            printDBG( 'Host listsItems begin name='+name )
-           #valTab.insert(0,CDisplayListItem('--- boy ---', 'boy', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/boy'], 'LIVEJASMIN-clips', '', None))
-           #valTab.insert(0,CDisplayListItem('--- gay ---', 'gay', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/gay'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Transgender ---', 'Transgender', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/transgender'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Couple ---', 'Couple', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/couple'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Mature ---', 'Mature', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/mature'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Fetish ---', 'Fetish', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/fetish'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Lesbian ---', 'Lesbian', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/lesbian'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Soul_mate ---', 'Soul_mate', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/soul_mate'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Hot_flirt ---', 'Hot_flirt', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/hot_flirt'], 'LIVEJASMIN-clips', '', None))
-           valTab.insert(0,CDisplayListItem('--- Girl ---', 'Girl', CDisplayListItem.TYPE_CATEGORY, ['https://www.livejasmin.com/en/girl'], 'LIVEJASMIN-clips', '', None))
+           #valTab.insert(0,CDisplayListItem('--- boy ---', 'boy', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/boy'], 'LIVEJASMIN-clips', '', None))
+           #valTab.insert(0,CDisplayListItem('--- gay ---', 'gay', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/gay'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Transgender ---', 'Transgender', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/transgender'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Couple ---', 'Couple', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/couple'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Mature ---', 'Mature', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/mature'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Fetish ---', 'Fetish', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/fetish'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Lesbian ---', 'Lesbian', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/lesbian'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Soul_mate ---', 'Soul_mate', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/soul_mate'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Hot_flirt ---', 'Hot_flirt', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/hot_flirt'], 'LIVEJASMIN-clips', '', None))
+           valTab.insert(0,CDisplayListItem('--- Girl ---', 'Girl', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/girl'], 'LIVEJASMIN-clips', '', None))
            printDBG( 'Host listsItems end' )
            return valTab 
 
         if 'LIVEJASMIN-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
-           self.MAIN_URL = 'https://www.livejasmin.com' 
-           COOKIEFILE = os_path.join(GetCookieDir(), 'livejasmin.cookie')
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           self.MAIN_URL = 'http://new.livejasmin.com' 
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
               printDBG( 'Host listsItems query error cookie' )
               return valTab
@@ -2007,7 +2004,7 @@ class Host:
                   printDBG( 'Host listsItems org: '  +org )
                   printDBG( 'Host listsItems phTitle: '  +phTitle )
                   printDBG( 'Host listsItems phImage: '  +phImage )
-                  valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', "https://www.livejasmin.com/en/chat/"+phTitle, 1)], 0, phImage, None)) 
+                  valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', "http://new.livejasmin.com/en/chat/"+phTitle, 1)], 0, phImage, None)) 
            printDBG( 'Host listsItems end' )
            return valTab 
 
@@ -2977,7 +2974,7 @@ class Host:
         if self.MAIN_URL == 'http://rusporn.tv':             return self.MAIN_URL
         if self.MAIN_URL == 'http://www.extremetube.com':    return self.MAIN_URL
         if self.MAIN_URL == 'http://search.el-ladies.com':   return self.MAIN_URL
-        if self.MAIN_URL == 'https://www.livejasmin.com':     return self.MAIN_URL
+        if self.MAIN_URL == 'http://new.livejasmin.com':     return self.MAIN_URL
         if self.MAIN_URL == 'https://pl.bongacams.com':      return self.MAIN_URL
         if self.MAIN_URL == 'https://www.tnaflix.com':       return self.MAIN_URL
         if self.MAIN_URL == 'https://www.empflix.com':       return self.MAIN_URL
@@ -3352,30 +3349,19 @@ class Host:
 
            return ''
 
-        if parser == 'https://www.livejasmin.com':
-           COOKIEFILE = os_path.join(GetCookieDir(), 'livejasmin.cookie')
-           try: data = self.cm.getURLRequestData({ 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+        if parser == 'http://new.livejasmin.com':
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try: data = self.cm.getURLRequestData(query_data)
            except:
+              printDBG( 'Host getResolvedURL query error' )
+              printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
-           printDBG( 'Host getResolvedURL data: '+data )
-           parse = re.search('memberAppletFlashvars        = (.*?)\};', data, re.S) 
-           if parse: 
-              json = '['+parse.group(1)+'}]'
-              result = simplejson.loads(json)
-              if result:
-                 printDBG( 'Host getResolvedURL json: '+json )
-                 for item in result:
-                    IP = str(item["sbip"]) 
-                    Name = str(item["performerid"])
-                    Hasz = str(item["sbhash"])
-                    SWF = str(item["mainapplet"])
-                    printDBG( 'Host IP : '+IP  )
-                    printDBG( 'Host Name: '+Name )
-                    printDBG( 'Host Hasz: '+Hasz )
-                    printDBG( 'Host SWF: '+SWF )
-                    printDBG( 'Host Name: '+Name )
-                    Url = 'rtmp://%s/memberChat/jasmin%s%s playpath=streams/clonedLiveStream swfUrl=%s live=1 pageUrl=https://www.livejasmin.com/en/chat/%s flashVer=WIN 24,0,0,194  ' % (IP, Name, Hasz, SWF, Name)
-                    return Url
+           #printDBG( 'Host getResolvedURL data: '+data )
+           videoPage = re.search('performerid":"(.*?)".*?proxyip":"(.*?)"', data, re.S) 
+           if videoPage.group(1) and videoPage.group(2):
+              printDBG( 'Host listsItems videoPage.group(2): '+videoPage.group(2) )
+              printDBG( 'Host listsItems videoPage.group(1): '+videoPage.group(1) )
+              return (videoPage.group(2)+'/'+videoPage.group(1)) 
            return ''
 
         if parser == 'http://www.cam4.pl':
@@ -3802,17 +3788,18 @@ class Host:
            return ''
         
         if parser == 'http://www.pornhub.com':
-           embed = re.search('="(http[s]?://www.pornhub.com/embed/.*?)"', data, re.S)
-           url = embed.group(1)
-           try:    data = self.cm.getURLRequestData({'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
-           except: 
-              printDBG( 'Host getResolvedURL query error xml' )
-              return ''
-           #printDBG( 'Host data embed: '+data )
-           videoPage = re.findall('quality_720p":"(.*?)"', data, re.S)
-           if videoPage: return videoPage[0].replace('\/','/')
-           videoPage = re.findall('quality_480p":"(.*?)"', data, re.S)
-           if videoPage: return videoPage[0].replace('\/','/')
+           embed = re.search('"embedCode":"<iframe src=."(.*?)"', data, re.S)
+           if embed:
+              url = embed.group(1).replace('\/','/').replace('\\','')
+              try:    data = self.cm.getURLRequestData({'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+              except: 
+                 printDBG( 'Host getResolvedURL query error xml' )
+                 return ''
+              #printDBG( 'Host data embed: '+data )
+              videoPage = re.findall('quality_720p":"(.*?)"', data, re.S)
+              if videoPage: return videoPage[0].replace('\/','/')
+              videoPage = re.findall('quality_480p":"(.*?)"', data, re.S)
+              if videoPage: return videoPage[0].replace('\/','/')
            return ''
 
         if parser == 'http://www.4tube.com':

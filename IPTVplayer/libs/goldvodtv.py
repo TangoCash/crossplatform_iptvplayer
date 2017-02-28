@@ -112,7 +112,8 @@ class GoldVodTVApi:
         '206':'VOX Music TV', '193':'Filmbox', '192':'Filmbox Premium', '191':'8TV', '190':'Disco Polo Music', '202':'Polsat Sport Extra',
         '203':'Polsat Sport HD', '194':'Filmbox Family', '181':'Polsat 2', '204':'Polsat HD', '120':'Discovery Science', '205':'Canal+',
         '172':'Eleven Extra HD', '171':'Cartoon Network', '211':'13 Ulica HD', '212':'Lifetime HD', '213':'Universal Channel HD', '214':'BBC HD',
-        '215':'FOX Comedy HD', '217':'Nowa TV', '218':'Nuta TV', '219':'TVN Fabula HD', '220':'Cartoon Network'}
+        '215':'FOX Comedy HD', '217':'Nowa TV', '218':'Nuta TV', '219':'TVN Fabula HD', '220':'Cartoon Network', '173':'TVP abc', '174':'TVP1 HD',
+        '178':'TVP HD', '175':'TVP Seriale', '177':'TVP2 HD', '176':'TVP Info'}
 
         sts, data = self.cm.getPage(self.MAIN_URL + 'kanaly.html?show=on', self.http_params)
         if not sts: return []

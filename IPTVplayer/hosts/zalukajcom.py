@@ -211,7 +211,8 @@ class ZalukajCOM(CBaseHostClass):
         if not sts: return
         sp = '<div class="tivief4">'
         if extract:
-            if (',strona-%d' % (page+1)) in data: nextPage = True
+            if self.cm.ph.getSearchGroups(data, 'strona\-(%d)[^0-9]' % (page+1))[0] != '':
+                nextPage = True
             m2 = '<div class="categories_page">' 
             if m2 not in data: m2 = '<div class="doln">'
             data = self.cm.ph.getDataBeetwenMarkers(data, sp, m2, True)[1]

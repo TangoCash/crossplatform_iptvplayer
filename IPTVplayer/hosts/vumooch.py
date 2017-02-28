@@ -33,15 +33,9 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
-#config.plugins.iptvplayer.alltubetv_premium  = ConfigYesNo(default = False)
-#config.plugins.iptvplayer.alltubetv_login    = ConfigText(default = "", fixed_size = False)
-#config.plugins.iptvplayer.alltubetv_password = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
-    #if config.plugins.iptvplayer.alltubetv_premium.value:
-    #    optionList.append(getConfigListEntry("  alltubetv login:", config.plugins.iptvplayer.alltubetv_login))
-    #    optionList.append(getConfigListEntry("  alltubetv hasło:", config.plugins.iptvplayer.alltubetv_password))
     return optionList
 ###################################################
 
@@ -51,12 +45,12 @@ def gettytul():
 
 class Vumoo(CBaseHostClass):
     USER_AGENT = 'curl/7'
-    MAIN_URL    = 'http://vumoo.at/'
+    MAIN_URL    = 'http://vumoo.li/'
     SRCH_URL    = MAIN_URL + 'videos/search/?search='
-    DEFAULT_ICON_URL = 'http://pbs.twimg.com/profile_images/559558208411287552/fFKLeLBS.png'
+    DEFAULT_ICON_URL = 'http://www.matrixable.org/wp-content/uploads/2016/02/vumoo.jpg'
     
-    MAIN_CAT_TAB = [{'category':'movies',         'title': _('Movies'),       'url':MAIN_URL,                                         'icon':DEFAULT_ICON_URL},
-                    {'category':'list_items',     'title': _('TV Shows'),     'url':MAIN_URL + 'videos/category/trending-television', 'icon':DEFAULT_ICON_URL},
+    MAIN_CAT_TAB = [{'category':'movies',         'title': _('Movies'),       'url':MAIN_URL                                          },
+                    {'category':'list_items',     'title': _('TV Shows'),     'url':MAIN_URL + 'videos/category/trending-television'  },
                     {'category':'search',         'title': _('Search'),       'search_item':True},
                     {'category':'search_history', 'title': _('Search history')} 
                    ]
@@ -305,67 +299,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, Vumoo(), True, [])#[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('vumoochlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie  
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  self.host.getIconUrl( cItem.get('icon', '') )
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem

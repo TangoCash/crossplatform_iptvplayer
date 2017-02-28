@@ -4,6 +4,7 @@
 # LOCAL import
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, rm
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 import Plugins.Extensions.IPTVPlayer.libs.xppod as xppod
@@ -65,13 +66,21 @@ class AnyFilesVideoUrlExtractor:
         #self.cm.addCookieItem(COOKIEFILE, {'name': 'AnyF18', 'value': 'mam18', 'domain': 'video.anyfiles.pl'}, False)
         if not self.isLogged():
             self.tryTologin()
+        
+        url = strwithmeta(url)
+        
+        params = dict(self.defaultParams)
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = url.meta.get('Referer', 'http://www.google.pl/')
+        sts, data = self.cm.getPage(url, params)
 
         # GET VIDEO ID
         u = url.split('/')
         vidID = u[-1]
-        match = re.search('([0-9]+?)\,', url )
-        if match:
-            vidID = match.group(1)
+        tmp = self.cm.ph.getSearchGroups(url, '([0-9]+?)\,')[0]
+        if tmp != '': vidID = tmp
+        if tmp == '': tmp = self.cm.ph.getSearchGroups(url+'|', 'id=([0-9]+?)[^0-9]')[0]
+        if tmp != '': vidID = tmp
 
         # get COOKIE
         url = self.MAINURL + '/videos.jsp?id=' + vidID

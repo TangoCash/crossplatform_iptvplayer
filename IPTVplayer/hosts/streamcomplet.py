@@ -25,7 +25,6 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerParams, unpackJS, VIDEOMEGA_decryptPlayerParams, VIDEOWEED_decryptPlayerParams, SAWLIVETV_decryptPlayerParams
 ###################################################
 
-
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
@@ -141,6 +140,20 @@ class StreamComplet(CBaseHostClass):
         cItem['url'] = self.SRCH_URL + searchPattern
         self.listItems(cItem)
         
+    def _unpackJS(self, data, name):
+        try:
+            vGlobals = {"__builtins__": None, 'str':str, 'chr':chr, 'list':list}
+            vLocals = { name: None }
+            exec( data, vGlobals, vLocals )
+        except Exception:
+            printExc('_unpackJS exec code EXCEPTION')
+            return ''
+        try:
+            return vLocals[name]
+        except Exception:
+            printExc('_unpackJS EXCEPTION')
+        return ''
+        
     def _decodeData(self, baseData):
         data = baseData
         fullDecData = ''
@@ -161,6 +174,27 @@ class StreamComplet(CBaseHostClass):
                     decData += tmpDec
             fullDecData += decData
             data = decData
+            
+        # ++++++++++++++++++++
+        codeData = 'def go123():\n'
+        tmp = self.cm.ph.getSearchGroups(baseData, '''document\[([^\]]+?)\[[0-9]\]\]\(([^)]+?)\)''', 2)
+        mainVar = tmp[0]
+        mainVal = self.cm.ph.getSearchGroups(baseData, '''var\s+?%s\s*=\s*(\[[^\]]+?\])''' % mainVar)[0]
+        mainVal = mainVal.replace('"', '\\"').replace('[\\', '[').replace('\\"]', '"]').replace(',\\"', ',"').replace('\\",', '",')
+
+        subTab = re.compile('''\+([^\+]+?)\+''').findall(tmp[1])
+        for item in subTab:
+            var = item.strip()
+            val = self.cm.ph.getSearchGroups(fullDecData, '''var\s*%s\s*=\s*(['"][^'^"]+?['"])''' % var)[0]
+            codeData += '\t%s = %s\n' % (var, val) 
+        codeData += '\t%s = %s\n' % (mainVar, mainVal)
+        codeData += '\treturn ' + tmp[1]
+        codeData += '\nkoteczek = go123()'
+        codeData = self._unpackJS(codeData, 'koteczek')
+        # ++++++++++++++++++++
+        
+        if codeData != '':
+            return codeData
         
         subTab = re.compile('''(['"]\s*\+[^\+]+?\+\s*['"])''').findall(fullDecData)
         for item in subTab:
@@ -192,9 +226,21 @@ class StreamComplet(CBaseHostClass):
                 printDBG(data)
                 printDBG("============================ end ============================")
                 if not sts: continue
+                enc1 = self.cm.ph.getDataBeetwenMarkers(data, 'enc1|', '|', False)[1].strip()
                 data = self._decodeData(data)
-                data = re.compile('<iframe[^>]+?src="([^"]+?)"').findall(data)
-                for item in data:
+                printDBG("============================ start ============================")
+                printDBG(data)
+                printDBG("============================ end ============================")
+                tryLinksTab = re.compile('<iframe[^>]+?src="([^"]+?)"').findall(data)
+                tryLinksTab.extend(re.compile('\s(https?:[^\s]+?)\s').findall(data))
+                try:
+                    if enc1 != '':
+                        tryLinksTab.append('http://hqq.tv/player/embed_player.php?vid=' + base64.b64decode(enc1))
+                except Exception:
+                    printExc()
+                
+                for item in tryLinksTab:
+                    item = item.replace('\\/', '/')
                     if '' == item.strip(): continue
                     if 'facebook' in item: continue
                     if not self.cm.isValidUrl(item):

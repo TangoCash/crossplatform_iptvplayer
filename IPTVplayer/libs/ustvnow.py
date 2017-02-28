@@ -57,7 +57,6 @@ def GetConfigList():
 
 class UstvnowApi:
     MAIN_URL = 'http://m.ustvnow.com/'
-    LOG_URL  = MAIN_URL + 'iphone/1/live/login'
     LIVE_URL = MAIN_URL + 'iphone/1/live/playingnow?pgonly=true'
     HTTP_HEADER  = { 'User-Agent': 'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Referer': MAIN_URL }
 
@@ -73,7 +72,7 @@ class UstvnowApi:
         HTTP_HEADER.update( {'Content-Type':'application/x-www-form-urlencoded'} )
         self.defParams = {'header':HTTP_HEADER, 'cookiefile': self.cookiePath, 'use_cookie': True, 'load_cookie':True, 'save_cookie':True}
         
-    def _getFullUrl(self, url):
+    def getFullUrl(self, url):
         if url.startswith('//'):
             return 'http:' + url
         if url.startswith('/'):
@@ -147,7 +146,7 @@ class UstvnowApi:
             desc = self.cleanHtmlStr(item)
             params = dict(cItem)
             params.pop('url')
-            params.update({'priv_url':self._getFullUrl(url), 'ui_page':ui, 'icon':icon, 'desc':desc})
+            params.update({'priv_url':self.getFullUrl(url), 'ui_page':ui, 'icon':icon, 'desc':desc})
             
             for nameItem in channelsNames:
                 if nameItem['img'] in icon:
@@ -184,8 +183,19 @@ class UstvnowApi:
         printDBG("UstvnowApi.doLogin")
         rm(self.cookiePath)
         token = ''
+        
+        sts, data = self.cm.getPage(self.getFullUrl('iphone/1/live/settings'), self.defParams)
+        if not sts: return token
+        
+        printDBG("=================================================================")
+        printDBG(data)
+        printDBG("=================================================================")
+        
+        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
+        if not self.cm.isValidUrl(url): return token
+        
         post_data = {'username':login, 'password':password, 'device':'iphone'}
-        sts, data = self.cm.getPage(self.LOG_URL, self.defParams, post_data)
+        sts, data = self.cm.getPage(url, self.defParams, post_data)
         if sts:
             token = self.cm.getCookieItem(self.cookiePath, 'token')
         return token
@@ -241,7 +251,7 @@ class UstvnowApi:
         if not sts: return []
         
         url = self.cm.ph.getSearchGroups(data, 'for="popup-%s"[^>]*?href="([^"]+?)"[^>]*?>' % cItem['ui_page'])[0]
-        url = self._getFullUrl(url)
+        url = self.getFullUrl(url)
         
         sts, data = self.cm.getPage(url, self.defParams)
         if not sts: return []

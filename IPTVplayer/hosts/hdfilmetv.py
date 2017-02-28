@@ -246,15 +246,17 @@ class HDFilmeTV(CBaseHostClass):
         
         googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
         if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
+        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         printDBG(googleUrls)
+        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         
         if googleUrls != '':
             try:
                 googleUrls = byteify( json.loads(googleUrls) )
                 for item in googleUrls:
-                    if item['type'] != 'mp4':
+                    if 'mp4' not in item['type']:
                         continue
-                    urlTab.append({'name':item['label'], 'url':self.getFullUrl(item['file'])})
+                    urlTab.append({'name':str(item['label']), 'url':self.getFullUrl(str(item['file']))})
             except Exception:
                 printExc()
         if len(urlTab):

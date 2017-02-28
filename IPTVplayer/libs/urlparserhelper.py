@@ -523,8 +523,10 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                         codecs.append(c.split('.')[0].strip())
                         item['codecs'] = ','.join(codecs)
                 except Exception:
+                    printExc()
+                    item['codecs'] = None
                     pass
-                item['codecs'] = None
+                
                 item['name']  = "bitrate: %s res: %dx%d %s" % ( item['bitrate'], \
                                                                 item['width'],    \
                                                                 item['height'],  \

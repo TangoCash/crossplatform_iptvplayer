@@ -1764,7 +1764,7 @@ class IPTVExtMoviePlayer(Screen):
                 cmd += ' -l '
             
             if config.plugins.iptvplayer.aac_software_decode.value:
-                cmd += ' -a -p 10'
+                cmd += ' -a 3 -p 10'
             elif config.plugins.iptvplayer.plarform.value in ('sh4', 'mipsel', 'armv7', 'armv5t'):
                 cmd += ' -p 2'
                 if None != self.downloader:

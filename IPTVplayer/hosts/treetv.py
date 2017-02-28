@@ -284,6 +284,10 @@ class TreeTv(CBaseHostClass):
         data = re.sub("<!--[\s\S]*?-->", "", data)
         
         url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+        
+        if 1 == self.up.checkHostSupport(url):
+            return self.up.getVideoLinkExt(url)
+        
         params = dict(self.defaultParams)
         params['header'] = dict(params['header'])
         params['header']['Referer'] = str(videoUrl)
@@ -363,6 +367,7 @@ class TreeTv(CBaseHostClass):
                 for item in sources:
                     uri = self.cm.ph.getSearchGroups(item, '''['"]?src['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
                     if not self.cm.isValidUrl(uri): continue
+                    uri = strwithmeta(uri, {'User-Agent':params['header']['User-Agent'] , 'Referer':params['header']['Referer'], 'Origin':'http://player.tree.tv'})
                     point = self.cm.ph.getSearchGroups(item, '''['"]?point['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
                     label = self.cm.ph.getSearchGroups(item, '''['"]?label['"]?\s*:\s*['"]([^'^"]+?)['"]''', 1, True)[0]
                     if label == '': label = name
@@ -442,6 +447,8 @@ class TreeTv(CBaseHostClass):
             else:
                 self.login    = config.plugins.iptvplayer.treetv_login.value
                 self.password = config.plugins.iptvplayer.treetv_password.value
+        else:
+            rm(self.COOKIE_FILE)
 
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')

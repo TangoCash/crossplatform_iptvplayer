@@ -84,11 +84,13 @@ class TeleWizjaComApi(CBaseHostClass):
     def getListOfChannels(self, cItem):
         printDBG("TeleWizjaComApi.getListOfChannels")
         #cItem['url']
-        sts, data = self.getPage(self.MAIN_URL, self.http_params)
+        sts, data = self.getPage(cItem['url'], self.http_params)
         if not sts: return []
         
         retList = []
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<figure', '</figure>')
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="article">', '<div class="article">')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '/>')
         printDBG(data)
         for item in data:
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
@@ -107,7 +109,7 @@ class TeleWizjaComApi(CBaseHostClass):
     def getList(self, cItem):
         printDBG("TeleWizjaComApi.getChannelsList")
         channelsTab = []
-        return self.getListOfChannels(cItem)
+        #return self.getListOfChannels(cItem)
         
         initList = cItem.get('init_list', True)
         if initList:
@@ -121,6 +123,7 @@ class TeleWizjaComApi(CBaseHostClass):
                 title = self.cleanHtmlStr(item)
                 if url == '': continue
                 if 'transmisje.html' in url: continue
+                if 'kontakt.html' in url: continue
                 params = dict(cItem)
                 params.update({'init_list':False, 'url':self.getFullUrl(url), 'title':title})
                 retList.append(params)

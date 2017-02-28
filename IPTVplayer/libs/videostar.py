@@ -61,7 +61,7 @@ def GetConfigList():
 
 class VideoStarApi:
     MAINURL_PC      = 'https://videostar.pl/'
-    MAINURL_IOS     = 'https://m.videostar.pl/'
+    MAINURL_IOS     = 'https://videostar.pl/'
     HTTP_HEADER_PC   = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': MAINURL_PC }
     HTTP_HEADER_IOS  = { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B179 Safari/7534.48.3', 'Referer': MAINURL_IOS }
     HTTP_HEADER2     = { 'User-Agent':'Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16', 'Referer': MAINURL_IOS}
@@ -295,7 +295,7 @@ class VideoStarApi:
             params['proxy_gateway'] = self.proxy_gateway_url
 
         post_data = {'login': login, 'password': password, 'permanent': '1'}
-        url = self._getUrl('login_url')
+        url = self._getUrl('login')
         
         sts, data = self.cm.getPage(url, params, post_data)
         if not sts: return False

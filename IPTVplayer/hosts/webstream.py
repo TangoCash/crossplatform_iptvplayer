@@ -135,7 +135,7 @@ class HasBahCa(CBaseHostClass):
                         #{'alias_id':'iklub.net',               'name': 'iklub.net',           'title': 'iKlub.net',                         'url': '',                                                                   'icon': 'http://iklub.net/wp-content/uploads/2015/11/klub2.png'}, \
                         {'alias_id':'tele-wizja.com',          'name': 'tele-wizja.com',      'title': 'tele-wizja.com',                    'url': '',                                                                   'icon': 'http://htk.net.pl/wp-content/uploads/2016/07/cache_2422349465.jpg'}, \
                         {'alias_id':'pierwsza.tv',             'name': 'pierwsza.tv',         'title': 'Pierwsza.TV',                       'url': '',                                                                   'icon': 'http://pierwsza.tv/img/logo.png'}, \
-                        {'alias_id':'telewizja-live.com',      'name': 'telewizja-live.com',  'title': 'Telewizja-Live.com',                'url': '',                                                                   'icon': 'http://mksolimpia.com/wp-content/uploads/2015/12/LIVE.png'}, \
+                        #{'alias_id':'telewizja-live.com',      'name': 'telewizja-live.com',  'title': 'Telewizja-Live.com',                'url': '',                                                                   'icon': 'http://mksolimpia.com/wp-content/uploads/2015/12/LIVE.png'}, \
                         #{'alias_id':'telewizjada.net',         'name': 'telewizjada.net',     'title': 'Telewizjada.net',                   'url': '',                                                                   'icon': 'http://www.btv.co/newdev/images/rokquickcart/samples/internet-tv.png'}, \
                         {'alias_id':'iptv_matzgpl',            'name': 'm3u',                 'title': 'Kanały IPTV_matzgPL',               'url': 'http://matzg2.prv.pl/Lista_matzgPL.m3u',                             'icon': 'http://matzg2.prv.pl/Iptv_matzgPL.png'}, \
                         {'alias_id':'prognoza.pogody.tv',      'name': 'prognoza.pogody.tv',  'title': 'prognoza.pogody.tv',                'url': 'http://prognoza.pogody.tv',                                          'icon': 'http://s2.manifo.com/usr/a/A17f/37/manager/pogoda-w-chorwacji-2013.png'}, \
@@ -153,11 +153,10 @@ class HasBahCa(CBaseHostClass):
                         #{'alias_id':'hasbahca',                'name': 'HasBahCa',            'title': 'HasBahCa',                          'url': 'http://hasbahcaiptv.com/m3u/HasBahCa/index.php?dir=',                'icon': 'http://hasbahcaiptv.com/xml/iptv.png'}, \
                         #{'alias_id':'wownet.ro',               'name': 'm3u',                 'title': 'Deutsch-Fernseher',                 'url': 'http://wownet.ro/iptv/',                                             'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
                         #{'alias_id':'iptv.ink',                'name': 'm3u',                 'title': 'Free Iptv Project',                 'url': 'http://tv.iptv.ink/iptv.ink',                                        'icon': ''}, \
-                        {'alias_id':'hellenic_tv',             'name': 'hellenic-tv',         'title': 'Hellenic TV',                       'url':'',  'icon':'https://superrepo.org/static/images/icons/original/xplugin.video.hellenic.tv.png.pagespeed.ic.siOAiUGkC0.jpg'},
                         {'alias_id':'wagasworld',              'name': 'wagasworld.com',      'title': 'WagasWorld',                        'url': 'http://www.wagasworld.com/channels.php',                              'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
                         #{'alias_id':'live_stream_tv',          'name': 'live-stream.tv',      'title': 'Live-Stream.tv',                    'url': 'http://www.live-stream.tv/',                                          'icon': 'http://www.live-stream.tv/images/lstv-logo.png'}, \
                         {'alias_id':'edem_tv',                 'name': 'edem.tv',             'title': 'Edem TV',                           'url': 'https://edem.tv/',                                                    'icon': 'https://edem.tv/public/images/logo_edem.png'}, \
-                        {'alias_id':'freetuxtv_programmes_en', 'name': 'm3u',                 'title': 'Angielska TV',                      'url': 'http://database.freetuxtv.net/playlists/playlist_programmes_en.m3u'}, \
+                        #{'alias_id':'freetuxtv_programmes_en', 'name': 'm3u',                 'title': 'Angielska TV',                      'url': 'http://database.freetuxtv.net/playlists/playlist_programmes_en.m3u'}, \
                         {'alias_id':'matzg2_radio',            'name': 'm3u',                 'title': 'Radio-OPEN FM i inne',              'url':'http://matzg2.prv.pl/radio.m3u',                                      'icon': 'http://matzg2.prv.pl/openfm.png'}, \
                         {'alias_id':'goldvod.tv',              'name': 'goldvod.tv',          'title': 'Goldvod TV',                        'url': '',                                                                   'icon': 'http://goldvod.tv/img/logo.png'}, \
                         {'alias_id':'pure-cast.net',           'name': 'pure-cast.net',       'title': 'Pure-Cast.net',                     'url': '',                                                                   'icon': 'http://blog-social-stream.dit.upm.es/wp-content/uploads/2013/05/logo.png'}, \
@@ -284,56 +283,6 @@ class HasBahCa(CBaseHostClass):
                 params = dict(item)
                 params.update(forceParams)
                 self.addDir(params)
-            
-    def listHellenicTv(self, cItem):
-        printDBG("listHellenicTv")
-        if '' == cItem.get('url'):
-            tab = [{'group':'cartoons', 'title':'Cartoons', 'url':'http://olympia.watchkodi.com/hellenic-tv/cartoons.xml', 'icon':'http://i.ytimg.com/vi/s4XfOGh_leQ/hqdefault.jpg'},
-                   {'group':'channels', 'title':'Channels', 'url':'http://olympia.watchkodi.com/hellenic-tv/channels.xml', 'icon':'http://greektvchannels.com/wp-content/uploads/2014/10/greektvlogo.png'}]
-            for item in tab:
-                params = dict(cItem)
-                params.update(item)
-                self.addDir(params)
-        else:
-            sts, data = self.cm.getPage(cItem['url'])
-            if not sts: return
-            if cItem['group'] == 'channels':
-                data = data.split('</channel>')
-                for item in data:
-                    if 'active="True"' not in item: continue
-                    title = CParsingHelper.getDataBeetwenMarkers(item, '<name>', '</name>', False)[1].strip()
-                    type = CParsingHelper.getDataBeetwenMarkers(item, '<type>', '</type>', False)[1].strip()
-                    url  = CParsingHelper.getDataBeetwenMarkers(item, '<url>', '</url>', False)[1].strip()
-                    params = dict(cItem)
-                    params.update({'title':title, 'url':url, 'link_type':type})
-                    self.addVideo(params)
-            else:
-                data = data.split('</item>')
-                for item in data:
-                    title = CParsingHelper.getDataBeetwenMarkers(item, '<title>', '</title>', False)[1].strip()
-                    icon  = CParsingHelper.getDataBeetwenMarkers(item, '<image>', '</image>', False)[1].strip()
-                    url   = CParsingHelper.getDataBeetwenMarkers(item, '<url>', '</url>', False)[1].strip()
-                    type  = CParsingHelper.getDataBeetwenMarkers(item, '<type>', '</type>', False)[1].strip()
-                    desc  = CParsingHelper.getDataBeetwenMarkers(item, '<language>', '</language>', False)[1].strip()
-                    desc  += ', ' + type
-                    if '' != url and '' != title:
-                        params = dict(cItem)
-                        params.update({'title':title, 'url':url, 'icon':icon, 'desc':desc, 'link_type':type})
-                        self.addVideo(params)
-            
-    def listHellenicTvLink(self, cItem):
-        printDBG("listHellenicTv")
-        urlsList = []
-        if cItem['group'] == 'channels':
-            if 'hls' == cItem['link_type']:
-                urlsList = getDirectM3U8Playlist(cItem['url'], checkExt=False)
-            else:
-                urlsList = [{'name':cItem['link_type'], 'url':cItem['url']}] 
-            for idx in range(len(urlsList)):
-                urlsList[idx]['url'] = self.up.decorateUrl(urlsList[idx]['url'], {'iptv_livestream':True})
-        else:
-            urlsList = self.up.getVideoLinkExt(cItem['url'])
-        return urlsList
             
     def listHasBahCa(self, item):
         url = item.get('url', '')
@@ -1015,9 +964,6 @@ class HasBahCa(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsMainMenu(self.MAIN_GROUPED_TAB)
-    #hellenic-tv  list
-        elif name == "hellenic-tv":
-            self.listHellenicTv(self.currItem)
     #HasBahCa list
         elif name == "HasBahCa":
             self.listHasBahCa(self.currItem)
@@ -1178,8 +1124,6 @@ class IPTVHost(CHostBase):
             urlList = self.host.getWebCameraLink(url)
         elif name == "prognoza.pogody.tv":
             urlList = self.host.prognozaPogodyLink(url)
-        elif name == "hellenic-tv":
-            urlList = self.host.listHellenicTvLink(cItem)
             
         if isinstance(urlList, list):
             for item in urlList:

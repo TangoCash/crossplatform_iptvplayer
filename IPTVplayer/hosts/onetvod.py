@@ -353,9 +353,6 @@ class API:
         dict['params'][key] = p[key]
     return json.dumps(dict)
 
-def _getLinkQuality( itemLink ):
-    return int(itemLink[2])
-
 class IPTVHost(IHost):
 
     def __init__(self):
@@ -427,16 +424,25 @@ class IPTVHost(IHost):
         videoID = self.onet.currList[Index].category
         
         subTrackTab, tab = self.onet.api.getVideoTab(self.onet.currList[Index].category, True)
-        if config.plugins.iptvplayer.onetvodUseDF.value:
-            maxRes = int(config.plugins.iptvplayer.onetvodDefaultformat.value) * 1.1
-            tab = CSelOneLink( tab, _getLinkQuality, maxRes ).getOneLink()
-
+        tmpTab = []
         for item in tab:
             if item[0] == vodonet.FORMAT:
-                nameLink = "type: %s \t bitrate: %s" % (item[0], item[2])
-                url = item[1].encode('utf-8')
-                url = strwithmeta(url, {'external_sub_tracks':subTrackTab})
-                retlist.append(CUrlItem(nameLink.encode('utf-8'), url, 0))
+                tmpTab.append(item)
+        
+        def __getLinkQuality( itemLink ):
+            return int(itemLink[2])
+    
+        tab = tmpTab
+        maxRes = int(config.plugins.iptvplayer.onetvodDefaultformat.value) * 1.1
+        tab = CSelOneLink(tab, __getLinkQuality, maxRes).getSortedLinks()
+        if config.plugins.iptvplayer.onetvodUseDF.value:
+            tab = [tab[0]]
+
+        for item in tab:
+            nameLink = "type: %s \t bitrate: %s" % (item[0], item[2])
+            url = item[1].encode('utf-8')
+            url = strwithmeta(url, {'external_sub_tracks':subTrackTab})
+            retlist.append(CUrlItem(nameLink.encode('utf-8'), url, 0))
             
         return RetHost(RetHost.OK, value = retlist)
     

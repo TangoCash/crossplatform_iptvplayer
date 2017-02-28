@@ -43,7 +43,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://www.tantifilm.org/'
+    return 'http://www.tantifilm.me/'
 
 class TantiFilmOrg(CBaseHostClass):
  
@@ -55,7 +55,7 @@ class TantiFilmOrg(CBaseHostClass):
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://www.tantifilm.org/'
+        self.MAIN_URL = 'http://www.tantifilm.me/'
         self.DEFAULT_ICON_URL = self.getFullUrl('wp-content/themes/smashingMultiMediaBrown/images/logo.png')
         
         self.MAIN_CAT_TAB = [{'category':'list_categories',    'title': _('Categories'),                           'url':self.MAIN_URL  },

@@ -59,6 +59,7 @@ class T123MoviesTO(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'T123MoviesTO.tv', 'cookie':'123moviesto.cookie', 'cookie_type':'MozillaCookieJar'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
+        self.DEFAULT_ICON_URL = 'http://koditips.com/wp-content/uploads/123movies-kodi.png'
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
@@ -106,7 +107,7 @@ class T123MoviesTO(CBaseHostClass):
             self.MAIN_URL = 'https://123movies.is/' # first domain is default one
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
-        self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
+        #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_filter_genre', 'title': 'Movies',    'url':self.MAIN_URL+'movie/filter/movie' },
                              {'category':'list_filter_genre', 'title': 'TV-Series', 'url':self.MAIN_URL+'movie/filter/series'},
@@ -362,6 +363,7 @@ class T123MoviesTO(CBaseHostClass):
             subTracks = []
             if False:
                 tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<jwplayer', '>', withMarkers=True)
+                printDBG("------------------------------------------------\n%s+++++++++++++++++++++++++++++++++++++++++++++\n" % tmp)
                 for item in tmp:
                     url  = self.cm.ph.getSearchGroups(item, 'file="(http[^"]+?)"')[0].replace('&amp;', '&')
                     name = self.cm.ph.getSearchGroups(item, 'label="([^"]+?)"')[0]
@@ -370,17 +372,18 @@ class T123MoviesTO(CBaseHostClass):
                     elif 'kind="captions"' in item:
                         format = url[-3:]
                         if format in ['srt', 'vtt']:
-                            subTracks.append({'title':name, 'url':url, 'lang':name, 'format':format})
+                            subTracks.append({'title':name, 'url':self.getFullIconUrl(url), 'lang':name, 'format':format})
             else:
                 try:
                     tmp = byteify(json.loads(data))
+                    printDBG("------------------------------------------------\n%s+++++++++++++++++++++++++++++++++++++++++++++\n" % tmp)
                     for item in tmp['playlist'][0]['sources']:
                         if "mp4" == item['type']:
                             urlTab.append({'name':item['label'], 'url':item['file']})
                     for item in tmp['playlist'][0]['tracks']:
                         format = item['file'][-3:]
                         if format in ['srt', 'vtt'] and "captions" == item['kind']:
-                            subTracks.append({'title':item['label'], 'url':item['file'], 'lang':item['label'], 'format':format})
+                            subTracks.append({'title':item['label'], 'url':self.getFullIconUrl(item['file']), 'lang':item['label'], 'format':format})
                 except Exception:
                     printExc()
             printDBG(subTracks)

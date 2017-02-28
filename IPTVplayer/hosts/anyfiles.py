@@ -42,7 +42,7 @@ def gettytul():
     return 'AnyFiles'
 
 class AnyFiles(CBaseHostClass):
-    MAIN_URL = 'http://anyfiles.pl'
+    MAIN_URL = 'http://www.anyfiles.pl'
     SEARCH_URL = MAIN_URL + '/search.jsp'
     DEFAULT_ICON_URL = 'http://anyfiles.pl/css/images/logo.png'
     MAIN_CAT_TAB = [{'category':'list_movies',        'title': _('Most Popular'), 'url':MAIN_URL + '/all.jsp'},
@@ -182,11 +182,8 @@ class AnyFiles(CBaseHostClass):
         if 1 == page:
             sts, data = self.cm.getPage(self._getFullUrl('/all.jsp?reset_f=true'), self.defaultParams) #self.MAIN_URL
             if not sts: return
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'POST', ';', False)[1]
-            data = re.compile('[ ]*?se:[ ]*?"([^"]+?)"').findall(data)
             post_data = {}
-            for item in data:
-                post_data['se'] = item
+            post_data['se'] = self.cm.ph.getSearchGroups(data, '''\sname=['"]se['"][^>]+?value=['"]([^'^"]+?)['"]''')[0]
             post_data['q'] = searchPattern
             cItem = dict(cItem)
             #cItem['post_data'] = post_data
