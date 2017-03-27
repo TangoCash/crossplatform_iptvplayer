@@ -107,14 +107,14 @@ class DardarkomCom(CBaseHostClass):
         if not sts: return
         
         #movies and rankings 
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="archives-menu">', '<br>')[1]
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<ul>', '</ul>')
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="archives-menu', '<br>', False)[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<ul', '</ul>')
         
         # main
-        tmp2 = self.cm.ph.getDataBeetwenMarkers(data, '<div class="left-menu">', '</ul>')[1]
+        tmp2 = self.cm.ph.getDataBeetwenMarkers(data, '<div class="catlinksf">', '</ul>')[1]
         tmp.insert(0, tmp2)
         
-        keys = ['main', 'movies', 'rankings', 'years'] 
+        keys = ['movies', 'rankings', 'main', 'years'] 
         for idx in range(len(tmp)):
             if idx >= len(keys):
                 break
@@ -144,7 +144,7 @@ class DardarkomCom(CBaseHostClass):
         cItem['category'] = nextCategory
         self.listsTab(tab, cItem)
             
-    def listItems(self, cItem, nextCategory='explore_item'):
+    def listItems(self, cItem):
         printDBG("DardarkomCom.listItems")
         page      = cItem.get('page', 1)
         post_data = cItem.get('post_data', None) 
@@ -153,104 +153,38 @@ class DardarkomCom(CBaseHostClass):
         sts, data = self.cm.getPage(url, {}, post_data)
         if not sts: return
         
-        pagnationMarker = '<div class="pagination"'
+        pagnationMarker = '<div class="navigation-center">'
         tmp = self.cm.ph.getDataBeetwenMarkers(data, pagnationMarker, '</div>', False)[1]
-        nextPageUrl = self.cm.ph.getSearchGroups(tmp, '<a[^>]+?href="([^"]+?)"[^>]*?><span[^>]*?>التالي</span></a>')[0]
-        if nextPageUrl == '': nextPageUrl = self.cm.ph.getSearchGroups(tmp, '<a[^>]+?href="([^"]+?)"[^>]*?><span[^>]*?>الصفحة التالية</span></a>')[0]
+        if tmp != '': hasPadinationMarker = True
+        else: hasPadinationMarker = False
+        nextPageUrl = self.cm.ph.getSearchGroups(tmp, '<a[^>]+?href="([^"]+?)"[^>]*?>{0}</a>'.format(page+1))[0]
         if '#' == nextPageUrl:
             if '&' in url and post_data == None:
                 nextPageUrl = url.split('&search_start')[0] + '&search_start=%s' % (page+1)
             elif post_data != None:
                 nextPageUrl = url
         
-        m1 = '<div class="movies-single">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '<div class="archives-menu">', False)[1]
-        data = data.split(m1)
+        if hasPadinationMarker: m2 = pagnationMarker
+        else: m2 = '<div class="footer">'
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="main-news"', m2, True)[1]
         
-        if len(data) and pagnationMarker in data[-1]:
-            data[-1] =  data[-1].split(pagnationMarker)[0]
-        
+        data = re.split('<div class="main-news"[^>]*>', data)
         for item in data:
-            idx = item.find('<ul>')
-            if idx > -1:
-                desc = ' ' + self.cleanHtmlStr(item[idx:])
-                item = item[0:idx]
-            else:
-                desc = ' ' + self.cleanHtmlStr(item)
+            url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?online\.html[^"^']*?)['"]''')[0] )
+            if not self.cm.isValidUrl(url): continue
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="main-news-title">', '</a>', False)[1])
+            icon  = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0] )
+            desc  = self.cleanHtmlStr(item)
             
-            tmp   = self.cm.ph.getSearchGroups(item, '''<a[^>]+?href=['"]([^'^"]+?)['"][^>]*?>([^<]+?)<''', 2)
-            url   = self._getFullUrl( tmp[0] )
-            title = ' ' + self.cleanHtmlStr( tmp[1] )
-            icon  = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''data-load-image=['"]([^"^']+?)['"]''')[0] )
-            
-            if url.startswith('http'):
-                params = dict(cItem)
-                params.update({'title':title, 'url':url, 'icon':icon, 'desc':desc})
-                params['category'] = nextCategory
-                self.addVideo(params)
+            params = dict(cItem)
+            params.update({'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            self.addVideo(params)
         
         if nextPageUrl.startswith('http'):
             params = dict(cItem)
             params.update({'title':_('Next page'), 'page':cItem.get('page', 1)+1, 'url':self._getFullUrl(nextPageUrl)})
             self.addDir(params)
             
-    def exploreItem(self, cItem):
-        printDBG("DardarkomCom.exploreItem")
-        sts, data = self.cm.getPage(cItem['url'])
-        if not sts: return
-        
-        data = data.split('</button>')
-        
-        # trailer
-        if 2 == len(data):
-            tmp = self.cm.ph.getDataBeetwenMarkers(data[0], '<iframe', 'Watch Trailer', True)[1]
-            videoUrl = self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
-            videoUrl = self._getFullUrl(videoUrl)
-            if videoUrl.startswith('http'):
-                params = dict(cItem)
-                params.update({'title':_('Watch Trailer'), 'url':videoUrl})
-                self.addVideo(params)
-            del data[0]
-        data = data[0]
-        
-        added = False 
-        for m in [('<span style="color: ', '</iframe>', False, True),\
-                  ('</iframe>', '<b>', True, True),\
-                  ('<iframe ', '</iframe>', False, False)]:
-                  
-            #"<div style='clear: both;'>"
-            if 1 == m[3]:
-                idx = data.find('Γλώσσα:')
-            else: idx = -1
-            if idx > -1:
-                tmp = data[idx:]
-            else:
-                tmp = data
-                    
-            if 0 == m[2]:
-                tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, m[0], m[1])
-            else:
-                tmp = self.cm.ph.rgetAllItemsBeetwenMarkers(tmp, m[0], m[1])
-            
-            #printDBG('=============================================================')
-            #printDBG(tmp)
-            #printDBG('=============================================================')
-            
-            for item in tmp:
-                title = self.cleanHtmlStr(self.cleanHtmlStr(item).replace('\r', ' ').replace('\n', ' '))
-                idx = title.find('Επεισόδιο')
-                if idx > -1:
-                    title = title[idx:]
-                if title == "": title = cItem['title']
-                videoUrl = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
-                videoUrl = self._getFullUrl(videoUrl)
-                if not videoUrl.startswith('http'): continue
-                params = dict(cItem)
-                params.update({'title':title, 'url':videoUrl})
-                self.addVideo(params)
-                added = True
-            if added:
-                break
     
     def getLinksForVideo(self, cItem):
         printDBG("DardarkomCom.getLinksForVideo [%s]" % cItem)
@@ -260,22 +194,15 @@ class DardarkomCom(CBaseHostClass):
         if not sts: return []
         
         # get tabs names
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'movies-seasons tabs', '</ul>', False)[1]
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li', '</li>') 
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="index-tabs">', '</div>', False)[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<span', '</span>') 
         tabsNames = []
         for item in tmp:
             tabsNames.append(self.cleanHtmlStr(item))
+            
+        printDBG(tabsNames)
         
-        m1 = '<div class="movies-episodes'
-        m2 = '<div id="secretpopout'
-        if m2 not in data: m2 = 'Vip/index.html'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2, False)[1]
-        data = data.split(m1)
-        
-        if len(data) != len(tabsNames):
-            printDBG('>>>>>>>>>>>>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<')
-            printDBG('>>>>>>>>>>>>>>>>>>> Something is wrong len(data)[%d] != len(tabsNames)[%d] !!!' % (len(data), len(tabsNames)) )
-        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="tt-panel"', '<div class="clearleech">') 
         for idx in range(len(data)):
             item = data[idx]
             if idx < len(tabsNames):
@@ -336,11 +263,13 @@ class DardarkomCom(CBaseHostClass):
                 if 'javascript' in url: 
                     url = ''
             if url == '': url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
+            if url == '': url = self.cm.ph.getSearchGroups(data, '''window\.open\(\s*['"](https?://[^"^']+?)['"]''', 1, True)[0]
+            printDBG(url)
             url = self._getFullUrl( url )
             videoUrl = url
         
         urlTab = []
-        if videoUrl.startswith('http'):
+        if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         
@@ -371,10 +300,7 @@ class DardarkomCom(CBaseHostClass):
         elif category == 'categories':
             self.listCategories(self.currItem, 'list_items')
         elif category == 'list_items':
-                self.listItems(self.currItem)
-    #EXPLORE ITEM
-        elif category == 'explore_item':
-            self.exploreItem(self.currItem)
+            self.listItems(self.currItem)
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)
@@ -390,110 +316,4 @@ class DardarkomCom(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        # for now we must disable favourites due to problem with links extraction for types other than movie
-        CHostBase.__init__(self, DardarkomCom(), True, favouriteTypes=[]) #, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('dardarkomcomlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-        
-    #def getArticleContent(self, Index = 0):
-    #    retCode = RetHost.ERROR
-    #    retlist = []
-    #    if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-    #
-    #    hList = self.host.getArticleContent(self.host.currList[Index])
-    #    for item in hList:
-    #        title      = item.get('title', '')
-    #        text       = item.get('text', '')
-    #        images     = item.get("images", [])
-    #        othersInfo = item.get('other_info', '')
-    #        retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-    #    return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return
+        CHostBase.__init__(self, DardarkomCom(), True, favouriteTypes=[])

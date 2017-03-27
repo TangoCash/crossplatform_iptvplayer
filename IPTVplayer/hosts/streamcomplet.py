@@ -57,7 +57,7 @@ class StreamComplet(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'StreamComplet', 'cookie_type':'MozillaCookieJar', 'cookie':'StreamComplet.cookie'})
         self.cacheFilters = {}
-        self.USER_AGENT = "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
+        self.USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko" #"Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
         self.USER_AGENT2 = "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/44.0 (Chrome)"
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -167,7 +167,7 @@ class StreamComplet(CBaseHostClass):
                 if len(tmp): del tmp[0]
                 for tmpItem in tmp:
                     tmpDec = ''
-                    for decFun in [VIDEOMEGA_decryptPlayerParams]:
+                    for decFun in [VIDEOMEGA_decryptPlayerParams, SAWLIVETV_decryptPlayerParams]:
                         tmpDec = unpackJSPlayerParams('eval('+tmpItem, decFun, 0)
                         if '' != tmpDec:   
                             break
@@ -243,6 +243,7 @@ class StreamComplet(CBaseHostClass):
                     item = item.replace('\\/', '/')
                     if '' == item.strip(): continue
                     if 'facebook' in item: continue
+                    if 'wp-content' in item: continue
                     if not self.cm.isValidUrl(item):
                         if item.startswith('../'):
                             item = self.up.getDomain(frameUrl, False) + item.replace('../', '')

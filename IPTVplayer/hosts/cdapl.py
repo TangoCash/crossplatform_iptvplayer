@@ -293,18 +293,21 @@ class cda(CBaseHostClass):
         printDBG('tryTologin start')
         connFailed = _('Connection to server failed!')
         
+        loginUrl = 'https://www.cda.pl/login'
         rm(self.COOKIE_FILE)
-        sts, data = self.cm.getPage(self.MAIN_URL, self.defaultParams)
+        sts, data = self.cm.getPage(loginUrl, self.defaultParams)
         if not sts: return False, connFailed 
         
-        post_data = {"username":login, "password":password, "login_submit":""}
+        r = self.cm.ph.getSearchGroups(data, '''name=['"]r['"][^>]+?value=['"]([^'^"]+?)['"]''', 1, True)[0]
+        
+        post_data = {"r":r, "username":login, "password":password, "login":"zaloguj"}
         params = dict(self.defaultParams)
         HEADER = dict(self.AJAX_HEADER)
         HEADER['Referer'] = self.MAIN_URL
         params.update({'header':HEADER})
         
         # login
-        sts, data = self.cm.getPage(self.getFullUrl('login'), params, post_data)
+        sts, data = self.cm.getPage(loginUrl, params, post_data)
         if not sts: return False, connFailed
         
         # check if logged
@@ -368,60 +371,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, cda(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('cdapllogo.png')])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        if icon == '':  icon = self.host.DEFAULT_ICON_URL
-        #isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-                                    #isGoodForFavourites = isGoodForFavourites)
-    # end converItem

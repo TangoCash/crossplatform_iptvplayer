@@ -64,6 +64,14 @@ class MoonwalkParser():
         if 'true' == cd: cd = 1
         else: cd = 0
         
+        version_control = self.cm.ph.getSearchGroups(data, 'var version_control = ([^;]+?);')[0].strip()
+        if len(version_control) > 2 and version_control[0] in ['"', "'"]:
+            version_control = version_control[1:-1]
+            
+        detect_true = self.cm.ph.getSearchGroups(data, 'var\s+?detect_true\s+?=([^;]+?);')[0].strip()
+        if len(detect_true) > 2 and detect_true[0] in ['"', "'"]:
+            detect_true = detect_true[1:-1]
+        
         allData = data
         data = self.cm.ph.getDataBeetwenMarkers(data, '/sessions/new_session', '.success', False)[1]
         partner = self.cm.ph.getSearchGroups(data, 'partner: ([^,]+?),')[0]
@@ -133,13 +141,17 @@ class MoonwalkParser():
         if 'access_key:' in data: post_data['access_key'] = access_key
         if 'mw_pid:' in data: post_data['mw_pid'] = mw_pid
         if 'mw_did:' in data: post_data['mw_did'] = mw_did
-        if 'mw_key' in data: post_data['mw_key'] = mw_key
+        if 'mw_key' in data: 
+            try: post_data['mw_key'] = mw_key#[0:4] + '\xd1\x81' + mw_key[5:]
+            except Exception: printExc()
         if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id
         if 'uuid:' in data: post_data['uuid'] = uuid
         if 'debug:' in data: post_data['debug'] = debug   
+        if 'version_control' in allData: post_data['version_control'] = version_control   
+        if 'detect_true' in allData: post_data['detect_true'] = detect_true
         #post_data['ad_attr'] =0
         
-        printDBG(allData)
+        #printDBG(allData)
         
         return sec_header, post_data
 

@@ -1,28 +1,29 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ###################################################
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.sha1Hash import SHA1
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigInteger, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from datetime import timedelta
-from binascii import hexlify
 import re
 import urllib
-import time
-import random
-try:    import simplejson as json
-except Exception: import json
+import string
+import base64
+try:    import json
+except Exception: import simplejson as json
+from random import randint
+from datetime import datetime
+from time import sleep
+from copy import deepcopy
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 
@@ -36,245 +37,253 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 # Config options for HOST
 ###################################################
 
-
 def GetConfigList():
     optionList = []
     return optionList
 ###################################################
 
+
 def gettytul():
-    return 'eskaGO'
+    return 'http://www.eskago.pl/'
 
 class EskaGo(CBaseHostClass):
-    # CHANNELS_URL and MAINURL_VOD taken from http://svn.sd-xbmc.org/filedetails.php?repname=sd-xbmc&path=%2Ftrunk%2Fxbmc-addons%2Fsrc%2Fplugin.video.polishtv.live%2Fhosts%2Feskago.py
-    CHANNELS_URL =  'http://www.eskago.pl/indexajax.php?action=SamsungSmartTvV1&start=channelsGroups'
-
-    MAINURL_VOD = 'http://www.eskago.pl/indexajax.php?action=MobileApi'
-
-    MAIN_CAT_TAB = [{'category':'channels_group',        'title':_('Kanały'),   'url': CHANNELS_URL},
-                    #{'category':'series_list_abc',       'title':_('Seriale'), 'url': SERIES_URL},
-                    #{'category':'search',                'title':_('Search'), 'search_item':True},
-                    #{'category':'search_history',        'title':_('Search history')} 
-                    ]
-    
+ 
     def __init__(self):
-        printDBG("EskaGo.__init__")
-        CBaseHostClass.__init__(self, {'history':'Joogle.pl'})
-        self.cacheChannels = None
+        CBaseHostClass.__init__(self, {'history':'eskaGO.pl', 'cookie':'eskagopl.cookie'})
         
-    def _getFullUrl(self, url):
-        if 0 < len(url) and not url.startswith('http'):
-            url =  self.MAIN_URL + url
-        return url
-
-    def listsTab(self, tab, cItem):
-        printDBG("EskaGo.listsMainMenu")
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        
+        self.MAIN_URL = 'http://www.eskago.pl/'
+        self.MAIN_ESKAPL_URL = 'http://www.eska.pl/'
+        self.DEFAULT_ICON_URL = self.MAIN_URL + 'html/img/fb.jpg'
+        
+        self.MAIN_CAT_TAB = [{'category':'list_tv_items',           'title': 'TV',                       'url':self.getFullUrl('tv')      },
+                             {'category':'list_radio_cats',         'title': 'Radio Eska Go',            'url':self.getFullUrl('radio')   },
+                             {'category':'list_radio_eskapl',       'title': 'Radio Eska PL',            'url':self.MAIN_ESKAPL_URL,       'icon':self.MAIN_ESKAPL_URL + 'html/v6/images/logo_eska_pl.png'},
+                             ]
+                            # {'category':'search',                  'title': _('Search'),                'search_item':True,              },
+                            # {'category':'search_history',          'title': _('Search history'),                                         } 
+                            #]
+        
+        self.cacheItems = {}
+        
+    def listRadioCats(self, cItem, nextCategory):
+        printDBG('listRadioCats')
+        self.cacheItems = {}
+        
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        ###########################
+        listDataTab = self.cm.ph.getDataBeetwenMarkers(data, '<div class="channel-list-box"', '<script>', False)[1]
+        listDataTab = listDataTab.split('<div class="channel-list-box"')
+        for listData in listDataTab:
+            listId = self.cm.ph.getSearchGroups(listData, '''channel\-list\-([^"^']+?)["']''')[0]
+            self.cacheItems[listId] = []
+            
+            headMarker = '<div class="head-title">'
+            tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(listData, headMarker, '</ul>')
+            for tmp in tmpTab:
+                desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(tmp, headMarker, '</div>', False)[1] )
+                tmp  = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li>', '</li>')
+                for item in tmp:
+                    if 'play_icon' not in item: continue
+                    url   = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                    title = self.cleanHtmlStr(item)
+                    self.cacheItems[listId].append({'good_for_fav':True, 'type':'audio', 'title':title, 'url':url, 'desc':desc})
+        printDBG('#########################################')
+        printDBG(self.cacheItems)
+        printDBG('#########################################')
+        ###########################
+            
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="new-radio-box">', '<div class="row radio-list">', False)[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
+        for item in tmp:
+            url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
+            icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''color[^>]+?src=['"]([^'^"]+?)['"]''')[0] )
+            if url != '#': url = self.getFullUrl(url)
+            if self.cm.isValidUrl(url):
+                title = url.split('/')[-1].replace('-', ' ').title()
+                params = {'good_for_fav':True, 'title':title, 'url':url, 'icon':icon}
+                self.addAudio(params)
+            else:
+                listId = self.cm.ph.getSearchGroups(item, '''data-list-id=['"]([^'^"]+?)['"]''')[0]
+                if 0 == len(self.cacheItems.get(listId, [])): continue
+                params = {'good_for_fav':False, 'category':nextCategory, 'title':self.cacheItems[listId][0]['desc'], 'url':listId, 'icon':icon}
+                self.addDir(params)
+                
+    def listCacheItems(self, cItem):
+        printDBG('listCacheItems')
+        listId = cItem.get('url', '')
+        tab = self.cacheItems.get(listId, [])
+        
         for item in tab:
             params = dict(cItem)
             params.update(item)
-            params['name']  = 'category'
-            self.addDir(params)
-            
-    def _fillChannelsCache(self, url):
-        printDBG("EskaGo._fillChannelsCache")
-        sts, data = self.cm.getPage(url)
-        if not sts: return
-        try:
-            data = byteify( json.loads(data) )
-            self.cacheChannels = data
-        except Exception:
-            printExc()
-            
-    def listChannels(self, cItem):
-        printDBG("EskaGo.listChannels")
+            self.currList.append(params)
+        
+    def listTvItems(self, cItem):
+        printDBG("EskaGo.listTvItems")
+        
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
-        keysTab = cItem.get('channels_keys_tab', [])
-        if 0 == len(keysTab):
-            self._fillChannelsCache(cItem['url'])
-            keysTab = [{'key':'result', 'meta_data':{}}]
         
-        data = self.cacheChannels
-        for item in keysTab:
-            try:
-                data = data[item['key']]
-                meta_data = item['meta_data']
-            except Exception:
-                printExc()
-                return
-        idx = 0
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="tv-online">', '</ul>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>', withMarkers=True)
         for item in data:
-            newKeysTab = list(keysTab)
-            newKeysTab.append({'key':idx, 'meta_data':{}})
-                
-            if 'channels' in item:
-                title = item.get('title', '').replace("Kanały w klimacie ", '')
-                icon  = item.get('image', '')
-                newKeysTab.append({'key':'channels', 'meta_data':{}})
-                
-                params = dict(cItem)
-                params.update({'title':title, 'icon':icon, 'channels_keys_tab':newKeysTab})
-                self.addDir(params)
-            elif 'subChannels' in item:
-                title = item.get('name', '')
-                newKeysTab.append({'key':'subChannels', 'meta_data':{'type':item.get('type', '')}})
-                
-                params = dict(cItem)
-                params.update({'title':title, 'channels_keys_tab':newKeysTab})
-                self.addDir(params)
-            elif 'streamUrl' in item:
-                title = item.get('name', '')
-                if '' == title: title = item.get('subname', '')
-                
-                type = item.get('type', '')
-                if '' == type: type = meta_data.get('type', '')
-                
-                tmpUrls = []
-                if 'streamUrls' in item:
-                    streamUrlHD = item['streamUrls'].get('hd', '').strip()
-                    streamUrlSD = item['streamUrls'].get('sd', '').strip()
-                    if streamUrlHD != '': tmpUrls.append({'name':'HD', 'url':streamUrlHD})
-                    if streamUrlSD != '': tmpUrls.append({'name':'SD', 'url':streamUrlSD}) 
-                else:
-                    streamUrl  = item.get('streamUrl', '')
-                    if None == streamUrl: streamUrl = ''
-                    else: streamUrl = streamUrl.strip()
-                    if streamUrl != '': tmpUrls.append({'name':'Normal', 'url':streamUrl}) 
-                
-                if len(tmpUrls):
-                    params = dict(cItem)
-                    params.update( {'title':title, 'urls':tmpUrls} )
-                    if type == 'Radio':
-                        self.addAudio(params)
-                    else:
-                        self.addVideo(params)
-            idx += 1
+            url    = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            icon   = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0].strip())
+            title  = self.cleanHtmlStr(item)
+            desc   = '' # ?? maybe EPG for channel
+            params = {'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':desc}
+            self.addVideo(params)
+            
+    def listRadioEskaPL(self, cItem):
+        printDBG("EskaGo.listRadioEskaPL")
+        
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="r_station_list">', '<script')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>', withMarkers=True)
+        for item in data:
+            url    = self.cm.ph.getSearchGroups(item, '''data-link=['"]([^'^"]+?)['"]''')[0]
+            if url == '': continue
+            if not self.cm.isValidUrl(url):
+                url = self.MAIN_ESKAPL_URL + url
+            icon   = cItem.get('icon', '')
+            title  = self.cleanHtmlStr(item)
+            desc   = '' # ?? maybe EPG for channel
+            params = {'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':desc}
+            self.addVideo(params)
 
-    def getLinksForVideo(self, cItem):
-        printDBG("EskaGo.getLinksForVideo [%s]" % cItem)
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("EskaGo.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        
+        # TODO: implement me
+    
+    def getLinksForItem(self, cItem):
+        printDBG("EskaGo.getLinksForItem [%s]" % cItem)
         urlTab = []
-        for urlItem in cItem.get('urls', []):
-            url = urlItem['url']
-            if url.split('?')[0].endswith('m3u8'):
+        
+        url = cItem['url']
+        
+        if self.up.getDomain(self.MAIN_ESKAPL_URL , onlyDomain=True) in url:
+            sts, data = self.cm.getPage(url, self.defaultParams)
+            if not sts: return []
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="play_player">', '</div>')[1]
+            url = self.cm.ph.getSearchGroups(data, '''href=['"]([^'^"]+?)['"]''')[0]
+            if not self.cm.isValidUrl(url): return []
+        
+        sts, data = self.cm.getPage(url)
+        if not sts: return []
+        
+        if '/radio/' in  url:
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'input[name="data-radio-url"]', ';', withMarkers=False)[1]
+            url  =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
+            if url != '' and url.endswith('.pls'):
+                sts, data = self.cm.getPage(url)
+                if not sts: return []
+                printDBG(data)
+                data = data.split('File')
+                if len(data): del data[0]
+                for item in data:
+                    printDBG('ITEM [%s]' % item)
+                    url  = self.cm.ph.getSearchGroups(item, '''(https?://[^\s]+?)\s''')[0]
+                    name = self.cm.ph.getSearchGroups(item, '''Title[^=]*?=([^\s]+?)\s''')[0].strip()
+                    urlTab.append({'name':name, 'url':url})
+        elif '/tv/' in url:
+            data = self.cm.ph.getDataBeetwenMarkers(data, '$.post(', 'function', withMarkers=False)[1]
+            url  =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
+            streamUri = self.cm.ph.getSearchGroups(data, '''streamUri['"\s]*?:\s*?['"]([^'^"]+?)['"]''')[0]
+            sts, url = self.cm.getPage(url, post_data={'streamUri':streamUri})
+            if not sts: return []
+            
+            printDBG('++++++++++++++++++++++++++')
+            printDBG(url)
+            printDBG('++++++++++++++++++++++++++')
+            
+            if self.cm.isValidUrl(url) and url.split('?')[0].endswith('m3u8'):
                 data = getDirectM3U8Playlist(url, checkExt=False)
                 for item in data:
                     item['url'] = urlparser.decorateUrl(item['url'], {'iptv_proto':'m3u8', 'iptv_livestream':True})
                     urlTab.append(item)
-            else:
-                urlTab.append(urlItem)
         
         return urlTab
-    
-    def handleService(self, index, refresh=0, searchPattern='', searchType=''):
-        printDBG('EskaGo.handleService start')
+        
+    def getVideoLinks(self, videoUrl):
+        printDBG("EskaGo.getVideoLinks [%s]" % videoUrl)
+        urlTab = []
+        
+        if self.cm.isValidUrl(videoUrl):
+            urlTab = self.up.getVideoLinkExt(videoUrl)
+        
+        return urlTab
+        
+    def getFavouriteData(self, cItem):
+        printDBG('EskaGo.getFavouriteData')
+        return json.dumps(cItem)
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('EskaGo.getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('EskaGo.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
+        
+    def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
+        printDBG('handleService start')
+        
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
-        name     = self.currItem.get("name", None)
+
+        name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
-        printDBG( "EskaGo.handleService: ---------> name[%s], category[%s] " % (name, category) )
-        searchPattern = self.currItem.get("search_pattern", searchPattern)
-        self.currList = [] 
-
-        if None == name:
-            self.listChannels({'name':'category', 'url':EskaGo.CHANNELS_URL})
+        mode     = self.currItem.get("mode", '')
+        
+        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        self.currList = []
+        
+    #MAIN MENU
+        if name == None:
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif 'list_radio_cats' == category:
+            self.listRadioCats(self.currItem, 'list_cache_items')
+        elif 'list_cache_items' == category:
+            self.listCacheItems(self.currItem)
+        elif 'list_tv_items' == category:
+            self.listTvItems(self.currItem)
+        elif 'list_radio_eskapl' == category:
+            self.listRadioEskaPL(self.currItem)
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
-            self.listChannels(self.currItem)
+            printExc()
+        
         CBaseHostClass.endHandleService(self, index, refresh)
-
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, EskaGo(), True)
+        CHostBase.__init__(self, EskaGo(), True, [])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('eskagologo.png')])
 
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] not in ['audio', 'video']:
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-
-        retlist = []
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            name = self.host.cleanHtmlStr( item["name"] )
-            url  = item["url"]
-            retlist.append(CUrlItem(name, url, need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def convertList(self, cList):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        searchTypesOptions.append(("Filmy",  "filmy"))
-        searchTypesOptions.append(("Seriale","seriale"))
-        
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-            possibleTypesOfSearch = None
-
-            if 'category' == cItem['type']:
-                if cItem.get('search_item', False):
-                    type = CDisplayListItem.TYPE_SEARCH
-                    possibleTypesOfSearch = searchTypesOptions
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-            elif 'more' == cItem['type']:
-                type = CDisplayListItem.TYPE_MORE
-            elif 'audio' == cItem['type']:
-                type = CDisplayListItem.TYPE_AUDIO
-                
-            if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-                
-            title       =  self.host.cleanHtmlStr( cItem.get('title', '') )
-            description =  self.host.cleanHtmlStr( cItem.get('desc', '') )
-            icon        =  self.host.cleanHtmlStr( cItem.get('icon', '') )
-            
-            hostItem = CDisplayListItem(name = title,
-                                        description = description,
-                                        type = type,
-                                        urlItems = hostLinks,
-                                        urlSeparateRequest = 1,
-                                        iconimage = icon,
-                                        possibleTypesOfSearch = possibleTypesOfSearch)
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

@@ -428,6 +428,7 @@ class YifyTV(CBaseHostClass):
                     data = self._evalJscode(data)
                     if 'sources[sourceSelected]["paramId"]' in data:
                         data = data.replace('"+"', '').replace(' ', '')
+                        paramSite = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramSite"\]="([^"]+?)"')[0]
                         data = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramId"\]="([^"]+?)"')[0]
                         printDBG('data ------------------------- [%s]' % data)
                         if data.startswith('enc'):
@@ -436,7 +437,12 @@ class YifyTV(CBaseHostClass):
                             iv = unhexlify(base64.b64decode('NWE0MTRlMzEzNjMzNjk2NDZhNGM1MzUxMzU0YzY0MzU='))
                             cipher = AES_CBC(key=key, padding=noPadding(), keySize=32)
                             data = cipher.decrypt(encrypted, iv).split('\x00')[0]
-                            urlTab.extend( self.up.getVideoLinkExt("https://userscloud.com/embed-" + data + "-1280x534.html") )
+                            if 'ucl' == paramSite:
+                                urlTab.extend( self.up.getVideoLinkExt("https://userscloud.com/embed-" + data + "-1280x534.html") )
+                            elif 'tus' == paramSite:
+                                urlTab.extend( self.up.getVideoLinkExt("https://tusfiles.net/embed-" + data + "-1280x534.html?v=34") )
+                            elif 'up' == paramSite:
+                                urlTab.extend( self.up.getVideoLinkExt("http://uptobox.com/" + data) )
                             break
                     
                 data = byteify(json.loads(data))

@@ -222,7 +222,7 @@ class Cinemay(CBaseHostClass):
         if len(tmp): del tmp[-1]
         for item in tmp:
             url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
-            if '/voir/' in url or '/voire/' in url or '/ser/' in url or '/regard/' in url:
+            if '/voir' in url or '/voire' in url or '/ser' in url or '/regard' in url:
                 title = self.cm.ph.getSearchGroups(item, 'src="[^"]+?/([^/]+?)\.png"')[0]
                 title = '[{0}] {1}'.format(title, self.cleanHtmlStr( item ))
                 urlTab.append({'name':title, 'url':self.getFullUrl(url), 'need_resolve':1})

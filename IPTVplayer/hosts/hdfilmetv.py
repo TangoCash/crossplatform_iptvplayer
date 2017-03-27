@@ -244,6 +244,26 @@ class HDFilmeTV(CBaseHostClass):
         sts, data = self.getPage(videoUrl, self.defaultParams)
         if not sts: return []
         
+        movieid = self.cm.ph.getSearchGroups(data, '''var\s+?movieid\s*?=\s*?([0-9]+?)\s*?;''')[0].strip()
+        episode = self.cm.ph.getSearchGroups(data, '''var\s+?episode\s*?=\s*?([0-9]+?)\s*?;''')[0].strip()
+
+        sts, tmp = self.getPage(self.getFullUrl("/movie/getlink/"+movieid+"/"+episode), self.defaultParams)
+        if sts:
+            try:
+                tmp = base64.b64decode(tmp)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                printDBG(tmp)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                tmp = byteify( json.loads(tmp) )
+                for item in tmp['playinfo']:
+                    if 'mp4' not in item['type']:
+                        continue
+                    urlTab.append({'name':str(item['label']), 'url':self.getFullUrl(str(item['file']))})
+            except Exception:
+                printExc()
+        if len(urlTab):
+            return urlTab
+        
         googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
         if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
         printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")

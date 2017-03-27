@@ -219,6 +219,14 @@ class IITVPL(CBaseHostClass):
             except Exception:
                 printExc()
         
+        if 1 != self.up.checkHostSupport(videoUrl):
+            try:
+                sts, response = self.cm.getPage(videoUrl, {'return_data':False})
+                videoUrl = response.geturl()
+                response.close()
+            except Exception:
+                printExc()
+        
         if videoUrl.startswith('http://') or videoUrl.startswith('https://'):
             return self.up.getVideoLinkExt(videoUrl)
         

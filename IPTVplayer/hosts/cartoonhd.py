@@ -48,15 +48,15 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://cartoonhd.online/'
+    return 'https://cartoonhd.online/'
 
 class CartoonHD(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL = 'http://cartoonhd.online/'
-    SEARCH_URL = 'http://api.cartoonhd.online/api/v1/0A6ru35yevokjaqbb8'
+    MAIN_URL = 'https://cartoonhd.online/'
+    SEARCH_URL = 'https://api.cartoonhd.online/api/v1/0A6ru35yevokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
                     {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php',    'icon':''},
@@ -235,8 +235,8 @@ class CartoonHD(CBaseHostClass):
         
         showTitle = cItem.get('show_title', '')
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="episode">', '</article>', False)[1]
-        data = data.split('<div class="episode">')
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="episode', '</article>', False)[1]
+        data = data.split('<div class="episode')
         for item in data:
             url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"#]+?)"')[0] )
             desc  = self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</p>', False)[1]
@@ -403,6 +403,7 @@ class CartoonHD(CBaseHostClass):
             except Exception:
                 printExc()
             if len(urlTab): break
+        urlTab = urlTab[::-1]
         self.cacheLinks[cItem['url']] = urlTab
         return urlTab
         
@@ -410,7 +411,16 @@ class CartoonHD(CBaseHostClass):
         printDBG("CartoonHD.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
-        if videoUrl.startswith('http'):
+        # mark requested link as used one
+        if len(self.cacheLinks.keys()):
+            key = self.cacheLinks.keys()[0]
+            for idx in range(len(self.cacheLinks[key])):
+                if videoUrl in self.cacheLinks[key][idx]['url']:
+                    if not self.cacheLinks[key][idx]['name'].startswith('*'):
+                        self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
+                    break
+        
+        if self.cm.isValidUrl( videoUrl ):
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         
@@ -496,90 +506,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, CartoonHD(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        if icon == '': icon = self.host.DEFAULT_ICON_URL
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

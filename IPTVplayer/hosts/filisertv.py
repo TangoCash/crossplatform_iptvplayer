@@ -263,10 +263,13 @@ class FiliserTv(CBaseHostClass):
             return self.cacheLinks[cItem['url']]
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
-        if not sts: return
+        if not sts: return []
+        
+        errorMessage = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2 class="title_block">', '</section>')[1])
+        if '' != errorMessage:  SetIPTVPlayerLastHostError(errorMessage)
         
         data = data.split('<div id="links">')
-        if 2 != len(data): return
+        if 2 != len(data): return []
         
         tabs = []
         tmp = self.cm.ph.getDataBeetwenMarkers(data[0], '<div id="video_links">', '<div class="clear">')[1]

@@ -152,7 +152,7 @@ class PapyStreamingUS(CBaseHostClass):
         return urlTab
         
     def getVideoLinks(self, videoUrl):
-        printDBG("IceFilms.PapyStreamingUS [%s]" % videoUrl)
+        printDBG("PapyStreamingUS.PapyStreamingUS [%s]" % videoUrl)
         urlTab = []
         
         referer = videoUrl.meta['Referer']
@@ -161,12 +161,12 @@ class PapyStreamingUS(CBaseHostClass):
             AJAX_HEADER['Referer'] = referer
             params = dict(self.defaultParams)
             params['header'] = AJAX_HEADER
+            videoUrl = videoUrl.replace('&amp;', '&')
             sts, data = self.cm.getPage(videoUrl, params)
             if not sts: return []
             url = self.getFullUrl('/e/Htplugins/Loader.php')
             params['header']['Referer'] = videoUrl
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'oad(', ')', False)[1]
-            data = self.cm.ph.getSearchGroups(data, '"([^"]+?)"')[0]
+            data = self.cm.ph.getSearchGroups(data, 'oad\(\s*"([^"]+?)"')[0]
             sts, data = self.cm.getPage(url, params, {'data':data})
             if not sts: return []
             

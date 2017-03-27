@@ -572,15 +572,20 @@ class IPTVSubDownloaderWidget(Screen):
     def listSubtitlesProviders(self):
         printDBG("IPTVSubDownloaderWidget.listSubtitlesProviders")
         subProvidersList = []
-        napisy24pl    = {'title':_("Napisy24.pl"),       'sub_provider':'napisy24pl'      }
-        openSubtitles = {'title':_("OpenSubtitles.org"), 'sub_provider':'opensubtitlesorg'}
-        napiprojektpl = {'title':_("Napiprojekt.pl"),    'sub_provider':'napiprojektpl'   }
-        titlovi       = {'title':_("Titlovi.com"),       'sub_provider':'titlovicom'      }
-        subscene      = {'title':_("Subscene.com"),      'sub_provider':'subscenecom'     }
-        youtube       = {'title':_("Youtube.com"),       'sub_provider':'youtubecom'      }
+        napisy24pl       = {'title':_("Napisy24.pl"),                'sub_provider':'napisy24pl'       }
+        openSubtitles    = {'title':_("OpenSubtitles.org"),          'sub_provider':'opensubtitlesorg' }
+        napiprojektpl    = {'title':_("Napiprojekt.pl"),             'sub_provider':'napiprojektpl'    }
+        titlovi          = {'title':_("Titlovi.com"),                'sub_provider':'titlovicom'       }
+        subscene         = {'title':_("Subscene.com"),               'sub_provider':'subscenecom'      }
+        youtube          = {'title':_("Youtube.com"),                'sub_provider':'youtubecom'       }
+        popcornsubtitles = {'title':_("PopcornSubtitles.com"),       'sub_provider':'popcornsubtitles' }
         
         if 'youtube_id' in self.params['url_params'] and '' != self.params['url_params']['youtube_id']:
             subProvidersList.append(youtube)
+            
+        if 'popcornsubtitles_url' in self.params['url_params'] and '' != self.params['url_params']['popcornsubtitles_url']:
+            subProvidersList.append(popcornsubtitles)
+        
         if 'pl' == GetDefaultLang(): 
             subProvidersList.append(napisy24pl)
             if IsSubtitlesParserExtensionCanBeUsed():

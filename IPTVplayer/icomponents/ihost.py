@@ -63,7 +63,7 @@ class ArticleContent:
     # Posible args and values for richDescParams:
     RICH_DESC_PARAMS        = ["alternate_title", "views", "status", "country", "language", "quality", "subtitles", "year", "imdb_rating", \
                                "released", "rating", "rated", "duration", "genre", "production", "director", "directors", "writer", "writers", \
-                               "creator", "creators", "actors", "stars", "awards" ]
+                               "creator", "creators", "actors", "stars", "awards", "budget" ]
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
     RICH_DESC_LABELS = {"alternate_title":   "Alternate Title:",
@@ -89,7 +89,8 @@ class ArticleContent:
                         "actors":            "Actors:", 
                         "stars":             "Stars:",
                         "awards":            "Awards:",
-                        "views":             "Views",}
+                        "views":             "Views",
+                        "budget":            "Budget",}
     def __init__(self, title = '', text = '', images = [], trailers = [], richDescParams = {}, visualizer=None):
         self.title    = title
         self.text     = text
@@ -294,7 +295,7 @@ class CHostBase(IHost):
         retlist = []
         if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
         
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
+        urlList = self.host.getLinksForItem(self.host.currList[Index])
         for item in urlList:
             need_resolve = item.get("need_resolve", 0)
             retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
@@ -643,6 +644,9 @@ class CBaseHostClass:
             
     def setInitListFromFavouriteItem(self, fav_data):
         return False
+        
+    def getLinksForItem(self, cItem):
+        return self.getLinksForVideo(cItem)
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         self.moreMode = False

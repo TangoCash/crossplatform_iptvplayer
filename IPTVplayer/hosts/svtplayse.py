@@ -259,7 +259,7 @@ class SVTPlaySE(CBaseHostClass):
             
             for item in data:
                 title = self.cleanHtmlStr( item.get('programTitle', ''))
-                url   = item['contentUrl']
+                url   = self.getFullUrl( item['contentUrl'] )
                 desc  = item.get('description', '')
                 if desc == None: desc = ''
                 else: self.cleanHtmlStr( desc )
@@ -419,39 +419,6 @@ class SVTPlaySE(CBaseHostClass):
             params = dict(cItem)
             params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
-        
-    def listEpisodes(self, cItem):
-        printDBG("SVTPlaySE.listEpisodes")
-        
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
-        if not sts: return
-        
-        try:
-            data = byteify(json.loads(data))
-            for item in data["relatedVideos"]["episodes"]:
-                title = self.cleanHtmlStr( item["title"])
-                try:
-                    seasonNum  = str(item["season"])
-                    episodeNum = str(item["episodeNumber"])
-                    title += ' s%se%s'% (seasonNum.zfill(2), episodeNum.zfill(2))
-                except Exception:
-                    pass
-                url   = self.getFullApiUrl('/title_page;title=' + "/video/" + str(item["id"]))
-                desc  = item.get('description', '')
-                if desc == None: desc = ''
-                else: self.cleanHtmlStr( desc )
-                icon  = self.getIcon(item)
-                
-                descTab = []
-                if item.get('onlyAvailableInSweden', False):
-                    descTab.append(_('Only available in Sweden.\n'))
-                if item.get('closedCaptioned', False):
-                    descTab.append(_('With closed captioned.'))
-                descTab.append(desc)
-                params = {'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(descTab)}
-                self.addVideo(params)
-        except Exception: 
-            printExc()
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("SVTPlaySE.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
@@ -471,26 +438,36 @@ class SVTPlaySE(CBaseHostClass):
         subtitlesTab = []
         
         if hlsUrl == None or dashUrl == None:
-            url = self.getFullApiUrl('/title_page;title=' + cItem['url'])
+            if 'api' not in self.up.getDomain(cItem['url']):
+                url = self.getFullUrl(cItem['url'])
+                sts, data = self.cm.getPage(url, self.defaultParams)
+                if not sts: return
+                videoId = self.cm.ph.getSearchGroups(data, '<video\s+?data-video-id="([^"]+?)"')[0]
+                url = 'http://api.svt.se/videoplayer-api/video/' + videoId
+            else:
+                url = cItem['url']
+            
             sts, data = self.cm.getPage(url, self.defaultParams)
             if not sts: return
+            
+            printDBG(data)
             
             try:
                 data = byteify(json.loads(data))
                 
                 videoItem = data.get('video', None)
-                if videoItem  == None: videoItem = data.get('video', None)
+                if videoItem  == None: videoItem = data
                 for item in videoItem['videoReferences']:
                     if self.cm.isValidUrl(item['url']):
-                        if 'dash' in item['playerType']:
+                        if 'dashhbbtv' in item['format']:
                             dashUrl = item['url']
-                        elif 'ios' in item['playerType']:
+                        elif 'hls' in item['format']:
                             hlsUrl = item['url']
                 
-                for item in videoItem['subtitles']:
+                for item in videoItem['subtitleReferences']:
                     format = item['url'][-3:]
                     if format in ['srt', 'vtt']:
-                        subtitlesTab.append({'title':item['language'], 'url':self.getFullIconUrl(item['url']), 'lang':item['language'], 'format':format})
+                        subtitlesTab.append({'title':format, 'url':self.getFullIconUrl(item['url']), 'lang':'n/a', 'format':format})
             except Exception: 
                 printExc()
         
@@ -589,8 +566,6 @@ class SVTPlaySE(CBaseHostClass):
             self.explorePage(self.currItem, 'list_tab_items')
         elif 'list_tab_items' == category:
             self.listTabItems(self.currItem, 'explore_page')
-        elif 'list_episodes' == category:
-            self.listEpisodes(self.currItem)
         elif 'list_section_items' == category:
             self.listSectionItems(self.currItem, 'explore_page')
 

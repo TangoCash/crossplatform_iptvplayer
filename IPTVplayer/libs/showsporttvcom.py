@@ -44,11 +44,11 @@ def GetConfigList():
     
 ###################################################
 
-class ShowsportTVApi:
-    MAIN_URL   = 'http://showsport-tv.com/'
-    HTTP_HEADER  = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': MAIN_URL }
+class ShowsportTVApi(CBaseHostClass):
     
     def __init__(self):
+        self.MAIN_URL   = 'http://showsport-tv.com/'
+        self.HTTP_HEADER  = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': self.MAIN_URL }
         self.COOKIE_FILE = GetCookieDir('showsporttvcom.cookie')
         self.sessionEx = MainSessionWrapper()
         self.cm = common()
@@ -57,30 +57,21 @@ class ShowsportTVApi:
         self.http_params.update({'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
         self.cacheList = {}
         
-    def getFullUrl(self, url):
-        if url.startswith('http'):
-            return url
-        elif url.startswith('/'):
-            return self.MAIN_URL + url[1:]
-        return self.MAIN_URL + url
-        
-    def cleanHtmlStr(self, str):
-        return CBaseHostClass.cleanHtmlStr(str)
-        
     def _getChannelsList(self, cItem):
         printDBG("ShowsportTVApi._getChannelsList")
         channelsTab = []
         sts, data = self.cm.getPage(self.MAIN_URL)
         if not sts: return []
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li class="has-sub">', '</a>')
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li class="magenta"', '</a>')
         for item in data:
             url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href="([^"]+?)"''', 1, True)[0] )
             icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src="([^"]+?)"''', 1, True)[0] )
-            title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title="([^"]+?)"''', 1, True)[0] )
-            if 'offline' in item:
+            title = self.cm.ph.getDataBeetwenMarkers(url, 'watch-', '-online.html', False)[1].replace('-', ' ').title()
+            if 'Offline' in item:
                 desc  = _('Off Air')
             else:
                 desc  = _('On Air')
+            if title == '': continue
             if not url.startswith('http'): continue
             params = dict(cItem)
             params.update({'type':'video', 'title':title, 'url':url, 'icon':icon, 'desc':desc})
@@ -115,6 +106,8 @@ class ShowsportTVApi:
         
     def getChannelsList(self, cItem):
         printDBG("ShowsportTVApi.getChannelsList")
+        return self._getChannelsList(cItem)
+        
         channelsTab = []
         
         category = cItem.get('abc_cat', None)
