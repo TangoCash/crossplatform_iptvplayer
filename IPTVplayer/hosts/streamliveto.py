@@ -74,7 +74,8 @@ class StreamLiveTo(CBaseHostClass):
             url = url.replace('https://', 'http://')
         return url
         
-    def getPage(self, url, params={}):
+    def getPage(self, url, params={}, post_data=None):
+        return self.cm.getPage(url, params, post_data)
         return self.checkBotProtection(url, params)
         
     def cleanHtmlStr(self, data):
@@ -112,10 +113,10 @@ class StreamLiveTo(CBaseHostClass):
             langTab.append({'title':item[1], 'lang':item[0]})
             
         sortTab = []
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select name="sort"', '</select>', False)[1]
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select name="sortBy"', '</select>', False)[1]
         tmp = re.compile('<option [^>]*?value="([^"]*?)"[^>]*?>([^<]+?)</option>').findall(tmp)
         for item in tmp:
-            sortTab.append({'title':item[1], 'lang':item[0]})
+            sortTab.append({'title':item[1], 'sort':item[0]})
             
         self.cacheFilters['cat']  = catTab
         self.cacheFilters['lang'] = langTab
@@ -156,19 +157,17 @@ class StreamLiveTo(CBaseHostClass):
         lang = cItem.get('lang', '')
         sort = cItem.get('sort', '')
         
-        #url = 'channels/{0}?p={1}&q={2}&lang={3}&sort={4}'.format(cat, page, q, lang, sort)
-        url = '{0}?p={1}&q={2}&lang={3}&sort={4}'.format(cat, page, q, lang, sort)
-        url = self._getFullUrl(url)
+        post_data = {'page':page, 'category':cat, 'language':lang, 'sortBy':sort, 'query':q}
+        url = self.getFullUrl('channelsPages.php')
 
-        sts, data = self.getPage(url, self.defaultParams)
+        sts, data = self.getPage(url, self.defaultParams, post_data)
         if not sts: return
         
         printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         printDBG(data)
         printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         
-        nextPage = self.cm.ph.getDataBeetwenMarkers(data, 'class="pages"', '</p>', False)[1]
-        if 'p={0}&'.format(page+1) in nextPage:
+        if 'data-page="{0}"'.format(page+1) in data:
             nextPage = True
         else: nextPage = False
         
@@ -395,8 +394,8 @@ class StreamLiveTo(CBaseHostClass):
                 if not logged:
                     self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_INFO, timeout = 10 )
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
-            if logged:  
-                self.addDir({'name':'category', 'title':_('Get free credits'), 'category':'get_free_credits'})
+            #if logged:  
+            #    self.addDir({'name':'category', 'title':_('Get free credits'), 'category':'get_free_credits'})
         elif category == 'get_free_credits':
             self.listGetFreeCredits()
         elif category == 'category':
@@ -424,81 +423,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, StreamLiveTo(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('streamlivetologo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        if icon == '':  icon = self.host.DEFAULT_ICON_URL
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

@@ -21,7 +21,7 @@ import urllib2
 
 class AnyFilesVideoUrlExtractor:
     COOKIEFILE  = GetCookieDir('anyfiles.cookie')
-    MAINURL     = 'http://anyfiles.pl'
+    MAINURL     = 'https://anyfiles.pl'
     LOGIN_URL_2 = MAINURL + '/j_security_check'
     LOGIN_URL   = MAINURL + '/Logo?op=l'
     
@@ -35,6 +35,7 @@ class AnyFilesVideoUrlExtractor:
         return self.logged
         
     def tryTologin(self):
+        rm(AnyFilesVideoUrlExtractor.COOKIEFILE)
         login    = config.plugins.iptvplayer.anyfilespl_login.value
         password = config.plugins.iptvplayer.anyfilespl_password.value
         printDBG("AnyFilesVideoUrlExtractor.tryTologin login[%s]" % login)
@@ -66,6 +67,8 @@ class AnyFilesVideoUrlExtractor:
         #self.cm.addCookieItem(COOKIEFILE, {'name': 'AnyF18', 'value': 'mam18', 'domain': 'video.anyfiles.pl'}, False)
         if not self.isLogged():
             self.tryTologin()
+        
+        sts, data = self.cm.getPage(self.MAINURL, self.defaultParams)
         
         url = strwithmeta(url)
         

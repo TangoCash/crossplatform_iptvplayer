@@ -43,14 +43,14 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://onwatchseries.to/'
+    return 'http://mywatchseries.to/'
 
 class TheWatchseriesTo(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    DOMAIN        = 'onwatchseries.to'
+    DOMAIN        = 'mywatchseries.to'
     MAIN_URL      = 'http://%s/' % DOMAIN
     SEARCH_URL    = MAIN_URL + 'search/'
     DEFAULT_ICON  = "http://%s/templates/default/images/apple-touch-icon.png" % DOMAIN
@@ -95,7 +95,7 @@ class TheWatchseriesTo(CBaseHostClass):
         
     def getIconUrl(self, url):
         url = self.getFullUrl(url)
-        if 'thewatchseries.to' in url and self.isNeedProxy():
+        if self.isNeedProxy() and ('thewatchseries.to' in url or 'watch-series.to' in url or 'the-watch-series.to' in url or self.DOMAIN in url):
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=240'.format(urllib.quote(url, ''))
             params = {}
             params['User-Agent'] = self.HEADER['User-Agent'],

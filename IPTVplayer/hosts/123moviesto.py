@@ -9,6 +9,7 @@ from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 ###################################################
 
 ###################################################
@@ -20,6 +21,7 @@ import urllib
 import string
 import random
 import base64
+from urlparse import urlparse
 from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
@@ -51,7 +53,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://123movies.to/'
+    return 'https://gomovies.to/'
 
 class T123MoviesTO(CBaseHostClass):
  
@@ -95,7 +97,7 @@ class T123MoviesTO(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['https://123movieshd.to/', 'https://123movies.net.ru/', 'http://123movies.moscow/', 'https://123movies.ru/', 'https://123movies.is/']
+        domains = ['https://gomovies.to/', 'https://123movieshd.to/', 'https://123movies.net.ru/', 'http://123movies.moscow/', 'https://123movies.ru/', 'https://123movies.is/']
         domain = config.plugins.iptvplayer.moviesto123_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -116,7 +118,7 @@ class T123MoviesTO(CBaseHostClass):
                 break
                 
         if self.MAIN_URL == None:
-            self.MAIN_URL = 'https://123movies.is/' # first domain is default one
+            self.MAIN_URL = 'https://gomovies.to/' # first domain is default one
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
@@ -301,44 +303,14 @@ class T123MoviesTO(CBaseHostClass):
         self.cacheLinks[cItem['url']] = urlTab
         return urlTab
 
-    def uncensored1(self, data):
+    def uncensored1(self, data):    
         xx = ''
         xy = ''
         try:
-            data = '(' + data.split("(_$$)) ('_');")[0].split("/* `$$` */")[-1].strip()
-            data = data.replace('(__$)[$$$]', '\'"\'')
-            data = data.replace('(__$)[_$]', '"\\\\"')
-            data = data.replace('(o^_^o)', '3')
-            data = data.replace('(c^_^o)', '0')
-            data = data.replace('(_$$)', '1')
-            data = data.replace('($$_)', '4')
-            code = '''def retA():
-    class Infix:
-        def __init__(self, function):
-            self.function = function
-        def __ror__(self, other):
-            return Infix(lambda x, self=self, other=other: self.function(other, x))
-        def __or__(self, other):
-            return self.function(other)
-        def __rlshift__(self, other):
-            return Infix(lambda x, self=self, other=other: self.function(other, x))
-        def __rshift__(self, other):
-            return self.function(other)
-        def __call__(self, value1, value2):
-            return self.function(value1, value2)
-    def my_add(x, y):
-        try: return x + y
-        except Exception: return str(x) + str(y)
-    x = Infix(my_add)
-    return %s
-param = retA()'''
-
-            vGlobals = {"__builtins__": None, '__name__':__name__, 'str':str, 'Exception':Exception}
-            vLocals = { 'param': None }
-            exec( code % data.replace('+','|x|'), vGlobals, vLocals)
-            data = vLocals['param'].decode('string_escape')
-            xx = self.cm.ph.getSearchGroups(data, '''xx=['"]([^"^']+?)['"]''')[0]
-            xy = self.cm.ph.getSearchGroups(data, '''xy=['"]([^"^']+?)['"]''')[0]
+            data = 'var location="https://gomovies.to/";String.prototype.italics=function(){return "<i></i>";};String.prototype.link=function(){return "<a href=\\"undefined\\"></a>";};String.prototype.fontcolor=function(){return "<font color=\\"undefined\\"></font>";};\n' + data + '\nfor (n in this){print(n+"="+this[n]+";");}'
+            ret = iptv_js_execute( data )
+            xx = data = self.cm.ph.getSearchGroups(ret['data'], '''x=([^;]+?);''')[0]
+            xy = data = self.cm.ph.getSearchGroups(ret['data'], '''y=([^;]+?);''')[0]
         except Exception:
             printExc()
         return xx, xy
@@ -378,36 +350,28 @@ param = retA()'''
                 printExc()
                 return []
         else:
-            url = self.getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^"^']*?js/client[^"^']*?)['"]''')[0] )
+            try: mid = urlparse(referer).path.split('/')[2].split('-')[-1]
+            except Exception:
+                mid = ''
+                printExc()
+            url = self.getFullUrl( 'https://gomovies.to/ajax/movie_token?eid=%s&mid=%s&_=%s' % (episodeId, mid, int(time.time() * 10000)))
             if not self.cm.isValidUrl(url): return []
             
             params = dict(self.defaultParams)
             params['header'] = dict(self.HEADER)
             params['header']['Referer'] = referer
-            data = ''
+            
             tries = 0
             while tries < 10:
-                tries += 1
                 sts, data = self.getPage(url, params)
-                if not sts: 
-                    data = ''
-                    continue
-                printDBG( "--------------" )
-                printDBG( data[0:20] )
-                printDBG( "--------------" )
-                if '[]' not in data:
-                    time.sleep(1)
-                    break
-                    
-            if '[]' in data:
-                SetIPTVPlayerLastHostError(_('Not supported obfuscation algorithm detected. Try again later.'))
-                return []
+                if not sts: return []
                 
-            if data == '':
-                return []
+                xx, xy = self.uncensored1(data)
+                if xx != '' and xy != '':
+                    break
+                tries += 1
             
-            xx, xy = self.uncensored1(data)
-            url = 'ajax/v3_get_sources/%s?xx=%s&xy=%s' % (episodeId, xx, xy)
+            url = 'ajax/movie_sources/%s?x=%s&y=%s' % (episodeId, xx, xy)
             url = self.getFullUrl( url )
 
             params = {}

@@ -411,6 +411,7 @@ class CBaseSubProviderClass:
         if data == None:
             return None
         ext = fileName.split('.')[-1].lower()
+        printDBG("fileName[%s] ext[%s]" % (fileName, ext))
         if ext not in ['zip', 'rar']:
             SetIPTVPlayerLastHostError(_('Unknown file extension "%s".') % ext)
             return None
@@ -441,6 +442,11 @@ class CBaseSubProviderClass:
             fileSize = self.getMaxFileSize()
             sts, response = self.cm.getPage(url, urlParams, post_data)
             fileName = response.info()['Content-Disposition']
+            tmpFileName = self.cm.ph.getSearchGroups(fileName.lower(), '''filename=['"]([^'^"]+?)['"]''')[0]
+            if tmpFileName != '': 
+                printDBG("downloadFileData: replace fileName[%s] with [%s]" % (fileName, tmpFileName))
+                fileName = tmpFileName
+            
             data = response.read(fileSize)
             response.close()
             return data, fileName

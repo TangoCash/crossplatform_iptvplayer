@@ -48,15 +48,15 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://cartoonhd.online/'
+    return 'https://cartoonhd.cc/'
 
 class CartoonHD(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL = 'https://cartoonhd.online/'
-    SEARCH_URL = 'https://api.cartoonhd.online/api/v1/0A6ru35yevokjaqbb8'
+    MAIN_URL = 'https://cartoonhd.cc/'
+    SEARCH_URL = 'https://api.cartoonhd.cc/api/v1/0A6ru35yevokjaqbb8'
     
     MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
                     {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php',    'icon':''},
@@ -186,7 +186,7 @@ class CartoonHD(CBaseHostClass):
             nextPage = True
         else: nextPage = False
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="flipBox">', '</main>', False)[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="flipBox"', '</main>', True)[1]
         data = data.split('</section>')
         if len(data): del data[-1]
         for item in data:
@@ -363,7 +363,7 @@ class CartoonHD(CBaseHostClass):
             hostings.append({'id':item[0], 'name':item[1]})
         
         httpParams = dict(self.defaultParams)
-        httpParams['header'] =  {'Referer':cItem['url'], 'User-Agent':self.cm.HOST, 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json, text/javascript, */*; q=0.01'}
+        httpParams['header'] =  {'Referer':cItem['url'], 'User-Agent':self.cm.HOST, 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json, text/javascript, */*; q=0.01', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
         encElid = gettt()
         __utmx = getCookieItem('__utmx')
         httpParams['header']['Authorization'] = 'Bearer ' + urllib.unquote(__utmx)

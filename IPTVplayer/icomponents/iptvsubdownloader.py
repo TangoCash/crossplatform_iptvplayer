@@ -575,6 +575,7 @@ class IPTVSubDownloaderWidget(Screen):
         napisy24pl       = {'title':_("Napisy24.pl"),                'sub_provider':'napisy24pl'       }
         openSubtitles    = {'title':_("OpenSubtitles.org"),          'sub_provider':'opensubtitlesorg' }
         napiprojektpl    = {'title':_("Napiprojekt.pl"),             'sub_provider':'napiprojektpl'    }
+        podnapisinet     = {'title':_("Podnapisi.net"),              'sub_provider':'podnapisinet'    }
         titlovi          = {'title':_("Titlovi.com"),                'sub_provider':'titlovicom'       }
         subscene         = {'title':_("Subscene.com"),               'sub_provider':'subscenecom'      }
         youtube          = {'title':_("Youtube.com"),                'sub_provider':'youtubecom'       }
@@ -591,6 +592,7 @@ class IPTVSubDownloaderWidget(Screen):
             if IsSubtitlesParserExtensionCanBeUsed():
                 subProvidersList.append(napiprojektpl)
         subProvidersList.append(openSubtitles)
+        subProvidersList.append(podnapisinet)
         subProvidersList.append(titlovi)
         subProvidersList.append(subscene)
         if 'pl' != GetDefaultLang(): 

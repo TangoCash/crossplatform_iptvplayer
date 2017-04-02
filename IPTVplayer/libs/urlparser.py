@@ -7,7 +7,7 @@
 from pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetCookieDir, byteify, formatBytes, GetPyScriptCmd, GetTmpDir, rm, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetCookieDir, byteify, formatBytes, GetPyScriptCmd, GetTmpDir, rm, GetDefaultLang, GetDukPath, CreateTmpFile
 from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.md5Hash import MD5
 
 from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
@@ -38,7 +38,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerPar
                                                                unicode_escape, JS_FromCharCode, pythonUnescape
 from Plugins.Extensions.IPTVPlayer.libs.jjdecode import JJDecoder
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute, MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute, iptv_js_execute, MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 # FOREIGN import
@@ -407,6 +407,7 @@ class urlparser:
                        'raptu.com':            self.pp.parserRAPTUCOM       ,
                        'ovva.tv':              self.pp.parserOVVATV         ,
                        'streamplay.to':        self.pp.parserSTREAMPLAYTO   ,
+                       'streamango.com':       self.pp.parserSTREAMANGOCOM  ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -6531,72 +6532,24 @@ class pageParser:
         encTab = re.compile('''<span[^>]+?id="%s[^"]*?"[^>]*?>([^<]+?)<\/span>''' % varName).findall(data)
         printDBG(">>>>>>>>>>>> varName[%s] encTab[%s]" % (varName, encTab) )
         
-        def __decode_k(k, p0, p1, p2):
+        def __decode_k(enc, jscode):
+            decoded = ''
+            tmpPath = ''
             try:
-                y = ord(k[0]);
-                e = y - p1
-                d = max(2, e)
-                e = min(d, len(k) - p0 - 2)
-                t = k[e:e + p0]
-                h = 0
-                g = []
-                while h < len(t):
-                    f = t[h:h+3]
-                    g.append(int(f, 0x8))
-                    h += 3
-                v = k[0:e] + k[e+p0:]
-                p = []
-                i = 0
-                h = 0
-                while h < len(v):
-                    B = v[h:h + 2]
-                    C = v[h:h + 3]
-                    D = v[h:h + 4]
-                    f = int(B, 0x10)
-                    h += 0x2
-                    
-                    if (i % 3) == 0:
-                        f = int(C, 8)
-                        h += 1
-                    elif i % 2 == 0 and i != 0 and ord(v[i-1]) < 0x3c:
-                        f = int(D, 0xa)
-                        h += 2
-                        
-                    A = g[i % p2]
-                    f = f ^ 0xd5;
-                    f = f ^ A;
-                    p.append( chr(f) )
-                    i += 1
+                jscode = '''var id = "%s", decoded, document = {getElementById: true}, window = this, $ = function(){return {text: function(a){if(a){decoded = a;}else {return id;}},ready: function(a){a()}}}; %s; print(decoded);''' % (enc, jscode)
+                ret = iptv_js_execute( jscode )
+                if ret['sts'] and 0 == ret['code']:
+                    decoded = ret['data'].strip()
+                    printDBG('DECODED DATA -> [%s]' % decoded)
             except Exception:
                 printExc()
-                return ''
-                
-            return "".join(p)
-            
-        tab = [(0x24, 0x37, 0x7), (0x1e, 0x34, 0x6)]
-        try: 
-            orgData = self.cm.ph.getDataBeetwenMarkers(orgData, '$(document)', '}});')[1].decode('string_escape')
-            printDBG("++++++++++++++++++++++++++++++++")
-            printDBG(orgData)
-            printDBG("++++++++++++++++++++++++++++++++")
-            p0 = self.cm.ph.getDataBeetwenMarkers(orgData, "splice", ';')[1]
-            p0 = self.cm.ph.getSearchGroups(p0, "\,(0x[0-9a-fA-F]+?)\)")[0]
-            p1 = self.cm.ph.getDataBeetwenMarkers(orgData, "'#'", 'continue;')[1]
-            p1 = self.cm.ph.getSearchGroups(p1, "\,(0x[0-9a-fA-F]+?)\)")[0]
-            p2 = self.cm.ph.rgetDataBeetwenMarkers2(orgData, '^=0x', 'var ')[1]
-            p2 = self.cm.ph.getSearchGroups(p2, "\,(0x[0-9a-fA-F]+?)\)")[0]
-            printDBG("p0[%s] p1[%s] p2[%s]" % (p0, p1, p2))
-            tab.insert(0, (int(p0, 16), int(p1, 16), int(p2, 16)))
-        except Exception:
-            printExc()
-            
-        printDBG("++++++++++++++++++++++++++++++++")
-        printDBG(tab)
-        printDBG("++++++++++++++++++++++++++++++++")
+            #rm(tmpPath)
+            return decoded
         
-        for item in tab:
-            dec = __decode_k(encTab[0], item[0], item[1], item[2])
-            if dec != '': break
+        marker = 'ﾟωﾟﾉ= /｀ｍ´）ﾉ'
+        orgData = marker + self.cm.ph.getDataBeetwenMarkers(orgData, marker, marker, False)[1]
+        orgData = re.sub('''if\s*\([^\}]+?typeof[^\}]+?\}''', '', orgData)
+        dec = __decode_k(encTab[0], orgData)
         
         videoUrl = 'https://openload.co/stream/{0}?mime=true'.format(dec)
         params = dict(HTTP_HEADER)
@@ -7562,7 +7515,7 @@ class pageParser:
         sts, data = self.cm.getPage(secPlayerUrl, params)
         
         data = re.sub('document\.write\(unescape\("([^"]+?)"\)', lambda m: urllib.unquote(m.group(1)), data)
-        data += _getEvalData(data)
+        data += str(_getEvalData(data))
         
         def getUtf8Str(st):
             idx = 0
@@ -7572,12 +7525,9 @@ class pageParser:
                 idx += 3
             return st2.decode('unicode-escape').encode('UTF-8')
         
-        data += tmpData
-        #printDBG("=================================================================")
-        #printDBG(data)
-        #printDBG("=================================================================")
+        data += str(tmpData)
         #self.cm.ph.writeToFile('/mnt/new2/test.html', data)
-
+        
         playerData = self.cm.ph.getDataBeetwenMarkers(data, 'get_md5.php', '})')[1]
         playerData = self.cm.ph.getDataBeetwenMarkers(playerData, '{', '}', False)[1]
         playerData = playerData.split(',')
@@ -7630,3 +7580,43 @@ class pageParser:
             if self.cm.isValidUrl(file):
                 return file
         return False
+        
+    def parserSTREAMANGOCOM(self, baseUrl):
+        printDBG("parserSTREAMANGOCOM url[%s]\n" % baseUrl)
+        videoTab = []
+        if '/embed/' not in baseUrl:
+            sts, data = self.cm.getPage(baseUrl)
+            if not sts: return videoTab
+            url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=["'](http[^"^']+?/embed/[^"^']+?)["']''', 1, True)[0]
+        else:
+            url = baseUrl
+        
+        sts, data = self.cm.getPage(url)
+        if not sts: return videoTab
+        
+        dashTab = []
+        hlsTab = []
+        mp4Tab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'srces.push(', ')', False)
+        printDBG(data)
+        for item in data:
+            url = self.cm.ph.getSearchGroups(item, r'''['"]?src['"]?\s*:\s*['"]([^"^']+)['"]''')[0]
+            if url.startswith('//'): url = 'http:' + url
+            type = self.cm.ph.getSearchGroups(item, r'''['"]?type['"]?\s*:\s*['"]([^"^']+)['"]''')[0]
+            if not self.cm.isValidUrl(url): continue
+        
+            #url = strwithmeta(url, {'User-Agent':params['header']})
+            if '/dash' in type:
+                dashTab.extend(getMPDLinksWithMeta(url, False))
+            elif 'hls' in type:
+                hlsTab.extend(getDirectM3U8Playlist(url, checkExt=False, checkContent=True))
+            elif '/mp4' in type:
+                name = self.cm.ph.getSearchGroups(item, '''height\s*\:\s*([^\,]+?)[\,]''')[0]
+                mp4Tab.append({'name':'[%s] %sp' % (type, name), 'url':url})
+
+        videoTab.extend(mp4Tab)
+        videoTab.extend(hlsTab)
+        videoTab.extend(dashTab)
+        return videoTab
+        
+        

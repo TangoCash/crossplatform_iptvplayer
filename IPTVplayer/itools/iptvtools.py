@@ -47,7 +47,7 @@ def GetNice(pid=None):
     return nice
     
 def E2PrioFix(cmd):
-    if config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'armv5t'):
+    if '/duk' not in cmd and config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'armv5t'):
         return 'nice -n %d %s' % (GetNice()+2, cmd)
     else:
         return cmd
@@ -238,6 +238,9 @@ def GetPyScriptCmd(name):
 def GetUchardetPath():
     return config.plugins.iptvplayer.uchardetpath.value
     
+def GetDukPath():
+    return config.plugins.iptvplayer.dukpath.value
+    
 def GetCookieDir(file = ''):
     cookieDir = '/tmp/'
     tmpDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
@@ -407,19 +410,21 @@ class CSelOneLink():
 # prints debugs on screen or to the file
 #############################################################
 # debugs
-def printDBG( DBGtxt ):
+def getDebugMode():
+    DBG=''
     try:
         from Components.config import config
         DBG = config.plugins.iptvplayer.debugprint.value
     except Exception:
-        #nie zainicjowany modul Config, sprawdzamy wartosc bezposredio w pliku
-        DBG=''
         file = open(resolveFilename(SCOPE_CONFIG, "settings"))
         for line in file:
             if line.startswith('config.plugins.iptvplayer.debugprint=' ) :
                 DBG=line.split("=")[1].strip()
                 break
-        #print DBG
+    return DBG
+
+def printDBG( DBGtxt ):
+    DBG = getDebugMode()
     if DBG == '':
         return
     elif DBG == 'console':

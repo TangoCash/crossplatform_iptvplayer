@@ -86,6 +86,7 @@ class MoonwalkParser():
         mw_domain_id = self.cm.ph.getSearchGroups(data, "mw_domain_id: ([0-9]+?)[^0-9]")[0]
         uuid = self.cm.ph.getSearchGroups(data, "uuid:\s*'([^,^']+?)'")[0]
         debug = self.cm.ph.getSearchGroups(data, "debug:\s*([^,^\s]+?)[,\s]")[0].strip()
+        async_method = self.cm.ph.getSearchGroups(allData, "var\s+async_method\s*=\s*'([^']+?)'")[0]
         
         printDBG("=======================================================================")
         printDBG(data)
@@ -104,7 +105,7 @@ class MoonwalkParser():
             varName  = item[0].strip()
             varValue = item[1].strip()
             printDBG('>>>>> [%s] [%s] ' % (varName, varValue) )
-            if varName not in ['cd', 'ad_attr', 'partner', 'd_id', 'video_token', 'content_type', 'access_key', 'mw_pid', 'mw_did', 'mw_key', 'mw_domain_id', 'uuid', 'debug']:
+            if varName not in ['cd', 'ad_attr', 'partner', 'd_id', 'video_token', 'content_type', 'access_key', 'mw_pid', 'mw_did', 'mw_key', 'mw_domain_id', 'uuid', 'debug', 'async_method']:
                 try:
                     tmp = int(varName)
                     continue
@@ -131,6 +132,9 @@ class MoonwalkParser():
                     else:
                         try:post_data[varName] = int(tmpVal)
                         except Exception: pass
+                        
+        
+        if mw_key  == '': mw_key = self.cm.ph.getSearchGroups(data, "var\s+mw_key\s*=\s*'([^']+?)'")[0]
         
         if 'cd:' in data: post_data['cd'] = cd
         if 'ad_attr:' in data: post_data['ad_attr'] = cd
@@ -149,6 +153,7 @@ class MoonwalkParser():
         if 'debug:' in data: post_data['debug'] = debug   
         if 'version_control' in allData: post_data['version_control'] = version_control   
         if 'detect_true' in allData: post_data['detect_true'] = detect_true
+        if 'async_method' in allData: post_data['async_method'] = async_method
         #post_data['ad_attr'] =0
         
         #printDBG(allData)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 HostsList=[ 
-	("123moviesto", "123movies.to"),
+	("123moviesto", "gomovies.to"),
 	("9cartoonme", "9cartoon.me"),
 	("alltubetv", "alltube.tv"),
 	("anyfiles", "AnyFiles"),
@@ -9,7 +9,7 @@ HostsList=[
 	("ardmediathek", "ARDmediathek"),
 	("bajeczkiorg", "bajeczki.org"),
 	("bbciplayer", "bbc.co.ukiplayer"),
-	("cartoonhd", "cartoonhd.online"),
+	("cartoonhd", "cartoonhd.cc"),
 	("cdapl", "cda.pl"),
 	("cinemay", "cinemay.com"),
 	("crtankocom", "crtanko.com"),
@@ -76,7 +76,7 @@ HostsList=[
 	("streamliveto", "StreamLiveTo.tv"),
 	("svtplayse", "svtplay.se"),
 	("tantifilmorg", "tantifilm.me"),
-	("thewatchseriesto", "onwatchseries.to"),
+	("thewatchseriesto", "mywatchseries.to"),
 	("treetv", "tree.tv"),
 	("tvgrypl", "tvgry.pl"),
 	("tvjworg", "tv.jw.org"),

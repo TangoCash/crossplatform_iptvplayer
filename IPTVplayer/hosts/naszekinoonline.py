@@ -134,7 +134,7 @@ class NaszeKinoOnline(CBaseHostClass):
         for item in data:
             tmp    = self.cm.ph.getDataBeetwenMarkers(item, '<h2 ', '</h2>')[1]
             url    = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''href=['"]([^'^"]+?)['"]''')[0])
-            if 'Nowego-Online' in url:
+            if 'Zaproponuj' in url:
                 break
             
             if 'forum_link-48.png' in item:

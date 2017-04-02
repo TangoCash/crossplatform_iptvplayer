@@ -3,7 +3,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import iptv_system, printDBG
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import iptv_system, printDBG, GetDukPath, CreateTmpFile, rm, getDebugMode
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 ###################################################
 # FOREIGN import
@@ -249,6 +249,21 @@ class iptv_execute(object):
 
     #def __del__(self):
     #    printDBG("iptv_execute.__del__ ---------------------------------")
+
+def iptv_js_execute(jscode):
+    sts, tmpPath = CreateTmpFile('.iptv_js.js', jscode)
+    if sts:
+        cmd =  GetDukPath() + ' ' + tmpPath + ' 2> /dev/null'
+        printDBG("iptv_js_execute cmd[%s]" % cmd)
+        ret = iptv_execute()( cmd )
+        
+        # leave last script for debug purpose
+        if getDebugMode() == '':
+            rm(tmpPath)
+    else:
+        ret = {'sts':False, 'code':-12, 'data':''}
+    printDBG('iptv_js_execute cmd ret[%s]' % ret)
+    return ret
 
 ###############################################################################
 #                          Proxy function Queue

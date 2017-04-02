@@ -348,13 +348,14 @@ class FilmovizijaStudio(CBaseHostClass):
             pageAttribs.append({'name':name, 'attrib':attrib})
         
         # main links
-        mainData = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="tabs"', '</ul>', False)[1]
+        mainData = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="tabs"', '</div>', False)[1]
         mainData = self.cm.ph.getAllItemsBeetwenMarkers(mainData, '<li>', '</li>')
+        printDBG("EEEEEEEE\n %s " % mainData)
         for item in mainData:
             try:
                 tmp = self.cm.ph.getDataBeetwenMarkers(item, '<a ', '>')[1]
                 #tmp = re.compile('''\s(\w)=['"]([^'^"]+?)['"]''').findall(tmp)
-                tmp = re.compile('''[^a-zA-Z0-9_]([a-zA-Z0-9_]+?)=['"]([^'^"]+?)['"]''').findall(tmp)
+                tmp = re.compile('''[^a-zA-Z0-9_]([a-zA-Z0-9_]+?)\s*=\s*['"]([^'^"]+?)['"]''').findall(tmp)
                 
                 attribs = {}
                 for a in tmp:
@@ -388,8 +389,12 @@ class FilmovizijaStudio(CBaseHostClass):
         for item in data:
             urlName = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h9', '</h9>', True)[1] )
             redirect = self.cm.ph.getSearchGroups(item, 'class="redirect"\s*id="([^"]+?)"')[0]
-            if '' == redirect: continue
-            urlTab.append({'name':urlName, 'url':'redirect=' + redirect, 'need_resolve':1})
+            if '' == redirect: 
+                redirect = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"]+?)['"]''')[0]
+                if 1 == self.up.checkHostSupport(redirect):
+                    urlTab.append({'name':urlName, 'url':redirect, 'need_resolve':1})
+            else:
+                urlTab.append({'name':urlName, 'url':'redirect=' + redirect, 'need_resolve':1})
                 
         uniqTab = []
         tmpTab = []
