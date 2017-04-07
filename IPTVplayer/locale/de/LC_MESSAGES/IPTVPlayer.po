@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.8.11\n"
+"X-Generator: Poedit 2.0\n"
 "X-Poedit-Basepath: .\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Poedit-SearchPath-0: ../plugin\n"
@@ -1461,7 +1461,7 @@ msgid "Select update server"
 msgstr "Wähle Update-Server"
 
 msgid "Select video option"
-msgstr "Wähle Videooption"
+msgstr "Auswahl Video-Optionen"
 
 msgid "Selected version [%s]."
 msgstr "Gewählte Version [%s]."
@@ -1912,7 +1912,7 @@ msgid "Video format:"
 msgstr "Videoformat: "
 
 msgid "Video options"
-msgstr "Video Optionen"
+msgstr "Video-Optionen"
 
 msgid "View count"
 msgstr "Anzahl der Betrachter"
@@ -3500,3 +3500,57 @@ msgstr "Alternativer Proxy Server (2)"
 
 msgid "Use proxy server:"
 msgstr "Benutze Proxy Server:"
+
+msgid "Is this message displayed correctly?"
+msgstr "Wird diese Nachricht korrekt dargestellt?"
+
+msgid "Video mode"
+msgstr "Video-Modus"
+
+msgid "Preferred format:"
+msgstr "Bevorzugtes Format:"
+
+msgid "Use web-proxy (it may be illegal):"
+msgstr "Benutze Web-Proxy (könnte illegal sein):"
+
+msgid "Detection of glibc version."
+msgstr "Erkennung der Glibc Version."
+
+msgid "Detection version of installed standard C library."
+msgstr "Erkennung der Version der installierten C-Standard-Bibliothek."
+
+msgid "hlsdl downloader"
+msgstr "hlsdl Downloader"
+
+msgid ""
+"\n"
+"For more info please ask samsamsam@o2.pl"
+msgstr ""
+"\n"
+"Für weitere Informationen fragen Sie bitte samsamsam@o2.pl"
+
+msgid "It improves HLS/M3U8 stream download.\n"
+msgstr "Es verbessert den HLS/M3U8 Stream-Download.\n"
+
+msgid "duktape"
+msgstr "Duktape"
+
+msgid ""
+"\n"
+"Please visit http://duktape.org/"
+msgstr ""
+"\n"
+"Bitte besuchen Sie http://duktape.org/"
+
+msgid "Duktape is an embeddable Javascript engine, with a focus on portability and compact footprint.\n"
+msgstr "Duktape ist eine einbettbare Javascript-Engine, mit Fokus auf Portabilität und kompakter Speicheranforderung.\n"
+
+msgid ""
+"Access to this service requires login.\n"
+"Please register on the site \"%s\" and then put your e-mail and password in the host configuration under blue button."
+msgstr ""
+"Der Zugang zu diesem Service benötigt ein Login.\n"
+"Bitte registrieren Sie sich auf der Seite \"%s\" und geben danach Ihre E-Mail und das Passwort in der Host Konfiguration ein."
+
+msgid "Login failed for user \"%s\"."
+msgstr "Anmeldung fehlgeschlagen für Benutzer \"%s\"."

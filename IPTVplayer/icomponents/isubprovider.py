@@ -441,12 +441,14 @@ class CBaseSubProviderClass:
         try:
             fileSize = self.getMaxFileSize()
             sts, response = self.cm.getPage(url, urlParams, post_data)
-            fileName = response.info()['Content-Disposition']
-            tmpFileName = self.cm.ph.getSearchGroups(fileName.lower(), '''filename=['"]([^'^"]+?)['"]''')[0]
-            if tmpFileName != '': 
-                printDBG("downloadFileData: replace fileName[%s] with [%s]" % (fileName, tmpFileName))
-                fileName = tmpFileName
-            
+            fileName = response.info().get('Content-Disposition', '')
+            if fileName != '':
+                tmpFileName = self.cm.ph.getSearchGroups(fileName.lower(), '''filename=['"]([^'^"]+?)['"]''')[0]
+                if tmpFileName != '': 
+                    printDBG("downloadFileData: replace fileName[%s] with [%s]" % (fileName, tmpFileName))
+                    fileName = tmpFileName
+            else:
+                fileName = urllib.unquote(response.geturl().split('/')[-1])
             data = response.read(fileSize)
             response.close()
             return data, fileName

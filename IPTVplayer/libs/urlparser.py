@@ -208,6 +208,7 @@ class urlparser:
                        'my.mail.ru':           self.pp.parserVIDEOMAIL     ,
                        'api.video.mail.ru':    self.pp.parserVIDEOMAIL     ,
                        'videoapi.my.mail.ru':  self.pp.parserVIDEOMAIL     ,
+                       'cloud.mail.ru':        self.pp.parserCOUDMAILRU    ,
                        'wrzuta.pl':            self.pp.parserWRZUTA        ,
                        'goldvod.tv':           self.pp.parserGOLDVODTV     ,
                        'vidzer.net':           self.pp.parserVIDZER        ,
@@ -362,7 +363,6 @@ class urlparser:
                        'sharerepo.com':        self.pp.parseSHAREREPOCOM   ,
                        'easyvideo.me':         self.pp.parseEASYVIDEOME    ,
                        'playbb.me':            self.pp.parseEASYVIDEOME    ,
-                       'uptostream.com':       self.pp.parseUPTOSTREAMCOM  ,
                        'vimeo.com':            self.pp.parseVIMEOCOM       ,
                        'jacvideo.com':         self.pp.parseJACVIDEOCOM    ,
                        'caston.tv':            self.pp.parseCASTONTV       ,
@@ -400,8 +400,8 @@ class urlparser:
                        'kingfiles.net':        self.pp.parserKINGFILESNET   ,
                        'thevideobee.to':       self.pp.parserTHEVIDEOBEETO  ,
                        'vidabc.com':           self.pp.parserVIDABCCOM      ,
-                       'uptostream.com':       self.pp.parserUPTOSTREAMCOM  ,
                        'uptobox.com':          self.pp.parserUPTOSTREAMCOM  ,
+                       'uptostream.com':       self.pp.parserUPTOSTREAMCOM  ,
                        'fastplay.cc':          self.pp.parserFASTPLAYCC     ,
                        'spruto.tv':            self.pp.parserSPRUTOTV       ,
                        'raptu.com':            self.pp.parserRAPTUCOM       ,
@@ -2575,30 +2575,6 @@ class pageParser:
             url = data[4:]
         
         return getDirectM3U8Playlist(url, checkContent=True)[::-1]
-        
-    def parserUPTOSTREAMCOM(self, baseUrl):
-        printDBG("parserUPTOSTREAMCOM baseUrl[%r]" % baseUrl)
-        
-        HTTP_HEADER= { 'User-Agent':"Mozilla/5.0", 'Referer':baseUrl }
-        url = baseUrl
-        if '/iframe/' not in url:
-            url = 'https://uptostream.com/iframe/' + url.split('/')[-1]
-            baseUrl = url
-        sts, data = self.cm.getPage(url, {'header':HTTP_HEADER})
-        if not sts: sts, data = self.cm.getPageWithWget(url, {'header':HTTP_HEADER})
-        if not sts: return False
-        
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source', '>', False, False)
-        tab = []
-        for item in data:
-            if 'video/mp4' in item:
-                res = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
-                url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
-                if url.startswith('//'): url = 'http:' + url
-                if not self.cm.isValidUrl(url): continue
-                tab.append({'name':res, 'url':strwithmeta(url, {'Referer':baseUrl})})
-        tab.reverse()
-        return tab
             
     def parseMOSHAHDANET(self, baseUrl):
         printDBG("parseMOSHAHDANET baseUrl[%r]" % baseUrl)
@@ -2802,7 +2778,20 @@ class pageParser:
         if not sts: return False
         r = re.compile("file:.+?'(.+?)'").findall(data)
         return r[0]
+    
+    def parserCOUDMAILRU(self, baseUrl):
+        printDBG("parserCOUDMAILRU baseUrl[%s]" % baseUrl)
+        HTTP_HEADER = {'User-Agent': 'Mozilla/5.0'}
+        sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
+        if not sts: return False
         
+        weblink  = self.cm.ph.getSearchGroups(data, '"weblink"\s*:\s*"([^"]+?)"')[0]
+        videoUrl = self.cm.ph.getSearchGroups(data, '"weblink_video"\s*:[^\]]*?"url"\s*:\s*"(https?://[^"]+?)"')[0]
+        videoUrl += '0p/%s.m3u8?double_encode=1' % (base64.b64encode(weblink))
+        videoUrl = strwithmeta(videoUrl, {'User-Agent':HTTP_HEADER['User-Agent']})
+        
+        return getDirectM3U8Playlist(videoUrl, checkContent=True)
+    
     def parserVIDEOMAIL(self, url):
         printDBG("parserVIDEOMAIL baseUrl[%s]" % url)
         #http://api.video.mail.ru/videos/embed/mail/etaszto/_myvideo/852.html
@@ -5815,20 +5804,36 @@ class pageParser:
             tab.insert(0, {'name':'main', 'url':video_url})
         return tab
         
-    def parseUPTOSTREAMCOM(self, baseUrl):
-        printDBG("parseUPTOSTREAMCOM baseUrl[%s]" % baseUrl)
+    def parserUPTOSTREAMCOM(self, baseUrl):
+        printDBG("parserUPTOSTREAMCOM baseUrl[%s]" % baseUrl)
         
-        if 'iframe' not in baseUrl:
-            video_id = self.cm.ph.getSearchGroups(baseUrl+'/', '/([A-Za-z0-9]{12})[/.]')[0]
-            url = 'https://uptostream.com/iframe/' + video_id
+        url = baseUrl
+        domain = urlparser.getDomain(baseUrl) 
+        if '/iframe/' not in url:
+            url = 'https://' + domain + '/iframe/' + url.split('/')[-1]
+            baseUrl = url
         else:
             url = baseUrl
         sts, data = self.cm.getPage(url)
         if not sts: return False
+        subTracks = []
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<track', '</track>', False, False)
+        for item in tmp:
+            if 'subtitles' not in item: continue
+            type  = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
+            lang  = self.cm.ph.getSearchGroups(item, '''lang=['"]([^"^']+?)['"]''')[0]
+            label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+            url   = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+            if url.startswith('//'):
+                url = 'http:' + url
+            if '://' not in url: continue
+            subTracks.append({'title':label, 'url':url, 'lang':label, 'format':type})
+        
         #'<font color="red">', '</font>'
         urlTab = []
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source ', '>', False, False)
         for item in data:
+            if 'video/mp4' not in item: continue
             type = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
             res  = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
             lang = self.cm.ph.getSearchGroups(item, '''lang=['"]([^"^']+?)['"]''')[0]
@@ -5836,7 +5841,9 @@ class pageParser:
             if url.startswith('//'):
                 url = 'http:' + url
             if url.startswith('http'):
-                urlTab.append({'name':'uptostream {0}: {1}'.format(lang, res), 'url':url})
+                url = strwithmeta(url, {'Referer':baseUrl, 'external_sub_tracks':subTracks})
+                urlTab.append({'name':domain + ' {0} {1}'.format(lang, res), 'url':url})
+        urlTab.reverse()
         return urlTab
         
     def parseVIMEOCOM(self, baseUrl):
@@ -6532,11 +6539,20 @@ class pageParser:
         encTab = re.compile('''<span[^>]+?id="%s[^"]*?"[^>]*?>([^<]+?)<\/span>''' % varName).findall(data)
         printDBG(">>>>>>>>>>>> varName[%s] encTab[%s]" % (varName, encTab) )
         
+        if varName == '':
+            for e in encTab:
+                if len(e) > 40:
+                    encTab.insert(0, e)
+                    break
+        
         def __decode_k(enc, jscode):
             decoded = ''
             tmpPath = ''
             try:
-                jscode = '''var id = "%s", decoded, document = {getElementById: true}, window = this, $ = function(){return {text: function(a){if(a){decoded = a;}else {return id;}},ready: function(a){a()}}}; %s; print(decoded);''' % (enc, jscode)
+                jscode = base64.b64decode('''ICAgICAgICAgICAgICAgICAgICB2YXIgaWQgPSAiJXMiDQogICAgICAgICAgICAgICAgICAgICAgLCBkZWNvZGVkDQogICAgICAgICAgICAgICAgICAgICAgLCBkb2N1bWVudCA9IHt9DQogICAgICAgICAgICAgICAgICAgICAgLCB3aW5kb3cgPSB0aGlzDQogICAgICAgICAgICAgICAgICAgICAgLCAkID0gZnVuY3Rpb24oKXsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgcmV0dXJuIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICB0ZXh0OiBmdW5jdGlvbihhKXsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGlmKGEpDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGRlY29kZWQgPSBhOw0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZWxzZQ0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gaWQ7DQogICAgICAgICAgICAgICAgICAgICAgICAgICAgfSwNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICByZWFkeTogZnVuY3Rpb24oYSl7DQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICBhKCkNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICB9DQogICAgICAgICAgICAgICAgICAgICAgICAgIH0NCiAgICAgICAgICAgICAgICAgICAgICAgIH07DQogICAgICAgICAgICAgICAgICAgIChmdW5jdGlvbihkLCB3KXsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgZiA9IGZ1bmN0aW9uKCl7fTsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgcyA9ICcnOw0KICAgICAgICAgICAgICAgICAgICAgIHZhciBvID0gbnVsbDsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgYiA9IGZhbHNlOw0KICAgICAgICAgICAgICAgICAgICAgIHZhciBuID0gMDsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgZGYgPSBbJ2Nsb3NlJywnY3JlYXRlQXR0cmlidXRlJywnY3JlYXRlRG9jdW1lbnRGcmFnbWVudCcsJ2NyZWF0ZUVsZW1lbnQnLCdjcmVhdGVFbGVtZW50TlMnLCdjcmVhdGVFdmVudCcsJ2NyZWF0ZU5TUmVzb2x2ZXInLCdjcmVhdGVSYW5nZScsJ2NyZWF0ZVRleHROb2RlJywnY3JlYXRlVHJlZVdhbGtlcicsJ2V2YWx1YXRlJywnZXhlY0NvbW1hbmQnLCdnZXRFbGVtZW50QnlJZCcsJ2dldEVsZW1lbnRzQnlOYW1lJywnZ2V0RWxlbWVudHNCeVRhZ05hbWUnLCdpbXBvcnROb2RlJywnb3BlbicsJ3F1ZXJ5Q29tbWFuZEVuYWJsZWQnLCdxdWVyeUNvbW1hbmRJbmRldGVybScsJ3F1ZXJ5Q29tbWFuZFN0YXRlJywncXVlcnlDb21tYW5kVmFsdWUnLCd3cml0ZScsJ3dyaXRlbG4nXTsNCiAgICAgICAgICAgICAgICAgICAgICBkZi5mb3JFYWNoKGZ1bmN0aW9uKGUpe2RbZV09Zjt9KTsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgZG9fID0gWydhbmNob3JzJywnYXBwbGV0cycsJ2JvZHknLCdkZWZhdWx0VmlldycsJ2RvY3R5cGUnLCdkb2N1bWVudEVsZW1lbnQnLCdlbWJlZHMnLCdmaXJzdENoaWxkJywnZm9ybXMnLCdpbWFnZXMnLCdpbXBsZW1lbnRhdGlvbicsJ2xpbmtzJywnbG9jYXRpb24nLCdwbHVnaW5zJywnc3R5bGVTaGVldHMnXTsNCiAgICAgICAgICAgICAgICAgICAgICBkb18uZm9yRWFjaChmdW5jdGlvbihlKXtkW2VdPW87fSk7DQogICAgICAgICAgICAgICAgICAgICAgdmFyIGRzID0gWydVUkwnLCdjaGFyYWN0ZXJTZXQnLCdjb21wYXRNb2RlJywnY29udGVudFR5cGUnLCdjb29raWUnLCdkZXNpZ25Nb2RlJywnZG9tYWluJywnbGFzdE1vZGlmaWVkJywncmVmZXJyZXInLCd0aXRsZSddOw0KICAgICAgICAgICAgICAgICAgICAgIGRzLmZvckVhY2goZnVuY3Rpb24oZSl7ZFtlXT1zO30pOw0KICAgICAgICAgICAgICAgICAgICAgIHZhciB3YiA9IFsnY2xvc2VkJywnaXNTZWN1cmVDb250ZXh0J107DQogICAgICAgICAgICAgICAgICAgICAgd2IuZm9yRWFjaChmdW5jdGlvbihlKXt3W2VdPWI7fSk7DQogICAgICAgICAgICAgICAgICAgICAgdmFyIHdmID0gWydhZGRFdmVudExpc3RlbmVyJywnYWxlcnQnLCdhdG9iJywnYmx1cicsJ2J0b2EnLCdjYW5jZWxBbmltYXRpb25GcmFtZScsJ2NhcHR1cmVFdmVudHMnLCdjbGVhckludGVydmFsJywnY2xlYXJUaW1lb3V0JywnY2xvc2UnLCdjb25maXJtJywnY3JlYXRlSW1hZ2VCaXRtYXAnLCdkaXNwYXRjaEV2ZW50JywnZmV0Y2gnLCdmaW5kJywnZm9jdXMnLCdnZXRDb21wdXRlZFN0eWxlJywnZ2V0U2VsZWN0aW9uJywnbWF0Y2hNZWRpYScsJ21vdmVCeScsJ21vdmVUbycsJ29wZW4nLCdwb3N0TWVzc2FnZScsJ3Byb21wdCcsJ3JlbGVhc2VFdmVudHMnLCdyZW1vdmVFdmVudExpc3RlbmVyJywncmVxdWVzdEFuaW1hdGlvbkZyYW1lJywncmVzaXplQnknLCdyZXNpemVUbycsJ3Njcm9sbCcsJ3Njcm9sbEJ5Jywnc2Nyb2xsVG8nLCdzZXRJbnRlcnZhbCcsJ3NldFRpbWVvdXQnLCdzdG9wJ107DQogICAgICAgICAgICAgICAgICAgICAgd2YuZm9yRWFjaChmdW5jdGlvbihlKXt3W2VdPWY7fSk7DQogICAgICAgICAgICAgICAgICAgICAgdmFyIHduID0gWydkZXZpY2VQaXhlbFJhdGlvJywnaW5uZXJIZWlnaHQnLCdpbm5lcldpZHRoJywnbGVuZ3RoJywnb3V0ZXJIZWlnaHQnLCdvdXRlcldpZHRoJywncGFnZVhPZmZzZXQnLCdwYWdlWU9mZnNldCcsJ3NjcmVlblgnLCdzY3JlZW5ZJywnc2Nyb2xsWCcsJ3Njcm9sbFknXTsNCiAgICAgICAgICAgICAgICAgICAgICB3bi5mb3JFYWNoKGZ1bmN0aW9uKGUpe3dbZV09bjt9KTsNCiAgICAgICAgICAgICAgICAgICAgICB2YXIgd28gPSBbJ2FwcGxpY2F0aW9uQ2FjaGUnLCdjYWNoZXMnLCdjcnlwdG8nLCdleHRlcm5hbCcsJ2ZyYW1lRWxlbWVudCcsJ2ZyYW1lcycsJ2hpc3RvcnknLCdpbmRleGVkREInLCdsb2NhbFN0b3JhZ2UnLCdsb2NhdGlvbicsJ2xvY2F0aW9uYmFyJywnbWVudWJhcicsJ25hdmlnYXRvcicsJ29uYWJvcnQnLCdvbmFuaW1hdGlvbmVuZCcsJ29uYW5pbWF0aW9uaXRlcmF0aW9uJywnb25hbmltYXRpb25zdGFydCcsJ29uYmVmb3JldW5sb2FkJywnb25ibHVyJywnb25jYW5wbGF5Jywnb25jYW5wbGF5dGhyb3VnaCcsJ29uY2hhbmdlJywnb25jbGljaycsJ29uY29udGV4dG1lbnUnLCdvbmRibGNsaWNrJywnb25kZXZpY2Vtb3Rpb24nLCdvbmRldmljZW9yaWVudGF0aW9uJywnb25kcmFnJywnb25kcmFnZW5kJywnb25kcmFnZW50ZXInLCdvbmRyYWdsZWF2ZScsJ29uZHJhZ292ZXInLCdvbmRyYWdzdGFydCcsJ29uZHJvcCcsJ29uZHVyYXRpb25jaGFuZ2UnLCdvbmVtcHRpZWQnLCdvbmVuZGVkJywnb25lcnJvcicsJ29uZm9jdXMnLCdvbmhhc2hjaGFuZ2UnLCdvbmlucHV0Jywnb25pbnZhbGlkJywnb25rZXlkb3duJywnb25rZXlwcmVzcycsJ29ua2V5dXAnLCdvbmxhbmd1YWdlY2hhbmdlJywnb25sb2FkJywnb25sb2FkZWRkYXRhJywnb25sb2FkZWRtZXRhZGF0YScsJ29ubG9hZHN0YXJ0Jywnb25tZXNzYWdlJywnb25tb3VzZWRvd24nLCdvbm1vdXNlZW50ZXInLCdvbm1vdXNlbGVhdmUnLCdvbm1vdXNlbW92ZScsJ29ubW91c2VvdXQnLCdvbm1vdXNlb3ZlcicsJ29ubW91c2V1cCcsJ29ub2ZmbGluZScsJ29ub25saW5lJywnb25wYWdlaGlkZScsJ29ucGFnZXNob3cnLCdvbnBhdXNlJywnb25wbGF5Jywnb25wbGF5aW5nJywnb25wb3BzdGF0ZScsJ29ucHJvZ3Jlc3MnLCdvbnJhdGVjaGFuZ2UnLCdvbnJlc2V0Jywnb25yZXNpemUnLCdvbnNjcm9sbCcsJ29uc2Vla2VkJywnb25zZWVraW5nJywnb25zZWxlY3QnLCdvbnNob3cnLCdvbnN0YWxsZWQnLCdvbnN0b3JhZ2UnLCdvbnN1Ym1pdCcsJ29uc3VzcGVuZCcsJ29udGltZXVwZGF0ZScsJ29udG9nZ2xlJywnb250cmFuc2l0aW9uZW5kJywnb251bmxvYWQnLCdvbnZvbHVtZWNoYW5nZScsJ29ud2FpdGluZycsJ29ud2Via2l0YW5pbWF0aW9uZW5kJywnb253ZWJraXRhbmltYXRpb25pdGVyYXRpb24nLCdvbndlYmtpdGFuaW1hdGlvbnN0YXJ0Jywnb253ZWJraXR0cmFuc2l0aW9uZW5kJywnb253aGVlbCcsJ29wZW5lcicsJ3BhcmVudCcsJ3BlcmZvcm1hbmNlJywncGVyc29uYWxiYXInLCdzY3JlZW4nLCdzY3JvbGxiYXJzJywnc2VsZicsJ3Nlc3Npb25TdG9yYWdlJywnc3BlZWNoU3ludGhlc2lzJywnc3RhdHVzYmFyJywndG9vbGJhcicsJ3RvcCddOw0KICAgICAgICAgICAgICAgICAgICAgIHdvLmZvckVhY2goZnVuY3Rpb24oZSl7d1tlXT1vO30pOw0KICAgICAgICAgICAgICAgICAgICAgIHZhciB3cyA9IFsnbmFtZSddOw0KICAgICAgICAgICAgICAgICAgICAgIHdzLmZvckVhY2goZnVuY3Rpb24oZSl7d1tlXT1zO30pOw0KICAgICAgICAgICAgICAgICAgICB9KShkb2N1bWVudCwgd2luZG93KTsNCiAgICAgICAgICAgICAgICAgICAgJXM7DQogICAgICAgICAgICAgICAgICAgIHByaW50KGRlY29kZWQpOw==''') % (enc, jscode)                     
+                printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                printDBG(jscode)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                 ret = iptv_js_execute( jscode )
                 if ret['sts'] and 0 == ret['code']:
                     decoded = ret['data'].strip()
@@ -6549,6 +6565,7 @@ class pageParser:
         marker = 'ﾟωﾟﾉ= /｀ｍ´）ﾉ'
         orgData = marker + self.cm.ph.getDataBeetwenMarkers(orgData, marker, marker, False)[1]
         orgData = re.sub('''if\s*\([^\}]+?typeof[^\}]+?\}''', '', orgData)
+        orgData = re.sub('''if\s*\([^\}]+?document[^\}]+?\}''', '', orgData)
         dec = __decode_k(encTab[0], orgData)
         
         videoUrl = 'https://openload.co/stream/{0}?mime=true'.format(dec)

@@ -575,11 +575,12 @@ class IPTVSubDownloaderWidget(Screen):
         napisy24pl       = {'title':_("Napisy24.pl"),                'sub_provider':'napisy24pl'       }
         openSubtitles    = {'title':_("OpenSubtitles.org"),          'sub_provider':'opensubtitlesorg' }
         napiprojektpl    = {'title':_("Napiprojekt.pl"),             'sub_provider':'napiprojektpl'    }
-        podnapisinet     = {'title':_("Podnapisi.net"),              'sub_provider':'podnapisinet'    }
+        podnapisinet     = {'title':_("Podnapisi.net"),              'sub_provider':'podnapisinet'     }
         titlovi          = {'title':_("Titlovi.com"),                'sub_provider':'titlovicom'       }
         subscene         = {'title':_("Subscene.com"),               'sub_provider':'subscenecom'      }
         youtube          = {'title':_("Youtube.com"),                'sub_provider':'youtubecom'       }
         popcornsubtitles = {'title':_("PopcornSubtitles.com"),       'sub_provider':'popcornsubtitles' }
+        subtitlesgr      = {'title':_("Subtitles.gr"),               'sub_provider':'subtitlesgr'      }
         
         if 'youtube_id' in self.params['url_params'] and '' != self.params['url_params']['youtube_id']:
             subProvidersList.append(youtube)
@@ -587,18 +588,26 @@ class IPTVSubDownloaderWidget(Screen):
         if 'popcornsubtitles_url' in self.params['url_params'] and '' != self.params['url_params']['popcornsubtitles_url']:
             subProvidersList.append(popcornsubtitles)
         
+        if 'el' == GetDefaultLang(): 
+            subProvidersList.append(subtitlesgr)
+        
         if 'pl' == GetDefaultLang(): 
             subProvidersList.append(napisy24pl)
             if IsSubtitlesParserExtensionCanBeUsed():
                 subProvidersList.append(napiprojektpl)
+        
         subProvidersList.append(openSubtitles)
         subProvidersList.append(podnapisinet)
         subProvidersList.append(titlovi)
         subProvidersList.append(subscene)
+        
         if 'pl' != GetDefaultLang(): 
             subProvidersList.append(napisy24pl)
             if IsSubtitlesParserExtensionCanBeUsed():
                 subProvidersList.append(napiprojektpl)
+                
+        if 'el' != GetDefaultLang(): 
+            subProvidersList.append(subtitlesgr)
         
         self.currList = []
         for item in subProvidersList:

@@ -67,7 +67,7 @@ class ArticleContent:
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
     RICH_DESC_LABELS = {"alternate_title":   "Alternate Title:",
-                        "status":            "Status",
+                        "status":            "Status:",
                         "quality":           "Quality:",
                         "subtitles":         "Subtitles:",
                         "country":           "Country:", 
@@ -89,8 +89,8 @@ class ArticleContent:
                         "actors":            "Actors:", 
                         "stars":             "Stars:",
                         "awards":            "Awards:",
-                        "views":             "Views",
-                        "budget":            "Budget",}
+                        "views":             "Views:",
+                        "budget":            "Budget:",}
     def __init__(self, title = '', text = '', images = [], trailers = [], richDescParams = {}, visualizer=None):
         self.title    = title
         self.text     = text

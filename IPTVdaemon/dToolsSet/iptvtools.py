@@ -46,7 +46,7 @@ def GetNice(pid=None):
     return nice
     
 def E2PrioFix(cmd):
-    if config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'armv5t'):
+    if '/duk' not in cmd and config.plugins.iptvplayer.plarform.value in ('mipsel', 'armv7', 'armv5t'):
         return 'nice -n %d %s' % (GetNice()+2, cmd)
     else:
         return cmd
@@ -204,6 +204,9 @@ def GetPyScriptCmd(name):
 def GetUchardetPath():
     return config.plugins.iptvplayer.uchardetpath.value
     
+def GetDukPath():
+    return config.plugins.iptvplayer.dukpath.value
+
 def GetCookieDir(file = ''):
     cookieDir = '/tmp/'
     tmpDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
@@ -329,7 +332,24 @@ class CSelOneLink():
         sortList.sort( self._cmpLinks )
         if len(self.listOfLinks) < 2 or None == self.maxRes:
             return self.listOfLinks
-
+        
+        if defaultFirst:
+            # split links to two groups 
+            # first gorup will meet maxRes
+            # second group not
+            group1 = []
+            group2 = []
+            for idx in range(len(self.listOfLinks)):
+                if  self.getQualiyFun( self.listOfLinks[idx] ) <= self.maxRes:
+                    group1.append(self.listOfLinks[idx])
+                else:
+                    group2.append(self.listOfLinks[idx])
+            group1.sort( self._cmpLinks )
+            group1.reverse()
+            group2.sort( self._cmpLinks )
+            group1.extend(group2)
+            return group1
+        
         defIdx = -1
         for idx in range(len(sortList)):
             linkRes = self.getQualiyFun( sortList[idx] )
@@ -418,6 +438,19 @@ def dumpclean(obj):
         tmptext += obj
     return "dumpclean:[" + tmptext + "]\n"
 
+def getDebugMode():
+    DBG=''
+    try:
+        from Components.config import config
+        DBG = config.plugins.iptvplayer.debugprint.value
+    except Exception:
+        file = open(resolveFilename(SCOPE_CONFIG, "settings"))
+        for line in file:
+            if line.startswith('config.plugins.iptvplayer.debugprint=' ) :
+                DBG=line.split("=")[1].strip()
+                break
+    return DBG
+
 def printDBG( DBGtxt ):
     try:
         f = open(os.path.join(config.plugins.iptvplayer.NaszaTMP.value,'iptv.dbg'), 'a')
@@ -498,11 +531,14 @@ def GetHostsOrderList(fileName="iptvplayerhostsorder"):
     fname = GetConfigDir(fileName)
     list = []
     try:
-        with open(fname, 'r') as f:
-            content = f.readlines()
-        for item in content:
-            item = item.strip()
-            if len(item): list.append(item)
+        if fileExists(fname):
+            with open(fname, 'r') as f:
+                content = f.readlines()
+            for item in content:
+                item = item.strip()
+                if len(item): list.append(item)
+        else:
+            printDBG('GetHostsOrderList file[%s] not exists' % fname)
     except Exception:
         pass #printExc()
     return list
@@ -1094,13 +1130,16 @@ def GetE2OptionsFromFile(filePath):
     options = []
     if IsBrokenDriver(filePath): return []
     try:
-        with open(filePath, 'r') as f:
-            data = f.read().strip()
-            data = data.split(' ')
-            for item in data:
-                opt = item.strip()
-                if '' != opt:
-                    options.append(opt)
+        if fileExists(filePath):
+            with open(filePath, 'r') as f:
+                data = f.read().strip()
+                data = data.split(' ')
+                for item in data:
+                    opt = item.strip()
+                    if '' != opt:
+                        options.append(opt)
+        else:
+            printDBG('GetE2OptionsFromFile file[%s] not exists' % filePath)
     except Exception:
         printExc()
     return options
@@ -1154,3 +1193,17 @@ def GetE2AudioCodecMixOption(codec):
     
 def SetE2AudioCodecMixOption(codec, value):
     return SetE2OptionByFile('/proc/stb/audio/%s' % codec, value)
+
+# videomode
+def GetE2VideoModeChoices():
+    # return 'pal ntsc 480i 576i 480p 576p 720p50 720p 1080i50 1080i 1080p24 1080p25 1080p30 720p24 720p25 720p30 1080p50 1080p'.split(' ')
+    return GetE2OptionsFromFile('/proc/stb/video/videomode_choices')
+    
+def GetE2VideoMode():
+    # return '1080p50'
+    options = GetE2OptionsFromFile('/proc/stb/video/videomode')
+    if 1 == len(options): return options[0]
+    return None
+    
+def SetE2VideoMode(value):
+    return SetE2OptionByFile('/proc/stb/video/videomode', value)

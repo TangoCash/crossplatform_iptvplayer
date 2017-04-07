@@ -48,21 +48,9 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://cartoonhd.cc/'
+    return 'https://cartoonhd.be/'
 
 class CartoonHD(CBaseHostClass):
-    HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-    AJAX_HEADER = dict(HEADER)
-    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    
-    MAIN_URL = 'https://cartoonhd.cc/'
-    SEARCH_URL = 'https://api.cartoonhd.cc/api/v1/0A6ru35yevokjaqbb8'
-    
-    MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php',    'icon':''},
-                    {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php',    'icon':''},
-                    {'category':'tv_shows',       'mode':'tv_shows',    'title': 'TV shows',  'url':'search.php',    'icon':''},
-                    {'category':'search',          'title': _('Search'), 'search_item':True},
-                    {'category':'search_history',  'title': _('Search history')} ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'CartoonHD.tv', 'cookie':'cartoonhdtv.cookie', 'cookie_type':'MozillaCookieJar'})
@@ -72,6 +60,32 @@ class CartoonHD(CBaseHostClass):
         self.loggedIn = None
         self.DEFAULT_ICON_URL = 'http://cartoonhd.online/templates/FliXanity/assets/images/logochd.png'
         
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.MAIN_URL = 'https://cartoonhd.cc/'
+        self.SEARCH_URL = 'https://api.cartoonhd.cc/api/v1/0A6ru35yevokjaqbb8'
+        
+        self.MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php'},
+                             {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php'},
+                             {'category':'tv_shows',       'mode':'tv_shows',    'title': 'TV shows',  'url':'search.php'},
+                             {'category':'search',          'title': _('Search'), 'search_item':True},
+                             {'category':'search_history',  'title': _('Search history')} ]
+    def selectDomain(self):
+        try:
+            params = dict(self.defaultParams)
+            params['return_data'] = False
+            sts, response = self.cm.getPage('https://cartoonhd.cc/', params)
+            url = response.geturl()
+            domain = self.up.getDomain(url, False)
+            self.MAIN_URL  = domain
+            domain = self.up.getDomain(url, true)
+            self.SEARCH_URL = 'https://api.%s/api/v1/0A6ru35yevokjaqbb8' % domain
+            if not sts: return
+        except Exception:
+            printExc()
+    
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()
         return self.cm.ph.getSearchGroups(data, '''var[\s]*{0}[\s]*=[\s]*['"]([^'^"]+?)['"]'''.format(torName))[0]
@@ -432,6 +446,8 @@ class CartoonHD(CBaseHostClass):
 
     def tryTologin(self):
         printDBG('tryTologin start')
+        self.selectDomain()
+        
         login = config.plugins.iptvplayer.cartoonhd_login.value
         password = config.plugins.iptvplayer.cartoonhd_password.value
         
@@ -469,6 +485,7 @@ class CartoonHD(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
+            self.selectDomain()
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif category == 'new':
             self.listNewCategory(self.currItem)

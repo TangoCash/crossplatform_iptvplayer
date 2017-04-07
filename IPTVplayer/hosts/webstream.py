@@ -31,6 +31,7 @@ from Plugins.Extensions.IPTVPlayer.libs.sport365live      import Sport365LiveApi
 from Plugins.Extensions.IPTVPlayer.libs.pierwszatv        import PierwszaTVApi, GetConfigList as PierwszaTV_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.yooanimecom       import YooanimeComApi
 from Plugins.Extensions.IPTVPlayer.libs.livetvhdnet       import LivetvhdNetApi
+from Plugins.Extensions.IPTVPlayer.libs.karwantv          import KarwanTvApi
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes        import strwithmeta
 
 
@@ -150,6 +151,7 @@ class HasBahCa(CBaseHostClass):
                         {'alias_id':'sport365.live',           'name': 'sport365.live',       'title': 'sport365.live',                     'url': 'http://www.sport365.live/',                                          'icon': 'http://s1.medianetworkinternational.com/images/icons/48x48px.png'}, \
                         {'alias_id':'yooanime.com',            'name': 'yooanime.com',        'title': 'yooanime.com',                      'url': 'http://yooanime.com/',                                               'icon': 'https://socialtvplayground.files.wordpress.com/2012/11/logo-technicolor2.png?w=960'}, \
                         {'alias_id':'livetvhd.net',            'name': 'livetvhd.net',        'title': 'livetvhd.net',                      'url': 'https://livetvhd.net/',                                              'icon': 'https://livetvhd.net/images/logo.png'}, \
+                        {'alias_id':'karwan.tv',               'name': 'karwan.tv',           'title': 'karwan.tv',                         'url': 'http://karwan.tv/',                                                  'icon': 'http://karwan.tv/images/KARWAN_TV_LOGO/www.karwan.tv.png'}, \
                         #{'alias_id':'hasbahca',                'name': 'HasBahCa',            'title': 'HasBahCa',                          'url': 'http://hasbahcaiptv.com/m3u/HasBahCa/index.php?dir=',                'icon': 'http://hasbahcaiptv.com/xml/iptv.png'}, \
                         #{'alias_id':'wownet.ro',               'name': 'm3u',                 'title': 'Deutsch-Fernseher',                 'url': 'http://wownet.ro/iptv/',                                             'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
                         #{'alias_id':'iptv.ink',                'name': 'm3u',                 'title': 'Free Iptv Project',                 'url': 'http://tv.iptv.ink/iptv.ink',                                        'icon': ''}, \
@@ -193,6 +195,7 @@ class HasBahCa(CBaseHostClass):
         self.edemTvApi            = None
         self.wkylinewebcamsComApi = None
         self.livespottingTvApi    = None
+        self.karwanTvApi          = None
         
         self.weebTvApi    = None
         self.hasbahcaiptv = {}
@@ -751,6 +754,24 @@ class HasBahCa(CBaseHostClass):
         urlsTab = self.livetvhdNetApi.getVideoLink(cItem)
         return urlsTab
         
+    def getKarwanTvList(self, cItem):
+        printDBG("getKarwanTvList start")
+        if None == self.karwanTvApi:
+            self.karwanTvApi = KarwanTvApi()
+        tmpList = self.karwanTvApi.getList(cItem)
+        for item in tmpList:
+            if 'video' == item['type']:
+                self.addVideo(item) 
+            elif 'audio' == item['type']:
+                self.addAudio(item) 
+            else:
+                self.addDir(item)
+        
+    def getKarwanTvLink(self, cItem):
+        printDBG("getKarwanTvLink start")
+        urlsTab = self.karwanTvApi.getVideoLink(cItem)
+        return urlsTab
+        
     def getTelewizjaLiveComList(self, cItem):
         printDBG("getTelewizjaLiveComList start")
         if None == self.telewizjaLiveComApi:
@@ -1004,6 +1025,9 @@ class HasBahCa(CBaseHostClass):
     #livetvhd.net items
         elif name == 'livetvhd.net':
             self.geLivetvhdNetList(self.currItem)
+    #karwan.tv items
+        elif name == 'karwan.tv':
+            self.getKarwanTvList(self.currItem)
     #telewizja-live.com items
         elif name == 'telewizja-live.com':
             self.getTelewizjaLiveComList(self.currItem)
@@ -1108,6 +1132,8 @@ class IPTVHost(CHostBase):
             urlList = self.host.getYooanimeComLink(cItem)
         elif name == 'livetvhd.net':
             urlList = self.host.getLivetvhdNetLink(cItem)
+        elif name == 'karwan.tv':
+            urlList = self.host.getKarwanTvLink(cItem)
         elif name == 'telewizja-live.com':
             urlList = self.host.getTelewizjaLiveComLink(cItem)
         elif name == 'tele-wizja.com':
@@ -1173,11 +1199,13 @@ class IPTVHost(CHostBase):
 
             if cItem['type'] == 'category':
                 type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
+            elif cItem['type'] in ['audio', 'video']:
                 type = CDisplayListItem.TYPE_VIDEO
                 url = cItem.get('url', '')
                 if url.endswith(".jpeg") or url.endswith(".jpg") or url.endswith(".png"):
                     type = CDisplayListItem.TYPE_PICTURE
+                elif cItem['type'] == 'audio':
+                    type = CDisplayListItem.TYPE_AUDIO
                 else:
                     type = CDisplayListItem.TYPE_VIDEO
                 if '' != url:

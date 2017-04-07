@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -18,6 +18,7 @@ import base64
 try:    import json
 except Exception: import simplejson as json
 from datetime import datetime
+from urlparse import urlparse
 from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
@@ -266,8 +267,36 @@ class FilmyTo(CBaseHostClass):
         printDBG("FilmyTo.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
-        sts, data = self.cm.getPage(cItem['url'])
+        rm(self.COOKIE_FILE)
+        
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
+        
+        provision = self.cm.ph.getSearchGroups(data, '<meta[^>]+?"provision"[^>]+?content="([^"]+?)"')[0]
+        
+        params = deepcopy(self.defaultParams)
+        params['header']['Referer'] = cItem['url']
+        
+        try: url = 'http://auth.filmy.to/iframe?page=%s&src=%s' % (urlparse(cItem['url']).path, self.up.getDomain(cItem['url']))
+        except Exception:
+            printExc()
+            return []
+            
+        sts, data = self.cm.getPage(url, params)
+        if not sts: return []
+        
+        csrftoken = self.cm.getCookieItem(self.COOKIE_FILE, 'csrftoken')
+        
+        params = dict(self.defaultParams)
+        params['header'] = dict(self.AJAX_HEADER)
+        params['header']['Referer'] = cItem['url']
+        params['header']['X-CSRFToken'] = csrftoken
+        
+        url = self.getFullUrl('/ajax/provision/' + provision)
+        sts, data = self.cm.getPage(url, params)
+        if not sts: return []
+        
+        #printDBG(data)
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="host-container', '</span>', withMarkers=True)
         for item in data:
