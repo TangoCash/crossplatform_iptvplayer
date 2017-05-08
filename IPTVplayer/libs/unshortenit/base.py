@@ -45,7 +45,7 @@ class UnshortenIt(object):
     _linkbucks_regex = r'linkbucks\.com|any\.gs|cash4links\.co|cash4files\.co|dyo\.gs|filesonthe\.net|goneviral\.com|megaline\.co|miniurls\.co|qqc\.co|seriousdeals\.net|theseblogs\.com|theseforums\.com|tinylinks\.co|tubeviral\.com|ultrafiles\.net|urlbeat\.net|whackyvidz\.com|yyv\.co'
     _adfocus_regex = r'adfoc\.us'
     _lnxlu_regex = r'lnx\.lu'
-    _shst_regex = r'sh\.st'
+    _shst_regex = r'sh\.st|skiip\.me|clkmein\.com'
     _viidme_regex = r'viid\.me'
     _hrefli_regex = r'href\.li'
     _anonymz_regex = r'anonymz\.com'

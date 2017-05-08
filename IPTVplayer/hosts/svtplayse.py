@@ -18,6 +18,7 @@ import urllib
 import string
 import base64
 import random
+import urlparse
 try:    import json
 except Exception: import simplejson as json
 from datetime import datetime, timedelta
@@ -60,7 +61,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://svtplay.se/'
+    return 'https://svtplay.se/'
 
 class SVTPlaySE(CBaseHostClass):
  
@@ -72,7 +73,7 @@ class SVTPlaySE(CBaseHostClass):
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://www.svtplay.se/'
+        self.MAIN_URL = 'https://www.svtplay.se/'
         self.DEFAULT_ICON_URL = 'https://upload.wikimedia.org/wikipedia/en/5/54/SVT_Play.png' 
         
         self.MAIN_CAT_TAB = [
@@ -83,10 +84,10 @@ class SVTPlaySE(CBaseHostClass):
         
                              {'category':'list_items',        'title': _('Popular'),                            'url':'/popular'         },
                              {'category':'list_items',        'title': _('Latest programs'),                    'url':'/latest'          },
-                             {'category':'list_items',        'title': _('Latest news broadcast'),              'url':'/cluster_latest;cluster=nyheter'},
+                             {'category':'list_items',        'title': _('Latest news broadcast'),              'url':'/cluster_latest?cluster=nyheter'},
                              {'category':'list_items',        'title': _('Last chance'),                        'url':'/last_chance'     },
                              {'category':'list_items',        'title': _('Live broadcasts'),                    'url':'/live'            },
-                             {'category':'list_channels',     'title': _('Channels'),                           'url':'/channel_page'    },   
+                             {'category':'list_channels',     'title': _('Channels'),                           'url':'/kanaler'          },   
                              {'category':'list_az_menu',      'title': _('Programs A-Ö'),                       'url':'/program'         },   #/all_titles
                              {'category':'list_items',        'title': _('Categories'),                         'url':'/active_clusters' },  
                              
@@ -167,14 +168,14 @@ class SVTPlaySE(CBaseHostClass):
                     printExc()
         
     def listChannels(self, cItem):
-        url = self.getFullApiUrl(cItem['url'])
+        url = self.getFullUrl(cItem['url'])
         
         OFFSET = datetime.now() - datetime.utcnow()
         
         def _parseDate(dateStr):
-            date = datetime.strptime(dateStr[:-6], "%Y-%m-%dT%H:%M:%S")
-            offsetDir = dateStr[-5]
-            offsetHours = int(dateStr[-4:-2])
+            date = datetime.strptime(dateStr[:-7], "%Y-%m-%dT%H:%M:%S")
+            offsetDir = dateStr[-6]
+            offsetHours = int(dateStr[-5:-3])
             offsetMins = int(dateStr[-2:])
             if offsetDir == "+":
                 offsetHours = -offsetHours
@@ -187,46 +188,38 @@ class SVTPlaySE(CBaseHostClass):
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: return
         
-        nextPage = False
+        data = self.cm.ph.getDataBeetwenMarkers(data, "root['__svtplay'] = ", ";\n", withMarkers=False)[1]
         try:
             data = byteify(json.loads(data))
-            for channel in data['channels']:
-                title = self.cleanHtmlStr(channel['name'])
-                
-                # get icon
-                try: 
-                    icon  = self.getFullIconUrl(channel['schedule'][0]['titlePage']['thumbnailMedium']) 
-                except Exception:
-                    icon = ''
-                
-                # get schedule
-                descTab = []
+            for key in data['channelsPage']['schedule']:
                 try:
-                    for item in channel['schedule']:
-                        utc_date =_parseDate(item['broadcastStartTime'])
-                        if utc_date.day == datetime.now().day:
-                            timeHeader = utc_date.strftime('%H:%M:%S')
+                    item = data['channelsPage']['schedule'][key]
+                    if 'channelName' in item and 'channel' in item:
+                        if 'poster' in item and self.cm.isValidUrl(str(item['poster'])):
+                            icon = item['poster']
                         else:
-                            timeHeader = utc_date.strftime('%Y-%m-%d %H:%M:%S')
-                        descTab.append('%s %s' % (timeHeader, self.cleanHtmlStr(item['title']))) 
-                        desc = self.cleanHtmlStr(item.get('description', ''))
-                        if desc != '':
-                            descTab.append(desc)
-                        descTab.append('')
+                            icon = ''
+                            
+                        # get description
+                        descTab = []
+                        try:
+                            utc_date =_parseDate(item['publishingTime'])
+                            if utc_date.day == datetime.now().day:
+                                timeHeader = utc_date.strftime('%H:%M:%S')
+                            else:
+                                timeHeader = utc_date.strftime('%Y-%m-%d %H:%M:%S')
+                            descTab.append('%s %s' % (timeHeader, self.cleanHtmlStr(item['programmeTitle']))) 
+                            desc = self.cleanHtmlStr(item.get('description', ''))
+                            if desc != '':
+                                descTab.append(desc)
+                            descTab.append('')
+                        except Exception:
+                            printExc()
+                    
+                        self.addVideo({'title':item['channelName'], 'url':self.getFullUrl('/kanaler/' + item['channel']), 'icon':icon, 'desc':'[/br]'.join(descTab)})
                 except Exception:
                     printExc()
-                
-                # get links
-                hlsUrl  = ''
-                dashUrl = ''
-                for item in channel['videoReferences']:
-                    if self.cm.isValidUrl(item['url']):
-                        if 'dash' in item['playerType']:
-                            dashUrl = item['url']
-                        elif 'ios' in item['playerType']:
-                            hlsUrl = item['url']
-                
-                self.addVideo({'title':title, 'hls_url':hlsUrl, 'dash_url':dashUrl, 'icon':icon, 'desc':'[/br]'.join(descTab)})
+
         except Exception:
             printExc()
     
@@ -300,10 +293,10 @@ class SVTPlaySE(CBaseHostClass):
         
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<section', '</section>', withMarkers=True)
         for sectionData in tmp:
-            if 'sok?q=' in url:
-                sections = sectionData.split('<h2 class="play_grid')
-                if len(sections): del sections[0]
-                for idx in range(len(sections)):
+            m1 = '<h2 class="play_grid'
+            if 'sok?q=' in url and m1 in sectionData:
+                sections = sectionData.split(m1)
+                for idx in range(1, len(sections)):
                     sections[idx] = '<h2 ' + sections[idx] 
             else:
                 sections = [sectionData]
@@ -325,6 +318,10 @@ class SVTPlaySE(CBaseHostClass):
         for item in data:
             title = self.cleanHtmlStr(item)
             url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
+            if url == '':
+                tmp = self.cm.ph.getSearchGroups(item, '''<a[^>]+?id=['"]([^'^"]+?)['"]''')[0].split('-')
+                if len(tmp) >= 2:
+                    url = '?%s=%s' % (tmp[-1], '-'.join(tmp[0:-1]))
             if url.startswith('?'):
                 url = cItem['url'] + url
             
@@ -441,14 +438,14 @@ class SVTPlaySE(CBaseHostClass):
             if 'api' not in self.up.getDomain(cItem['url']):
                 url = self.getFullUrl(cItem['url'])
                 sts, data = self.cm.getPage(url, self.defaultParams)
-                if not sts: return
+                if not sts: return []
                 videoId = self.cm.ph.getSearchGroups(data, '<video\s+?data-video-id="([^"]+?)"')[0]
                 url = 'http://api.svt.se/videoplayer-api/video/' + videoId
             else:
                 url = cItem['url']
             
             sts, data = self.cm.getPage(url, self.defaultParams)
-            if not sts: return
+            if not sts: return []
             
             printDBG(data)
             
@@ -485,8 +482,18 @@ class SVTPlaySE(CBaseHostClass):
             if item == dashUrl:
                 item = getMPDLinksWithMeta(item, False)
             elif item == hlsUrl:
+                vidTab = []
                 # item = strwithmeta(item, {'X-Forwarded-For':'83.172.75.170'})
-                item = getDirectM3U8Playlist(item, False, checkContent=True)
+                try:
+                    tmp = urlparse.urlparse(item)
+                    tmp = urlparse.parse_qs(tmp.query)['alt'][0]
+                    vidTab = getDirectM3U8Playlist(tmp, False, checkContent=True)
+                except Exception:
+                    printExc()
+                if 0 == len(vidTab):
+                    item = getDirectM3U8Playlist(item, False, checkContent=True)
+                else:
+                    item = vidTab
             else: continue
             
             if len(item):

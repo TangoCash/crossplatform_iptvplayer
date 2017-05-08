@@ -91,6 +91,8 @@ sed -i 's;\(^.*ListaGraficzna.*default[ ]*=[ ]*\)True\(.*$\);\1False\2;
   s;\(^.*wgetpath.*default = \)"";\1"wget"; 
   s;\(^.*f4mdumppath.*default = \)"";\1"f4mdump"; 
   s;\(^.*rtmpdumppath.*default = \)"";\1"rtmpdump"; 
+  s;\(^.*dukpath.*default = \)"";\1"duk"; 
+  s;\(^.*hlsdlpath.*default = \)"";\1"hlsdl"; 
   ' $myFile
 
 ############################## cleaning unused components #######################################################################################
@@ -204,3 +206,14 @@ do
     echo "	{id=\"$fileNameRoot\", title=\"$tytul\", fileName=\"luaHosts/$fileNameRoot.lua\", logoName=\"luaHosts/$fileNameRoot.png\", type=\"lua\"},">>$NpluginDir/luaScripts/hostslist.lua
 done
 echo "	}">>$NpluginDir/luaScripts/hostslist.lua
+###################### step 4 create list of possible configs
+cd $publicGitDir
+echo "#Aby ustawic jakas opcje nalezy skopiowac jej nazwe do pliku E2settings.conf i wpisac jej wartosc" > $NpluginDir/../IPTV-E2settings.list
+echo "#Przyklad:" >> $NpluginDir/../IPTV-E2settings.list
+echo "" >> $NpluginDir/../IPTV-E2settings.list
+echo "#Lista mozliwych opcji konfiguracyjnych IPTVplayer-a:" >> $NpluginDir/../IPTV-E2settings.list
+for myfile in `find -type f -name '*.py'`
+do
+  #echo $myfile
+  cat $myfile| egrep -v 'extplayer|gstplayer|MIPS|ARM|software_decode' | grep -o "config\.plugins\.iptvplayer\..*=[ ]*Config.*$" >> $NpluginDir/../IPTV-E2settings.list
+done

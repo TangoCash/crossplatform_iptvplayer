@@ -287,6 +287,17 @@ class IceFilms(CBaseHostClass):
                 sourceId = self.cm.ph.getSearchGroups(source, "onclick='go\((\d+)\)'")[0]
                 if sourceId == '': continue
                 sourceName = self.cleanHtmlStr(clean_html(source.replace('</a>', ' ')))
+                
+                # hostings filter
+                # do not add hostings wich require captcha
+                add = True
+                for notSup in [' upload ', ' uploadx ', ' uploadz ']:
+                    if notSup in (' %s ' % sourceName.lower()): 
+                        add = False
+                        break
+                if not add: continue
+                # end hostings filter
+                
                 urlTab.append({'name':'[{0}] {1}'.format(mainTitle, sourceName), 'url':strwithmeta(sourceId, {'url':cItem['url']}), 'need_resolve':1})
         
         self.cacheLinks[cItem['url']] = urlTab

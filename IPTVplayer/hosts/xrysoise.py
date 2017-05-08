@@ -41,14 +41,14 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://xrysoi.se/'
+    return 'https://xrysoi.online/'
 
 class XrysoiSE(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
-    MAIN_URL = 'http://xrysoi.se/'
+    MAIN_URL = 'https://xrysoi.online/'
     SEARCH_SUFFIX = '?s='
     
     MAIN_CAT_TAB = [{'category':'movies',         'mode':'movies',     'title': 'Ταινιες',      'url':'',                                     'icon':''},
@@ -58,7 +58,7 @@ class XrysoiSE(CBaseHostClass):
                     {'category':'search_history',  'title': _('Search history')} ]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'XrysoiSE.tv', 'cookie':'XrysoiSEtv.cookie'})
+        CBaseHostClass.__init__(self, {'history':'XrysoiSE.tv', 'cookie':'XrysoiSEtv.cookie', 'min_py_ver':(2,7,9)})
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'wp-content/uploads/2015/03/logo-GM.png'
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}

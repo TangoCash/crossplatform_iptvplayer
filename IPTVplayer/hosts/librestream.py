@@ -245,7 +245,7 @@ class LibreStream(CBaseHostClass):
                 episodeTitle  = self.cm.ph.getDataBeetwenMarkers(item, '<h3 class="episodetitle">', '</h3>', False)[1]
                 etitleMap[id] = self.cleanHtmlStr(episodeTitle)
         
-        servers = self.cm.ph.getDataBeetwenMarkers(data, "<ul class='etabs'>", '</ul>', False)[1]
+        servers = self.cm.ph.getDataBeetwenMarkers(data, "<ul class='etabs'", '</ul>')[1]
         servers = servers.split('</li>')
         if len(servers): del servers[-1]
         for item in servers:

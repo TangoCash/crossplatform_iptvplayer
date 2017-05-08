@@ -1080,11 +1080,14 @@ class YoutubeIE(InfoExtractor):
                     elif 's' in url_data:
                         encrypted_sig = url_data['s']
                         signature = ''
-                        match = re.search('"([^"]+?html5player-[^"]+?\.js)"', video_webpage)
-                        if None == match:
-                            match = re.search('"([^"]+?(?:www|player)-([^/]+)/base\.js)"', video_webpage)
-                        if match:
-                            playerUrl = match.group(1).replace('\\', '').replace('https:', 'http:')
+                        playerUrl = ''
+                        for reObj in ['"assets"\:[^\}]+?"js"\s*:\s*"([^"]+?)"', 'src="([^"]+?)"[^>]+?name="player/base"']:
+                            match = re.search(reObj, video_webpage)
+                            if None != match:
+                                playerUrl =  match.group(1).replace('\\', '').replace('https:', 'http:')
+                                break
+                        
+                        if playerUrl != '':
                             if playerUrl.startswith('//'):
                                 playerUrl = 'http:' + playerUrl
                             elif playerUrl.startswith('/'):

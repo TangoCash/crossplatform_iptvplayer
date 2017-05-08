@@ -71,7 +71,7 @@ class KissCartoonMe(CBaseHostClass):
                    {'title':_('New cartoon'),        'sort_by':'Newest'}]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'kisscartoon.io', 'cookie':'kisscartoonme.cookie'})
+        CBaseHostClass.__init__(self, {'history':'kisscartoon.io', 'cookie':'kisscartoonme.cookie', 'min_py_ver':(2,7,9)})
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheHome = {}
         self.cache = {}
@@ -169,7 +169,7 @@ class KissCartoonMe(CBaseHostClass):
             else: icon = forceIcon
             desc  = self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</p>', False)[1]
             if '' == desc: desc = '<'+item
-            tab.append({'title':self.cleanHtmlStr(title), 'url':self._getFullUrl(url), 'icon':self._urlWithCookie(icon), 'desc':self.cleanHtmlStr(desc)})
+            tab.append({'good_for_fav': True, 'title':self.cleanHtmlStr(title), 'url':self._getFullUrl(url), 'icon':self._urlWithCookie(icon), 'desc':self.cleanHtmlStr(desc)})
         return tab
             
     def listHome(self, cItem, category):
@@ -295,12 +295,17 @@ class KissCartoonMe(CBaseHostClass):
         nextPage = False
         if ('page=%d"' % (page+1)) in data:
             nextPage = True
-            
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="listing full"', '<script type', False)[1]
+        
+        if '/Search/' in cItem['url']:
+            m1 = '<div class="list-cartoon"'
+        else:
+            m1 = '<div class="listing full"'
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '<script type', False)[1]
         data = self._getItems(data, '<div class="item_movies')
         
         params = dict(cItem)
-        params['category'] = category
+        params.update({'category':category})
         self.listsTab(data, params)
         
         if nextPage:
@@ -320,7 +325,7 @@ class KissCartoonMe(CBaseHostClass):
         data = self._getItems(data, '<h3>', cItem.get('icon', ''))
         data.reverse()
         params = dict(cItem)
-        params['category'] = 'video'
+        params.update({'category':'video'})
         self.listsTab(data, params, 'video') 
         
     def getLinksForVideo(self, cItem):
@@ -403,10 +408,32 @@ class KissCartoonMe(CBaseHostClass):
         self.listItems(cItem, 'list_episodes')
 
     def getFavouriteData(self, cItem):
-        return cItem['url']
+        printDBG('CartoonME.getFavouriteData')
+        params = dict(cItem)
+        return json.dumps(params) 
         
     def getLinksForFavourite(self, fav_data):
-        return self.getLinksForVideo({'url':fav_data})
+        printDBG('CartoonME.getLinksForFavourite')
+        links = []
+        try:
+            try:
+                cItem = byteify(json.loads(fav_data))
+            except Exception:
+                cItem = {'url':fav_data}
+                pass
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('CartoonME.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
     
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -460,4 +487,4 @@ class KissCartoonMe(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, KissCartoonMe(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
+        CHostBase.__init__(self, KissCartoonMe(), True, favouriteTypes=[]) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])

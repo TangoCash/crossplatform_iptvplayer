@@ -57,7 +57,7 @@ def gettytul():
 class SeriesOnlineIO(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'http://static.www.real.com/resources/wp-content/uploads/2013/01/stream-live-tv2.jpg'
@@ -107,7 +107,7 @@ class SeriesOnlineIO(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['https://123movieshd.tv/', 'https://seriesonline.io/']
+        domains = ['https://123movieshd.io/', 'https://seriesonline.io/']
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -128,7 +128,7 @@ class SeriesOnlineIO(CBaseHostClass):
                 break
                 
         if self.MAIN_URL == None:
-            self.MAIN_URL = 'https://123movieshd.tv/' # first domain is default one
+            self.MAIN_URL = 'https://123movieshd.io/' # first domain is default one
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'

@@ -194,6 +194,17 @@ class CBaseSubProviderClass:
             self.COOKIE_FILE = GetCookieDir(params['cookie'])
         self.moreMode = False
         self.params = params
+        self.minPyVer = params.get('min_py_ver', 0)
+        
+    def checkPythonVersion(self, pyVer):
+        try:
+            from Screens.MessageBox import MessageBox
+            import sys
+            if sys.version_info < pyVer:
+                message = _('This service requires a new Enigma2 image with a Python version %s or later.') % ('.'.join(str(x) for x in pyVer))
+                self.sessionEx.waitForFinishOpen(MessageBox, message, type = MessageBox.TYPE_INFO, timeout = 10)
+        except Exception:
+            printExc()
         
     def getSupportedFormats(self, all=False):
         if all:
@@ -274,6 +285,10 @@ class CBaseSubProviderClass:
         return url
     
     def handleService(self, index, refresh=0):
+        if self.minPyVer > 0:
+            self.checkPythonVersion(self.minPyVer)
+            self.minPyVer = 0 # inform only once
+    
         self.moreMode = False
         if 0 == refresh:
             if len(self.currList) <= index:

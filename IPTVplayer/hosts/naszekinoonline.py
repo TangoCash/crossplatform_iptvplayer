@@ -52,7 +52,7 @@ def gettytul():
 class NaszeKinoOnline(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'NaszeKinoOnline.tv', 'cookie':'naszekinoonline.cookie'})
+        CBaseHostClass.__init__(self, {'history':'NaszeKinoOnline.tv', 'cookie':'naszekinoonline.cookie', 'min_py_ver':(2,7,9)})
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.defaultParams = {'header': self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.AJAX_HEADER = dict(self.HEADER)

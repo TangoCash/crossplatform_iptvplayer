@@ -147,7 +147,7 @@ class HDPopcornsCom(CBaseHostClass):
             nextPage = str(byteify(json.loads(nextPage)).get('nextLink', ''))
         except Exception:
             nextPage = ''
-            ptineExc()
+            printExc()
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article', '</article>', withMarkers=True)
         for item in data:

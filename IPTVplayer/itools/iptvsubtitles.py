@@ -244,6 +244,19 @@ class IPTVSubtitlesHandler:
                 subsObj = subparser.parse(subText, microsecperframe, removeTags, setEndTime, CPS, WPM)
                 if 'type' in subsObj:
                     self.subAtoms = subsObj['list']
+                    # Workaround start
+                    try:
+                        printDBG('Workaround for subtitles from Das Erste: %s' % self.subAtoms[0]['start'])
+                        if len(self.subAtoms) and self.subAtoms[0]['start'] >= 36000000:
+                            for idx in range(len(self.subAtoms)):
+                                for key in ['start', 'end']:
+                                    if key not in self.subAtoms[idx]:
+                                        continue
+                                    if self.subAtoms[idx][key] >= 36000000:
+                                        self.subAtoms[idx][key] -= 36000000
+                    except Exception:
+                        printExc()
+                    # workaround end
                     self._fillPailsOfAtoms()
                     return True
                 else:

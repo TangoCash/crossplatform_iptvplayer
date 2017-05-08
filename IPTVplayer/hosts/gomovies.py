@@ -38,15 +38,15 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.moviesto123_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
-                                                                                           ("proxy_1",  _("Alternative proxy server (1)")),
-                                                                                           ("proxy_2",  _("Alternative proxy server (2)"))])
+config.plugins.iptvplayer.gomovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
+                                                                                        ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                        ("proxy_2",  _("Alternative proxy server (2)"))])
 config.plugins.iptvplayer.moviesto123_alt_domain = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.moviesto123_proxy))
-    if config.plugins.iptvplayer.moviesto123_proxy.value == 'None':
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.gomovies_proxy))
+    if config.plugins.iptvplayer.gomovies_proxy.value == 'None':
         optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.moviesto123_alt_domain))
     return optionList
 ###################################################
@@ -55,10 +55,10 @@ def GetConfigList():
 def gettytul():
     return 'https://gomovies.to/'
 
-class T123MoviesTO(CBaseHostClass):
+class GoMovies(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'T123MoviesTO.tv', 'cookie':'123moviesto.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'GoMovies.tv', 'cookie':'gomovies.cookie', 'cookie_type':'MozillaCookieJar'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://cdn.unlonecdn.ru/images/gomovies-logo-light.png'
@@ -74,7 +74,7 @@ class T123MoviesTO(CBaseHostClass):
         if addParams == {}:
             addParams = dict(self.defaultParams)
             
-        proxy = config.plugins.iptvplayer.moviesto123_proxy.value
+        proxy = config.plugins.iptvplayer.gomovies_proxy.value
         if proxy != 'None':
             if proxy == 'proxy_1':
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
@@ -87,7 +87,7 @@ class T123MoviesTO(CBaseHostClass):
         
     def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
-        proxy = config.plugins.iptvplayer.moviesto123_proxy.value
+        proxy = config.plugins.iptvplayer.gomovies_proxy.value
         if proxy != 'None':
             if proxy == 'proxy_1':
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
@@ -161,7 +161,7 @@ class T123MoviesTO(CBaseHostClass):
         printDBG(self.cacheFilters)
         
     def listFilters(self, cItem, filter, nextCategory):
-        printDBG("T123MoviesTO.listFilters")
+        printDBG("GoMovies.listFilters")
         if {} == self.cacheFilters:
             self.fillCacheFilters()
         
@@ -170,7 +170,7 @@ class T123MoviesTO(CBaseHostClass):
         self.listsTab(self.cacheFilters.get(filter, []), cItem)
         
     def listItems(self, cItem, nextCategory=None):
-        printDBG("T123MoviesTO.listItems")
+        printDBG("GoMovies.listItems")
         url = cItem['url']
         page = cItem.get('page', 1)
         if '/search' not in url:
@@ -212,7 +212,7 @@ class T123MoviesTO(CBaseHostClass):
             self.addDir(params)
     
     def listEpisodes(self, cItem):
-        printDBG("T123MoviesTO.listEpisodes")
+        printDBG("GoMovies.listEpisodes")
         
         tab = self.getLinksForVideo(cItem, True)
         episodeKeys = []
@@ -242,13 +242,13 @@ class T123MoviesTO(CBaseHostClass):
             self.addVideo(params)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("T123MoviesTO.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        printDBG("GoMovies.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
         cItem['url'] = self.SEARCH_URL + '/' + urllib.quote_plus(searchPattern)
         self.listItems(cItem, 'list_episodes')
     
     def getLinksForVideo(self, cItem, forEpisodes=False):
-        printDBG("T123MoviesTO.getLinksForVideo [%s]" % cItem)
+        printDBG("GoMovies.getLinksForVideo [%s]" % cItem)
         
         if 'urls' in cItem:
             return cItem['urls']
@@ -316,7 +316,7 @@ class T123MoviesTO(CBaseHostClass):
         return xx, xy
         
     def getVideoLinks(self, videoUrl):
-        printDBG("T123MoviesTO.getVideoLinks [%s]" % videoUrl)
+        printDBG("GoMovies.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
         if self.cm.isValidUrl(videoUrl):
@@ -413,7 +413,7 @@ class T123MoviesTO(CBaseHostClass):
         return urlTab
         
     def getArticleContent(self, cItem):
-        printDBG("T123MoviesTO.getArticleContent [%s]" % cItem)
+        printDBG("GoMovies.getArticleContent [%s]" % cItem)
         retTab = []
         
         sts, data = self.getPage(cItem.get('url', ''))
@@ -458,12 +458,12 @@ class T123MoviesTO(CBaseHostClass):
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
     
     def getFavouriteData(self, cItem):
-        printDBG('T123MoviesTO.getFavouriteData')
+        printDBG('GoMovies.getFavouriteData')
         params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'movie_id':cItem['movie_id'], 'desc':cItem['desc'], 'info_url':cItem['info_url'], 'icon':cItem['icon']}
         return json.dumps(params) 
         
     def getLinksForFavourite(self, fav_data):
-        printDBG('T123MoviesTO.getLinksForFavourite')
+        printDBG('GoMovies.getLinksForFavourite')
         if self.MAIN_URL == None:
             self.selectDomain()
         links = []
@@ -474,7 +474,7 @@ class T123MoviesTO(CBaseHostClass):
         return links
         
     def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('T123MoviesTO.setInitListFromFavouriteItem')
+        printDBG('GoMovies.setInitListFromFavouriteItem')
         if self.MAIN_URL == None:
             self.selectDomain()
         try:
@@ -531,7 +531,7 @@ class T123MoviesTO(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, T123MoviesTO(), True, [])
+        CHostBase.__init__(self, GoMovies(), True, [])
     
     def withArticleContent(self, cItem):
         if cItem['type'] != 'video' and cItem['category'] != 'list_episodes':

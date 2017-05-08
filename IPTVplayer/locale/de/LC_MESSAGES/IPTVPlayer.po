@@ -3554,3 +3554,16 @@ msgstr ""
 
 msgid "Login failed for user \"%s\"."
 msgstr "Anmeldung fehlgeschlagen für Benutzer \"%s\"."
+
+msgid ""
+"Fatal Error!\n"
+"Plugin is not supported with your platform."
+msgstr ""
+"Schwerer Fehler!\n"
+"Das Plugin wird für ihre Plattform nicht unterstützt."
+
+msgid "Detection of MIPSEL FPU ABI."
+msgstr "Erkennung der MIPSEL FPU ABI."
+
+msgid "This step is required to proper select binaries for installation."
+msgstr "Dieser Vorgang ist notwendig, um die passenden Binärdateien für die Installation zu ermitteln."

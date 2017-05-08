@@ -26,7 +26,7 @@ config.plugins.iptvplayer.bbc_prefered_format     = ConfigSelection(default = "h
 ("hls", _("HLS/m3u8")),
 ("dash", _("DASH/mpd")),
 ])
-config.plugins.iptvplayer.bbc_use_web_proxy = ConfigYesNo(default = False)
+#config.plugins.iptvplayer.bbc_use_web_proxy = ConfigYesNo(default = False)
 
 def int_or_none(data):
     ret = 0
@@ -71,9 +71,9 @@ class BBCCoUkIE(InfoExtractor):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
     
     def getFullUrl(self, url):
-        if config.plugins.iptvplayer.bbc_use_web_proxy.value and 'englandproxy.co.uk' not in url:
-            try: url = 'https://www.englandproxy.co.uk/' + url[url.find('://')+3:]
-            except Exception: pass
+        #if config.plugins.iptvplayer.bbc_use_web_proxy.value and 'englandproxy.co.uk' not in url:
+        #    try: url = 'https://www.englandproxy.co.uk/' + url[url.find('://')+3:]
+        #    except Exception: pass
         return url
         
     def getPage(self, url, params={}, post_data=None):
@@ -128,14 +128,14 @@ class BBCCoUkIE(InfoExtractor):
         else:
             mediaselectorUrls = self._MEDIASELECTOR_URLS_2
         
+        hasDASH = False
+        hasHLS = False
         for mediaselector_url in mediaselectorUrls:
             try:
                 if len(subtitlesTab): withSubtitles = False
                 formats, subtitles = self._download_media_selector_url(mediaselector_url % programme_id, programme_id, withSubtitles)
                 formatsTab.extend(formats)
                 subtitlesTab.extend(subtitles)
-                hasDASH = False
-                hasHLS = False
                 for item in formatsTab:
                     if item.get('ext', '') == 'dash': hasDASH = True
                     if item.get('ext', '') == 'hls':  hasHLS = True
@@ -249,9 +249,17 @@ class BBCCoUkIE(InfoExtractor):
         
         player = None
         if tviplayer != '':
-            player = byteify(json.loads(tviplayer)).get('player', {})
+            printDBG(tviplayer)
+            tmp = byteify(json.loads(tviplayer))
+            player = tmp.get('player', {})
             duration = int_or_none(player.get('duration'))
             programme_id = player.get('vpid')
+            if not programme_id:
+                try:
+                    #programme_id = tmp['episode']['master_brand'].get('ident_id')
+                    programme_id = tmp['episode']['versions'][0]['id']
+                except Exception:
+                    printExc()
 
         if not programme_id:
             programme_id = self.cm.ph.getSearchGroups(webpage, r'"vpid"\s*:\s*"(%s)"' % self._ID_REGEX)[0]

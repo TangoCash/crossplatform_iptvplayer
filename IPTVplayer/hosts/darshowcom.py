@@ -206,14 +206,23 @@ class DarshowCom(CBaseHostClass):
         params.update({'title':_('Trailer'), 'trailer':True})
         self.addVideo(params)
         
-        url  = self._getFullUrl( self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"](https?://on\.[^"^']+?)['"][^>]*?btn_showmore1''')[0] )
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="leftxlbar">', '<div class="fullin', False)[1]
+        tmp  = self.cm.ph.getDataBeetwenMarkers(data, '<div class="leftxlbar">', '<div class="fullin', False)[1]
+        desc = self.cleanHtmlStr(tmp)
         icon = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?)['"]''')[0]
         
-        params = dict(cItem)
-        params.update({'title':_('Episodes'), 'serie_title': cItem['title'], 'url':url, 'category':category, 'icon':icon, 'desc':self.cleanHtmlStr(data)})
-        self.addDir(params)
+        tmp  = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="seasonname">', '</a>')
+        if len(tmp):
+            for item in tmp:
+                title = self.cleanHtmlStr(item)
+                url   = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href=['"](https?://on\.[^"^']+?)['"]''')[0])
+                params = dict(cItem)
+                params.update({'title':title, 'serie_title': cItem['title'], 'url':url, 'category':category, 'icon':icon, 'desc':desc})
+                self.addDir(params)
+        else:
+            url  = self._getFullUrl( self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"](https?://on\.[^"^']+?)['"][^>]*?btn_showmore1''')[0] )
+            params = dict(cItem)
+            params.update({'title':_('Episodes'), 'serie_title': cItem['title'], 'url':url, 'category':category, 'icon':icon, 'desc':desc})
+            self.addDir(params)
     
     def getLinksForVideo(self, cItem):
         printDBG("DarshowCom.getLinksForVideo [%s]" % cItem)

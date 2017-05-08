@@ -4,13 +4,15 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.sweetcaptcha_v2widget import UnCaptchaSweetCaptchaWidget
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
+import urlparse
 import re
 import urllib
 import string
@@ -19,7 +21,7 @@ try:    import json
 except Exception: import simplejson as json
 from random import randint
 from datetime import datetime
-from time import sleep
+from time import sleep, time
 from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
@@ -50,13 +52,14 @@ class FiliserTv(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'FiliserTv.tv', 'cookie':'filisertv.cookie'})
         
-        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.USER_AGENT = 'Mozilla/5.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'http://filiser.tv/'
-        self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/img/logo.png'
+        self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.filisertv.png.pagespeed.ic.TvuWrsxCIN.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Movies'),                       'url':self.getFullUrl('filmy')   },
                              {'category':'list_items',        'title': _('Series'),                       'url':self.getFullUrl('seriale') },
@@ -75,9 +78,29 @@ class FiliserTv(CBaseHostClass):
         if item[key] == None: return ''
         return str(item[key])
         
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}:
+            addParams = dict(self.defaultParams)
+        
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url):
+                return url
+            else:
+                return urlparse.urljoin(baseUrl, url)
+            
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        return sts, data
+        
+    def getFullIconUrl(self, url):
+        url = CBaseHostClass.getFullIconUrl(self, url)
+        if url == '': return ''
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
+        
     def fillFilters(self, cItem):
         self.cacheFilters = {}
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         def addFilter(data, key, addAny, titleBase, marker):
@@ -161,7 +184,7 @@ class FiliserTv(CBaseHostClass):
         if cItem.get('order', '0') not in ['0', '-', '']:
             baseUrl += 'type={0}&'.format(cItem['order'])
             
-        sts, data = self.cm.getPage(self.getFullUrl(baseUrl), self.defaultParams)
+        sts, data = self.getPage(self.getFullUrl(baseUrl), self.defaultParams)
         if not sts: return
         
         if '>Następna<' in data:
@@ -195,7 +218,7 @@ class FiliserTv(CBaseHostClass):
         
         self.cacheSeasons = {'keys':[], 'dict':{}}
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
         data = data.split('<div id="episodes">')
@@ -237,7 +260,7 @@ class FiliserTv(CBaseHostClass):
         printDBG("FiliserTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
         baseUrl = self.getFullUrl('szukaj?q=' + urllib.quote_plus(searchPattern))
-        sts, data = self.cm.getPage(baseUrl)
+        sts, data = self.getPage(baseUrl)
         if not sts: return
 
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ul id="resultList2">', '</ul>', withMarkers=False)[1]
@@ -262,7 +285,7 @@ class FiliserTv(CBaseHostClass):
         if len(self.cacheLinks.get(cItem['url'], [])):
             return self.cacheLinks[cItem['url']]
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
         errorMessage = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2 class="title_block">', '</section>')[1])
@@ -312,6 +335,79 @@ class FiliserTv(CBaseHostClass):
             printExc()
         return header
         
+    def getSweetCaptchaRespond(self, data):
+        printDBG("FiliserTv.getSweetCaptchaRespond")
+        
+        def _getFullUrl(url):
+            urlPrefix = 'http:'
+            if url.startswith('//'): url = urlPrefix + url
+            return url
+        
+        def n(e, n):
+            a = ""
+            n = urllib.unquote(n)
+            for r in range(len(n)-1, -1, -1):
+                t = n[r]
+                if (t >= "a" and "z" >= t) or (t >= "A" and "Z" >= t):
+                    a += chr(65 + e.find(t) % 26)
+                else:
+                    a += t
+            return a.lower()
+        
+        retData = {}
+        
+        printDBG(data)
+        url = _getFullUrl(self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?/captcha/[^'^"]*?)['"]''')[0])
+        url += 'mobile=1&_=' + str(int(time() * 1000))
+        
+        sts, data = self.getPage(url)
+        if not sts: return retData
+        
+        printDBG(data)
+        thumbFileTab = []
+        try:
+            data = byteify(json.loads(data))
+            imgUrlTab = []
+            for item in data["a"]:
+                imgUrlTab.append(_getFullUrl(n(data['simple_key'], item['src'])))
+            imgUrlTab.append(_getFullUrl(n(data['simple_key'], data['q'])))
+            printDBG(imgUrlTab)
+            
+            errorOccurred = False
+            params = {'maintype': 'image', 'subtypes':['png'], 'check_first_bytes':['\x89\x50\x4E\x47']}
+            for idx in range(len(imgUrlTab)):
+                imgUrl   = imgUrlTab[idx]
+                filePath = GetTmpDir('.iptvplayer_captcha_%s.png' % idx)
+                ret = self.cm.saveWebFile(filePath, imgUrl, params)
+                if not ret.get('sts'):
+                    SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
+                    errorOccurred = True
+                    break
+                thumbFileTab.append(filePath)
+            if not errorOccurred:
+                verify = data['drag']['verify']
+                challenge = data['drag']['challenge']
+                printDBG(thumbFileTab)
+                printDBG("OK")
+                printDBG(verify)
+                printDBG(challenge)
+                
+                retArg = self.sessionEx.waitForFinishOpen(UnCaptchaSweetCaptchaWidget, params={'icon_list':thumbFileTab, 'title':verify, 'challenge':challenge})
+                printDBG('>>>>>>>> Captcha response %r' % (retArg))
+                if retArg is not None and len(retArg) and retArg[0]:
+                    answer = retArg[0]['resp_idx']
+                    printDBG('>>>>>>>> Captcha answer[%s]' % (answer))
+                    retData = {'sckey':data['k'], 'scvalue':data['a'][answer]['hash'][5:15], 'scvalue2':0}
+                else:
+                    retData = None
+        except Exception:
+            printExc()
+        
+        for file in thumbFileTab:
+            rm(file)
+        
+        return retData
+        
     def getVideoLinks(self, videoUrl):
         printDBG("FiliserTv.getVideoLinks [%s]" % videoUrl)
         urlTab = []
@@ -331,19 +427,46 @@ class FiliserTv(CBaseHostClass):
             if salt not in FiliserTv.SALT_CACHE:
                 httpParams = dict(self.defaultParams)
                 tries = 0
+                googleCaptcha = False
                 while tries < 6:
+                    reCaptcha = False
+                    
                     tries += 1
+                    #if tries > 3:
+                    #    rm(self.COOKIE_FILE)
+                    
                     url = 'http://filiser.tv/embed?salt=' + videoUrl
-                    httpParams['header'] = self.getHeaders(tries)
-                    sts, data = self.cm.getPage(url, httpParams)
+                    if tries > 1 and googleCaptcha: httpParams['header'] = self.getHeaders(tries)
+                    sts, data = self.getPage(url, httpParams)
                     if not sts: return urlTab
                     
                     if '/captchaResponse' in data:
+                        googleCaptcha = True
                         reCaptcha = True
                         sleep(1)
                         continue
-                    
-                    reCaptcha = False
+                        
+                    if 'sweetcaptcha' in data:
+                        post_data = self.getSweetCaptchaRespond(data)
+                        printDBG(post_data)
+                        
+                        if post_data == None: # cancelled
+                            videoUrl = ''
+                            break
+                        
+                        if post_data == {}: # retry
+                            continue
+                        
+                        httpParams2 = dict(httpParams)
+                        httpParams2['header']['Referer'] = url
+                        sts, data = self.getPage(url, httpParams2, post_data)
+                        
+                        if not sts or 'sweetcaptcha' in data:
+                            continue # wrong answer? -> Another try 
+                        reCaptcha = True
+                        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        printDBG(data)
+                        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                     
                     videoUrl = self.cm.ph.getSearchGroups(data, '''var\s*url\s*=\s*['"](http[^'^"]+?)['"]''')[0]
                     videoUrl = videoUrl.replace('#WIDTH', '800').replace('#HEIGHT', '600')
@@ -358,8 +481,8 @@ class FiliserTv(CBaseHostClass):
         if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)
             
-        if reCaptcha:
-            self.sessionEx.open(MessageBox, 'Otwórz stronę http://filiser.tv/ w przeglądarce i odtwórz dowolny film potwierdzając, że jesteś człowiekiem.', type = MessageBox.TYPE_ERROR, timeout = 10 )
+        if reCaptcha and 0 == len(urlTab):
+            self.sessionEx.waitForFinishOpen(MessageBox, 'Otwórz stronę http://filiser.tv/ w przeglądarce i odtwórz dowolny film potwierdzając, że jesteś człowiekiem.', type = MessageBox.TYPE_ERROR, timeout = 10 )
         
         return urlTab
         

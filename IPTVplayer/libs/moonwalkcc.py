@@ -87,10 +87,14 @@ class MoonwalkParser():
         uuid = self.cm.ph.getSearchGroups(data, "uuid:\s*'([^,^']+?)'")[0]
         debug = self.cm.ph.getSearchGroups(data, "debug:\s*([^,^\s]+?)[,\s]")[0].strip()
         async_method = self.cm.ph.getSearchGroups(allData, "var\s+async_method\s*=\s*'([^']+?)'")[0]
+        runner_go = self.cm.ph.getSearchGroups(allData, "post_method\.runner_go\s*=\s*'([^']+?)'")[0]
+        
         
         printDBG("=======================================================================")
         printDBG(data)
         printDBG("=======================================================================")
+        postParamName =  self.cm.ph.getSearchGroups(data, "\.post\([^\,]+?\,\s*([^\s^\)^\,]+?)[\s\)\,]")[0]
+        printDBG(">>>> postParamName[%s]" % postParamName)
         
         sec_header['Encoding-Pool'] = base64.b64encode(contentData.replace('|', ''))
         sec_header['X-Data-Pool'] = xDataPool
@@ -99,7 +103,8 @@ class MoonwalkParser():
         post_data = {}
         
         allVariables = re.compile("[,\s]([^:^,^\s]+?)\s*:\s*([^,^\s]+?)[,\s]").findall(data)
-        allVariables.extend( re.compile("session_params\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
+        allVariables.extend( re.compile(postParamName + "\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
+        allVariables.extend( re.compile(postParamName + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^'^"]+?['"])\s*;''').findall(allData) )
         
         for item in allVariables:
             varName  = item[0].strip()
@@ -154,6 +159,8 @@ class MoonwalkParser():
         if 'version_control' in allData: post_data['version_control'] = version_control   
         if 'detect_true' in allData: post_data['detect_true'] = detect_true
         if 'async_method' in allData: post_data['async_method'] = async_method
+        if 'runner_go' in allData: post_data['runner_go'] = runner_go
+        
         #post_data['ad_attr'] =0
         
         #printDBG(allData)

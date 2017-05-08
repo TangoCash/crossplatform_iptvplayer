@@ -1,20 +1,39 @@
 # -*- coding: utf-8 -*-
-# based on (root)/trunk/xbmc-addons/src/plugin.video.polishtv.live/ @ 635 - Wersja 668
-
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
-from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSelOneLink, GetLogoDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
+import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
+from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
+import urlparse
+import time
 import re
-from Components.config import config
+import urllib
+import string
+import random
+import base64
+from copy import deepcopy
+from hashlib import md5
+try:    import json
+except Exception: import simplejson as json
+from datetime import datetime
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+###################################################
+
+
+###################################################
+# E2 GUI COMMPONENTS 
+###################################################
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -22,325 +41,322 @@ from Components.config import config
 ###################################################
 
 def GetConfigList():
-    return []
+    optionList = []
+    return optionList
 ###################################################
 
-
 def gettytul():
-    return 'Kabarety Odpoczywam'
+    return 'http://kabaret.tworzymyhistorie.pl/'
 
-class Kabarety:
-    MAINURL = 'http://www.kabarety.odpoczywam.net/'
-    IMGURL = 'http://i.ytimg.com/vi/'
-
-    NAJ_LINK = MAINURL + '/bestof/page:'
-    NOW_LINK = MAINURL + '/index/page:'
-
-    SERVICE_MENU_TABLE = {
-        1: "Najnowsze",
-        2: "Najlepsze",
-        3: "Kategorie",
-        4: "Wyszukaj",
-    }
+class Kabarety(CBaseHostClass):
+ 
     def __init__(self):
-        self.cm = pCommon.common()
-        self.currList = []
-        self.ytp = YouTubeParser()
-        self.ytformats = config.plugins.iptvplayer.ytformat.value
+        CBaseHostClass.__init__(self, {'history':'kabaret.tworzymyhistorie.pl', 'cookie':'kabarettworzymyhistoriepl.cookie', 'cookie_type':'MozillaCookieJar'})
+        self.DEFAULT_ICON_URL = 'http://m.ocdn.eu/_m/3db4aef7dfc39ec1230c837335a6ddfe,10,19,0.jpg'
+        self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.MAIN_URL = 'http://kabaret.tworzymyhistorie.pl/'
+        self.cacheLinks    = {}
+        self.cacheFilters  = {}
+        self.cacheFiltersKeys = []
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+    
+        self.MAIN_CAT_TAB = [{'category':'list_filters',   'title': _('Main'),     'url':self.getFullUrl('kabarety/')   },
+                             {'category':'list_popular',   'title': _('Popular'),  'url':self.getFullUrl('kabarety/')   },
+                             {'category':'list_all',       'title': _('All'),      'url':self.getFullUrl('kabarety/')   },
+
+                             {'category':'search',         'title': _('Search'), 'search_item':True,},
+                             {'category':'search_history', 'title': _('Search history'),            } 
+                            ]
+    
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}:
+            addParams = dict(self.defaultParams)
         
-    def _getFullUrl(self, url, baseUrl=None):
-        if None == baseUrl: baseUrl = Kabarety.MAINURL
-        if 0 < len(url) and not url.startswith('http'):
-            url =  baseUrl + url
-        return url
-        
-    def getCurrList(self):
-        return self.currList
-
-    def setCurrList(self, list):
-        self.currList = list
-        return 
-
-    def setTable(self):
-        return self.SERVICE_MENU_TABLE
-
-    def listsMainMenu(self, table):
-        printDBG("Kabarety.listsMainMenu")
-        self.currList = []
-        for num, val in table.items():
-            item = {'type': 'dir', 'name': 'main-menu', 'category': val, 'title': val, 'icon': ''}
-            self.currList.append(item)
-
-    def getCategories(self, url):
-        printDBG("Kabarety.getCategories")
-        self.currList = []
-        query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG("Kabarety.getCategories exception")
-            return
-            
-        match = re.compile('<b>Kategorie</a><br><br>(.+?)<br><br>', re.DOTALL).findall(data)
-        if len(match) > 0:
-            match2 = re.compile('href="(.+?)">(.+?)</a>').findall(match[0])
-            if len(match2) > 0:
-                for i in range(len(match2)):
-                    title = self.cm.html_entity_decode(match2[i][1])
-                    item = {'type': 'dir', 'name': 'category', 'title': title, 'category': match2[i][0], 'icon': ''}
-                    self.currList.append(item)
-
-    def getFilmTab(self, url, page):
-        printDBG("Kabarety.getFilmTab")
-        self.currList = []
-        query_data = { 'url': self._getFullUrl(url)+page, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG("Kabarety.getFilmTab exception")
-            return
-        link = data.replace('\n', '') #MOD
-        match = re.compile('<a class="video-mini" title="(.+?)" href=".+?">.+?<span class="duration".+?<img class="video-mini-img".+?src="http://i.ytimg.com/vi/(.+?)/0.jpg" />').findall(link)
-        if len(match) > 0:
-            for i in range(len(match)):
-                title = self.cm.html_entity_decode(match[i][0])
-                img = self.IMGURL + match[i][1] + '/0.jpg'
-                item = {'type': 'video', 'title': title, 'page': match[i][1], 'icon': img}
-                self.currList.append(item)
-        match = re.compile('<span><a href=".+?" class="next shadow-main">&raquo;</a></span>').findall(data)
-        if len(match) > 0:
-            newpage = str(int(page) + 1)
-            item = {'type': 'dir', 'name': 'nextpage', 'title': 'Następna strona', 'category': url, 'page': newpage, 'icon': ''}
-            self.currList.append(item)
-
-    def getMovieUrls(self, vID):
-        printDBG("Kabarety.getMovieUrls vID: " + vID)
-        url = 'http://www.youtube.com/watch?v=' + vID
-        tmpTab = self.ytp.getDirectLinks(url, self.ytformats)
-        
-        movieUrls = []
-        for item in tmpTab:
-            movieUrls.append({'name': item['format'] + '\t' + item['ext'] , 'url':item['url']})
-        
-        return movieUrls
-
-    def handleService(self, index, refresh = 0, searchPattern = ''):
-        printDBG("Kabarety.handleService")
-        if 0 == refresh:
-            if len(self.currList) <= index:
-                printDBG( "handleService wrong index: %s, len(self.currList): %d" % (index, len(self.currList)) )
-                return
-            self.name = None
-            self.title = ''
-            self.category = ''
-            self.page = ''
-            self.icon = ''
-            self.link = ''
-            self.action = ''
-            if -1 == index:
-                printDBG( "Kinomaniak: handleService for first self.category" )
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url):
+                return url
             else:
-                item = self.currList[index]
+                return urlparse.urljoin(baseUrl, url)
+            
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        return sts, data
+        
+    def getFullIconUrl(self, url):
+        url = url.replace('&amp;', '&')
+        return CBaseHostClass.getFullIconUrl(self, url)
+        
+    def getFullUrl(self, url):
+        url = url.replace('&amp;', '&')
+        return CBaseHostClass.getFullUrl(self, url)
+    
+    def fillCacheFilters(self, cItem):
+        printDBG("Kabarety.listCategories")
+        self.cacheFilters = {}
+        self.cacheFiltersKeys = []
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        def addFilter(data, marker, baseKey, addAll=True, titleBase=''):
+            key = 'f_' + baseKey
+            self.cacheFilters[key] = []
+            for item in data:
+                value = self.cm.ph.getSearchGroups(item, marker + '''="([^"]+?)"''')[0]
+                if value == '': continue
+                title = self.cleanHtmlStr(item)
+                self.cacheFilters[key].append({'title':title.title(), key:value})
                 
-                if "name" in item: self.name = item['name']
-                if "title" in item: self.title = item['title']
-                if "category" in item: self.category = item['category']
-                if "page" in item: self.page = item['page']
-                if "icon" in item: self.icon = item['icon']
-                if "url" in item: self.link = item['url']
-                if "action" in item: self.action = item['action']
+            if len(self.cacheFilters[key]):
+                if addAll: self.cacheFilters[key].insert(0, {'title':_('All')})
+                self.cacheFiltersKeys.append(key)
+        
+        # type
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'Rodzaj:', '</select>')[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<option', '</option>')
+        addFilter(tmp, 'value', 'type', False)
+        
+        # sort
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'Sortuj według:', '</select>')[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<option', '</option>')
+        addFilter(tmp, 'value', 'sort', False)
+            
+        # add order to f_sort filter
+        orderLen = len(self.cacheFilters['f_sort'])
+        for idx in range(orderLen):
+            item = deepcopy(self.cacheFilters['f_sort'][idx])
+            # desc
+            self.cacheFilters['f_sort'][idx].update({'title':'\xe2\x86\x93 ' + self.cacheFilters['f_sort'][idx]['title'], 'f_order':'desc'})
+            # asc
+            item.update({'title': '\xe2\x86\x91 ' + item['title'], 'f_order':'asc'})
+            self.cacheFilters['f_sort'].append(item)
+        
+        printDBG(self.cacheFilters)
+        
+    def listFilters(self, cItem, nextCategory):
+        printDBG("Kabarety.listFilters")
+        cItem = dict(cItem)
+        
+        f_idx = cItem.get('f_idx', 0)
+        if f_idx == 0: self.fillCacheFilters(cItem)
+        
+        if 0 == len(self.cacheFiltersKeys): return
+        
+        filter = self.cacheFiltersKeys[f_idx]
+        f_idx += 1
+        cItem['f_idx'] = f_idx
+        if f_idx  == len(self.cacheFiltersKeys):
+            cItem['category'] = nextCategory
+        self.listsTab(self.cacheFilters.get(filter, []), cItem)
+        
+    def listCategory(self, cItem, idx, nextCategory):
+        printDBG("Kabarety.listCategory")
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        m1 = '<div class="rborder">'
+        if idx == 0:
+            data = self.cm.ph.getDataBeetwenMarkers(data, m1, m1)[1]
+        else:
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'WSZYSTKIE</p>', '<div class="fright', False)[1]
+        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        for item in data:
+            url = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
+            if not self.cm.isValidUrl(url): continue
+            title = self.cleanHtmlStr(item)
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'title':title, 'url':url})
+            params['category'] = nextCategory
+            self.addDir(params)
+        
+    def listItems(self, cItem):
+        printDBG("Kabarety.listItems")
+        perPage = 99
+        page = cItem.get('page', 0)
+        baseUrl = 'index/exec/load.php?tod=skecze_lista&title='
+        
+        baseUrl += '&typ={0}'.format(cItem.get('f_type', ''))
+        baseUrl += '&sort={0}'.format(cItem.get('f_sort', ''))
+        baseUrl += '&order={0}'.format(cItem.get('f_order', ''))
+        baseUrl += '&limit={0}'.format(page * perPage)
+        baseUrl += '&count={0}'.format(perPage)
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        cat = self.cm.ph.getSearchGroups(data, '<div class="load"[^>]+?name="([^"]+?)"')[0]
+        baseUrl += '&cat={0}'.format(cat)
+        
+        HEADER = dict(self.AJAX_HEADER)
+        HEADER['Referer'] = cItem['url']
+        
+        sts, data = self.getPage(self.getFullUrl(baseUrl), {'header':HEADER})
+        if not sts: return
+        
+        printDBG(data)
+        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="video', 'class="ico_play">')
+        num = 0
+        for item in data:
+            url = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
+            if not self.cm.isValidUrl(url): continue
+            
+            icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
+            title = self.cleanHtmlStr(item)
+            
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'title':title, 'url':url, 'desc':'', 'icon':icon})
+            self.addVideo(params)
+            num += 1
+        
+        if num >= perPage:
+            params = dict(cItem)
+            params.update({'title':_('Next page'), 'page':page+1})
+            self.addDir(params)
+
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("Kabarety.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        
+        sts, data = self.getPage(self.getFullUrl('szukaj'), post_data={'szukaj':searchPattern})
+        if not sts: return
+        
+        if searchType == 'sketches':
+            m = '<div class="div_szukaj_video div_szukaj', '<input type="hidden"'
+        elif searchType == 'interviews':
+            m = '<div class="div_szukaj_wywiady div_szukaj', '<input type="hidden"'
+        else:
+            m = '<div class="div_szukaj_kabarety div_szukaj', '<input type="hidden"'
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, m[0], m[1])[1]
+        
+        if searchType in ['sketches', 'interviews']:
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="video', 'class="ico_play">')
+        else:
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<h1', '</h1>')
+        
+        for item in data:
+            url = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
+            if not self.cm.isValidUrl(url): continue
+            
+            icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
+            title = self.cleanHtmlStr(item)
+            
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'title':title, 'url':url, 'desc':'', 'icon':icon})
+            if searchType in ['sketches', 'interviews']: 
+                self.addVideo(params)
+            else:
+                params['category'] = 'list_filters'
+                self.addDir(params)
+        
+    def getLinksForVideo(self, cItem):
+        printDBG("Kabarety.getLinksForVideo [%s]" % cItem)
+        urlTab = []
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return []
+        
+        videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](https?://[^"^']+?)['"]''', 1, True)[0]
+        if self.cm.isValidUrl(videoUrl):
+            urlTab = self.up.getVideoLinkExt(self.getFullUrl(videoUrl))
+            
+        if 0 == len(urlTab):
+            videoUrl = self.cm.ph.getSearchGroups(data, '''<div class="fb-video"[^>]+?data-href=['"](https?://[^"^']+?)['"]''', 1, True)[0]
+            if self.cm.isValidUrl(videoUrl):
+                urlTab = self.up.getVideoLinkExt(self.getFullUrl(videoUrl))
                 
-                printDBG( "Kabarety: |||||||||||||||||||||||||||||||||||| %s " % item["name"] )
+        if 0 == len(urlTab):
+            videoId = self.cm.ph.getSearchGroups(cItem['url'], '''\.pl/([0-9]+?)_''', 1, True)[0]
+            if videoId != '':
+                HEADER = dict(self.AJAX_HEADER)
+                HEADER['Referer'] = cItem['url']
+                
+                url = self.getFullUrl('index/exec/load.php?tod=vidplay&name=' + videoId)
+                sts, data = self.getPage(url, {'header':HEADER})
+                if sts:
+                    videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](https?://[^"^']+?)['"]''', 1, True)[0]
+                    if self.cm.isValidUrl(videoUrl):
+                        urlTab = self.up.getVideoLinkExt(self.getFullUrl(videoUrl))
+        
+        return urlTab
+    
+    def getFavouriteData(self, cItem):
+        printDBG('Kabarety.getFavouriteData')
+        return json.dumps(cItem) 
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('Kabarety.getLinksForFavourite')
+        if self.MAIN_URL == None:
+            self.selectDomain()
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('Kabarety.setInitListFromFavouriteItem')
+        if self.MAIN_URL == None:
+            self.selectDomain()
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
+        
+    def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
+        printDBG('handleService start')
+        
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
+
+        name     = self.currItem.get("name", '')
+        category = self.currItem.get("category", '')
+        mode     = self.currItem.get("mode", '')
+        
+        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
-        name = self.name
-        title = self.title
-        category = self.category
-        page = self.page
-        icon = self.icon
-        link = self.link
-        action = self.action
-
-        if str(page)=='None' or page=='': page = '1'
-
+        
     #MAIN MENU
         if name == None:
-            self.listsMainMenu(self.SERVICE_MENU_TABLE)
-    #NAJNOWSZE
-        elif category == self.setTable()[1]:
-            self.getFilmTab(self.NOW_LINK, page)
-    #NAJLEPSZE
-        elif category == self.setTable()[2]:
-            self.getFilmTab(self.NAJ_LINK, page)
-    #KATEGORIE
-        elif category == self.setTable()[3]:
-            self.getCategories(self.MAINURL)
-    #WYSZUKAJ
-        elif category == self.setTable()[4]:
-            self.getFilmTab(self.MAINURL + '/search/' + searchPattern + '/page:', page)
-    #LISTA TYTULOW
-        elif name == 'category' or  name == 'nextpage':
-            url = category + '/page:'
-            self.getFilmTab(url, page)
-# end Kabarety
+            self.cacheLinks = {}
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif category == 'list_popular':
+            self.listCategory(self.currItem, 0, 'list_filters')
+        elif category == 'list_all':
+            self.listCategory(self.currItem, 1, 'list_filters')
+        elif category == 'list_filters':
+            self.listFilters(self.currItem, 'list_items')
+        elif category == 'list_items':
+            self.listItems(self.currItem)
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
+        else:
+            printExc()
+        
+        CBaseHostClass.endHandleService(self, index, refresh)
 
-
-def _getLinkQuality( itemLink ):
-    tab = itemLink['name'].split('x')
-    return int(tab[0])
-    
-class IPTVHost(IHost):
+class IPTVHost(CHostBase):
 
     def __init__(self):
-        self.host = None
-        self.currIndex = -1
-        self.listOfprevList = [] 
-        
-        self.searchPattern = ''
-        self.searchType = ''
+        CHostBase.__init__(self, Kabarety(), True, [])
     
-    # return firs available list of item category or video or link
-    def getInitList(self):
-        self.isSearch = False
-        self.host = Kabarety()
-        self.currIndex = -1
-        self.listOfprevList = [] 
-        
-        self.host.handleService(self.currIndex)
-        convList = self.convertList(self.host.getCurrList())
-        
-        return RetHost(RetHost.OK, value = convList)
-    
-    # return List of item from current List
-    # for given Index
-    # 1 == refresh - force to read data from 
-    #                server if possible 
-    # server instead of cache 
-    def getListForItem(self, Index = 0, refresh = 0, selItem = None):
-        self.listOfprevList.append(self.host.getCurrList())
-        
-        self.currIndex = Index
-        self.host.handleService(Index, refresh, self.searchPattern)
-        convList = self.convertList(self.host.getCurrList())
-        
-        return RetHost(RetHost.OK, value = convList)
-        
-    # return prev requested List of item 
-    # for given Index
-    # 1 == refresh - force to read data from 
-    #                server if possible
-    def getPrevList(self, refresh = 0):
-        if(len(self.listOfprevList) > 0):
-            hostList = self.listOfprevList.pop()
-            self.host.setCurrList(hostList)
-            convList = self.convertList(hostList)
-            return RetHost(RetHost.OK, value = convList)
-        else:
-            return RetHost(RetHost.ERROR, value = [])
-        
-    # return current List
-    # for given Index
-    # 1 == refresh - force to read data from 
-    #                server if possible
-    def getCurrentList(self, refresh = 0):      
-        if refresh == 1:
-            self.host.handleService(self.currIndex, refresh, self.searchPattern)
-        convList = self.convertList(self.host.getCurrList())
-        return RetHost(RetHost.OK, value = convList)
-        
-    # return list of links for VIDEO with given Index
-    # for given Index
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] != 'video':
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-            
-        retlist = []
-        urlList = self.host.getMovieUrls(self.host.currList[Index]["page"])
-        if config.plugins.iptvplayer.ytUseDF.value:
-            maxRes = int(config.plugins.iptvplayer.ytDefaultformat.value) * 1.1
-            def __getLinkQuality( itemLink ):
-                tab = itemLink['name'].split('x')
-                return int(tab[0])
-            urlList = CSelOneLink(urlList, __getLinkQuality, maxRes).getOneLink()
-            
-        for item in urlList:
-            nameLink = item['name']
-            url = item['url']
-            retlist.append(CUrlItem(nameLink, url, 0))
-            
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-        
-    # return resolved url
-    # for given url
-    def getResolvedURL(self, url):
-        if url != None and url != '':
-        
-            ret = self.host.up.getVideoLink( url )
-            list = []
-            if ret:
-                list.append(ret)
-            
-            return RetHost(RetHost.OK, value = list)
-            
-        else:
-            return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
-    # end getResolvedURL
-            
-    # return full path to player logo
-    def getLogoPath(self):  
-        return RetHost(RetHost.OK, value = [ GetLogoDir('kabaretylogo.png') ])
-
-
-    def convertList(self, cList):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        
-        for cItem in cList:
-            hostLinks = []
-                
-            type = CDisplayListItem.TYPE_UNKNOWN
-            possibleTypesOfSearch = None
-            if cItem['type'] == 'dir':
-                if cItem['title'] == 'Wyszukaj':
-                    type = CDisplayListItem.TYPE_SEARCH
-                    possibleTypesOfSearch = searchTypesOptions
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-                
-            title = ''
-            if 'title' in cItem: title = cItem['title']
-            description = ''
-            if 'plot' in cItem: description =  cItem['plot']
-            icon = ''
-            if 'icon' in cItem: icon =  cItem['icon']
-            
-            hostItem = CDisplayListItem(name = title,
-                                        description = description,
-                                        type = type,
-                                        urlItems = hostLinks,
-                                        urlSeparateRequest = 1,
-                                        iconimage = icon,
-                                        possibleTypesOfSearch = possibleTypesOfSearch)
-            hostList.append(hostItem)
-            
-        return hostList
-    # end convertList
-        
-    def getSearchResults(self, searchpattern, searchType = None):
-        self.isSearch = True
-        retList = []
-        self.searchPattern = searchpattern
-        self.searchType = searchType
-        
-        #4: Wyszukaj
-        return self.getListForItem(3)
-    # end getSearchResults
+    def getSearchTypes(self):
+        searchTypesOptions = []
+        searchTypesOptions.append(('Skecze',   "sketches"))
+        searchTypesOptions.append(('Kabarety', "cabarets"))
+        searchTypesOptions.append(('Wywiady',  "interviews"))
+        return searchTypesOptions
     

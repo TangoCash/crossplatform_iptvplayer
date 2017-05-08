@@ -180,7 +180,7 @@ class KreskoweczkiPL(CBaseHostClass):
             
             params = dict(cItem)
             params.pop('post_data', None)
-            params.update({'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon)})
+            params.update({'good_for_fav':True, 'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon)})
             printDBG(icon)
             if video:
                 params.update({'desc':self.cleanHtmlStr(item)})
@@ -191,7 +191,7 @@ class KreskoweczkiPL(CBaseHostClass):
         
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':page+1})
+            params.update({'good_for_fav':False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
         
     def getLinksForVideo(self, cItem):
@@ -250,10 +250,27 @@ class KreskoweczkiPL(CBaseHostClass):
         self.listItems(cItem)
         
     def getFavouriteData(self, cItem):
-        return str(cItem['url'])
+        printDBG('KreskoweczkiPL.getFavouriteData')
+        return json.dumps(cItem) 
         
     def getLinksForFavourite(self, fav_data):
-        return self.getLinksForVideo({'url':fav_data})
+        printDBG('KreskoweczkiPL.getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception:
+            return self.getLinksForVideo({'url':fav_data})
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('KreskoweczkiPL.setInitListFromFavouriteItem')
+        try: params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')

@@ -291,9 +291,17 @@ class ZDFmediathek(CBaseHostClass):
             formatMap[tmp[i]] = i
         
         try:
+            subTracks = []
             urlTab = []
             tmpUrlTab = []
             data = byteify(json.loads(data)['document'])
+            try:
+                for item in data['captions']:
+                    if 'vtt' in item['format'] and self.cm.isValidUrl(item['uri']):
+                        subTracks.append({'title':item['language'], 'url':item['uri'], 'lang':item['language'], 'format':'vtt'})
+            except Exception:
+                printExc()
+            
             live = data['type']
             try:
                 data = data['formitaeten']
@@ -359,7 +367,7 @@ class ZDFmediathek(CBaseHostClass):
                         live = True
                     else: 
                         live = False
-                    urlTab.append({'need_resolve':0, 'name':name, 'url':self.up.decorateUrl(url, {'iptv_livestream':live})})
+                    urlTab.append({'need_resolve':0, 'name':name, 'url':self.up.decorateUrl(url, {'iptv_livestream':live, 'external_sub_tracks':subTracks})})
                     if onelinkmode: break
             printDBG(tmpUrlTab)
         except Exception:

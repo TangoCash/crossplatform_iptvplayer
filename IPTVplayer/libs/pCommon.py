@@ -489,7 +489,10 @@ class common:
                     if sitekey != '':
                         from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
                         # google captcha
-                        token = UnCaptchaReCaptcha(lang=GetDefaultLang()).processCaptcha(sitekey)
+                        recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
+                        recaptcha.HTTP_HEADER['Referer'] = baseUrl
+                        if '' != cfParams.get('User-Agent', ''): recaptcha.HTTP_HEADER['User-Agent'] = cfParams['User-Agent']
+                        token = recaptcha.processCaptcha(sitekey)
                         if token == '': return False, None
                     
                         sts, tmp = self.ph.getDataBeetwenMarkers(verData, '<form', '</form>', caseSensitive=False)
@@ -553,7 +556,8 @@ class common:
                         params2 = dict(params)
                         params2['load_cookie'] = True
                         params2['save_cookie'] = True
-                        params2['header'] = {'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'}
+                        params2['header'] = dict(params.get('header', {}))
+                        params2['header'].update({'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'})
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
                         time.sleep(5-(time.time() - start_time))
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
@@ -754,7 +758,7 @@ class common:
                 data = response.read()
                 response.close()
             except urllib2.HTTPError, e:
-                if e.code == 404:
+                if e.code in [404, 500]:
                     printDBG('!!!!!!!! 404: getURLRequestData - page not found handled')
                     if e.fp.info().get('Content-Encoding', '') == 'gzip':
                         gzip_encoding = True

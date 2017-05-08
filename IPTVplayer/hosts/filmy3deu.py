@@ -124,7 +124,7 @@ class Filmy3dEU(CBaseHostClass):
             url    = self.cm.ph.getSearchGroups(tmp, 'href="([^"]+?)"')[0]
             icon   = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
             title  = CParsingHelper.getDataBeetwenMarkers(tmp, '>', '</h5>', False)[1]
-            if '' == title: self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0]
+            if '' == title: title = self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0]
             desc = _("Rating") + ': {0}/100, '.format(self.cm.ph.getSearchGroups(item, 'width\:([0-9]+?)\%')[0]) 
             desc  += CParsingHelper.getDataBeetwenMarkers(item, '<p class="text">', '</p>', False)[1]
 

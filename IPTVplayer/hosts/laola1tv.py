@@ -304,57 +304,43 @@ class Laola1TV(CBaseHostClass):
         try:
             sts, response = self.cm.getPage(baseUrl, {'return_data':False})
             baseUrl = response.geturl()
-            data = response.read().strip()
             response.close()
         except Exception:
             printExc()
             return []
+            
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return []
         
-        vidUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0]
-        
-        if '' == vidUrl:
-            error = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoplayer-overlay">', '</p>', False)[1] )
-            if '' != error: SetIPTVPlayerLastHostError(error)
-            return []
-        
-        baseUrl = baseUrl[baseUrl.find('://')+3:]
-        baseUrl = 'http://' + baseUrl[0:baseUrl.find('/')] + '/'
-        
-        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoplayer"', '</script>')[1]
+        printDBG(data)
+        getParams = {}
+        getParams['videoid']   = self.cm.ph.getSearchGroups(data, '\svideoid\s*:\s*"([0-9]*?)"')[0]
+        getParams['partnerid'] = self.cm.ph.getSearchGroups(data, '\spartnerid\s*:\s*"([0-9]*?)"')[0]
+        getParams['language']  = self.cm.ph.getSearchGroups(data, '\slanguage\s*:\s*"([a-z]*?)"')[0]
+        getParams['portal']    = self.cm.ph.getSearchGroups(data, '\portalid\s*:\s*"([a-z]*?)"')[0]
+        getParams['format']    = 'iphone'
+        vidUrl = self.cm.ph.getSearchGroups(data, '\configUrl\s*:\s*"([^"]*?)"')[0]
+        if vidUrl.startswith('//'):
+            vidUrl = 'http:' + vidUrl
+        vidUrl += '?' + urllib.urlencode(getParams)
         vidUrl = self._getFullUrl( vidUrl, baseUrl )
         
         sts, data = self.getPage(vidUrl)
         if not sts: return []
         
-        mainAuth = self.cm.ph.getSearchGroups(data, '[ .]auth = "([^"]+?)"')[0]
-        mainTimestamp = self.cm.ph.getSearchGroups(data, '[ .]timestamp = "([^"]+?)"')[0]
-        vs_target = self.cm.ph.getSearchGroups(data, 'var vs_target = ([0-9]+?);')[0]
-        data = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, 'var flashvars', '};', False)[1] )
-        def _getParamValue(paramName, data):
-            return self.cm.ph.getSearchGroups(data, '%s: "([^"]+?)"' % paramName)[0]
-            
-        streamid  = _getParamValue('streamid', data)
-        partnerid = _getParamValue('partnerid', data)
-        portalid  = _getParamValue('portalid', data)
-        sprache   = _getParamValue('sprache', data)
-        vidUrl = "http://www.laola1.tv/server/hd_video.php?play=%s&partner=%s&portal=%s&v5ident&lang=%s&v=1" % (streamid, partnerid, portalid, sprache)
-        
-        sts, data = self.getPage(vidUrl)
-        if not sts: return []
-        
-        vidUrl = self.cm.ph.getDataBeetwenMarkers(data, '<url>', '</url>', False)[1].replace('&amp;', '&')
-        fallbackVidUrl = self.cm.ph.getDataBeetwenMarkers(data, '<fallbackurl>', '</fallbackurl>', False)[1].replace('&amp;', '&')
-        id      = self.cm.ph.getDataBeetwenMarkers(data, '<id>', '</id>', False)[1]
-        area    = self.cm.ph.getDataBeetwenMarkers(data, '<area>', '</area>', False)[1]
-        label   = self.cm.ph.getDataBeetwenMarkers(data, '<label>', '</label>', False)[1]
-        req_abo = self.cm.ph.getDataBeetwenMarkers(data, '<req_liga_abos>', '</req_liga_abos>', False)[1].split(',')
-        live    = self.cm.ph.getDataBeetwenMarkers(data, '<live>', '</live>', False)[1]
-        if live == 'false': isLive = False
-        else: isLive = True
+        try:
+            data = byteify(json.loads(data))
+            url  = data['video']['streamAccess']
+            req_abo = []
+            for item in data['video']['abo']['required']:
+                req_abo.append(str(item))
+        except Exception:
+            return []
+            printExc()
 
         ######################################################
         streamaccessTab = []
-        url = 'https://club.laola1.tv/sp/laola1/api/v3/user/session/premium/player/stream-access?videoId=' + id + '&target=' + vs_target + '&label=' + label + '&area=' + area + '&format=iphone'
         post_data = {}
         for idx in range(len(req_abo)):
             post_data[idx] = req_abo[idx]
@@ -365,32 +351,6 @@ class Laola1TV(CBaseHostClass):
                 streamaccessTab.append(item)
         except Exception:
             printExc()
-        
-        if 0 == len(streamaccessTab):
-            def addZ(n):
-                if n < 10: return '0%d' % n
-                return str(n)
-            
-            def getTimestamp():
-                date = datetime.datetime.now()
-                year  = date.year
-                month = date.month
-                datum = date.day
-                hour  = date.hour
-                min   = date.minute
-                sec   = date.second
-                timestamp = addZ(year) + addZ(month) + addZ(datum) + addZ(hour) + addZ(min) + addZ(sec)
-                return timestamp
-
-            randomNumber = str(random.randint(10000000, 99999999))
-            htmlTimestamp = str(time.time()).split('.')[0]
-            ident = randomNumber + htmlTimestamp
-            timestamp = mainTimestamp
-            if '' == timestamp:
-                timestamp = getTimestamp()
-            
-            for baseUrl in [vidUrl, fallbackVidUrl]:
-                streamaccessTab.append(baseUrl + '&ident=' + ident + '&klub=0&unikey=0&timestamp=' + timestamp + '&auth=' + mainAuth + '&format=iphone');
         
         for streamaccess in streamaccessTab:
             for myip in ['', config.plugins.iptvplayer.laola1tv_myip1.value, config.plugins.iptvplayer.laola1tv_myip2.value]:
