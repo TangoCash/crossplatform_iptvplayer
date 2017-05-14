@@ -13,8 +13,13 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 
 class CUrlItem:
     def __init__(self, name = "", url = "", urlNeedsResolve = 0):
-        self.name = name
-        self.url = url # used only for TYPE_VIDEO item 
+        if isinstance(name, basestring): self.name = name
+        else: self.name = str(name)
+        
+        # used only for TYPE_VIDEO item 
+        if isinstance(url, basestring): self.url = url
+        else: self.url = str(url)
+        
         self.urlNeedsResolve = urlNeedsResolve #  additional request to host is needed to resolv this url (url is not direct link)
 ## class CDisplayListItem
 # define attribiutes for item of diplay list
@@ -42,12 +47,24 @@ class CDisplayListItem:
                 possibleTypesOfSearch = None, \
                 pinLocked = False, \
                 isGoodForFavourites = False):
-        self.name = name
-        self.description = description
-        self.type = type
-        self.iconimage = iconimage
-        self.pinLocked = pinLocked
-        self.isGoodForFavourites = isGoodForFavourites
+                
+        if isinstance(name, basestring): self.name = name
+        else: self.name = str(name)
+        
+        if isinstance(description, basestring): self.description = description
+        else: self.description = str(description)
+        
+        if isinstance(type, basestring): self.type = type
+        else: self.type = str(type)
+        
+        if isinstance(iconimage, basestring): self.iconimage = iconimage
+        else: self.iconimage = str(iconimage)
+        
+        if pinLocked: self.pinLocked = True
+        else: self.pinLocked = False
+            
+        if isGoodForFavourites: self.isGoodForFavourites = True
+        else: self.isGoodForFavourites = False
         
         # used only for TYPE_VIDEO item
         self.urlItems = urlItems # url to VIDEO

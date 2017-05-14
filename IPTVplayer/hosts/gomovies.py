@@ -398,11 +398,11 @@ class GoMovies(CBaseHostClass):
                     printDBG("------------------------------------------------\n%s+++++++++++++++++++++++++++++++++++++++++++++\n" % tmp)
                     for item in tmp['playlist'][0]['sources']:
                         if "mp4" == item['type']:
-                            urlTab.append({'name':item['label'], 'url':item['file']})
+                            urlTab.append({'name':str(item['label']), 'url':item['file']})
                     for item in tmp['playlist'][0]['tracks']:
                         format = item['file'][-3:]
                         if format in ['srt', 'vtt'] and "captions" == item['kind']:
-                            subTracks.append({'title':item['label'], 'url':self.getFullIconUrl(item['file']), 'lang':item['label'], 'format':format})
+                            subTracks.append({'title':str(item['label']), 'url':self.getFullIconUrl(item['file']), 'lang':item['label'], 'format':format})
                 except Exception:
                     printExc()
             printDBG(subTracks)

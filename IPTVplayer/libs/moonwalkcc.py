@@ -5,6 +5,7 @@
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.youtube import YoutubeIE
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html, unescapeHTML
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, CSelOneLink, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getDirectM3U8Playlist, getF4MLinksWithMeta
@@ -192,7 +193,8 @@ class MoonwalkParser():
                 data = data['mans']
             except Exception: printExc()
             if 'm3u8' == config.plugins.iptvplayer.moonwalk_format.value:
-                tmpTab = getDirectM3U8Playlist(data["manifest_m3u8"])
+                hlsUrl = strwithmeta(data["manifest_m3u8"], {'User-Agent':'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Referer':url})
+                tmpTab = getDirectM3U8Playlist(hlsUrl)
                 def __getLinkQuality( itemLink ):
                     return itemLink['heigth']
                 if config.plugins.iptvplayer.moonwalk_use_df.value:

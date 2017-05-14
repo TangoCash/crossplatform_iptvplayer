@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -18,7 +18,7 @@ import base64
 try:    import json
 except Exception: import simplejson as json
 from datetime import datetime
-from urlparse import urlparse
+from urlparse import urlparse, urljoin
 from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
@@ -28,6 +28,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 ###################################################
 
 ###################################################
@@ -47,26 +48,101 @@ class FilmyTo(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'FilmyTo.tv', 'cookie':'filmyto.cookie'})
-        
-        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-        self.AJAX_HEADER = dict(self.HEADER)
+        self.USER_AGENT = 'Mozilla/5.0'
+        self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'http://filmy.to/'
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'static/frontend/img/logo.06ac9ed751db.png'
         
-        self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Movies'),                       'url':self.getFullUrl('filmy/'),        'icon':self.DEFAULT_ICON_URL},
-                             {'category':'list_items',        'title': _('Series'),                       'url':self.getFullUrl('seriale/'),      'icon':self.DEFAULT_ICON_URL},
-                             {'category':'list_items',        'title': _('Dokumentalne'),                 'url':self.getFullUrl('dokumentalne/'), 'icon':self.DEFAULT_ICON_URL},
-                             {'category':'list_items',        'title': _('Dla dzieci'),                   'url':self.getFullUrl('dzieci/'),       'icon':self.DEFAULT_ICON_URL},
-                             {'category':'search',            'title': _('Search'), 'search_item':True,         'icon':self.DEFAULT_ICON_URL},
-                             {'category':'search_history',    'title': _('Search history'),                     'icon':self.DEFAULT_ICON_URL} 
+        self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Movies'),                       'url':self.getFullUrl('filmy/'),        },
+                             {'category':'list_items',        'title': _('Series'),                       'url':self.getFullUrl('seriale/'),      },
+                             {'category':'list_items',        'title': _('Dokumentalne'),                 'url':self.getFullUrl('dokumentalne/'), },
+                             {'category':'list_items',        'title': _('Dla dzieci'),                   'url':self.getFullUrl('dzieci/'),       },
+                             {'category':'search',            'title': _('Search'), 'search_item':True,                                           },
+                             {'category':'search_history',    'title': _('Search history'),                                                       } 
                             ]
         
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.cacheSeries = {}
+        
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}:
+            addParams = dict(self.defaultParams)
+        
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url):
+                return url
+            else:
+                return urljoin(baseUrl, url)
+            
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        
+        if sts and 'id="captchaPage"' in data:
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'id="captchaPage"', '</form>')[1]
+            captchaTitle = self.cm.ph.getAllItemsBeetwenMarkers(data, '<p', '</p>')
+            
+            if len(captchaTitle):
+                captchaTitle = self.cleanHtmlStr(captchaTitle[-1])
+            
+            # parse form data
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>')[1]
+            
+            imgUrl = self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"')[0]
+            if imgUrl.startswith('/'):
+                imgUrl = urljoin(baseUrl, imgUrl)
+                
+            actionUrl = self.cm.ph.getSearchGroups(data, 'action="([^"]+?)"')[0]
+            if actionUrl.startswith('/'):
+                actionUrl = urljoin(baseUrl, actionUrl)
+                
+            captcha_post_data = dict(re.findall(r'''<input[^>]+?name=["']([^"^']*)["'][^>]+?value=["']([^"^']*)["'][^>]*>''', data))
+            
+            if self.cm.isValidUrl(imgUrl):
+                header = dict(self.HTTP_HEADER)
+                header['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                params = dict(self.defaultParams)
+                params.update( {'maintype': 'image', 'subtypes':['jpeg', 'png'], 'check_first_bytes':['\xFF\xD8','\xFF\xD9','\x89\x50\x4E\x47'], 'header':header} )
+                filePath = GetTmpDir('.iptvplayer_captcha.jpg')
+                ret = self.cm.saveWebFile(filePath, imgUrl.replace('&amp;', '&'), params)
+                if not ret.get('sts'):
+                    SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
+                    return False
+
+                params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
+                params['accep_label'] = _('Send')
+                params['title'] = _('Captcha')
+                params['status_text'] = captchaTitle
+                params['with_accept_button'] = True
+                params['list'] = []
+                item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
+                item['label_size'] = (160,75)
+                item['input_size'] = (480,25)
+                item['icon_path'] = filePath
+                item['title'] = _('Answer')
+                item['input']['text'] = ''
+                params['list'].append(item)
+    
+                ret = 0
+                retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
+                printDBG(retArg)
+                if retArg and len(retArg) and retArg[0]:
+                    printDBG(retArg[0])
+                    captcha_post_data['captcha_1'] = retArg[0][0]
+                    params = deepcopy(addParams)
+                    params['header']['Referer'] = baseUrl
+                    sts, data = self.cm.getPage(actionUrl, self.defaultParams, captcha_post_data)
+                
+                if sts and 'id="captchaPage"' in data:
+                    SetIPTVPlayerLastHostError(_('Wrong answer.'))
+                    sts, data = False, None
+                else:
+                    sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        return sts, data
         
     def getStr(self, item, key):
         if key not in item: return ''
@@ -75,7 +151,7 @@ class FilmyTo(CBaseHostClass):
         
     def fillFilters(self, cItem):
         self.cacheFilters = {}
-        sts, data = self.cm.getPage(self.getFullUrl('filmy/1')) # it seems that series and movies have same filters
+        sts, data = self.getPage(self.getFullUrl('filmy/1')) # it seems that series and movies have same filters
         if not sts: return
         
         def addFilter(data, key, addAny, titleBase):
@@ -166,7 +242,7 @@ class FilmyTo(CBaseHostClass):
         if cItem.get('order', '0') not in ['0', '-', '']:
             baseUrl += 'kolejnosc={0}&'.format(cItem['order'])
             
-        sts, data = self.cm.getPage(self.getFullUrl(baseUrl), self.defaultParams)
+        sts, data = self.getPage(self.getFullUrl(baseUrl), self.defaultParams)
         if not sts: return
         
         if None != re.search('<a[^>]+?>&rarr;<', data):
@@ -194,7 +270,7 @@ class FilmyTo(CBaseHostClass):
         
     def listSeasons(self, cItem, nextCategory):
         printDBG("FilmyTo.listSeasons")
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
         data = self.cm.ph.getDataBeetwenMarkers(data, ' <select name="sezon"', '</select>')[1]
@@ -209,7 +285,7 @@ class FilmyTo(CBaseHostClass):
         
     def listEpisodes(self, cItem):
         printDBG("FilmyTo.listEpisodes")
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
         params  = dict(self.defaultParams)
@@ -220,10 +296,10 @@ class FilmyTo(CBaseHostClass):
         name  = self.cm.ph.getSearchGroups(data, '''name=['"]([^'^"]+?)['"]''')[0]
         value = self.cm.ph.getSearchGroups(data, '''value=['"]([^'^"]+?)['"]''')[0]
         post_data = {name:value, 'ukryj_bez_zrodel':'1', 'ukryj':'on'}
-        sts, data = self.cm.getPage(cItem['url'], params, post_data)
+        sts, data = self.getPage(cItem['url'], params, post_data)
         
         #if not sts or '<aside>' not in data:
-        sts, data = self.cm.getPage(cItem['url'], params)
+        sts, data = self.getPage(cItem['url'], params)
         if not sts: return
         
         sNum = cItem['priv_snum']
@@ -243,7 +319,7 @@ class FilmyTo(CBaseHostClass):
         printDBG("FilmyTo.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
         baseUrl = self.getFullUrl('szukaj?q=' + urllib.quote_plus(searchPattern))
-        sts, data = self.cm.getPage(baseUrl)
+        sts, data = self.getPage(baseUrl)
         if not sts: return
 
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="movie clearfix">', '<div id="now_playing"', withMarkers=False)[1]
@@ -267,9 +343,9 @@ class FilmyTo(CBaseHostClass):
         printDBG("FilmyTo.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
-        rm(self.COOKIE_FILE)
+        #rm(self.COOKIE_FILE)
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
         provision = self.cm.ph.getSearchGroups(data, '<meta[^>]+?"provision"[^>]+?content="([^"]+?)"')[0]
@@ -282,7 +358,7 @@ class FilmyTo(CBaseHostClass):
             printExc()
             return []
             
-        sts, data = self.cm.getPage(url, params)
+        sts, data = self.getPage(url, params)
         if not sts: return []
         
         csrftoken = self.cm.getCookieItem(self.COOKIE_FILE, 'csrftoken')
@@ -293,7 +369,7 @@ class FilmyTo(CBaseHostClass):
         params['header']['X-CSRFToken'] = csrftoken
         
         url = self.getFullUrl('/ajax/provision/' + provision)
-        sts, data = self.cm.getPage(url, params)
+        sts, data = self.getPage(url, params)
         if not sts: return []
         
         #printDBG(data)
@@ -396,68 +472,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, FilmyTo(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
     
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item.get('need_resolve', False)))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "series"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem
-

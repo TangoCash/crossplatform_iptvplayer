@@ -103,7 +103,24 @@ class KarwanTvApi(CBaseHostClass):
         hlsUrl  = self.cm.ph.getSearchGroups(data, '''['"]?hls['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
         dashUrl = self.cm.ph.getSearchGroups(data, '''['"]?dash['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
         
-        urlsTab.extend( getDirectM3U8Playlist(hlsUrl, checkContent=True) )
-        if 0 == len(urlsTab): urlsTab.extend( getMPDLinksWithMeta(dashUrl, checkExt=True) )
+        if self.cm.isValidUrl(hlsUrl):
+            urlsTab.extend( getDirectM3U8Playlist(hlsUrl, checkContent=True) )
+        if 0 == len(urlsTab) and self.cm.isValidUrl(dashUrl):
+            urlsTab.extend( getMPDLinksWithMeta(dashUrl, checkExt=True) )
+            
+        if 0 == len(urlsTab):
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, 'playlist:', ']')[1]
+            tmp = tmp.split('}')
+            printDBG(tmp)
+            for item in tmp:
+                url = self.cm.ph.getSearchGroups(item, '''['"]?file['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+                name = self.cm.ph.getSearchGroups(item, '''['"]?title['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+                printDBG(">>> url[%s]" % url)
+                printDBG(">>> name[%s]" % name)
+                if self.cm.isValidUrl(url) and url.split('?')[0].endswith('.m3u8'):
+                    tmpTab = getDirectM3U8Playlist(url, checkContent=True)
+                    for idx in range(len(tmpTab)):
+                        tmpTab[idx]['name'] = name + ' ' + tmpTab[idx]['name']
+                    urlsTab.extend(tmpTab)
         
         return urlsTab

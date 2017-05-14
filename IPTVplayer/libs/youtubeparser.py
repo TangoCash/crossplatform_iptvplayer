@@ -167,10 +167,25 @@ class YouTubeParser():
             if '' == time: sts, time = CParsingHelper.getDataBeetwenReMarkers(data[i], re.compile('pl-video-time"[^>]*?>'), re.compile('<'), False)
             if '' == time: sts, time = CParsingHelper.getDataBeetwenReMarkers(data[i], re.compile('timestamp"[^>]*?>'), re.compile('<'), False)
             time = time.strip()
+            
             # desc
-            sts,desc  = CParsingHelper.getDataBeetwenReMarkers(data[i], re.compile('class="video-description[^>]+?>'), re.compile('</p>'), False)
-            if '' == desc: sts,desc = CParsingHelper.getDataBeetwenReMarkers(data[i], re.compile('class="yt-lockup-description[^>]+?>'), re.compile('</div>'), False)
-            desc = CParsingHelper.removeDoubles(remove_html_markup(desc, ' '), ' ')
+            descTab = []
+            
+            desc = self.cm.ph.getDataBeetwenMarkers(data[i], '<div class="yt-lockup-meta', '</div>')[1]
+            if desc != '': descTab.append(desc)
+            desc = self.cm.ph.getDataBeetwenMarkers(data[i], '<span class="formatted-video-count', '</span>')[1]
+            if desc != '': descTab.append(desc)
+            
+            desc  = self.cm.ph.getDataBeetwenReMarkers(data[i], re.compile('class="video-description[^>]+?>'), re.compile('</p>'), False)[1]
+            if '' == desc: desc = self.cm.ph.getDataBeetwenReMarkers(data[i], re.compile('class="yt-lockup-description[^>]+?>'), re.compile('</div>'), False)[1]
+            if desc != '': descTab.append(desc)
+            
+            newDescTab = []
+            for desc in descTab:            
+                desc = self.cm.ph.removeDoubles(remove_html_markup(desc, ' '), ' ')
+                desc = clean_html(desc).strip()
+                if desc != '':
+                    newDescTab.append(desc)
             
             urlTmp = url.split(';')
             if len(urlTmp) > 0: url = urlTmp[0]
@@ -194,8 +209,7 @@ class YouTubeParser():
                             correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
 
                 title = clean_html(title)
-                desc  = clean_html(desc)
-                params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1], 'time': time, 'desc': desc}
+                params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1], 'time': time, 'desc': '[/br]'.join(newDescTab)}
                 currList.append(params)
 
         return currList
@@ -330,6 +344,42 @@ class YouTubeParser():
             return []
         return currList
     # end getVideosFromSearch
+    
+    ########################################################
+    # PLAYLISTS PARSER
+    ########################################################
+    def getListPlaylistsItems(self, url, category, page, cItem):
+        printDBG('YouTubeParser.getListPlaylistsItems page[%s]' % (page))
+        currList = []
+        try:
+            sts,data =  self.cm.getPage(url, {'host': self.HOST})
+            if sts:
+                #self.cm.ph.writeToFile('/mnt/new2/yt.html', data)
+                if '1' == page:
+                    sts,data = CParsingHelper.getDataBeetwenMarkers(data, '<div class="yt-lockup clearfix', 'footer-container')
+                else:
+                    data = json.loads(data)
+                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
+                    
+                # nextPage
+                match = re.search('data-uix-load-more-href="([^"]+?)"', data)
+                if not match: 
+                    nextPage = ""
+                else: 
+                    nextPage = match.group(1).replace('&amp;', '&')
+                
+                itemsTab = data.split('<div class="yt-lockup clearfix')
+                printDBG(itemsTab[0])
+                currList = self.parseListBase(itemsTab, 'playlist')
+                if '' != nextPage:
+                    item = dict(cItem)
+                    item.update({'title': 'Następna strona', 'page': str(int(page) + 1), 'url': 'http://www.youtube.com' + nextPage})
+                    currList.append(item)
+        except Exception:
+            printExc()
+            
+        return currList
+    # end getListPlaylistsItems
     
     
     ########################################################

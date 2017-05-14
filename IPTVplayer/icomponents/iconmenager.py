@@ -19,6 +19,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import threading
+from urlparse import urlparse, urljoin
 from binascii import hexlify
 from os import path as os_path, listdir, remove as removeFile, rename as os_rename, rmdir as os_rmdir
 from Components.config import config
@@ -252,17 +253,24 @@ class IconMenager:
         else:
             params['check_first_bytes'] = ['\xFF\xD8', '\xFF\xD9', '\x89\x50\x4E\x47','GIF87a','GIF89a']
         
-        if img_url.endswith('need_resolve.jpeg') and 'imdb.com' in urlparser.getDomain(img_url): 
+        if img_url.endswith('need_resolve.jpeg'):
+            domain = urlparser.getDomain(img_url)
             # link need resolve, at now we will have only one img resolver, 
             # we should consider add img resolver to urlparser if more will be needed
             sts, data = self.cm.getPage(img_url)
             if not sts: return False
-            img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="poster"', '</div>')[1]
-            img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
-            if not self.cm.isValidUrl(img_url):
-                img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="slate"', '</div>')[1]
+            if 'imdb.com' in domain:
+                img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="poster"', '</div>')[1]
                 img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
-                if not self.cm.isValidUrl(img_url): return False
+                if not self.cm.isValidUrl(img_url):
+                    img_url = self.cm.ph.getDataBeetwenMarkers(data, 'class="slate"', '</div>')[1]
+                    img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
+            elif 'bs.to' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getSearchGroups(data, '(<img[^>]+?alt="Cover"[^>]+?>)')[0]
+                img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
+                if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            if not self.cm.isValidUrl(img_url): return False
         else:
             img_url = strwithmeta(img_url)
             if img_url.meta.get('icon_resolver', None) is not None:

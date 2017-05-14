@@ -3412,9 +3412,14 @@ class pageParser:
                 vidTab.append({'name':label, 'url':url})
         return vidTab
         
-    def parserUSERSCLOUDCOM(self, url):
-        printDBG("parserUSERSCLOUDCOM url[%s]\n" % url)
-        sts, data = self.cm.getPage(url)
+    def parserUSERSCLOUDCOM(self, baseUrl):
+        printDBG("parserUSERSCLOUDCOM baseUrl[%s]\n" % baseUrl)
+        HTTP_HEADER = {'User-Agent': "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"}
+        COOKIE_FILE = GetCookieDir('userscloudcom.cookie')
+        rm(COOKIE_FILE)
+        params = {'header':HTTP_HEADER, 'cookiefile':COOKIE_FILE, 'use_cookie': True, 'save_cookie':True, 'load_cookie':True}
+        
+        sts, data = self.cm.getPage(baseUrl, params)
         
         errorTab = ['File Not Found', 'File was deleted']
         for errorItem in errorTab:
@@ -3433,7 +3438,27 @@ class pageParser:
         videoUrl = self.cm.ph.getSearchGroups(data, '''<source[^>]+?src=['"]([^'^"]+?)['"][^>]+?["']video''')[0]
         if self.cm.isValidUrl(videoUrl): return videoUrl
         
-        return False
+        sts, data = self.cm.ph.getDataBeetwenMarkers(data, 'method="POST"', '</Form>', False, False)
+        if not sts: return False
+        
+        post_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', data))
+        params['header']['Referer'] = baseUrl
+        params['return_data'] = False
+        
+        redirectUrl = False
+        sts, response = self.cm.getPage(baseUrl, params, post_data)
+        if sts:
+            try:
+                printDBG(response.geturl() )
+                printDBG(response.headers.maintype)
+                if 'text' not in response.headers.maintype:
+                    redirectUrl = response.geturl() 
+            except Exception:
+                printExc()
+            response.close()
+        
+        return redirectUrl
+        
         
     def parseTUNEPK(self, url):
         printDBG("parseTUNEPK url[%s]\n" % url)

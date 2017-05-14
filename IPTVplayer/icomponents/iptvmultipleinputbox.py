@@ -25,6 +25,7 @@ from Components.Input import Input
 from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Tools.LoadPixmap import LoadPixmap
 from enigma import gRGB
+from skin import parseColor
 ###################################################
 
 class IPTVVirtualKeyBoardWithCaptcha(VirtualKeyBoard):
@@ -53,7 +54,7 @@ class IPTVVirtualKeyBoardWithCaptcha(VirtualKeyBoard):
 
 class IPTVMultipleInputBox(Screen):
     DEF_INPUT_PARAMS = {'validator':None, 'title':'', 'useable_chars':None, 'label_font':'Regular;23', 'label_size':(550,25), 'input_font':'Regular;20', 'input_size':(550,25), 'input':dict(text="", maxSize = False, visible_width = False, type = Input.TEXT)}
-    DEF_PARAMS = {'title':_("Input"), 'accep_label':_("Save"), 'list':[]}
+    DEF_PARAMS = {'title':_("Input"), 'with_accept_button':False, 'accep_label':_("Save"), 'list':[]}
     def __init__(self, session, params={}):
         
         # Skin generator
@@ -64,6 +65,8 @@ class IPTVMultipleInputBox(Screen):
         skinItems = ''
         self.icons = []
         self.list = params['list']
+        self.withAcceptButton = params.get('with_accept_button', False)
+        self.statusText = params.get('status_text', '')
         
         # calcl maxWidth size
         for idx in range(len(self.list)):
@@ -71,6 +74,11 @@ class IPTVMultipleInputBox(Screen):
             if item['label_size'][0] > maxWidth: maxWidth = item['label_size'][0]
             if item['input_size'][0] > maxWidth: maxWidth = item['input_size'][0]
         maxWidth += pX*2
+        
+        if len(self.statusText):
+            skinItems = '<widget name="statustext"   position="10,%d"  zPosition="2" size="%d,80"  valign="center" halign="center" font="Regular;22" transparent="1" />' % (pY+dY, maxWidth-20)
+            pY += 80 + dY*2
+            
         
         for idx in range(len(self.list)):
             item = self.list[idx]
@@ -98,7 +106,10 @@ class IPTVMultipleInputBox(Screen):
             skinItems +=  '<widget name="marker_%d" zPosition="1" position="10,%d" size="16,16" transparent="1" alphatest="blend" />' % (idx, pY + (item['input_size'][1]-16) / 2)
             self['marker_%d'%idx] = Cover3()
             pY += dY*2 + item['input_size'][1]
-        
+            
+        if self.withAcceptButton:
+            skinItems += '<widget name="accept_button"  position="10,%d"  zPosition="2" size="%d,50"  valign="center" halign="center" font="Regular;22" foregroundColor="#00FFFFFF" backgroundColor="#FFFFFFFF" />' % (pY, maxWidth-20)
+            pY += dY*2 + 50
         self.skin = """
         <screen name="IPTVMultipleInputBox" position="center,center" size="%d,%d" title="%s">
             <widget name="key_red"   position="10,10" zPosition="2" size="%d,35" valign="center" halign="left"   font="Regular;22" transparent="1" foregroundColor="red" />
@@ -111,6 +122,10 @@ class IPTVMultipleInputBox(Screen):
         self["key_green"] = Label(params.get('accep_label', _("Save")))
         self["key_ok"]    = Label(_("OK"))
         self["key_red"]   = Label(_("Cancel"))
+        if len(self.statusText):
+            self["statustext"] = Label(str(self.statusText))
+        if self.withAcceptButton:
+            self["accept_button"] = Label(params.get('accep_label', _("Verify")))
     
         Screen.__init__(self, session)
         self.onShown.append(self.onStart)
@@ -188,34 +203,63 @@ class IPTVMultipleInputBox(Screen):
         if not self.started: return
         prevIdx = self.idx
         self.idx -= 1
-        if self.idx < 0: self.idx = len(self.list) - 1
-        self.activeInput = "input_%d" % self.idx
-        self.setKeyboardMode()
+        if self.idx < 0: 
+            if self.withAcceptButton:
+                self.idx = len(self.list)
+            else:
+                self.idx = len(self.list) - 1
+        if self.idx  < len(self.list):
+            self.activeInput = "input_%d" % self.idx
+            self.setKeyboardMode()
+        else:
+            self.activeInput = ''
         self.setMarker(prevIdx)
 
     def keyDown(self):
         if not self.started: return
         prevIdx = self.idx
         self.idx += 1
-        if self.idx >= len(self.list): self.idx = 0
-        self.activeInput = "input_%d" % self.idx
-        self.setKeyboardMode() 
+        if self.idx >= len(self.list):
+            if self.idx == len(self.list) and self.withAcceptButton:
+                self.idx = len(self.list)
+            else:
+                self.idx = 0
+        if self.idx  < len(self.list):
+            self.activeInput = "input_%d" % self.idx
+            self.setKeyboardMode()
+        else:
+            self.activeInput = ''
         self.setMarker(prevIdx)
         
     def setMarker(self, prevIdx=None):
+        if self.withAcceptButton:
+            if self.idx == len(self.list):
+                self['accept_button'].instance.setForegroundColor( parseColor("#000000") )
+                self['accept_button'].instance.setBackgroundColor( parseColor("#32CD32") )
+            else:
+                self['accept_button'].instance.setForegroundColor( parseColor("#FFFFFF") )
+                self['accept_button'].instance.setBackgroundColor( parseColor("#FFFFFFFF") )
+        
         if "marker" in self:
-            x, y = self["marker_%d"%self.idx].getPosition()
-            self["marker"].setPosition(x, y)
+            if self.idx < len(self.list):
+                x, y = self["marker_%d"%self.idx].getPosition()
+                self["marker"].setPosition(x, y)
+                self["marker"].show()
+            else:
+                self["marker"].hide()
         try:
             if None != prevIdx: 
-                self["border_%d"%prevIdx].hide()
+                if prevIdx < len(self.list):
+                    self["border_%d"%prevIdx].hide()
             else:
                 for idx in range(len(self.list)):
                     self["border_%d"%idx].hide()
-            self["border_%d"%self.idx].show()
+            if self.idx < len(self.list):
+                self["border_%d"%self.idx].show()
         except Exception: printExc()
         
     def setKeyboardMode(self):
+        if self.activeInput == '': return
         
         rcinput = eRCInput.getInstance()
         printDBG("setKeyboardMode current_mode[%r] ASCI[%r] none[%r] type_text[%r] intput_type[%r]" % (rcinput.getKeyboardMode(), rcinput.kmAscii, rcinput.kmNone, Input.TEXT, self[self.activeInput].type))
@@ -227,18 +271,23 @@ class IPTVMultipleInputBox(Screen):
             rcinput.setKeyboardMode(rcinput.kmNone)
 
     def gotAsciiCode(self):
+        if self.activeInput == '': return
         self[self.activeInput].handleAscii(getPrevAsciiCode())
 
     def keyLeft(self):
+        if self.activeInput == '': return
         self[self.activeInput].left()
 
     def keyRight(self):
+        if self.activeInput == '': return
         self[self.activeInput].right()
 
     def keyNumberGlobal(self, number):
+        if self.activeInput == '': return
         self[self.activeInput].number(number)
 
     def keyDelete(self):
+        if self.activeInput == '': return
         self[self.activeInput].delete()
 
     def keySave(self):
@@ -256,6 +305,10 @@ class IPTVMultipleInputBox(Screen):
         self.close(retList)
         
     def keyOK(self):
+        if self.idx == len(self.list):
+            self.keySave()
+            return
+        
         def VirtualKeyBoardCallBack(newTxt):
             if isinstance(newTxt, basestring): self[self.activeInput].setText( newTxt )
             self.setKeyboardMode()
@@ -284,16 +337,21 @@ class IPTVMultipleInputBox(Screen):
         self.close(None)
 
     def keyHome(self):
+        if self.activeInput == '': return
         self[self.activeInput].home()
 
     def keyEnd(self):
+        if self.activeInput == '': return
         self[self.activeInput].end()
 
     def keyBackspace(self):
+        if self.activeInput == '': return
         self[self.activeInput].deleteBackward()
 
     def keyTab(self):
+        if self.activeInput == '': return
         self[self.activeInput].tab()
 
     def keyInsert(self):
+        if self.activeInput == '': return
         self[self.activeInput].toggleOverwrite()

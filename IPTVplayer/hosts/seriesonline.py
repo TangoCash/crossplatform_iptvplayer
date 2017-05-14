@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm, GetDefaultLang
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -24,7 +24,9 @@ import base64
 from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
+from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v1 import UnCaptchaReCaptcha
 ###################################################
 
 
@@ -90,6 +92,53 @@ class SeriesOnlineIO(CBaseHostClass):
                 return urlparse.urljoin(baseUrl, url)
             
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        if not sts: return sts, data
+        if 'Incapsula_Resource' in data and ('Incapsula incident ID' in data or 'jsTest.html' in data):
+            domainUrl = self.up.getDomain(baseUrl, False)
+        
+            tmpUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0].replace(' ', '%20')
+            if tmpUrl.startswith('//'): tmpUrl = 'https:' + tmpUrl
+            tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
+            tmpParams = deepcopy(addParams)
+            tmpParams['header']['Referer'] = domainUrl
+            sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
+            tries = 0
+            while tries < 6:
+                tries += 1
+                if tries > 1: time.sleep(1)
+                tmpParams = deepcopy(addParams)
+                sts, tmpData = self.cm.getPage(domainUrl, tmpParams)
+                if not sts: return False, None
+                tmpUrl = self.cm.ph.getSearchGroups(tmpData, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0].replace(' ', '%20')
+                tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
+                if 'Incapsula_Resource' in tmpUrl:
+                    break
+                else:
+                    if tmpUrl.startswith('//'): tmpUrl = 'https:' + tmpUrl
+                    tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
+                    tmpParams['header']['Referer'] = domainUrl
+                    sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
+            
+            printDBG("========================================================================")
+            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
+            if not sts: return False, None
+            
+            sitekey = self.cm.ph.getSearchGroups(tmpData, 'challenge\?k=([^"]+?)"')[0]
+            if sitekey != '':
+                recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
+                recaptcha.HTTP_HEADER['Referer'] = tmpUrl
+                recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
+                token = recaptcha.processCaptcha(sitekey)
+                if token == '':
+                    return False, 'NOT OK'
+                tmp_post_data = {'g-recaptcha-response_field':'', 'recaptcha_challenge_field':token, 'recaptcha_response_field':'manual_challenge'}
+            
+                tmpData  = self.cm.ph.getDataBeetwenMarkers(tmpData, '<form', '</form>', False)[1]
+                tmpUrl   = _getFullUrl(self.cm.ph.getSearchGroups(tmpData, '''action=['"]([^'^"]+?)['"]''')[0]).replace(' ', '%20')
+                sts, tmpData = self.cm.getPage(tmpUrl, tmpParams, tmp_post_data)
+                if not sts: return False, None
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
@@ -107,7 +156,7 @@ class SeriesOnlineIO(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['https://123movieshd.io/', 'https://seriesonline.io/']
+        domains = ['https://123movieshd.tv/', 'https://seriesonline.io/']
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -128,7 +177,7 @@ class SeriesOnlineIO(CBaseHostClass):
                 break
                 
         if self.MAIN_URL == None:
-            self.MAIN_URL = 'https://123movieshd.io/' # first domain is default one
+            self.MAIN_URL = 'https://seriesonline.io/'
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
@@ -237,12 +286,14 @@ class SeriesOnlineIO(CBaseHostClass):
             title = title.replace('EPISODE', ' ')
             title = title.replace(' 0', ' ')
             if 'TRAILER' not in title: title = 'Episode ' + title
+            title = self.cm.ph.removeDoubles(title, ' ')
             if title not in episodeKeys:
                 episodeLinks[title] = []
                 episodeKeys.append(title)
             item['name'] = item['server_title']
             try: key = int(title)
             except Exception: key = title
+            printDBG("key [%s]" % key)
             episodeLinks[key].append(item)
         
         seasonNum = self.cm.ph.getSearchGroups(cItem['url']+'|', '''-season-([0-9]+?)[^0-9]''', 1, True)[0]
@@ -321,6 +372,11 @@ class SeriesOnlineIO(CBaseHostClass):
         
         sts, data = self.getPage(videoUrl, self.defaultParams)
         if not sts: return []
+        
+        tmpVideoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
+        if self.cm.isValidUrl(tmpVideoUrl):
+            tab = self.up.getVideoLinkExt(tmpVideoUrl)
+            if len(tab): return tab
         
         
         subTracks = []

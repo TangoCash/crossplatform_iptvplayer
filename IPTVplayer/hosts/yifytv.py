@@ -44,13 +44,13 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'yify.tv'
+    return 'http://yify.bz/'
 
 class YifyTV(CBaseHostClass):
     HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    MAIN_URL    = 'http://yify.tv/'
+    MAIN_URL    = 'http://yify.bz/'
     SRCH_URL    = MAIN_URL + '?s='
     DEFAULT_ICON= MAIN_URL + 'wp-content/themes/yifybootstrap3/img/logo3s.png'
     
@@ -366,7 +366,7 @@ class YifyTV(CBaseHostClass):
             subLangs = subLangs.split(',')
             for lang in subLangs:
                 if subID != '':
-                    sub_tracks.append({'title':lang, 'url':'http://yify.tv/player/bajarsub.php?%s_%s' % (subID, lang), 'lang':lang, 'format':'srt'})
+                    sub_tracks.append({'title':lang, 'url':'http://yify.bz/player/bajarsub.php?%s_%s' % (subID, lang), 'lang':lang, 'format':'srt'})
         
         data = data.split('&')
         idx = 1
@@ -418,7 +418,7 @@ class YifyTV(CBaseHostClass):
             souTab.append('pic')
         for sou in souTab:
             post_data = {'fv':'18', 'url':baseUrl, 'sou':sou}
-            url = 'http://yify.tv/playerlite/pk/pk/plugins/player_p2.php'
+            url = 'http://yify.bz/playerlite/pk/pk/plugins/player_p2.php'
             sts, data = self.cm.getPage(url, {'header':header}, post_data)
             if not sts: return []
             #printDBG('>>>>>>>>>>>>>>>>>>>>>>>\n%s\n<<<<<<<<<<<<<<<' % data)
