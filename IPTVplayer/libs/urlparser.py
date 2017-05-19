@@ -417,6 +417,7 @@ class urlparser:
                        'filez.tv':             self.pp.parserFILEZTV        ,
                        'wiiz.tv':              self.pp.parserWIIZTV         ,
                        'tunein.com':           self.pp.parserTUNEINCOM      ,
+                       'speedvid.net':         self.pp.parserSPEEDVIDNET    ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -806,6 +807,16 @@ class pageParser:
         self.COOKIE_PATH = GetCookieDir('')
         #self.hd3d_login = config.plugins.iptvplayer.hd3d_login.value
         #self.hd3d_password = config.plugins.iptvplayer.hd3d_password.value
+        
+    def getPageCF(self, baseUrl, addParams = {}, post_data = None):
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url):
+                return url
+            else:
+                return urljoin(baseUrl, url)
+        addParams['cloudflare_params'] = {'domain':urlparser.getDomain(baseUrl), 'cookie_file':addParams['cookiefile'], 'User-Agent':addParams['header']['User-Agent'], 'full_url_handle':_getFullUrl}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        return sts, data
     
     def getYTParser(self):
         if self.ytParser == None:
@@ -872,8 +883,13 @@ class pageParser:
             printDBG('+++++++++++++++++++++++++++')
             printDBG(item)
             
-            if 'mp4' in item:
+            if 'flv' in item:
+                if name == '': name = '[FLV]'
+                urlTab.insert(0, {'name':name, 'url':url})
+            elif 'mp4' in item:
+                if name == '': name = '[MP4]'
                 urlTab.append({'name':name, 'url':url})
+            
         return urlTab
         
     def _findLinks(self, data, serverName='', linkMarker=r'''['"]?file['"]?[ ]*:[ ]*['"](http[^"^']+)['"][,}]''', m1='sources', m2=']', contain='', meta={}):
@@ -942,16 +958,20 @@ class pageParser:
         refUrl = strwithmeta(baseUrl).meta.get('Referer', baseUrl)
         HTTP_HEADER = { 'User-Agent':"Mozilla/5.0", 'Referer':refUrl }
         HTTP_HEADER.update(httpHeader)
+        
         if 'embed' not in baseUrl:
             video_id = self.cm.ph.getSearchGroups(baseUrl+'/', '/([A-Za-z0-9]{12})[/.]')[0]
             url = embedUrl.format(video_id)
         else:
             url = baseUrl
+        
         params = dict(params)
         params.update({'header':HTTP_HEADER})
         post_data = None
         
-        sts, data = self.cm.getPage(url, params, post_data)
+        if params.get('cfused', False): sts, data = self.getPageCF(url, params, post_data)
+        else: sts, data = self.cm.getPage(url, params, post_data)
+        
         if not sts: sts, data = self.cm.getPageWithWget(url, params, post_data)
         if not sts: return False
         
@@ -980,6 +1000,7 @@ class pageParser:
             tmpData = unpackJSPlayerParams(data2, VIDUPME_decryptPlayerParams)
             if tmpData == '':
                 tmpData = unpackJSPlayerParams(data2, VIDUPME_decryptPlayerParams, 0)
+                
             if None != tmpData:
                 data = data + tmpData
         printDBG("Data: " + data)
@@ -2547,6 +2568,14 @@ class pageParser:
         #    return self._findLinks(data, 'vidup.me', m1='setup(', m2='image:')
         return self._parserUNIVERSAL_A(baseUrl, 'http://vidup.me/embed-{0}-640x360.html', self._findLinks)
         
+    def parserSPEEDVIDNET(self, baseUrl):
+        printDBG("parserSPEEDVIDNET baseUrl[%r]" % baseUrl)
+        def _findLinks(data):
+            data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''jwplayer\(\s*['"]vplayer['"]\s*\)\.setup'''), re.compile(';'))[1]
+            return self._findLinks(data, 'speedvid.net')
+        defaultParams = {'cfused':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': GetCookieDir('speedvidnet.cookie')}
+        return self._parserUNIVERSAL_A(baseUrl, 'http://www.speedvid.net/embed-{0}-540x360.html', _findLinks, params=defaultParams)
+        
     def parserVIDLOXTV(self, baseUrl):
         printDBG("parserVIDLOXTV baseUrl[%r]" % baseUrl)
         # example video: http://vidlox.tv/embed-e9r0y7i65i1v.html
@@ -2867,7 +2896,7 @@ class pageParser:
             if 'This video is only available on Mail.Ru' in data:
                 tmpUrl = self.cm.ph.getSearchGroups(data, 'href="([^"]+?)"')[0]
                 sts, data = self.cm.getPage(tmpUrl)
-            metadataUrl =  self.cm.ph.getSearchGroups(data, """["']*metadataUrl["']*[ ]*:[ ]*["'](http[^"']+?\.json[^"']*?)["']""")[0]
+            metadataUrl =  self.cm.ph.getSearchGroups(data, """["']*metadataUrl["']*[ ]*:[ ]*["']((?:https?\:)?//[^"']+?[^"']*?)["']""")[0]
             if '' == metadataUrl:
                 tmp =  self.cm.ph.getSearchGroups(data, """["']*metadataUrl["']*[ ]*:[ ]*["'][^0-9]*?([0-9]{19})[^0-9]*?["']""")[0]
                 if '' == tmp:
@@ -2875,12 +2904,15 @@ class pageParser:
                     if '' == tmp: tmp = self.cm.ph.getSearchGroups(data, '<link[^>]*?href="([^"]+?)"[^>]*?rel="image_src"[^>]*?')[0]
                     tmp = self.cm.ph.getSearchGroups(urllib.unquote(tmp), '[^0-9]([0-9]{19})[^0-9]')[0]
                 metadataUrl = 'http://videoapi.my.mail.ru/videos/{0}.json?ver=0.2.102'.format(tmp)
+            if metadataUrl.startswith('//'): metadataUrl = 'http:' + metadataUrl
             sts, data = self.cm.getPage(metadataUrl, {'cookiefile': COOKIEFILE, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True})
             video_key = self.cm.getCookieItem(COOKIEFILE,'video_key')
             if '' != video_key:
-                data = json.loads(data)['videos']
+                data = byteify(json.loads(data)['videos'])
                 for item in data:
-                    videoUrl = strwithmeta(item['url'].encode('utf-8'), {'Cookie':"video_key=%s" % video_key, 'iptv_buffering':'required'})
+                    videoUrl = item['url']
+                    if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+                    videoUrl = strwithmeta(videoUrl, {'Cookie':"video_key=%s" % video_key, 'iptv_buffering':'required'})
                     videoName = 'mail.ru: %s' % item['key'].encode('utf-8')
                     movieUrls.append({ 'name': videoName, 'url': videoUrl}) 
         except Exception:
@@ -7370,22 +7402,37 @@ class pageParser:
                        'Cookie':'_flashVersion=18',
                        'X-Requested-With':'XMLHttpRequest'}
         
+        metadataUrl = ''
         if 'videoPlayerMetadata' not in baseUrl:
             sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
             if not sts: return False
-            data = self.cm.ph.getSearchGroups(data, '''data-options=['"]([^'^"]+?)['"]''')[0]
-            data = clean_html(data)
-            data = byteify(json.loads(data))
-            data = byteify(json.loads(data['flashvars']['metadata']))
+            tmpTab = re.compile('''data-options=['"]([^'^"]+?)['"]''').findall(data)
+            for tmp in tmpTab:
+                tmp = clean_html(tmp)
+                tmp = byteify(json.loads(tmp))
+                printDBG("==============================================================")
+                printDBG(tmp)
+                printDBG("==============================================================")
+                
+                tmp = tmp['flashvars']
+                if 'metadata' in tmp:
+                    data = byteify(json.loads(tmp['metadata']))
+                    metadataUrl = ''
+                    break
+                else:
+                    metadataUrl = urllib.unquote(tmp['metadataUrl'])
         else:
-            url = baseUrl
+            metadataUrl = baseUrl
+        
+        if metadataUrl != '':
+            url = metadataUrl
             sts, data = self.cm.getPage(url, {'header':HTTP_HEADER})
             if not sts: return False
             data = byteify(json.loads(data))
         
         urlsTab = []
         for item in data['videos']:
-            url = item['url'].replace('&ct=4&', '&ct=0&') #+ '&bytes'#=0-7078'
+            url = item['url'] #.replace('&ct=4&', '&ct=0&') #+ '&bytes'#=0-7078'
             url = strwithmeta(url, {'Referer':baseUrl, 'User-Agent':HTTP_HEADER['User-Agent']})
             urlsTab.append({'name':item['name'], 'url':url})
         urlsTab = urlsTab[::-1]
@@ -7401,7 +7448,10 @@ class pageParser:
                 if url.endswith('/'):
                     linksTab[idx]['url'] = strwithmeta(url+'playlist.m3u8', meta)
                     
-            try: urlsTab.extend(sorted(linksTab, key=lambda item: -1 * int(item.get('bitrate', 0))))
+            try:
+                tmpUrlTab = sorted(linksTab, key=lambda item: -1 * int(item.get('bitrate', 0)))
+                tmpUrlTab.extend(urlsTab)
+                urlsTab = tmpUrlTab
             except Exception:  printExc()
         return urlsTab
         
@@ -7560,6 +7610,9 @@ class pageParser:
         url = _EMBED_URL % (video_host, video_id)
         sts, data = self.cm.getPage(url)
         if not sts: return False
+        
+        urlTab = self._getSources(data)
+        if len(urlTab): return urlTab
 
         file_key = self.cm.ph.getSearchGroups(data, r'key\s*:\s*"([^"]+)"')[0]
         if '' == file_key:

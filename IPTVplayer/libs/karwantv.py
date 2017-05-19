@@ -110,7 +110,11 @@ class KarwanTvApi(CBaseHostClass):
             
         if 0 == len(urlsTab):
             tmp = self.cm.ph.getDataBeetwenMarkers(data, 'playlist:', ']')[1]
-            tmp = tmp.split('}')
+            if tmp != "":
+                tmp = tmp.split('}')
+            else:
+                tmp = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ';')[1]
+                tmp = [tmp]
             printDBG(tmp)
             for item in tmp:
                 url = self.cm.ph.getSearchGroups(item, '''['"]?file['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]

@@ -6,6 +6,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, remove_html_markup, CSelOneLink, IsExecutable, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
@@ -196,9 +197,11 @@ class Youtube(CBaseHostClass):
         
         videoUrls = []
         for item in tmpTab:
-            videoUrls.append({'name': item['format'] + ' | ' + item['ext'] , 'url':item['url']})
+            url = strwithmeta(item['url'], {'youtube_id':item.get('id', '')})
+            videoUrls.append({'name': item['format'] + ' | ' + item['ext'] , 'url':url})
         for item in dashTab:
-            videoUrls.append({'name': _("[dash] ") + item['format'] + ' | ' + item['ext'] , 'url':item['url']})
+            url = strwithmeta(item['url'], {'youtube_id':item.get('id', '')})
+            videoUrls.append({'name': _("[dash] ") + item['format'] + ' | ' + item['ext'] , 'url':url})
         return videoUrls
         
     def getFavouriteData(self, cItem):

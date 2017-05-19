@@ -5,7 +5,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -295,6 +295,7 @@ class SerialeNet(CBaseHostClass):
                         videoUrl = self.cm.ph.getSearchGroups(data2, '''src[^'"]*?['"](http[^'"]+?)['"]''')[0]
                         data2 = None
                     if videoUrl.startswith('http') and videoUrl != 'http://serialnet.pl/':
+                        videoUrl = byteify(json.loads('"%s"' % videoUrl))
                         videoUrlTab.append({'name':item['title'], 'url':videoUrl})
                     else:
                         data = self.cm.ph.getDataBeetwenMarkers(data, 'on("error"', '}', False)[1]
