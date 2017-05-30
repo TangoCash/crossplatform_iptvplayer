@@ -236,7 +236,7 @@ class KreskowkaZonePL(CBaseHostClass):
                 else:
                     videoUrl = tmp
                     break
-        
+        videoUrl = videoUrl.replace('&amp;', '&')
         if self.cm.isValidUrl(videoUrl):
             return self.up.getVideoLinkExt(videoUrl)
         

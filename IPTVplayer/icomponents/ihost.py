@@ -559,8 +559,18 @@ class CBaseHostClass:
             from Screens.MessageBox import MessageBox
             import sys
             if sys.version_info < pyVer:
-                message = _('This service requires a new Enigma2 image with a Python version %s or later.') % ('.'.join(str(x) for x in pyVer))
-                self.sessionEx.waitForFinishOpen(MessageBox, message, type = MessageBox.TYPE_INFO, timeout = 10)
+                hasSNI = False
+                try:
+                    from ssl import wrap_socket
+                    from inspect import getargspec
+                    if 'server_hostname' in '%s' % [getargspec(wrap_socket)]:
+                        hasSNI = True
+                except Exception:
+                    pass
+                if not hasSNI:
+                    message = _('This service requires a new Enigma2 image with a Python version %s or later.') % ('.'.join(str(x) for x in pyVer))
+                    message += '\n' + _('You can also install SNI patch for you python if available.')
+                    self.sessionEx.waitForFinishOpen(MessageBox, message, type = MessageBox.TYPE_INFO, timeout = 10)
         except Exception:
             printExc()
     

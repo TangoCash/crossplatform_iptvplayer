@@ -27,7 +27,7 @@ HostsList={
       {id="filma24hdcom", title="filma24hd.com", type="py"},
       {id="filmezz", title="filmezz.eu", type="py"},
       {id="filmovizijastudio", title="filmovizija.ws", type="py"},
-      {id="filmstreamvkcom", title="filmstreamvk.com", type="py"},
+      {id="filmstreamvkcom", title="filmstreamvk.ws", type="py"},
       {id="filmy3deu", title="filmy3d.eu", type="py"},
       {id="filmydokumentalneeu", title="FilmyDokumentalne.eu", type="py"},
       {id="filmyto", title="filmy.to", type="py"},

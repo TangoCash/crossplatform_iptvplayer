@@ -7,6 +7,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 ###################################################
 
 ###################################################
@@ -62,7 +63,7 @@ def GetConfigList():
     optionList.append(getConfigListEntry("Domyślna jakość wideo",           config.plugins.iptvplayer.tvpVodDefaultformat))
     optionList.append(getConfigListEntry("Używaj domyślnej jakości wideo:", config.plugins.iptvplayer.tvpVodUseDF))
     optionList.append(getConfigListEntry("Korzystaj z proxy?",              config.plugins.iptvplayer.tvpVodProxyEnable))
-    optionList.append(getConfigListEntry("Więcej jako następna strona",     config.plugins.iptvplayer.tvpVodNextPage))
+    #optionList.append(getConfigListEntry("Więcej jako następna strona",     config.plugins.iptvplayer.tvpVodNextPage))
     return optionList
 ###################################################
 
@@ -70,26 +71,31 @@ def gettytul():
     return 'vod.tvp.pl'
 
 class TvpVod(CBaseHostClass):
-    DEFAULT_ICON_URL = 'http://sd-xbmc.org/repository/xbmc-addons/tvpvod.png'
+    DEFAULT_ICON_URL = 'https://s.tvp.pl/files/vod.tvp.pl/img/menu/logo_vod.png' #'http://sd-xbmc.org/repository/xbmc-addons/tvpvod.png'
     PAGE_SIZE = 12
     ALL_FORMATS = [{"video/mp4":"mp4"}, {"application/x-mpegurl":"m3u8"}, {"video/x-ms-wmv":"wmv"}] 
     REAL_FORMATS = {'m3u8':'ts', 'mp4':'mp4', 'wmv':'wmv'}
-    MAIN_VOD_URL = "http://vod.tvp.pl/"
+    MAIN_VOD_URL = "https://vod.tvp.pl/"
     LOGIN_URL = "https://www.tvp.pl/sess/ssologin.php"
     STREAMS_URL_TEMPLATE = 'http://www.api.v3.tvp.pl/shared/tvpstream/listing.php?parent_id=13010508&type=epg_item&direct=false&filter={%22release_date_dt%22:%22[iptv_date]%22,%22epg_play_mode%22:{%22$in%22:[0,1,3]}}&count=-1&dump=json'
     SEARCH_VOD_URL = MAIN_VOD_URL + 'szukaj?query=%s'
     IMAGE_URL = 'http://s.v3.tvp.pl/images/%s/%s/%s/uid_%s_width_500_gs_0.%s'
     HTTP_HEADERS = {}
     
-    VOD_CAT_TAB  = [{'icon':DEFAULT_ICON_URL, 'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'streams',             'title':'TVP na żywo',               'url':'http://tvpstream.tvp.pl/'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'vods_list_items1',    'title':'Polecamy',                  'url':MAIN_VOD_URL},
-                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Polecane',                  'marker':'Polecane'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'VOD',                       'marker':'VOD'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Programy',                  'marker':'Programy'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
-                    {'icon':DEFAULT_ICON_URL, 'category':'search',          'title':_('Search'), 'search_item':True},
-                    {'icon':DEFAULT_ICON_URL, 'category':'search_history',  'title':_('Search history')} ]
+    
+    VOD_CAT_TAB  = [{'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
+                    {'category':'streams',             'title':'TVP na żywo',               'url':'http://tvpstream.tvp.pl/'},
+                    {'category':'vods_explore_item',   'title':'Przegapiłeś w TV?',         'url':MAIN_VOD_URL + 'przegapiles-w-tv'},
+                    {'category':'vods_list_cats',      'title':'Katalog',                   'url':MAIN_VOD_URL},
+                    #{'category':'vods_explore_item',   'title':'Programy',                  'url':MAIN_VOD_URL + 'category/programy,4934948'},
+                    
+                    #{'category':'vods_list_items1',    'title':'Polecamy',                  'url':MAIN_VOD_URL},
+                    #{'category':'vods_sub_categories', 'title':'Polecane',                  'marker':'Polecane'},
+                    #{'category':'vods_sub_categories', 'title':'VOD',                       'marker':'VOD'},
+                    #{'category':'vods_sub_categories', 'title':'Programy',                  'marker':'Programy'},
+                    #{'category':'vods_sub_categories', 'title':'Informacje i publicystyka', 'marker':'Informacje i publicystyka'},
+                    {'category':'search',          'title':_('Search'), 'search_item':True},
+                    {'category':'search_history',  'title':_('Search history')} ]
                     
     STREAMS_CAT_TAB = [{'icon':DEFAULT_ICON_URL, 'category':'tvp3_streams', 'title':'TVP 3',     'url':'http://tvpstream.tvp.pl/', 'icon':'http://ncplus.pl/~/media/n/npl/kanaly/logo%20na%20strony%20kanalow/tvp3.png?bc=white&w=480'},
                        {'icon':DEFAULT_ICON_URL, 'category':'week_epg',     'title':'TVP SPORT', 'url':STREAMS_URL_TEMPLATE,       'icon':'https://upload.wikimedia.org/wikipedia/commons/9/9d/TVP_Sport_HD_Logo.png'},
@@ -160,11 +166,14 @@ class TvpVod(CBaseHostClass):
     def _getFullUrl(self, url, baseUrl=None):
         if None == baseUrl: baseUrl = TvpVod.MAIN_VOD_URL
         if 0 < len(url) and not url.startswith('http'):
-            if not baseUrl.endswith('/'):
-                baseUrl += '/'
-            if url.startswith('/'):
-                url = url[1:]
-            url =  baseUrl + url
+            if url.startswith('//'):
+                url = 'http:' + url
+            else:
+                if not baseUrl.endswith('/'):
+                    baseUrl += '/'
+                if url.startswith('/'):
+                    url = url[1:]
+                url =  baseUrl + url
         return url
         
     def getFormatFromBitrate(self, bitrate):
@@ -365,6 +374,167 @@ class TvpVod(CBaseHostClass):
             else:
                 params['title'] = _('More')
                 self.addMore(params)
+                
+    def listCatalog(self, cItem, nextCategory):
+        printDBG("TvpVod.listCatalog")
+        sts, data = self._getPage(cItem['url'], self.defaultParams)
+        if not sts: return []
+
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="subMenu">', '</ul>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            url = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+            if not self.cm.isValidUrl(url): continue
+            params = dict(cItem)
+            params.update({'good_for_fav': False, 'skip_sub_filter_id':-1, 'category':nextCategory, 'title':self.cleanHtmlStr(item).title(), 'url':url, 'desc':''})
+            self.addDir(params)
+            
+    def mapHoeverItem(self, cItem, item, nextCategory):
+        try:
+            item = byteify(json.loads(item))
+            title = self.getJItemStr(item, 'title')
+            icon = self._getFullUrl(self.getJItemStr(item, 'image'))
+            tmp = []
+            for key in ['transmision', 'antena', 'age']:
+                val = self.getJItemStr(item, key)
+                if val != '': tmp.append(val)
+            desc = ' | '.join(tmp)
+            desc += '[/br]' + self.getJItemStr(item, 'description')
+            
+            params = {'good_for_fav': True, 'skip_sub_filter_id':-1, 'icon':icon, 'desc':self.cleanHtmlStr(desc)}
+            seriesLink = self._getFullUrl(self.getJItemStr(item, 'seriesLink'))
+            episodeUrl = self._getFullUrl(self.getJItemStr(item, 'episodeLink'))
+            
+            if self.cm.isValidUrl(episodeUrl) and  '/video/' in episodeUrl:
+                title += ' ' + self.getJItemStr(item, 'episodeCount')
+                params.update({'title':title, 'url':episodeUrl})
+                self.addVideo(params)
+            else:
+                params.update({'category':nextCategory, 'title':title, 'url':seriesLink})
+                self.addDir(params)
+            
+            printDBG("======================")
+            printDBG(item)
+        except Exception:
+            printExc()
+                
+    def exploreVODItem(self, cItem, nextCategory):
+        printDBG("TvpVod.exploreVODItem")
+        
+        sts, data = self._getPage(cItem['url'], self.defaultParams)
+        if not sts: return []
+        
+        if '/szukaj?query=' in cItem['url']:
+            isSearch = True
+        else:
+            isSearch = False
+            
+        printDBG(">>>>>>>>>>>>. isSearch [%s]" % isSearch)
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<section class="episodes"', '</h1>')[1]
+        if self.cleanHtmlStr(tmp) == "Odcinki":
+            url = self._getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+            if self.cm.isValidUrl(url):
+                cItem = dict(cItem)
+                cItem['url'] = url
+                sts, data = self._getPage(cItem['url'], self.defaultParams)
+                if not sts: return []
+        
+        data = re.sub("<!--[\s\S]*?-->", "", data)
+        
+        page = cItem.get('page', 1)
+        lastPage = self.cm.ph.getDataBeetwenMarkers(data, '<li class="lastItem"', '</li>')[1]
+        lastPage = self.cm.ph.getSearchGroups(lastPage, '''<a[^>]+?href\s*=\s*['"][^'^"]*?page=([0-9]+?)[^0-9]''')[0]
+        if lastPage != '' and page < int(lastPage):
+            nextPageUrl = self.cm.ph.getDataBeetwenMarkers(data, '<li class="next"', '</li>')[1]
+            nextPageUrl = self._getFullUrl(self.cm.ph.getSearchGroups(nextPageUrl, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+        else: nextPageUrl = ''
+        
+        skipSubFilterId = cItem.get('skip_sub_filter_id', -1)
+        if cItem.get('filtered_by_antena', False): skipSubFilterId = 1
+        
+        sectionsData = self.cm.ph.getDataBeetwenMarkers(data, '<section', '<footer>')[1]
+        sectionsData = sectionsData.split('<section')
+        if len(sectionsData): del sectionsData[0]
+        
+        subFiltersData = self.cm.ph.getAllItemsBeetwenMarkers(data, 'sortBoxDesktop', '</ul>')
+        subFiltersData.reverse()
+        for idx in range(len(subFiltersData)):
+            if idx <= skipSubFilterId: continue
+            subFilterData = self.cm.ph.getAllItemsBeetwenMarkers(subFiltersData[idx], '<li', '</li>')
+            for item in subFilterData:
+                url = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                if not self.cm.isValidUrl(url): continue
+                params = dict(cItem)
+                params.update({'good_for_fav': False, 'skip_sub_filter_id':skipSubFilterId + 1, 'category':nextCategory, 'title':self.cleanHtmlStr(item), 'url':url, 'desc':''})
+                if 'antena=' in params['url'] or 'Wszystkie anteny TVP' == params['title']:
+                    params['filtered_by_antena'] = True
+                self.addDir(params)
+            break
+        
+        if len(self.currList):
+            return
+                
+        if isSearch:
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'serachContent', '</section>')[1]
+        else:
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="contentList', '</section>')[1]
+        if data != '':
+            if isSearch:
+                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="item', '</a>')
+            else:
+                data = data.split('<div class="subCategoryMobile">')[0]
+                data = data.split('<div class="col-md') #re.split('<div class="col-md[^>]+?>', data)
+                if len(data): del data[0]
+            for item in data:
+                item = clean_html(self.cm.ph.getSearchGroups(item, '''data-hover\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                self.mapHoeverItem(cItem, item, nextCategory)
+        else:
+            for section in sectionsData:
+                sectionHeader = self.cm.ph.getDataBeetwenMarkers(section, '<h1', '</h1>')[1]
+                sectionUrl    = self._getFullUrl(self.cm.ph.getSearchGroups(sectionHeader, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                sectionIcon   = self._getFullUrl(self.cm.ph.getSearchGroups(section, '''<img[^>]+?data-lazy\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                sectionTitle  = self.cleanHtmlStr(sectionHeader)
+                
+                if self.cm.isValidUrl(sectionUrl):
+                    if sectionTitle.startswith('Zobacz także:'): continue
+                    params = dict(cItem)
+                    params.update({'good_for_fav': False, 'skip_sub_filter_id':-1, 'category':nextCategory, 'title':sectionTitle, 'url':sectionUrl, 'icon':sectionIcon, 'desc':''})
+                    self.addDir(params)
+                elif (len(self.currList) == 0 and sectionTitle in ['Przeglądaj', 'Wideo']) or isSearch:
+                    tmp = self.cm.ph.getAllItemsBeetwenMarkers(section, '<div class="item', '</a>')
+                    for item in tmp:
+                        icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?data-lazy\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                        if icon == '': icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?src\s*=\s*['"]([^'^"]+?\.jpg)['"]''')[0])
+                        url  = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                        
+                        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h2', '</h3>')[1])
+                        if title == '': title = self.cleanHtmlStr(item)
+                        if self.cm.isValidUrl(url):
+                            params = dict(cItem)
+                            params.update({'good_for_fav': False, 'skip_sub_filter_id':-1, 'title':title, 'url':url, 'icon':icon, 'desc':''})
+                            if '/video/' in url:
+                                params['good_for_fav'] = True
+                                self.addVideo(params)
+                            else:
+                                params.update({'category':nextCategory,})
+                                self.addDir(params)
+                    if len(self.currList) and not isSearch:
+                        break
+                
+        if self.cm.isValidUrl(nextPageUrl):
+            params = dict(cItem)
+            params.update({'good_for_fav': False, 'category':nextCategory, 'title':_("Next page"), 'url':nextPageUrl, 'page':page+1})
+            self.addDir(params)
+            
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("TvpVod.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        searchPattern = urllib.quote_plus(searchPattern)
+        url = TvpVod.SEARCH_VOD_URL % urllib.quote(searchPattern)
+        cItem = dict(cItem)
+        cItem['url'] = url
+        
+        self.exploreVODItem(cItem, 'vods_explore_item')
             
     def listVodsSubCategories(self, cItem, category):
         printDBG("TvpVod.listVodsSubCategories")
@@ -511,64 +681,12 @@ class TvpVod(CBaseHostClass):
             self.listsMenuGroups(baseItem, cItem['category'])
         if 0 == len(self.currList):
             self.listItems1(cItem, 'vod_series')
-
-    def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("TvpVod.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
-        searchPattern = urllib.quote_plus(searchPattern)
-        url = TvpVod.SEARCH_VOD_URL % urllib.quote(searchPattern)
-        page = cItem.get('page', 1)
-        if page > 1:
-            url += '&order=desc&page=%s' % page
-        
-        sts, data = self._getPage(url, self.defaultParams)
-        if not sts: return
-        
-        if ('&page=%s"' % (page+1)) in data:
-            nextPage = True
-        else:
-            nextPage = False
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="content search_content">', '</section>', False)[1]
-        data = data.split('<div class="item">')
-        if len(data): del data[0]
-        for item in data:
-            url  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
-            icon = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
-            desc = self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</div>', False)[1]
-            title = self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0]
-            if '' == title: title = self.cm.ph.getDataBeetwenMarkers(item, '<strong class="fullTitle">', '</a>')[1]
-            if '' == title: title = self.cm.ph.getDataBeetwenMarkers(item, '<strong class="shortTitle">', '</a>')[1]
-            title = self.cleanHtmlStr(title)
-            if 'class="new"' in item: title += _(', nowość')
-            if 'class="pay"' in item: title += _(', materiał płatny')
-            duration = self.cm.ph.getSearchGroups(item, 'class="duration[^>]+?>([^<]+?)</li>')[0]
-            if '' != duration: title += ', ' + duration
-            
-            object_id = self.cm.ph.getSearchGroups(url, '/([0-9]+?)/')[0]
-            #object_id = self.getObjectID(url)
-            params = dict(cItem)
-            #if '' == object_id:
-            if '' == object_id or not self.isVideoData(object_id):
-                params.update({'category':'vod_episodes', 'title':title, 'url':url, 'icon':icon, 'desc':desc, 'page':1})
-                self.addDir(params)
-            else:
-                params.update({'title':title, 'url': url, 'icon':icon, 'desc':desc})
-                self.addVideo(params)
-        
-        if nextPage:    
-            params = dict(cItem)
-            params.update({'page':page+1})
-            if config.plugins.iptvplayer.tvpVodNextPage.value:
-                params['title'] = _("Następna strona")
-                self.addDir(params)
-            else:
-                params['title'] = _('More')
-                self.addMore(params)
             
     def getObjectID(self, url):
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: return ''
         asset_id = self.cm.ph.getSearchGroups(data, 'object_id=([0-9]+?)[^0-9]')[0]
+        if asset_id == '': asset_id = self.cm.ph.getSearchGroups(data, 'class="playerContainer"[^>]+?data-id="([0-9]+?)"')[0]
         return asset_id
                 
     def getLinksForVideo(self, cItem):
@@ -726,6 +844,11 @@ class TvpVod(CBaseHostClass):
     # LIST TVP SPORT VIDEOS
         elif category == 'tvp_sport_list_items':
             self.listTVPSportVideos(self.currItem)
+        elif category == 'vods_list_cats':
+            self.listCatalog(self.currItem, 'vods_explore_item')
+        elif category == 'vods_explore_item':
+            self.exploreVODItem(self.currItem, 'vods_explore_item')
+            
     # POPULAR
         elif category == 'vods_list_items1':
             self.listItems1(self.currItem, 'popular')
@@ -758,4 +881,4 @@ class TvpVod(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, TvpVod(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
+        CHostBase.__init__(self, TvpVod(), True, [])

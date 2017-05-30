@@ -42,7 +42,7 @@ def gettytul():
     return 'AnyFiles'
 
 class AnyFiles(CBaseHostClass):
-    MAIN_URL = 'http://www.anyfiles.pl'
+    MAIN_URL = 'https://anyfiles.pl'
     SEARCH_URL = MAIN_URL + '/search.jsp'
     DEFAULT_ICON_URL = 'http://anyfiles.pl/css/images/logo.png'
     MAIN_CAT_TAB = [{'category':'list_movies',        'title': _('Most Popular'), 'url':MAIN_URL + '/all.jsp'},

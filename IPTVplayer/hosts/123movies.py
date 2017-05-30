@@ -74,6 +74,25 @@ class T123Movies(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self._myFun = None
         
+    def uncensored(self, data):    
+        cookieItems = {}
+        try:
+            jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCnZhciBsb2NhdGlvbiA9ICJodHRwczovLzlhbmltZS50by8iOw0KU3RyaW5nLnByb3RvdHlwZS5pdGFsaWNzPWZ1bmN0aW9uKCl7cmV0dXJuICI8aT48L2k+Ijt9Ow0KU3RyaW5nLnByb3RvdHlwZS5saW5rPWZ1bmN0aW9uKCl7cmV0dXJuICI8YSBocmVmPVwidW5kZWZpbmVkXCI+PC9hPiI7fTsNClN0cmluZy5wcm90b3R5cGUuZm9udGNvbG9yPWZ1bmN0aW9uKCl7cmV0dXJuICI8Zm9udCBjb2xvcj1cInVuZGVmaW5lZFwiPjwvZm9udD4iO307DQpBcnJheS5wcm90b3R5cGUuZmluZD0iZnVuY3Rpb24gZmluZCgpIHsgW25hdGl2ZSBjb2RlXSB9IjsNCkFycmF5LnByb3RvdHlwZS5maWxsPSJmdW5jdGlvbiBmaWxsKCkgeyBbbmF0aXZlIGNvZGVdIH0iOw0KZnVuY3Rpb24gZmlsdGVyKCkNCnsNCiAgICBmdW4gPSBhcmd1bWVudHNbMF07DQogICAgdmFyIGxlbiA9IHRoaXMubGVuZ3RoOw0KICAgIGlmICh0eXBlb2YgZnVuICE9ICJmdW5jdGlvbiIpDQogICAgICAgIHRocm93IG5ldyBUeXBlRXJyb3IoKTsNCiAgICB2YXIgcmVzID0gbmV3IEFycmF5KCk7DQogICAgdmFyIHRoaXNwID0gYXJndW1lbnRzWzFdOw0KICAgIGZvciAodmFyIGkgPSAwOyBpIDwgbGVuOyBpKyspDQogICAgew0KICAgICAgICBpZiAoaSBpbiB0aGlzKQ0KICAgICAgICB7DQogICAgICAgICAgICB2YXIgdmFsID0gdGhpc1tpXTsNCiAgICAgICAgICAgIGlmIChmdW4uY2FsbCh0aGlzcCwgdmFsLCBpLCB0aGlzKSkNCiAgICAgICAgICAgICAgICByZXMucHVzaCh2YWwpOw0KICAgICAgICB9DQogICAgfQ0KICAgIHJldHVybiByZXM7DQp9Ow0KT2JqZWN0LmRlZmluZVByb3BlcnR5KGRvY3VtZW50LCAiY29va2llIiwgew0KICAgIGdldCA6IGZ1bmN0aW9uICgpIHsNCiAgICAgICAgcmV0dXJuIHRoaXMuX2Nvb2tpZTsNCiAgICB9LA0KICAgIHNldCA6IGZ1bmN0aW9uICh2YWwpIHsNCiAgICAgICAgcHJpbnQodmFsKTsNCiAgICAgICAgdGhpcy5fY29va2llID0gdmFsOw0KICAgIH0NCn0pOw0KQXJyYXkucHJvdG90eXBlLmZpbHRlciA9IGZpbHRlcjsNCiVzDQoNCg==''') % (data)                     
+            ret = iptv_js_execute( jscode )
+            if ret['sts'] and 0 == ret['code']:
+                printDBG(ret['data'])
+                data = ret['data'].split('\n')
+                for line in data:
+                    line = line.strip()
+                    if not line.endswith('=/'): continue
+                    line = line.split(';')[0]
+                    line = line.replace(' ', '').split('=')
+                    if 2 != len(line): continue
+                    cookieItems[line[0]] = line[1].split(';')[0]
+        except Exception:
+            printExc()
+        return cookieItems
+        
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
@@ -94,7 +113,18 @@ class T123Movies(CBaseHostClass):
                 return urlparse.urljoin(baseUrl, url)
             
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
-        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        if sts:
+            try:
+                tmpUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script src=['"]([^'^"]*?/token[^'^"]*?)['"]''')[0])
+                if self.cm.isValidUrl(tmpUrl):
+                    tmpSts, tmpData = self.cm.getPageCFProtection(tmpUrl, addParams)
+                    cookieItems = self.uncensored(tmpData);
+                    self.defaultParams['cookie_items'] = cookieItems
+            except Exception:
+                printExc()
+        return sts, data
+            
         
     def getFullIconUrl(self, url):
         m1 = 'amp;url='
@@ -308,6 +338,8 @@ class T123Movies(CBaseHostClass):
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("T123Movies.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        page = cItem.get('page', 0)
+        if page == 0: self.getPage(self.getMainUrl())
         cItem = dict(cItem)
         cItem['url'] = self.SEARCH_URL
         self.listItems(cItem, 'list_episodes', searchPattern)

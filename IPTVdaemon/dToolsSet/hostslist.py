@@ -28,7 +28,7 @@ HostsList=[
 	("filma24hdcom", "filma24hd.com"),
 	("filmezz", "filmezz.eu"),
 	("filmovizijastudio", "filmovizija.ws"),
-	("filmstreamvkcom", "filmstreamvk.com"),
+	("filmstreamvkcom", "filmstreamvk.ws"),
 	("filmy3deu", "filmy3d.eu"),
 	("filmydokumentalneeu", "FilmyDokumentalne.eu"),
 	("filmyto", "filmy.to"),

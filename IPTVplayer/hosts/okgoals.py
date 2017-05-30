@@ -63,6 +63,10 @@ class OkGoals(CBaseHostClass):
                              {'category':'search',            'title': _('Search'),     'search_item':True,                },
                              {'category':'search_history',    'title': _('Search history'),                                },
                             ]
+    def getFullUrl(self, url):
+        if url.startswith('//'): url = 'http:' + url
+        url = CBaseHostClass.getFullUrl(self, url)
+        return url
         
     def listCategories(self, cItem, nextCategory):
         printDBG("OkGoals.listCategories")
@@ -117,7 +121,11 @@ class OkGoals(CBaseHostClass):
         tmp = tmp.split('</script>')
         for item in tmp:
             url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''['"]([^'^"]*?//config\.playwire\.com[^'^"]+?\.json)['"]''')[0])
+            if not self.cm.isValidUrl(url): url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0])
+            
             if not self.cm.isValidUrl(url): continue
+            if self.up.checkHostSupport(url) != 1: continue
+            
             title = self.cleanHtmlStr(item)
             if title == '': title = cItem['title']
             params = {'good_for_fav': True, 'title':title, 'url':url}

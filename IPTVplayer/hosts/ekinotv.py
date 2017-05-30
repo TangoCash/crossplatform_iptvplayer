@@ -281,7 +281,9 @@ class EkinoTv(CBaseHostClass):
         #printDBG(data)
         for item in data:
             id  = self.cm.ph.getSearchGroups(item, 'id="([^"]+?)"')[0]
-            url = self.cm.ph.getSearchGroups(item, '''ShowPlayer[^"^']*?['"]([^"^']+?)['"]''')[0]
+            playerParams = self.cm.ph.getSearchGroups(item, '''ShowPlayer[^"^']*?['"]([^"^']+?)['"]\s*\,\s*['"]([^"^']+?)['"]''', 2)
+            if playerParams[0] != '' and playerParams[1] != '':
+                url = 'watch/' + '/'.join(playerParams)
             if url == '': url = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
             url = self._getFullUrl(url)
             if url == '' or url.split('.')[-1] in ['jpg', 'jepg', 'gif']:
@@ -296,13 +298,26 @@ class EkinoTv(CBaseHostClass):
         printDBG("EkinoTv.getVideoLinks [%s]" % baseUrl)
         urlTab = []
         
-        url = ''
-        if 'ekino-tv.pl' in baseUrl:
-            sts, data = self.cm.getPage(baseUrl)
+        try:
+            sts, response = self.cm.getPage(baseUrl, {'return_data':False})
+            baseUrl = response.geturl()
+            response.close()
+            printDBG(baseUrl)
+        except Exception:
+            printExc()
+        
+        url = baseUrl
+        tries = 1
+        while 'ekino-tv.pl' in url and tries < 3:
+            tries += 1
+            sts, data = self.cm.getPage(url)
             if not sts: return urlTab
-            url = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0]
-        else:
-            url = baseUrl
+            printDBG(data)
+            url = self._getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0])
+            
+            if not self.cm.isValidUrl(url):
+                url = self._getFullUrl(self.cm.ph.getSearchGroups(data, '''var\s+url\s*=\s*['"]([^'^"]+?)['"]''')[0])
+            printDBG("|||"  + url)
         
         if url.startswith('//'):
             url = 'http:' + url

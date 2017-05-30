@@ -482,6 +482,37 @@ class CBaseSubProviderClass:
             SetIPTVPlayerLastHostError(_('Failed to write file "%s".') % filePath)
         return False
         
+    def unpackZipArchive(self, tmpFile, tmpDIR):
+        errorCode = 0 
+        # check if archive is not evil
+        cmd = "unzip -l '{0}' 2>&1 ".format(tmpFile)
+        ret = self.iptv_execute(cmd)
+        if not ret['sts'] or 0 != ret['code']:
+            errorCode = ret['code']
+            if errorCode == 0: errorCode = 9
+        elif '..' in ret['data'] or 'files' not in ret['data']:
+            errorCode = 9
+        
+        # if archive is valid then upack it
+        if errorCode == 0:
+            cmd = "unzip -o '{0}' -d '{1}' 2>/dev/null".format(tmpFile, tmpDIR)
+            printDBG("cmd[%s]" % cmd)
+            ret = self.iptv_execute(cmd)
+            if not ret['sts'] or 0 != ret['code']:
+                errorCode = ret['code']
+                if errorCode == 0: errorCode = 9
+        
+        if errorCode != 0:
+            message = _('Unzip error code[%s].') % errorCode
+            if str(errorCode) == str(127):
+                message += '\n' + _('It seems that unzip utility is not installed.')
+            elif str(errorCode) == str(9):
+                message += '\n' + _('Wrong format of zip archive.')
+            SetIPTVPlayerLastHostError(message)
+            return False
+        
+        return True
+        
     def unpackArchive(self, tmpFile, tmpDIR):
         printDBG('CBaseSubProviderClass.unpackArchive tmpFile[%s], tmpDIR[%s]' % (tmpFile, tmpDIR))
         rmtree(tmpDIR, ignore_errors=True)
@@ -489,17 +520,7 @@ class CBaseSubProviderClass:
             SetIPTVPlayerLastHostError(_('Failed to create directory "%s".') % tmpDIR)
             return False
         if tmpFile.endswith('.zip'):
-            cmd = "unzip -o '{0}' -d '{1}' 2>/dev/null".format(tmpFile, tmpDIR)
-            printDBG("cmd[%s]" % cmd)
-            ret = self.iptv_execute(cmd)
-            if not ret['sts'] or 0 != ret['code']:
-                message = _('Unzip error code[%s].') % ret['code']
-                if str(ret['code']) == str(127):
-                    message += '\n' + _('It seems that unzip utility is not installed.')
-                elif str(ret['code']) == str(9):
-                    message += '\n' + _('Wrong format of zip archive.')
-                SetIPTVPlayerLastHostError(message)
-            return True
+            return self.unpackZipArchive(tmpFile, tmpDIR)
         elif tmpFile.endswith('.rar'):
             cmd = "unrar e -o+ -y '{0}' '{1}' 2>/dev/null".format(tmpFile, tmpDIR)
             printDBG("cmd[%s]" % cmd)
@@ -511,6 +532,7 @@ class CBaseSubProviderClass:
                 elif str(ret['code']) == str(9):
                     message += '\n' + _('Wrong format of rar archive.')
                 SetIPTVPlayerLastHostError(message)
+                return False
             return True
         return False
         
