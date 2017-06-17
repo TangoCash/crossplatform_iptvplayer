@@ -58,15 +58,18 @@ class ArconaitvME(CBaseHostClass):
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
         self.MAIN_URL      = 'https://www.arconaitv.me/'
-        self.DEFAULT_ICON  = "https://arconaitv.me/wp-content/uploads/2015/06/svs.png"
+        self.DEFAULT_ICON_URL  = "https://arconaitv.me/wp-content/uploads/2017/05/logo-white-1.png"
 
-        self.MAIN_CAT_TAB = [{'icon':self.getIconUrl(self.DEFAULT_ICON), 'category':'list_main',      'title': _('Main'),      'url':self.MAIN_URL},
-                             {'icon':self.getIconUrl(self.DEFAULT_ICON), 'category':'list_channels',  'title': _('Channels'),  'url':self.MAIN_URL},
-                             {'icon':self.getIconUrl(self.DEFAULT_ICON), 'category':'list_cabletv',   'title': _('Cable Tv'),  'url':self.MAIN_URL},
-                             {'icon':self.getIconUrl(self.DEFAULT_ICON), 'category':'list_movies',    'title': _('Movies'),    'url':self.MAIN_URL} ]
+        self.MAIN_CAT_TAB = [{'category':'list_main',      'title': _('Main'),      'url':self.MAIN_URL},
+                             {'category':'list_channels',  'title': _('Channels'),  'url':self.MAIN_URL},
+                             {'category':'list_cabletv',   'title': _('Cable Tv'),  'url':self.MAIN_URL},
+                             {'category':'list_movies',    'title': _('Movies'),    'url':self.MAIN_URL} ]
     
     def isProxyNeeded(self, url):
         return 'arconaitv.me' in url
+        
+    def getDefaulIcon(self, cItem=None):
+        return self.getFullIconUrl(self.DEFAULT_ICON_URL)
         
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= dict(self.HEADER)
@@ -81,8 +84,8 @@ class ArconaitvME(CBaseHostClass):
         if sts and None == data:
             sts = False
         return sts, data
-        
-    def getIconUrl(self, url):
+    
+    def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
         if self.isProxyNeeded( url ):
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=240'.format(urllib.quote(url, ''))
@@ -115,7 +118,7 @@ class ArconaitvME(CBaseHostClass):
             if desc == '': desc = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0] )
             
             params = dict(cItem)
-            params.update({'title':title, 'url':url, 'icon':self.getIconUrl( icon ), 'desc':desc})
+            params.update({'title':title, 'url':url, 'icon':self.getFullIconUrl( icon ), 'desc':desc})
             self.addVideo(params)
             
     def listItems(self, cItem, m1='', m2=''):
@@ -153,9 +156,20 @@ class ArconaitvME(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return urlsTab
         
-        data = self.cm.ph.getSearchGroups(data, '<source[^>]*?src="([^"]+?)"', 1, ignoreCase=True)[0]
-        if data.startswith('http'):
-            tmp = getDirectM3U8Playlist(data)
+        printDBG(data)
+        
+        playerUrl = self.cm.ph.getSearchGroups(data, '''<source[^>]*?src=['"](https?:[^"^']+?\.m3u8[^"^']*?)['"]''', 1, ignoreCase=True)[0]
+        try: playerUrl = byteify(json.loads('"%s"' % playerUrl))
+        except Exception: printExc()
+        if not self.cm.isValidUrl(playerUrl): playerUrl = self.cm.ph.getSearchGroups(data, '''"sources"\s*:\s*[^\]]*?"src"\s*:\s*"(https?:[^"]+?\.m3u8[^"]*?)"''', 1, ignoreCase=True)[0]
+        try: playerUrl = byteify(json.loads('"%s"' % playerUrl))
+        except Exception: printExc()
+        if not self.cm.isValidUrl(playerUrl): playerUrl = self.cm.ph.getSearchGroups(data, '''"(https?:[^"]+?\.m3u8[^"]*?)"''', 1, ignoreCase=True)[0]
+        try: playerUrl = byteify(json.loads('"%s"' % playerUrl))
+        except Exception: printExc()
+        
+        if self.cm.isValidUrl(playerUrl):
+            tmp = getDirectM3U8Playlist(playerUrl)
             for item in tmp:
                 item['need_resolve'] = 0
                 urlsTab.append(item)
@@ -198,53 +212,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, ArconaitvME(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO])
     
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem

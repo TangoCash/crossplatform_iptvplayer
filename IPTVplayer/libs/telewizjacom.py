@@ -89,8 +89,8 @@ class TeleWizjaComApi(CBaseHostClass):
         
         retList = []
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="article">', '<div class="article">')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '/>')
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<tbody>', '</tbody>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<td', '</td>')
         printDBG(data)
         for item in data:
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
@@ -98,6 +98,7 @@ class TeleWizjaComApi(CBaseHostClass):
             if url == '': continue
             title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0]
             if title == '': title = url.split('/')[-1].replace('.html', '')
+            if title == '': title = url.split('/')[-2]
             icon = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
             if icon == '': icon = self.cm.ph.getSearchGroups(item, '''data-original=['"]([^'^"]+?)['"]''')[0]
             
@@ -116,7 +117,7 @@ class TeleWizjaComApi(CBaseHostClass):
             retList = []
             sts, data = self.getPage(self.getFullUrl(self.MAIN_URL), self.http_params)
             if not sts: return []
-            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="menu_nav">', '</ul>')[1]
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'main-nav-wrap', '</ul>')[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
             for item in data:
                 url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
@@ -139,19 +140,32 @@ class TeleWizjaComApi(CBaseHostClass):
         sts, data = self.getPage(cItem['url'], self.http_params)
         if not sts: return urlsTab
         
-        #m = '<div class="article">'
-        #data = self.cm.ph.getDataBeetwenMarkers(data, m, m)[1]
-        frameUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0] )
-        if not self.cm.isValidUrl(frameUrl): return urlsTab
-        
-        printDBG(frameUrl)
-        
-        sts, data = self.getPage(frameUrl, self.http_params)
-        if not sts: return urlsTab
-        
-        tmp = re.compile('''(['"]http[^'^"]+?proxy\-german\.de[^'^"]+?['"])''').findall(data)
-        for url in tmp:
-            stripUrl = self.getFullUrl(url)
-            data = data.replace(url, stripUrl)
-        printDBG(data)
-        return self.up.getAutoDetectedStreamLink(frameUrl, data)
+        altPlayer = self.cm.ph.getSearchGroups(data, '''href=\s*['"]\s*(https?://[^'^"]+?/zapas[^'^"]+?)['"]''', ignoreCase=True)[0].strip()
+        for url in ['', altPlayer]:
+            prefix = ''
+            if url == altPlayer and self.cm.isValidUrl(url):
+                prefix = '[zapasowy] '
+                sts, data = self.getPage(url, self.http_params)
+                if not sts: return urlsTab
+            
+            #m = '<div class="article">'
+            #data = self.cm.ph.getDataBeetwenMarkers(data, m, m)[1]
+            frameUrl = self.getFullUrl( self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0] )
+            
+            if not self.cm.isValidUrl(frameUrl): continue
+            
+            printDBG(frameUrl)
+            
+            sts, data = self.getPage(frameUrl, self.http_params)
+            if not sts: continue
+            
+            tmp = re.compile('''(['"]http[^'^"]+?proxy\-german\.de[^'^"]+?['"])''').findall(data)
+            for url in tmp:
+                stripUrl = self.getFullUrl(url)
+                data = data.replace(url, stripUrl)
+            #printDBG(data)
+            tmpLinks = self.up.getAutoDetectedStreamLink(frameUrl, data)
+            for idx in range(len(tmpLinks)):
+                tmpLinks[idx]['name'] = prefix + tmpLinks[idx]['name']
+            urlsTab.extend(tmpLinks)
+        return urlsTab

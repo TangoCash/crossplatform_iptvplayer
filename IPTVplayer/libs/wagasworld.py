@@ -33,7 +33,7 @@ class WagasWorldApi:
         
         if self.MAIN_URL.startswith('https://'):
             url = url.replace('https://', 'http://')
-        return url
+        return url.replace('&amp;', '&')
         
     def getMainCategories(self, cItem):
         printDBG("WagasWorldApi.getMainCategories")
@@ -50,7 +50,7 @@ class WagasWorldApi:
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="form-item">', '<select', True)[1]
         data = re.compile('<a[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)</a>').findall(data)
         for item in data:
-            list.append({'type':'waga_cat', 'waga_cat':'items', 'title':item[1], 'url':item[0]})
+            list.append({'type':'waga_cat', 'waga_cat':'items', 'title':item[1], 'url':self._getFullUrl(item[0])})
         return list
         
     def getItems(self, cItem):

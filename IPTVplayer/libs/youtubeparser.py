@@ -209,7 +209,7 @@ class YouTubeParser():
                             correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
 
                 title = clean_html(title)
-                params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1], 'time': time, 'desc': '[/br]'.join(newDescTab)}
+                params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1].replace('&amp;', '&'), 'time': time, 'desc': '[/br]'.join(newDescTab)}
                 currList.append(params)
 
         return currList

@@ -62,7 +62,7 @@ class Vevo(CBaseHostClass):
     MAIN_CAT_TAB = [{'category':'apiv2',  'keys':['nowPosts'], 'url': API2_URL + 'now?size=20', 'title': _("Main"),     'icon':DEFAULT_LOGO},
                     {'category':'browse_videos',            'title': "Browse",     'icon':DEFAULT_LOGO},
                     {'category':'browse_artists',           'title': "Popular Artists",     'icon':DEFAULT_LOGO},
-                    {'category':'browse_shows',             'title': "Shows",     'icon':DEFAULT_LOGO},
+                    #{'category':'browse_shows',             'title': "Shows",     'icon':DEFAULT_LOGO},
                     {'category':'search',                   'title':_('Search'), 'search_item':True, 'icon':DEFAULT_LOGO},
                     {'category':'search_history',           'title':_('Search history'), 'icon':DEFAULT_LOGO} ]
                     
@@ -87,6 +87,11 @@ class Vevo(CBaseHostClass):
         self.cacheShows = []
         self.language = []
         
+    def getStr(self, item, key):
+        if key not in item: return ''
+        if item[key] == None: return ''
+        return str(item[key])
+        
     def _getFullUrl(self, url):
         if 0 < len(url):
             if url.startswith('//'):
@@ -99,10 +104,13 @@ class Vevo(CBaseHostClass):
         
     def apiv2PrepareUrl(self, url, page=None, session=None):
         oauth_token = ''
-        sts, data = self.cm.getPage('http://www.vevo.com/auth', {}, b'')
+        #sts, data = self.cm.getPage('http://www.vevo.com/auth', {}, b'')
+        #if sts:
+        #    try: oauth_token = byteify(json.loads(data))['access_token']
+        #    except Exception: printExc()
+        sts, data = self.cm.getPage('http://www.vevo.com/')
         if sts:
-            try: oauth_token = byteify(json.loads(data))['access_token']
-            except Exception: printExc()
+            oauth_token = self.cm.ph.getSearchGroups(data, '''"access_token":"([^"]+?)"''')[0]
         
         if '?' in url:
             url += '&'
@@ -242,8 +250,9 @@ class Vevo(CBaseHostClass):
             
     def addVideoItem(self, cItem, item):
         params = dict(cItem)
-        icon = item.get('image', '')
-        if '' == icon: icon = item.get('thumbnailUrl', '')
+        icon = self.getStr(item, 'image') 
+        if '' == icon: icon = self.getStr(item, 'thumbnailUrl')
+        if '' == icon: icon = cItem.get('icon', '')
         
         desc = item.get('description', '')
         if '' == desc: 
@@ -303,14 +312,26 @@ class Vevo(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('window\.__INITIAL_STORE__\s*=\s*'), re.compile('</script>'), False)[1]
         try:
             data = byteify(json.loads(data.strip()[:-1]))
-            id = cItem['url'].split('/')[-1]
-            playlist = []
-            if 'playlist' == cItem['category']:
-                playlist = data['default']['playlists'][id]['isrcs']
-            elif 'artist' == cItem['category']:
-                playlist = data['default']['artistVideos'][id]['all']['MostRecent']['isrcs']
-            for item in playlist:
-                self.addVideoItem(cItem, data['default']['videos'][item])
+            if cItem['category'] == 'artist':
+                data = data['apollo']['data']
+                for key in data.keys():
+                    if key.endswith('.videos'):
+                        tmp = data[key]['data']
+                        for item in tmp:
+                            videoKey = "$%s.basicMeta" % item['id']
+                            self.addVideoItem(cItem, data[videoKey])
+            elif cItem['category'] == 'playlist':
+                playlistId = data['routing']['locationBeforeTransitions']['pathname'].split('/')[-1]
+                data = data['apollo']['data']
+                for key in data[playlistId].keys():
+                    if key.startswith('videos('):
+                        for item in data[data[playlistId][key]['id']]['items']:
+                            videoKey = "$%s.basicMetaV3" % data[item['id']]['isrc']
+                            if 1 == len(data[videoKey].get('artists', [])):
+                                artistKey = '$%s.basicMeta' % data[videoKey]['artists'][0]['id']
+                                data[videoKey]['title'] = data[artistKey]['name'] + ' ' + data[videoKey]['title']
+                            self.addVideoItem(cItem, data[videoKey])
+                        break
         except Exception:
             printExc()
         return

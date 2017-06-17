@@ -6,7 +6,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import *
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import _unquote
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.jsinterp import JSInterpreter
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 
@@ -396,6 +396,26 @@ class InfoExtractor(object):
         #printDBG(dump)
         content = webpage_bytes.decode(encoding, 'replace')
         return (content, urlh)
+        
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams.get('return_data', False):
+            addParams = dict(addParams)
+            addParams['return_data'] = False
+            try:
+                sts, response = self.cm.getPage(baseUrl, addParams, post_data)
+                content_type = response.headers.get('Content-Type', '')
+                m = re.match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+\s*;\s*charset=(.+)', content_type)
+                if m: encoding = m.group(1)
+                else: encoding = 'utf-8'
+                data = response.read()
+                response.close()
+                data = data.decode(encoding, 'replace')
+                return sts, data
+            except Exception:
+                printExc()
+                return False, None
+        else:
+            return self.cm.getPage(baseUrl, addParams, post_data)
 
     def _download_webpage(self, url_or_request, video_id, note=None, errnote=None):
         """ Returns the data of the page as a string """
@@ -704,10 +724,6 @@ class YoutubeIE(InfoExtractor):
         """Report attempt to log in."""
         printDBG(u'Logging in')
 
-    def report_video_webpage_download(self, video_id):
-        """Report attempt to download video webpage."""
-        printDBG(u'%s: Downloading video webpage' % video_id)
-
     def report_video_info_webpage_download(self, video_id):
         """Report attempt to download video info webpage."""
         printDBG(u'%s: Downloading video info webpage' % video_id)
@@ -817,11 +833,11 @@ class YoutubeIE(InfoExtractor):
             raise ExtractorError('Unable to confirm age')
 
     def _extract_id(self, url):
+        video_id = ''
         mobj = re.match(self._VALID_URL, url, re.VERBOSE)
-        if mobj is None:
-            printDBG('Invalid URL: %s' % url)
-            raise ExtractorError('Invalid URL: %s' % url)
-        video_id = mobj.group(2)
+        if mobj != None:
+            video_id = mobj.group(2)
+        
         return video_id
 
     def _get_automatic_captions(self, video_id, webpage=None):
@@ -930,17 +946,27 @@ class YoutubeIE(InfoExtractor):
         printDBG(sub_tracks)
         return sub_tracks
 
-    def _real_extract(self, url, ):
+    def _real_extract(self, url):
         # Extract original video URL from URL with redirection, like age verification, using next_url parameter
         mobj = re.search(self._NEXT_URL_RE, url)
         if mobj:
             #https
             url = 'http://www.youtube.com/' + compat_urllib_parse.unquote(mobj.group(1)).lstrip('/')
         video_id = self._extract_id(url)
-        
-        # Get video webpage
-        self.report_video_webpage_download(video_id)
-        url = 'http://www.youtube.com/watch?v=%s&gl=US&hl=en&has_verified=1' % video_id
+        if 'yt-video-id' == video_id:
+            video_id = self.cm.ph.getSearchGroups(url+'&', '[\?&]docid=([^\?^&]+)[\?&]')[0]
+            isGoogleDoc = True
+            url = url
+            videoKey = 'docid'
+            videoInfoBase = 'https://docs.google.com/get_video_info?docid=%s' % video_id
+            COOKIE_FILE = GetCookieDir('docs.google.com.cookie')
+            videoInfoparams = {'cookiefile':COOKIE_FILE, 'use_cookie': True, 'load_cookie':False, 'save_cookie':True}
+        else:
+            url = 'http://www.youtube.com/watch?v=%s&' % video_id
+            isGoogleDoc = False
+            videoKey = 'video_id'
+            videoInfoBase = 'https://www.youtube.com/get_video_info?video_id=%s&' % video_id
+            videoInfoparams = {}
         
         sts, video_webpage_bytes = self.cm.getPage(url)
         
@@ -964,27 +990,23 @@ class YoutubeIE(InfoExtractor):
             age_gate = True
             # We simulate the access to the video from www.youtube.com/v/{video_id}
             # this can be viewed without login into Youtube
-            data = compat_urllib_parse.urlencode({'video_id': video_id,
-                                                  'el': 'embedded',
+            data = compat_urllib_parse.urlencode({'el': 'embedded',
                                                   'gl': 'US',
                                                   'hl': 'en',
                                                   'eurl': 'https://youtube.googleapis.com/v/' + video_id,
                                                   'asv': 3,
                                                   'sts':'1588',
                                                   })
-            video_info_url = 'https://www.youtube.com/get_video_info?' + data
-            video_info = self._download_webpage(video_info_url, video_id,
-                                    note=False,
-                                    errnote='unable to download video info webpage')
+            video_info_url = videoInfoBase + data
+            sts, video_info = self.getPage(video_info_url, videoInfoparams)
+            if not sts: raise ExtractorError('Faile to get "%s"' % video_info_url)
         else:
             age_gate = False
             for el_type in ['&el=detailpage', '&el=embedded', '&el=vevo', '']:
                 #https
-                video_info_url = ('http://www.youtube.com/get_video_info?&video_id=%s%s&ps=default&eurl=&gl=US&hl=en'
-                        % (video_id, el_type))
-                video_info = self._download_webpage(video_info_url, video_id,
-                                        note=False,
-                                        errnote='unable to download video info webpage')
+                video_info_url = videoInfoBase + ('%s&ps=default&eurl=&gl=US&hl=en'% ( el_type))
+                sts, video_info = self.getPage(video_info_url, videoInfoparams)
+                if not sts: continue
                 if '&token=' in video_info:
                     break
         if '&token=' not in video_info:
@@ -1122,6 +1144,9 @@ class YoutubeIE(InfoExtractor):
         if not video_url_list:
             return []
         
+        if isGoogleDoc:
+            cookieHeader = self.cm.getCookieHeader(COOKIE_FILE)
+        
         sub_tracks = self._get_subtitles(video_id)
         results = []
         for format_param, video_real_url in video_url_list:
@@ -1134,6 +1159,8 @@ class YoutubeIE(InfoExtractor):
             video_real_url = video_real_url.encode('utf-8')
             if len(sub_tracks):
                 video_real_url = strwithmeta(video_real_url, {'external_sub_tracks':sub_tracks})
+            if isGoogleDoc:
+                video_real_url = strwithmeta(video_real_url, {'Cookie':cookieHeader})
 
             results.append({
                 'id':       video_id.encode('utf-8'),

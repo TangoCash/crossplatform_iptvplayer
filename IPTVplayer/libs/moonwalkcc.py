@@ -47,6 +47,11 @@ class MoonwalkParser():
         sec_header = {}
         post_data = {}
         
+        def _repl(m):
+            m = m.group(1).replace("'", "").replace('"', '').replace('+', '').replace(' ', '')
+            return '["%s"]' % m
+        data = re.sub(r'''\[(\s*['"][^\]]+?['"]\s*)\]''', _repl, data)
+        
         #printDBG(data)
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'headers:', '}')
         for item in tmp:
@@ -90,7 +95,7 @@ class MoonwalkParser():
         async_method = self.cm.ph.getSearchGroups(allData, "var\s+async_method\s*=\s*'([^']+?)'")[0]
         runner_go = self.cm.ph.getSearchGroups(allData, "post_method\.runner_go\s*=\s*'([^']+?)'")[0]
         
-        
+        printDBG(allData)
         printDBG("=======================================================================")
         printDBG(data)
         printDBG("=======================================================================")
@@ -103,9 +108,14 @@ class MoonwalkParser():
         sec_header['X-Requested-With'] = 'XMLHttpRequest'
         post_data = {}
         
-        allVariables = re.compile("[,\s]([^:^,^\s]+?)\s*:\s*([^,^\s]+?)[,\s]").findall(data)
-        allVariables.extend( re.compile(postParamName + "\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
-        allVariables.extend( re.compile(postParamName + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^'^"]+?['"])\s*;''').findall(allData) )
+        try: allVariables = re.compile("[,\s]([^:^,^\s]+?)\s*:\s*([^,^\s]+?)[,\s]").findall(data)
+        except Exception: printExc()
+        try: allVariables.extend( re.compile(re.escape(postParamName) + "\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
+        except Exception: printExc()
+        try: allVariables.extend( re.compile(re.escape(postParamName) + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^'^"]+?['"])\s*;''').findall(allData) )
+        except Exception: printExc()
+        try: allVariables.extend( re.compile(re.escape(postParamName) + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^;]+?);''').findall(allData) )
+        except Exception: printExc()
         
         for item in allVariables:
             varName  = item[0].strip()
@@ -117,7 +127,7 @@ class MoonwalkParser():
                     continue
                 except Exception: pass
                 if varValue.startswith('"') or varValue.startswith("'"):
-                    post_data[varName] = varValue[1:-1]
+                    post_data[varName] = varValue.replace("'", "").replace('"', '').replace('+', '').replace(' ', '')
                 elif varValue in ['true', 'false']:
                     post_data[varName] = varValue
                 else:

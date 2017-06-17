@@ -51,6 +51,7 @@ def gettytul():
 
 class StreamLiveTo(CBaseHostClass):
     HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0', 'Accept': 'text/html'}
+    HTTP_MOBILE_HEADER = {'User-Agent': 'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Accept': 'text/html'}
     MAIN_URL = 'http://www.streamlive.to/'
     
     MAIN_CAT_TAB = [{'category':'category',        'title': 'Live Channels', 'icon':''},
@@ -171,17 +172,15 @@ class StreamLiveTo(CBaseHostClass):
             nextPage = True
         else: nextPage = False
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="clist clearfix">', '</ul>', False)[1]
-        data = data.split('</li>')
-        if len(data): del data[-1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="servic', '</h4>')
         for item in data:
             url  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
             icon = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
             title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<strong>', '</strong>', False)[1] )
             if '' == title: title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0] )
-            if 'class="premium_only"' in item: title += ' [PREMIUM ONLY]'
-            desc = self.cleanHtmlStr( item.split('</strong>')[-1] )
-            if url.startswith('http'):
+            if 'class="premium_only"' in item or 'Premium Only' in item: title += ' [PREMIUM ONLY]'
+            desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h4', '</h4>')[1] )
+            if self.cm.isValidUrl(url):
                 params = {'title':title, 'url':url, 'desc':desc, 'icon':icon}
                 self.addVideo(params)
         if nextPage:
@@ -361,14 +360,14 @@ class StreamLiveTo(CBaseHostClass):
         
     def doLogin(self, login, password):
         logged = False
-        HTTP_HEADER= dict(self.HTTP_HEADER)
+        HTTP_HEADER= dict(self.HTTP_MOBILE_HEADER)
         HTTP_HEADER.update( {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With' : 'XMLHttpRequest'} )
 
         post_data = {'username':login, 'password':password, 'accessed_by':'web', 'submit':'Login', 'x':0, 'y':0}
         params    = {'header' : HTTP_HEADER, 'cookiefile' : self.COOKIE_FILE, 'save_cookie' : True}
         loginUrl  = self.MAIN_URL + 'login.php'
         sts, data = self.cm.getPage( loginUrl, params, post_data)
-        if sts and '/logout"' in data:
+        if sts and '/logout"' in data or '/logout.php"' in data:
             logged = True
         return logged
         

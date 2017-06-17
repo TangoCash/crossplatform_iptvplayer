@@ -82,15 +82,14 @@ class VevoIE(InfoExtractor):
         printDBG("=======================================================")
         
     def _initialize_api(self, video_id):
-        webpage = self._download_webpage(
-            'http://www.vevo.com/auth', data=b'',
-            note='Retrieving oauth token',
-            errnote='Unable to retrieve oauth token')
+        sts, data = self.cm.getPage('http://www.vevo.com/')
+        if sts:
+            oauth_token = self.cm.ph.getSearchGroups(data, '''"access_token":"([^"]+?)"''')[0]
 
-        if 'THIS PAGE IS CURRENTLY UNAVAILABLE IN YOUR REGION' in webpage:
+        if 'THIS PAGE IS CURRENTLY UNAVAILABLE IN YOUR REGION' in data:
             SetIPTVPlayerLastHostError(_('%s said: This page is currently unavailable in your region') % self.IE_NAME)
-        auth_info = byteify(json.loads(webpage))
-        self._api_url_template = 'http://apiv2.vevo.com/%s?token=' + auth_info['access_token']
+
+        self._api_url_template = 'http://apiv2.vevo.com/%s?token=' + oauth_token
 
     def _formats_from_json(self, video_info):
         if not video_info:

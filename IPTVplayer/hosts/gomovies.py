@@ -41,13 +41,13 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 config.plugins.iptvplayer.gomovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
                                                                                         ("proxy_1",  _("Alternative proxy server (1)")),
                                                                                         ("proxy_2",  _("Alternative proxy server (2)"))])
-config.plugins.iptvplayer.moviesto123_alt_domain = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.gomovies_alt_domain = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.gomovies_proxy))
     if config.plugins.iptvplayer.gomovies_proxy.value == 'None':
-        optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.moviesto123_alt_domain))
+        optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.gomovies_alt_domain))
     return optionList
 ###################################################
 
@@ -97,8 +97,8 @@ class GoMovies(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['https://gomovies.to/', 'https://123movieshd.to/', 'https://123movies.net.ru/', 'http://123movies.moscow/', 'https://123movies.ru/', 'https://123movies.is/']
-        domain = config.plugins.iptvplayer.moviesto123_alt_domain.value.strip()
+        domains = ['https://gomovies.to/', 'https://gomovies.pet/'] #, 'https://123movieshd.to/', 'http://123movies.moscow/', 'https://123movies.ru/', 'https://123movies.is/'
+        domain = config.plugins.iptvplayer.gomovies_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
             domains.insert(0, domain)
@@ -398,7 +398,7 @@ class GoMovies(CBaseHostClass):
                     printDBG("------------------------------------------------\n%s+++++++++++++++++++++++++++++++++++++++++++++\n" % tmp)
                     for item in tmp['playlist'][0]['sources']:
                         if "mp4" == item['type']:
-                            urlTab.append({'name':str(item['label']), 'url':item['file']})
+                            urlTab.append({'name':str(item.get('label', 'default')), 'url':item['file']})
                     for item in tmp['playlist'][0]['tracks']:
                         format = item['file'][-3:]
                         if format in ['srt', 'vtt'] and "captions" == item['kind']:
