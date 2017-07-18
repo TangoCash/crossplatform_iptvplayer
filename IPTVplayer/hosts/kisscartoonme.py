@@ -353,6 +353,7 @@ class KissCartoonMe(CBaseHostClass):
             if not self.cm.isValidUrl(url):
                 url  = self.cm.ph.getSearchGroups(url, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
                 url = self._getFullUrl(url)
+            url = strwithmeta(url, {'Referer':cItem['url']})
             urlTab.append({'name':'default', 'url':url, 'need_resolve':1})
         except Exception:
             printExc()
@@ -363,7 +364,10 @@ class KissCartoonMe(CBaseHostClass):
         printDBG("KissCartoonMe.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
+        referer = strwithmeta(videoUrl).meta.get('Referer', videoUrl)
         params = dict(self.defaultParams)
+        params['header'] = dict(params['header'] )
+        params['header'] ['Referer'] = referer
         params['return_data'] = False
         
         try:
@@ -377,16 +381,23 @@ class KissCartoonMe(CBaseHostClass):
         if 'kisscartoon' not in self.up.getDomain(videoUrl):
             return self.up.getVideoLinkExt(videoUrl)
         
-        sts, data = self.getPage(videoUrl) 
+        params.update({'return_data':True})
+        sts, data = self.getPage(videoUrl, params) 
         if not sts: return urlTab
         
         try:
             data = byteify(json.loads(data))
-            for item in data['playlist'][0]['sources']:
+            printDBG(data)
+            for item in data['playlist'][0].get('sources', []):
                 if 'mp4' not in item['type']: continue
                 url = item['file']
                 name = item['label']
                 urlTab.append({'name':name, 'url':url, 'need_resolve':0})
+            
+            for item in data['playlist']:
+                url = item.get('file', '')
+                if self.cm.isValidUrl(url):
+                    urlTab.extend(getDirectM3U8Playlist(url, checkContent=True))
         except Exception:
             printExc()
             
@@ -396,8 +407,7 @@ class KissCartoonMe(CBaseHostClass):
                 try:
                     return int(self.cm.ph.getSearchGroups('|'+itemLink['name']+'|', '[^0-9]([0-9]+?)[^0-9]')[0])
                 except Exception: return 0
-            urlTab = CSelOneLink(urlTab, __getLinkQuality, max_bitrate).getBestSortedList()  
-        
+            urlTab = CSelOneLink(urlTab, __getLinkQuality, max_bitrate).getBestSortedList()
         return urlTab
         
     def listSearchResult(self, cItem, searchPattern, searchType):

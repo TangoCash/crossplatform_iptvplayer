@@ -991,10 +991,16 @@ class IPTVPlayerWidget(Screen):
                     printExc('get host name exception for host "%s"' % hostName)
                     brokenHostList.append('host'+hostName)
                     continue # do not use default name if import name will failed
+                # The 'http...' in host titles is annoying on regular choiceBox and impacts sorting.
+                # To simplify choiceBox usage and clearly show service is a webpage, list is build using the "<service name> (<service URL>)" schema.
+                if (config.plugins.iptvplayer.ListaGraficzna.value == False or 0 == GetAvailableIconSize()) and title[:4] == 'http':
+                    try: title = ('%s   (%s)') % ('.'.join(title.replace('://','.').replace('www.','').split('.')[1:-1]) , title)
+                    except Exception: pass
                 self.displayHostsList.append((title, hostName))
         # if there is no order hosts list use old behavior
         if 0 == len(GetHostsOrderList()):
-            self.displayHostsList.sort()
+            try: self.displayHostsList.sort(key=lambda t : tuple(str(t[0]).lower()))
+            except Exception: self.displayHostsList.sort()
         self.displayHostsList.append((_("Configuration"), "config"))
         
         # prepare info message when some host or update cannot be used

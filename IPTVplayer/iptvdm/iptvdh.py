@@ -268,7 +268,7 @@ class DMHelper:
         headerOptions = ''
         proxyOptions = ''
         
-        userAgent = ' -u "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0" '
+        userAgent = ' -u "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0" '
         for key, value in downloaderParams.items():
             if value != '':
                 if key in DMHelper.HANDLED_HTTP_HEADER_PARAMS:

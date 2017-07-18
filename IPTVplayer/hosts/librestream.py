@@ -44,10 +44,10 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://libre-stream.com/'
+    return 'http://ls-streaming.com/'
 
 class LibreStream(CBaseHostClass):
-    MAIN_URL   = 'http://libre-stream.com/'
+    MAIN_URL   = 'http://ls-streaming.com/'
     SEARCH_URL = MAIN_URL + 'index.php?q='
     DEFAULT_ICON_URL = 'http://thumbnail.easycounter.com/thumbnails/300x180/l/libre-stream.org.png'
     
@@ -260,7 +260,7 @@ class LibreStream(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("LibreStream.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        if 'libre-stream.com' in cItem['url']:
+        if 'libre-stream.com' in cItem['url'] or self.up.getDomain(self.getMainUrl(), True) in cItem['url']:
             sts, data = self.cm.getPage(cItem['url'])
             if not sts: return []
             urlTab = self._getLinksFromContent(data, 'name', {'need_resolve':1})

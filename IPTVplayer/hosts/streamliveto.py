@@ -365,7 +365,7 @@ class StreamLiveTo(CBaseHostClass):
 
         post_data = {'username':login, 'password':password, 'accessed_by':'web', 'submit':'Login', 'x':0, 'y':0}
         params    = {'header' : HTTP_HEADER, 'cookiefile' : self.COOKIE_FILE, 'save_cookie' : True}
-        loginUrl  = self.MAIN_URL + 'login.php'
+        loginUrl  = 'https://www.streamlive.to/login.php'
         sts, data = self.cm.getPage( loginUrl, params, post_data)
         if sts and '/logout"' in data or '/logout.php"' in data:
             logged = True

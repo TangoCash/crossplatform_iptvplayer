@@ -41,7 +41,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://vumoo.at/'
+    return 'http://vumoo.li/'
 
 class Vumoo(CBaseHostClass):
     USER_AGENT = 'curl/7'

@@ -48,7 +48,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://cartoonhd.be/'
+    return 'https://cartoonhd.global/'
 
 class CartoonHD(CBaseHostClass):
  
@@ -64,8 +64,8 @@ class CartoonHD(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL = 'https://cartoonhd.cc/'
-        self.SEARCH_URL = 'https://api.cartoonhd.cc/api/v1/0A6ru35yevokjaqbb8'
+        self.MAIN_URL = 'https://cartoonhd.global/'
+        self.SEARCH_URL = 'https://api.cartoonhd.global/api/v1/0A6ru35yevokjaqbb8'
         
         self.MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php'},
                              {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php'},
@@ -80,7 +80,7 @@ class CartoonHD(CBaseHostClass):
             url = response.geturl()
             domain = self.up.getDomain(url, False)
             self.MAIN_URL  = domain
-            domain = self.up.getDomain(url, true)
+            domain = self.up.getDomain(url, True)
             self.SEARCH_URL = 'https://api.%s/api/v1/0A6ru35yevokjaqbb8' % domain
             if not sts: return
         except Exception:

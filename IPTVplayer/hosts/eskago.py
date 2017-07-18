@@ -182,21 +182,36 @@ class EskaGo(CBaseHostClass):
         if not sts: return []
         
         if '/radio/' in  url:
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'input[name="data-radio-url"]', ';', withMarkers=False)[1]
-            url  =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, 'input[name="data-radio-url"]', ';', withMarkers=False)[1]
+            url  =  self.cm.ph.getSearchGroups(tmp, '''(https?://[^'^"]+?)['"]''')[0]
             if url != '' and url.endswith('.pls'):
-                sts, data = self.cm.getPage(url)
+                sts, tmp = self.cm.getPage(url)
                 if not sts: return []
-                printDBG(data)
-                data = data.split('File')
-                if len(data): del data[0]
-                for item in data:
+                printDBG(tmp)
+                tmp = tmp.split('File')
+                if len(tmp): del tmp[0]
+                for item in tmp:
                     printDBG('ITEM [%s]' % item)
                     url  = self.cm.ph.getSearchGroups(item, '''(https?://[^\s]+?)\s''')[0]
                     name = self.cm.ph.getSearchGroups(item, '''Title[^=]*?=([^\s]+?)\s''')[0].strip()
                     urlTab.append({'name':name, 'url':url})
+            else:
+                tmp1 = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>')
+                for tmp in tmp1:
+                    tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '{', '}')
+                    for item in tmp:
+                        if 'streamUrl' in item:
+                            streamUrl  = self.cm.ph.getSearchGroups(item, '''streamUrl\s*=\s*['"](https?://[^'^"]+?)['"]''')[0]
+                            streamType = self.cm.ph.getSearchGroups(item, '''streamType\s*=\s*['"]([^'^"]+?)['"]''')[0]
+                            if 'aac' in streamType:
+                                streamUrl = streamUrl.replace('.mp3', '.aac')
+                            elif 'mp3' in streamType:
+                                streamUrl = streamUrl.replace('.aac', '.mp3')
+                            urlTab.append({'name':streamType, 'url':streamUrl})
+                        
         elif '/tv/' in url:
             data = self.cm.ph.getDataBeetwenMarkers(data, '$.post(', 'function', withMarkers=False)[1]
+            printDBG(data)
             url  =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
             streamUri = self.cm.ph.getSearchGroups(data, '''streamUri['"\s]*?:\s*?['"]([^'^"]+?)['"]''')[0]
             sts, url = self.cm.getPage(url, post_data={'streamUri':streamUri})

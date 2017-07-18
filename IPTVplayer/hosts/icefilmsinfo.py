@@ -291,7 +291,7 @@ class IceFilms(CBaseHostClass):
                 # hostings filter
                 # do not add hostings wich require captcha
                 add = True
-                for notSup in [' upload ', ' uploadx ', ' uploadz ']:
+                for notSup in [' uploadx ', ' uploadz ', ' owndrives ']:
                     if notSup in (' %s ' % sourceName.lower()): 
                         add = False
                         break

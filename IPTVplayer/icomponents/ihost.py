@@ -79,7 +79,7 @@ class ArticleContent:
     VISUALIZER_DEFAULT = 'DEFAULT'
     # Posible args and values for richDescParams:
     RICH_DESC_PARAMS        = ["alternate_title", "views", "status", "country", "language", "quality", "subtitles", "year", "imdb_rating", \
-                               "released", "rating", "rated", "duration", "genre", "production", "director", "directors", "writer", "writers", \
+                               "released", "broadcast", "remaining", "rating", "rated", "duration", "genre", "production", "director", "directors", "writer", "writers", \
                                "creator", "creators", "actors", "stars", "awards", "budget" ]
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
@@ -91,6 +91,8 @@ class ArticleContent:
                         "language":          "Language",
                         "year":              "Year:", 
                         "released":          "Released:",
+                        "broadcast":         "Broadcast:",
+                        "remaining":         "Remaining:",
                         "imdb_rating":       "IMDb Rating:",
                         "rating":            "Rating:", 
                         "rated":             "Rated:",
@@ -276,10 +278,10 @@ class CHostBase(IHost):
     def isValidIndex(self, Index, validTypes=None):
         listLen = len(self.host.currList)
         if listLen <= Index or Index < 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
+            printDBG( "ERROR isValidIndex - current list is to short len: %d, Index: %d" % (listLen, Index) )
             return False
         if None != validTypes and self.converItem(self.host.currList[Index]).type not in validTypes:
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
+            printDBG( "ERROR isValidIndex - current item has wrong type" )
             return False
         return True
         
@@ -502,6 +504,7 @@ class CHostBase(IHost):
         icon        =  self.getFullIconUrl( cItem.get('icon', '') )
         if icon == '': icon = self.getDefaulIcon(cItem)
         isGoodForFavourites = cItem.get('good_for_fav', False)
+        pinLocked = cItem.get('pin_locked', False)
         
         return CDisplayListItem(name = title,
                                     description = description,
@@ -510,6 +513,7 @@ class CHostBase(IHost):
                                     urlSeparateRequest = 1,
                                     iconimage = icon,
                                     possibleTypesOfSearch = possibleTypesOfSearch,
+                                    pinLocked = pinLocked,
                                     isGoodForFavourites = isGoodForFavourites)
     # end converItem
 

@@ -481,7 +481,7 @@ class TED(CBaseHostClass):
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'talkPage.init",', ')<', False)[1]
         try:
-            tmp = byteify(json.loads(tmp))['talks'][0]
+            tmp = byteify(json.loads(tmp))['__INITIAL_DATA__']['talks'][0]['player_talks'][0]
             rtmpTab = tmp['resources'].get('rtmp', [])
             if rtmpTab == None: rtmpTab = []
             for item in rtmpTab:

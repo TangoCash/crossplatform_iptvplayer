@@ -16,6 +16,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
+import urlparse
 import base64
 try:    import json
 except Exception: import simplejson as json
@@ -32,30 +33,24 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
-#config.plugins.iptvplayer.alltubetv_premium  = ConfigYesNo(default = False)
-#config.plugins.iptvplayer.alltubetv_login    = ConfigText(default = "", fixed_size = False)
-#config.plugins.iptvplayer.alltubetv_password = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
-    #if config.plugins.iptvplayer.alltubetv_premium.value:
-    #    optionList.append(getConfigListEntry("  alltubetv login:", config.plugins.iptvplayer.alltubetv_login))
-    #    optionList.append(getConfigListEntry("  alltubetv hasło:", config.plugins.iptvplayer.alltubetv_password))
     return optionList
 ###################################################
 
 
 def gettytul():
-    return 'http://watchwrestling.tc/'
+    return 'http://watchwrestling.uno/'
 
-class Watchwrestling(CBaseHostClass):
-    MAIN_URL    = 'http://watchwrestling.tc/'
+class WatchwrestlingUNO(CBaseHostClass):
+    MAIN_URL    = 'http://watchwrestling.uno/'
     SRCH_URL    = MAIN_URL + 'index.php?s='
-    DEFAULT_ICON_URL = 'http://watchwrestling.to/wp-content/uploads/2014/11/ww_fb.png'
+    DEFAULT_ICON_URL = 'http://watchwrestling.uno/wp-content/uploads/2016/03/wwunologo2.png'
     
-    MAIN_CAT_TAB = [{'category':'categories',  'title': _('Categories'), 'url':MAIN_URL,                                 'icon':DEFAULT_ICON_URL, 'm1':'Categories</h3>'},
-                    {'category':'categories', 'title': _('Monthly'),     'url':MAIN_URL + 'video/watch-wwe-raw-101915/', 'icon':DEFAULT_ICON_URL, 'm1':'Monthly Posts</h3>'},
-                    {'category':'live',       'title': _('LIVE 24/7'),   'url':MAIN_URL + 'watch-wwe-network-live/',     'icon':DEFAULT_ICON_URL, 'm1':'Monthly Posts</h3>'},
+    MAIN_CAT_TAB = [{'category':'categories',  'title': _('Categories'), 'url':MAIN_URL,                                      'm1':'Categories</h3>'},
+                    {'category':'categories', 'title': _('Monthly'),     'url':MAIN_URL + 'video/watch-wwe-raw-101915/',      'm1':'Monthly Posts</h3>'},
+                    {'category':'live',       'title': _('LIVE 24/7'),   'url':MAIN_URL + 'watch-wwe-network-247-live-free/'},
                     {'category':'search',             'title': _('Search'),       'search_item':True},
                     {'category':'search_history',     'title': _('Search history')} 
                    ]
@@ -67,22 +62,11 @@ class Watchwrestling(CBaseHostClass):
                ]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'Watchwrestling', 'cookie':'Watchwrestling.cookie'})
+        CBaseHostClass.__init__(self, {'history':'watchwrestling.uno', 'cookie':'watchwrestling.uno.cookie'})
         self.serversCache = []
-        
-    def _getFullUrl(self, url, series=False):
-        if not series:
-            mainUrl = self.MAIN_URL
-        else:
-            mainUrl = self.S_MAIN_URL
-        if 0 < len(url) and not url.startswith('http'):
-            url = mainUrl + url
-        if not mainUrl.startswith('https://'):
-            url = url.replace('https://', 'http://')
-        return url
 
     def listsTab(self, tab, cItem, type='dir'):
-        printDBG("Watchwrestling.listsTab")
+        printDBG("WatchwrestlingUNO.listsTab")
         for item in tab:
             params = dict(cItem)
             params.update(item)
@@ -92,7 +76,7 @@ class Watchwrestling(CBaseHostClass):
             else: self.addVideo(params)
             
     def listCategories(self, cItem, category):
-        printDBG("Watchwrestling.listCategories")
+        printDBG("WatchwrestlingUNO.listCategories")
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         data = self.cm.ph.getDataBeetwenMarkers(data, cItem['m1'], '</ul>', False)[1]
@@ -103,17 +87,17 @@ class Watchwrestling(CBaseHostClass):
             if url == '': continue
             title  = self.cleanHtmlStr(item)
             params = dict(cItem)
-            params.update({'title':title, 'url':self._getFullUrl(url), 'category':category})
+            params.update({'title':title, 'url':self.getFullUrl(url), 'category':category})
             self.addDir(params)
             
     def listFilters(self, cItem, category):
-        printDBG("Watchwrestling.listFilters")
+        printDBG("WatchwrestlingUNO.listFilters")
         cItem = dict(cItem)
         cItem['category'] = category
         self.listsTab(self.SORT_TAB, cItem)
             
     def listMovies(self, cItem, category):
-        printDBG("Watchwrestling.listMovies")
+        printDBG("WatchwrestlingUNO.listMovies")
         url = cItem['url']
         page = cItem.get('page', 1)
         if page > 1:
@@ -146,7 +130,7 @@ class Watchwrestling(CBaseHostClass):
             title  = self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0]
             desc   = tmp[-1]
             params = dict(cItem)
-            params.update( {'category':category, 'title': self.cleanHtmlStr( title ), 'url':self._getFullUrl(url), 'desc': self.cleanHtmlStr( desc ), 'icon':self._getFullUrl(icon)} )
+            params.update( {'category':category, 'title': self.cleanHtmlStr( title ), 'url':self.getFullUrl(url), 'desc': self.cleanHtmlStr( desc ), 'icon':self.getFullIconUrl(icon)} )
             self.addDir(params)
         
         if nextPage:
@@ -155,7 +139,7 @@ class Watchwrestling(CBaseHostClass):
             self.addDir(params)
             
     def listServers(self, cItem, category):
-        printDBG("Watchwrestling.listServers [%s]" % cItem)
+        printDBG("WatchwrestlingUNO.listServers [%s]" % cItem)
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         self.serversCache = []
@@ -178,20 +162,24 @@ class Watchwrestling(CBaseHostClass):
                 self.serversCache.append(partsTab)
         
     def listParts(self, cItem):
-        printDBG("Watchwrestling.listServers [%s]" % cItem)
+        printDBG("WatchwrestlingUNO.listServers [%s]" % cItem)
         partIdx = cItem['part_idx']
         self.listsTab(self.serversCache[partIdx], cItem, 'video')
         
     def listLiveStreams(self, cItem):
-        printDBG("Watchwrestling.listLiveStreams [%s]" % cItem)
+        printDBG("WatchwrestlingUNO.listLiveStreams [%s]" % cItem)
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
+        
+        baseUrl = self.cm.ph.getSearchGroups(data, '''<base[^>]+?href=["'](https?://[^"^']+?)['"]''')[0]
         sp = '<div style="text-align: center;">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '</div>', False)[1]
-        data = re.compile('href="([^"]+?)"[^>]*?>([^>]+?)</a>').findall(data)
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<p style="text-align: center;"><a', '</p>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>', True)
         for item in data:
+            title  = self.cleanHtmlStr(item)
+            url    = urlparse.urljoin(baseUrl, self.cm.ph.getSearchGroups(item, '''href=["']([^"^']+?)['"]''')[0])
             params = dict(cItem)
-            params.update({'title':item[1], 'url':item[0], 'Referer':cItem['url'], 'live':True})
+            params.update({'title':title, 'url':strwithmeta(url, {'live':True, 'Referer':cItem['url']}), 'live':True})
             self.addVideo(params)
         
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -207,14 +195,17 @@ class Watchwrestling(CBaseHostClass):
         return data
         
     def getLinksForVideo(self, cItem):
-        printDBG("Watchwrestling.getLinksForVideo [%s]" % cItem)
+        printDBG("WatchwrestlingUNO.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        url = cItem['url']
-        Referer =  cItem.get('Referer', '')
+        live = cItem.get('live', False)
+        if live: return [{'name':cItem['title'], 'url':cItem['url'], 'need_resolve':1}]
+        
+        url = strwithmeta(cItem['url'])
+        referer =  url.meta.get('Referer', '')
         if 1 != self.up.checkHostSupport(url):  
             tries = 0
             while tries < 3:
-                sts, data = self.cm.getPage(url, {'header':{'Referer':Referer, 'User-Agent':'Mozilla/5.0'}})
+                sts, data = self.cm.getPage(url, {'header':{'Referer':referer, 'User-Agent':'Mozilla/5.0'}})
                 if not sts: return urlTab
                 data = data.replace('// -->', '')
                 data = self._clearData(data)
@@ -222,20 +213,20 @@ class Watchwrestling(CBaseHostClass):
                 if 'eval(unescape' in data:
                     data = urllib.unquote(self.cm.ph.getSearchGroups(data, '''eval\(unescape\(['"]([^"^']+?)['"]''')[0])
                 url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]*?src=['"]([^"^']+?)['"]''', 1, True)[0]
-                if 'protect.cgi' in url:
-                    Referer = cItem['url']
+                if '/cgi-bin/' in url:
+                    referer = cItem['url']
                 else:
                     break
                 tries += 1
         url = strwithmeta(url)
-        url.meta['Referer'] = Referer
+        url.meta['Referer'] = referer
         url.meta['live'] = cItem.get('live', False)
         
         urlTab.append({'name':cItem['title'], 'url':url, 'need_resolve':1})
         return urlTab
         
     def getVideoLinks(self, baseUrl):
-        printDBG("Watchwrestling.getVideoLinks [%s]" % baseUrl)
+        printDBG("WatchwrestlingUNO.getVideoLinks [%s]" % baseUrl)
         urlTab = []
         
         url = strwithmeta(baseUrl)
@@ -287,97 +278,4 @@ class Watchwrestling(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, Watchwrestling(), True, []) #CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('watchwrestlinglogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie  
-        searchTypesOptions.append((_("DATE"),         "date"))
-        searchTypesOptions.append((_("VIEWS"),       "views"))
-        searchTypesOptions.append((_("LIKES"),       "likes"))
-        searchTypesOptions.append((_("COMMENTS"), "comments"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return
+        CHostBase.__init__(self, WatchwrestlingUNO(), True, []) #CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO

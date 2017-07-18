@@ -11,9 +11,10 @@ from enigma import ePoint, getDesktop
 from Tools.LoadPixmap import LoadPixmap
 from Components.Label import Label
 from Components.config import config
+from Screens.ChoiceBox import ChoiceBox
 
 from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover3
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetIPTVPlayerVerstion, GetIconDir, GetAvailableIconSize
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetIPTVPlayerVerstion, GetIconDir, GetAvailableIconSize, SaveHostsOrderList, GetHostsList
 
 
 class PlayerSelectorWidget(Screen):
@@ -22,7 +23,10 @@ class PlayerSelectorWidget(Screen):
         printDBG("PlayerSelectorWidget.__init__ --------------------------------")
         screenwidth = getDesktop(0).size().width()
         iconSize = GetAvailableIconSize()
-        if len(list) > 16 and iconSize == 100:
+        if len(list) >= 30 and iconSize == 100 and screenwidth and screenwidth > 1100:
+            numOfRow = 4
+            numOfCol = 8
+        elif len(list) > 16 and iconSize == 100:
             numOfRow = 4
             numOfCol = 5
         elif len(list) > 12 and iconSize == 100:
@@ -31,7 +35,7 @@ class PlayerSelectorWidget(Screen):
         elif len(list) > 9:
             if screenwidth and screenwidth == 1920:
                 numOfRow = 4
-                numOfCol = 8      
+                numOfCol = 8
             else:
                 numOfRow = 3
                 numOfCol = 4
@@ -107,8 +111,13 @@ class PlayerSelectorWidget(Screen):
             self.close(None)
             
         self.currList = list
+        self.origHostsList = []
+        self.numOfSpecialItems = 0
+        self.getFilteredItemsList(self.currList, self.origHostsList)
+        
         # numbers of items in self.currList
         self.numOfItems = len(self.currList)
+        self.numOfSpecialItems = self.numOfItems - len(self.origHostsList)
         self.IconsSize  = iconSize #do ladowania ikon
         self.MarkerSize = self.IconsSize + 45
         
@@ -142,6 +151,7 @@ class PlayerSelectorWidget(Screen):
             <widget name="statustext" position="0,0" zPosition="1" size="%d,50" font="Regular;36" halign="center" valign="center" transparent="1"/>
             <widget name="marker" zPosition="2" position="%d,%d" size="%d,%d" transparent="1" alphatest="blend" />
             <widget name="page_marker" zPosition="3" position="%d,%d" size="%d,%d" transparent="1" alphatest="blend" />
+            <widget name="menu" zPosition="3" position="%d,10" size="70,30" transparent="1" alphatest="blend" />
             """  %(
               GetIPTVPlayerVerstion(),
               offsetCoverX + tmpX * numOfCol + offsetCoverX - disWidth,  # width of window
@@ -151,6 +161,7 @@ class PlayerSelectorWidget(Screen):
               markerWidth, markerHeight,    # marker size
               self.pageItemStartX, self.pageItemStartY, # pagination marker
               self.pageItemSize, self.pageItemSize,
+              offsetCoverX + tmpX * numOfCol + offsetCoverX - disWidth - 70,
               )  
         else:
             skin = """
@@ -158,6 +169,7 @@ class PlayerSelectorWidget(Screen):
             <widget name="statustext" position="0,0" zPosition="1" size="%d,50" font="Regular;26" halign="center" valign="center" transparent="1"/>
             <widget name="marker" zPosition="2" position="%d,%d" size="%d,%d" transparent="1" alphatest="blend" />
             <widget name="page_marker" zPosition="3" position="%d,%d" size="%d,%d" transparent="1" alphatest="blend" />
+            <widget name="menu" zPosition="3" position="%d,10" size="70,30" transparent="1" alphatest="blend" />
             """  %(
               GetIPTVPlayerVerstion(),
               offsetCoverX + tmpX * numOfCol + offsetCoverX - disWidth,  # width of window
@@ -167,6 +179,7 @@ class PlayerSelectorWidget(Screen):
               markerWidth, markerHeight,    # marker size
               self.pageItemStartX, self.pageItemStartY, # pagination marker
               self.pageItemSize, self.pageItemSize,
+              offsetCoverX + tmpX * numOfCol + offsetCoverX - disWidth - 70,
               )
         
         for y in range(1,numOfRow+1):
@@ -199,9 +212,11 @@ class PlayerSelectorWidget(Screen):
             self.pixmapList.append( LoadPixmap(GetIconDir('PlayerSelector/' + self.currList[idx][1] + '%i.png' % self.IconsSize)) )
 
         self.markerPixmap = LoadPixmap(GetIconDir('PlayerSelector/marker%i.png' % self.MarkerSize))
+        self.markerPixmapSel = LoadPixmap(GetIconDir('PlayerSelector/markerSel%i.png' % self.MarkerSize))
         self.pageMarkerPixmap = LoadPixmap(GetIconDir('radio_button_on.png'))
+        self.menuPixmap = LoadPixmap(GetIconDir('menu.png'))
         
-        self["actions"] = ActionMap(["WizardActions", "DirectionActions", "ColorActions"],
+        self["actions"] = ActionMap(["WizardActions", "DirectionActions", "ColorActions", "IPTVPlayerListActions"],
         {
             "ok":    self.ok_pressed,
             "back":  self.back_pressed,
@@ -210,11 +225,14 @@ class PlayerSelectorWidget(Screen):
             "up":    self.keyUp,
             "down":  self.keyDown,
             "blue":  self.keyBlue,
+            "menu":  self.keyMenu,
         }, -1)
         
 
         self["marker"] = Cover3()
         self["page_marker"] = Cover3()
+        self["menu"] = Cover3()
+        
         
         for y in range(1,self.numOfRow+1):
             for x in range(1,self.numOfCol+1):
@@ -227,6 +245,8 @@ class PlayerSelectorWidget(Screen):
     
         self.onLayoutFinish.append(self.onStart)
         self.visible = True
+        self.reorderingMode = False
+        self.reorderingItemSelected = False
         
     def __del__(self):
         printDBG("PlayerSelectorWidget.__del__ --------------------------")
@@ -235,7 +255,20 @@ class PlayerSelectorWidget(Screen):
         self.session.nav.event.remove(self.__event)
         self.onClose.remove(self.__onClose)
         self.onLayoutFinish.remove(self.onStart)
-
+        try:
+            hostsList = []
+            self.getFilteredItemsList(self.currList, hostsList)
+            if self.origHostsList != hostsList:
+                SaveHostsOrderList(hostsList)
+        except Exception:
+            printExc()
+        idx = self.currLine * self.numOfCol +  self.dispX
+        PlayerSelectorWidget.LAST_SELECTION = idx
+        
+    def getFilteredItemsList(self, inList, outList, filters=['config', 'update']):
+        for item in inList:
+            if item[1] not in filters:
+                outList.append(item[1])
     #Calculate marker position Y
     def calcMarkerPosY(self):
         
@@ -256,18 +289,21 @@ class PlayerSelectorWidget(Screen):
         # if we are in last line dispX pos 
         # must be also corrected
         if self.currLine ==  (self.numOfLines - 1):
-            self.numItemsInLine = self.numOfItems - ((self.numOfLines - 1) * self.numOfCol) 
+            numOfItems = self.numOfItems
+            if self.reorderingMode: numOfItems -= self.numOfSpecialItems
+            self.numItemsInLine = numOfItems - ((self.numOfLines - 1) * self.numOfCol) 
             if self.dispX > (self.numItemsInLine - 1):
                 self.dispX = self.numItemsInLine - 1
             
         return
-        
 
     #Calculate marker position X
     def calcMarkerPosX(self):
         if self.currLine == self.numOfLines - 1:
             #calculate num of item in last line
-            self.numItemsInLine = self.numOfItems - ((self.numOfLines - 1) * self.numOfCol) 
+            numOfItems = self.numOfItems
+            if self.reorderingMode: numOfItems -= self.numOfSpecialItems
+            self.numItemsInLine = numOfItems - ((self.numOfLines - 1) * self.numOfCol) 
         else:
             self.numItemsInLine = self.numOfCol
 
@@ -281,10 +317,21 @@ class PlayerSelectorWidget(Screen):
     def onStart(self):
         self["marker"].setPixmap( self.markerPixmap )
         self["page_marker"].setPixmap( self.pageMarkerPixmap )
+        self["menu"].setPixmap( self.menuPixmap )
         self.updateIcons()
         self.setIdx(self.lastSelection)
         return
         
+    def updateIconsList(self, rangeList):
+        idx = self.currPage * (self.numOfCol*self.numOfRow)
+        for y in range(1,self.numOfRow+1):
+            for x in range(1,self.numOfCol+1):
+                if idx >= rangeList[0] and idx <= rangeList[1]:
+                    strIndex = "cover_%s%s" % (x,y)
+                    printDBG("updateIconsList [%s]" % strIndex)
+                    self[strIndex].setPixmap(self.pixmapList[idx])
+                idx += 1
+    
     def updateIcons(self):
         idx = self.currPage * (self.numOfCol*self.numOfRow)
         for y in range(1,self.numOfRow+1):
@@ -315,28 +362,44 @@ class PlayerSelectorWidget(Screen):
         return
         
     def keyRight(self):
+        prev_idx = self.currLine * self.numOfCol +  self.dispX
         self.dispX += 1
         self.calcMarkerPosX()
-        self.moveMarker()
+        self.moveMarker(prev_idx)
         return
     def keyLeft(self):
+        prev_idx = self.currLine * self.numOfCol +  self.dispX
         self.dispX -= 1
         self.calcMarkerPosX()
-        self.moveMarker()
+        self.moveMarker(prev_idx)
         return
 
     def keyDown(self):
+        prev_idx = self.currLine * self.numOfCol +  self.dispX
         self.currLine += 1
         self.calcMarkerPosY()
-        self.moveMarker()
+        self.moveMarker(prev_idx)
         return
     def keyUp(self):
+        prev_idx = self.currLine * self.numOfCol +  self.dispX
         self.currLine -= 1
         self.calcMarkerPosY()
-        self.moveMarker()
+        self.moveMarker(prev_idx)
         return
     
-    def moveMarker(self):
+    def moveMarker(self, prev_idx=0):
+        new_idx = self.currLine * self.numOfCol +  self.dispX
+        
+        if self.reorderingItemSelected:
+            if prev_idx != new_idx:
+                prevHost   = self.currList[prev_idx]
+                prevPixmap = self.pixmapList[prev_idx]
+                del self.currList[prev_idx]
+                del self.pixmapList[prev_idx]
+                
+                self.currList.insert(new_idx, prevHost)
+                self.pixmapList.insert(new_idx, prevPixmap)
+                self.updateIconsList(sorted([prev_idx, new_idx]))
 
         # calculate position of image
         imgPosX = self.offsetCoverX + (self.coverWidth + self.disWidth) * self.dispX
@@ -349,9 +412,7 @@ class PlayerSelectorWidget(Screen):
         #x =  30 + self.dispX * 180
         #y = 130 + self.dispY * 125
         self["marker"].instance.move(ePoint(x,y))
-        
-        idx = self.currLine * self.numOfCol +  self.dispX
-        self["statustext"].setText(self.currList[idx][0])
+        self["statustext"].setText(self.currList[new_idx][0])
         return
 
     def back_pressed(self):
@@ -359,6 +420,15 @@ class PlayerSelectorWidget(Screen):
         return
 
     def ok_pressed(self):
+        if self.reorderingMode:
+            if self.reorderingItemSelected:
+                self["marker"].setPixmap( self.markerPixmap )
+                self.reorderingItemSelected = False
+            else:
+                self["marker"].setPixmap( self.markerPixmapSel )
+                self.reorderingItemSelected = True
+            return
+        
         idx = self.currLine * self.numOfCol +  self.dispX
         PlayerSelectorWidget.LAST_SELECTION = idx
         if idx < self.numOfItems:
@@ -369,6 +439,38 @@ class PlayerSelectorWidget(Screen):
         
     def keyBlue(self):
         self.close((_("IPTV download manager"), "IPTVDM"))
+        
+    def keyMenu(self):     
+        options = []
+        if self.numOfItems - self.numOfSpecialItems > 0:
+            if not self.reorderingMode:
+                options.append((_("Enable reordering mode"), "CHANGE_REORDERING_MODE"))
+            else:
+                options.append((_("Disable reordering mode"), "CHANGE_REORDERING_MODE"))
+        options.append((_("IPTV download manager"), "IPTVDM"))
+        if len(options):
+            self.session.openWithCallback(self.selectMenuCallback, ChoiceBox, title=_("Select option"), list=options)
+    
+    def selectMenuCallback(self, ret):
+        if ret:
+            ret = ret[1] 
+            if ret == "CHANGE_REORDERING_MODE": 
+                self.changeReorderingMode()
+            elif ret == "IPTVDM":
+                self.keyBlue()
+        
+    def changeReorderingMode(self):
+        selIdx = self.currLine * self.numOfCol +  self.dispX
+        if not self.reorderingMode and (self.numOfItems - self.numOfSpecialItems) > 0:
+            if selIdx >= (self.numOfItems - self.numOfSpecialItems):
+                selIdx = self.numOfItems - self.numOfSpecialItems - 1
+                self.setIdx(selIdx)
+            self.reorderingMode = True
+        else:
+            if self.reorderingItemSelected:
+                self["marker"].setPixmap( self.markerPixmap )
+            self.reorderingMode = False
+        self.reorderingItemSelected  = False
     
     def hideWindow(self):
         self.visible = False

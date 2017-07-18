@@ -16,6 +16,8 @@ import time
 import string
 import codecs
 import urllib
+try:    from urlparse import urlsplit, urlunsplit, urljoin
+except Exception: printExc()
 ###################################################
 try:
     from hashlib import md5
@@ -554,18 +556,35 @@ def getF4MLinksWithMeta(manifestUrl, checkExt=True):
         liveStreamDetected = False
         if 'live' == CParsingHelper.getDataBeetwenMarkers('<streamType>', '</streamType>', False):
             liveStreamDetected = True
-        bitrates = re.compile('bitrate="([0-9]+?)"').findall(data)
-        for item in bitrates:
-            link = strwithmeta(manifestUrl, {'iptv_proto':'f4m', 'iptv_bitrate':item})
-            if liveStreamDetected:
-                link.meta['iptv_livestream'] = True
-            retPlaylists.append({'name':'[f4m/hds] bitrate[%s]' % item, 'url':link})
+        
+        tmp = cm.ph.getDataBeetwenMarkers(data, '<manifest', '</manifest>')[1]
+        baseUrl = cm.ph.getDataBeetwenReMarkers(tmp, re.compile('<baseURL[^>]*?>'), re.compile('</baseURL>'), False)[1].strip()
+        printDBG("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| " + baseUrl)
+        if baseUrl == '': baseUrl = manifestUrl
+        tmp = cm.ph.getAllItemsBeetwenMarkers(tmp, '<media', '>')
+        for item in tmp:
+            link = cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+)['"]''')[0]
+            if link != '': link = urljoin(baseUrl, link)
+            if cm.isValidUrl(link):
+                try: bitrate = int(cm.ph.getSearchGroups(item, '''bitrate=['"]([^'^"]+)['"]''')[0])
+                except Exception: bitrate = 0
+                retPlaylists.append({'name':'[f4m/hds] bitrate[%s]' % bitrate, 'bitrate':bitrate, 'url':link})
+        
+        if 0 == len(retPlaylists):
+            bitrates = re.compile('bitrate="([0-9]+?)"').findall(data)
+            for item in bitrates:
+                link = strwithmeta(manifestUrl, {'iptv_proto':'f4m', 'iptv_bitrate':item})
+                if liveStreamDetected:
+                    link.meta['iptv_livestream'] = True
+                try: bitrate = int(item)
+                except Exception: bitrate = 0
+                retPlaylists.append({'name':'[f4m/hds] bitrate[%s]' % item, 'bitrate':bitrate, 'url':link})
         
         if 0 == len(retPlaylists):
             link = strwithmeta(manifestUrl, {'iptv_proto':'f4m'})
             if liveStreamDetected:
                 link.meta['iptv_livestream'] = True
-            retPlaylists.append({'name':'[f4m/hds]', 'url':link})
+            retPlaylists.append({'name':'[f4m/hds]', 'bitrate':0, 'url':link})
     return retPlaylists
     
 def getMPDLinksWithMeta(manifestUrl, checkExt=True):

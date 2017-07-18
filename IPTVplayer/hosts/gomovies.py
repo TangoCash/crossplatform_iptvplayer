@@ -10,6 +10,7 @@ import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
@@ -58,7 +59,7 @@ def gettytul():
 class GoMovies(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'GoMovies.tv', 'cookie':'gomovies.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'GoMovies.tv', 'cookie':'gomovies.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://cdn.unlonecdn.ru/images/gomovies-logo-light.png'
@@ -388,6 +389,8 @@ class GoMovies(CBaseHostClass):
                     name = self.cm.ph.getSearchGroups(item, 'label="([^"]+?)"')[0]
                     if 'type="mp4"' in item:
                         urlTab.append({'name':name, 'url':url})
+                    elif 'type="m3u8"' in item:
+                        urlTab.extend(getDirectM3U8Playlist(url, checkContent=True))
                     elif 'kind="captions"' in item:
                         format = url[-3:]
                         if format in ['srt', 'vtt']:
@@ -399,6 +402,8 @@ class GoMovies(CBaseHostClass):
                     for item in tmp['playlist'][0]['sources']:
                         if "mp4" == item['type']:
                             urlTab.append({'name':str(item.get('label', 'default')), 'url':item['file']})
+                        elif "m3u8" == item['type']:
+                            urlTab.extend(getDirectM3U8Playlist(item['file'], checkContent=True))
                     for item in tmp['playlist'][0]['tracks']:
                         format = item['file'][-3:]
                         if format in ['srt', 'vtt'] and "captions" == item['kind']:
@@ -424,8 +429,8 @@ class GoMovies(CBaseHostClass):
         icon  = self.getFullUrl( self.cm.ph.getSearchGroups(data, '<meta property="og:image"[^>]+?content="([^"]+?)"')[0] )
         
         if title == '': title = cItem['title']
-        if desc == '':  title = cItem['desc']
-        if icon == '':  title = cItem['icon']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', '')
         
         descData = self.cm.ph.getDataBeetwenMarkers(data, '<div class="mvic-info">', '<div class="clearfix">', False)[1]
         descData = self.cm.ph.getAllItemsBeetwenMarkers(descData, '<p', '</p>')

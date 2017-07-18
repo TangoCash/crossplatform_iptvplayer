@@ -135,11 +135,11 @@ config.plugins.iptvplayer.napisy24pl_password = ConfigText(default="", fixed_siz
 config.plugins.iptvplayer.debugprint = ConfigSelection(default = "", choices = [("", _("no")),("console", _("yes, to console")),("debugfile", _("yes, to file /hdd/iptv.dbg"))]) 
 
 #icons
-config.plugins.iptvplayer.IconsSize = ConfigSelection(default = "135", choices = [("135", "135x135"),("120", "120x120"),("100", "100x100")]) 
+config.plugins.iptvplayer.IconsSize = ConfigSelection(default = "100", choices = [("135", "135x135"),("120", "120x120"),("100", "100x100")]) 
 config.plugins.iptvplayer.numOfRow = ConfigSelection(default = "0", choices = [("1", "1"),("2", "2"),("3", "3"),("4", "4"),("0", "auto")])
 config.plugins.iptvplayer.numOfCol = ConfigSelection(default = "0", choices = [("1", "1"),("2", "2"),("3", "3"),("4", "4"),("5", "5"),("6", "6"),("7", "7"),("8", "8"),("0", "auto")])
 
-config.plugins.iptvplayer.skin = ConfigSelection(default = "Default", choices = GetSkinsList())
+config.plugins.iptvplayer.skin = ConfigSelection(default = "rafalcoo1", choices = GetSkinsList())
 
 #Pin code
 

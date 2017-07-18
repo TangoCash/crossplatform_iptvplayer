@@ -18,7 +18,7 @@ def ParseM3u(data):
     list = []
     data = data.replace("\r","\n").replace('\n\n', '\n').split('\n')
     printDBG(">>>>>>>>>>>>> data0[%s]" % data[0])
-    if '#EXTM3U' not in data[0]:
+    if '#EXT' not in data[0]:
         return list
     
     params = {'title':'', 'length':'', 'uri':''}
@@ -32,7 +32,16 @@ def ParseM3u(data):
             except Exception:
                 printExc()
                 params = {'title':'', 'length':'', 'uri':''}
-        else:
+        elif line.startswith('#EXTVLCOPT:'):
+            tmp = line[11:].split(',')
+            for it in tmp:
+                it = it.split('=')
+                if len(it) != 2: continue
+                it[0] = it[0].upper() # key
+                for m in [("PROGRAM", 'PROGRAM-ID')]:
+                    if it[0] == m[0]:
+                        params[m[1]] = it[1]
+        elif not line.startswith('#'):
             if '' != params['title']:
                 line = line.replace('rtmp://$OPT:rtmp-raw=', '')
                 cTitle = re.sub('\[[^\]]*?\]', '', params['title'])

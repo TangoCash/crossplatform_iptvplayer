@@ -425,7 +425,29 @@ class YifyTV(CBaseHostClass):
             try:
                 printDBG(data)
                 if 'jscode' in data:
+                    #printDBG("+++++++++++++++++++++++++++++++++++++++++")
+                    #printDBG(data)
+                    #printDBG("+++++++++++++++++++++++++++++++++++++++++")
+                    #return []
                     data = self._evalJscode(data)
+                    if 'showiFrame(' in data:
+                        url = urllib.unquote(self.cm.ph.getDataBeetwenMarkers(data, "emb='+'", "'", False)[1])
+                        tmp = url.split('sub.file')
+                        url = tmp[0]
+                        subTrack = urllib.unquote(tmp[1])
+                        if url.startswith('//'):
+                            url = 'http:' + url
+                        if subTrack.startswith('//'):
+                            subTrack = 'http:' + subTrack
+                        tmpUrlTab = self.up.getVideoLinkExt(url)
+                        if self.cm.isValidUrl(subTrack):
+                            format = subTrack[-3:]
+                            for idx in range(len(tmpUrlTab)):
+                                tmpUrlTab[idx]['url'] = strwithmeta(tmpUrlTab[idx]['url'], {'external_sub_tracks':[{'title':'', 'url':subTrack, 'lang':'en', 'format':format}]})
+                        urlTab.extend(tmpUrlTab)
+                        printDBG(urlTab)
+                        break
+                        
                     if 'sources[sourceSelected]["paramId"]' in data:
                         data = data.replace('"+"', '').replace(' ', '')
                         paramSite = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramSite"\]="([^"]+?)"')[0]
@@ -448,7 +470,7 @@ class YifyTV(CBaseHostClass):
                 data = byteify(json.loads(data))
                 for item in data:
                     #printDBG('++++++++++++++++++++++\n%s\n++++++++++++++++++++++' % item)
-                    if item.get('type', '').startswith('video/') and item.get('url', '').startswith('http'):
+                    if (item.get('type', '').startswith('video/') or item.get('type', '').startswith('application/x-shockwave-flash')) and self.cm.isValidUrl(item.get('url', '')):
                         urlTab.append({'name':'{0}x{1}'.format(item.get('height', ''), item.get('width', '')), 'url':item['url'], 'need_resolve':0})
             except Exception:
                 SetIPTVPlayerLastHostError('The Mirror is broken.\nIf available you can choose other source.')
@@ -460,9 +482,17 @@ class YifyTV(CBaseHostClass):
             if url.startswith('//'):
                 videoUrl = 'http:' + videoUrl
             urlTab = self.up.getVideoLinkExt(videoUrl)
-        for idx in range(len(urlTab)):
-            urlTab[idx]['url'] = strwithmeta(urlTab[idx]['url'], {'external_sub_tracks':sub_tracks})
         
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(urlTab)
+        
+        for idx in range(len(urlTab)):
+            subs = strwithmeta(urlTab[idx]['url']).meta.get('external_sub_tracks', [])
+            subs.extend(sub_tracks)
+            urlTab[idx]['url'] = strwithmeta(urlTab[idx]['url'], {'external_sub_tracks':subs})
+        
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(urlTab)
         return urlTab
         
     def getFavouriteData(self, cItem):

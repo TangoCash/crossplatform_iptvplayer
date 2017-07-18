@@ -1060,7 +1060,8 @@ class IPTVExtMoviePlayer(Screen):
                     tmpLength = self.playback['CurrentTime']
                     if val > self.playback['CurrentTime']: tmpLength = val
                     if self.playback['Length'] < tmpLength:
-                        self.setPlaybackLength(tmpLength)
+                        if None == self.downloader or not self.downloader.hasDurationInfo():
+                            self.setPlaybackLength(tmpLength)
                     self.playback['LengthFromPlayerReceived'] = True
             elif 'CurrentTime' == key:
                 if self.playback['Length'] < val:
@@ -1744,6 +1745,9 @@ class IPTVExtMoviePlayer(Screen):
                     url = urlparser.decorateParamsFromUrl(url)
                     if '1' == url.meta.get('MPEGTS-Live', '0'):
                         cmd += ' -v '
+                programId = url.meta.get('PROGRAM-ID', '')
+                if programId != '':
+                    cmd += ' -P "%s" ' % programId
                     
             if config.plugins.iptvplayer.stereo_software_decode.value:
                 cmd += ' -s '

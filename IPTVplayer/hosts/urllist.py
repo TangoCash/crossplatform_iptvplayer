@@ -8,7 +8,7 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHost
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta, getMPDLinksWithMeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 ###################################################
@@ -190,6 +190,9 @@ class Urllist(CBaseHostClass):
                 videoUrls.extend(retTab)
             elif uri.split('?')[0].endswith('.f4m'):
                 retTab = getF4MLinksWithMeta(uri)
+                videoUrls.extend(retTab)
+            elif uri.split('?')[0].endswith('.mpd'):
+                retTab = getMPDLinksWithMeta(uri, False)
                 videoUrls.extend(retTab)
             else:
                 videoUrls.append({'name':'direct link', 'url':uri})

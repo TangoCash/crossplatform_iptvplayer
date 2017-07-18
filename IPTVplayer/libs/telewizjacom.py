@@ -117,7 +117,7 @@ class TeleWizjaComApi(CBaseHostClass):
             retList = []
             sts, data = self.getPage(self.getFullUrl(self.MAIN_URL), self.http_params)
             if not sts: return []
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'main-nav-wrap', '</ul>')[1]
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<ul', '</ul>')[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
             for item in data:
                 url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]

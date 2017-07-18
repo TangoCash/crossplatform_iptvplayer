@@ -52,7 +52,7 @@ def GetConfigList():
     optionList.append(getConfigListEntry(_('Preferred quality') + ": ", config.plugins.iptvplayer.videostar_defquality))
     optionList.append(getConfigListEntry( _("Login") + ": ", config.plugins.iptvplayer.videostar_login))
     optionList.append(getConfigListEntry( _("Password") + ": ", config.plugins.iptvplayer.videostar_password))
-    if '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
+    if False and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
         optionList.append(getConfigListEntry(_("Use a proxy gateway") + ' ' + _('(unsafe)'), config.plugins.iptvplayer.videostar_use_proxy_gateway))
         #if config.plugins.iptvplayer.videostar_use_proxy_gateway.value:
         #    optionList.append(getConfigListEntry("    " + _("Url:"), config.plugins.iptvplayer.videostar_proxy_gateway_url))
@@ -60,8 +60,8 @@ def GetConfigList():
 ###################################################
 
 class VideoStarApi:
-    MAINURL_PC      = 'https://videostar.pl/'
-    MAINURL_IOS     = 'https://videostar.pl/'
+    MAINURL_PC      = 'https://pilot.wp.pl/'
+    MAINURL_IOS     = 'https://pilot.wp.pl/'
     HTTP_HEADER_PC   = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': MAINURL_PC }
     HTTP_HEADER_IOS  = { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B179 Safari/7534.48.3', 'Referer': MAINURL_IOS }
     HTTP_HEADER2     = { 'User-Agent':'Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16', 'Referer': MAINURL_IOS}
@@ -89,7 +89,7 @@ class VideoStarApi:
         printDBG("--------------------------------------------------")
 
     def doInit(self):
-        if config.plugins.iptvplayer.videostar_use_proxy_gateway.value and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
+        if False and config.plugins.iptvplayer.videostar_use_proxy_gateway.value and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
             self.proxy_gateway_url      = "http://www.bramka-proxy.pl/browse.php?u={0}&b=60" #192&f=norefer" #config.plugins.iptvplayer.videostar_proxy_gateway_url.value
             self.proxy_gateway_url_ssl  = "http://www.bramka-proxy.pl/includes/process.php?action=sslagree"
             self.my_ip = ''
@@ -155,7 +155,7 @@ class VideoStarApi:
                 self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."') % self.LOGIN, type = MessageBox.TYPE_INFO, timeout = 10 )
                 return self.channelsList
         else:
-            self.sessionEx.open(MessageBox, _('Strona wymaga darmowego konta na http://videostar.pl/.\nProszę uzupełnić dane w konfiguracji hosta.'), type = MessageBox.TYPE_INFO, timeout = 10 )
+            self.sessionEx.open(MessageBox, _('Strona wymaga darmowego konta na http://pilot.wp.pl/.\nProszę uzupełnić dane w konfiguracji hosta.'), type = MessageBox.TYPE_INFO, timeout = 10 )
             return self.channelsList
          
         self._fillChannelsList()
@@ -229,7 +229,7 @@ class VideoStarApi:
                 params = {'header': HTTP_HEADER}
             
             if guestMode: 
-                url = url.replace('https://videostar.pl/api', 'https://api.videostar.pl/guest')
+                url = url.replace('https://pilot.wp.pl/api', 'https://api.pilot.wp.pl/guest')
             sts, data = self.cm.getPage( url, params )
             try:
                 self.printPageData(url, data)
@@ -246,8 +246,8 @@ class VideoStarApi:
                         
                         streams = re.findall('url="([^"]+?)" bitrate="([0-9]+?)"', data)
                         for item in streams:
-                            # swfVfy=https://videostar.pl/javascripts/libs/flowplayer/flowplayer.netvi-x.swf protocol=1 
-                            url = r + '/' + item[0] + ' live=1 swfUrl=https://videostar.pl/javascripts/libs/flowplayer/flowplayer.commercial-3.2.11.swf' + ' pageUrl=' + referer + (' conn=S:%s conn=S:%s token=%s' % (url_param1, VideoStarApi.VIDEO_STAR_T, VideoStarApi.VIDEO_STAR_T)) + ' flashVer=WIN 12,0,0,44 '
+                            # swfVfy=https://pilot.wp.pl/javascripts/libs/flowplayer/flowplayer.netvi-x.swf protocol=1 
+                            url = r + '/' + item[0] + ' live=1 swfUrl=https://pilot.wp.pl/javascripts/libs/flowplayer/flowplayer.commercial-3.2.11.swf' + ' pageUrl=' + referer + (' conn=S:%s conn=S:%s token=%s' % (url_param1, VideoStarApi.VIDEO_STAR_T, VideoStarApi.VIDEO_STAR_T)) + ' flashVer=WIN 12,0,0,44 '
                             urlsTab.append({'url': strwithmeta(url, {'iptv_proto':'rtmp'}), 'name': item[1], 'bitrate':item[1]+'000', 'type':'rtmpt'})
                     else:
                         # hls
