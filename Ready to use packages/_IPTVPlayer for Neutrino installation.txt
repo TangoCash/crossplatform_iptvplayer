@@ -1,0 +1,8 @@
+You need to install the following packages on your system in order to use IPTVPlayer for Neutrino.
+
+1. minipython_16.11.28.1237_sh4.ipk - OPTIONAL, only when system you use SH4 tuner without python bins installed already
+2. e2emulator-by-j00zek_17.01.04.1326_all.ipk - REQUIRED, emulates E2/openPLi environment enabling some e2 plugins to work
+3. commandline-iptvplayer_X.Y.Z_all.ipk - REQUIRED, contains slightly modified version of IPTVPlayer ready to run under E2 emulator in the daemon mode
+4. neutrino-iptvplayer-by-j00zek_X.Y.Z_all.ipk - LUA addon for Neutrino with GUI
+
+Please note sources of everything are available in other subdirs of this repository.

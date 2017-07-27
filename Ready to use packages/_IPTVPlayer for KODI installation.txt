@@ -1,0 +1,5 @@
+To use IPTVPlayer for KODI, install plugin.video.IPTVplayer.zip plugin in it, like you do for other KODI addons.
+The file contains all necessary scripts, nothing else needed.
+It will become visible under Vidoe>Addons menu.
+
+The IPTVPlayer addon for KODI has been confirmed to work on Windows, Linux and Android versions of the KODI.
