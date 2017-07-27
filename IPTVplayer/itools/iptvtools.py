@@ -198,6 +198,18 @@ class iptv_system:
 def IsHttpsCertValidationEnabled():
     return config.plugins.iptvplayer.httpssslcertvalidation.value
     
+def IsWebInterfaceModuleAvailable(chekInit=False):
+    if chekInit:
+        file = '__init__'
+    else:
+        file = 'initiator'
+    if (fileExists(resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/Web/%s.py'  % file)) or
+        fileExists(resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/Web/%s.pyo' % file)) or
+        fileExists(resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/Web/%s.pyc' % file))):
+        return True
+    else:
+        return False
+    
 def GetAvailableIconSize(checkAll=True):
     iconSizes = [config.plugins.iptvplayer.IconsSize.value]
     if checkAll:
@@ -551,6 +563,7 @@ def GetSkinsList():
     fileList = os.listdir( SKINS_PATH )
     for filename in fileList: skins.append((filename, filename))
     skins.sort()
+    skins.insert(0,("Auto", "Auto"))
     skins.insert(0,("Default", "Default"))
     printDBG('getSkinsList end')
     return skins

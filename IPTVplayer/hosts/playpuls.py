@@ -74,8 +74,8 @@ class Playpuls(CBaseHostClass):
                 params = {'name':'category', 'title':item[1], 'category':'menu', 'url':self.getFullUrl(item[0]), 'icon':self.DEFAULT_ICON_URL}
                 self.addDir(params)
             #
-            self.addDir({'name':'category', 'title':'Wyszukaj',              'category':'Wyszukaj', 'icon':self.DEFAULT_ICON_URL})
-            self.addDir({'name':'category', 'title':'Historia wyszukiwania', 'category':'Historia wyszukiwania', 'icon':self.DEFAULT_ICON_URL})
+            self.addDir({'name':'category', 'title':_('Search'),         'category':'search', 'search_item':True})
+            self.addDir({'name':'category', 'title':_('Search history'), 'category':'search_history'})
         
     def listCategory(self, cItem, searchMode=False):
         printDBG("Playpuls.listCategory cItem[%s]" % cItem)
@@ -148,7 +148,7 @@ class Playpuls(CBaseHostClass):
                 
     def getLinksForVideo(self, cItem):
         printDBG("Playpuls.getLinksForVideo [%s]" % cItem['url'])
-        videoUrls =[]
+        videoUrls = []
         header = dict(self.HEADER)
         header['Referer'] = cItem['url']
         sts, data = self.cm.getPage(cItem['url'], {'use_cookie': True, 'load_cookie': False, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':header})
@@ -167,9 +167,18 @@ class Playpuls(CBaseHostClass):
         source4Data = re.compile("([MDmd][123])\s*:\s*\{\s*source\s*\:\s*'([^']+?)'").findall(data)
         quality     = self.cm.ph.getSearchGroups(data, "quality = '([01])';")[0]
         
+        if (source1Data + source3Data + quality) == '' and 0 == len(source2Data) and 0 == len(source4Data):
+            url = 'http://playpuls.pl/sites/all/modules/vod/player.php'
+            id  = self.cm.ph.getSearchGroups(data, 'id\s*=\s*([0-9]+?);')[0]
+            post_data = {'id':id}
+            header['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+            sts, source3Data = self.cm.getPage(url, {'use_cookie': True, 'load_cookie': True, 'save_cookie': False, 'cookiefile': self.COOKIE_FILE, 'header':header, 'cookie_items':{'has_js':'1'}}, post_data=post_data)
+            if not sts: return videoUrls
+            printDBG(source3Data)
+        
         sources = []
         proto = config.plugins.iptvplayer.playpuls_defaultproto.value
-        printDBG("Playpuls.getLinksForVide proto[%s] source1Data[%r] source2Data[%r] source3Data[%r] source4Data[%r] quality[%r] " % (proto, source1Data, source2Data, quality, source3Data, source4Data))
+        printDBG("Playpuls.getLinksForVide proto[%s] source1Data[%s] source2Data[%s] source3Data[%s] source4Data[%s] quality[%s] " % (proto, source1Data, source2Data, quality, source3Data, source4Data))
         if '' != source1Data:
             if '' != quality:
                 mobileSrc = ''
@@ -217,8 +226,12 @@ class Playpuls(CBaseHostClass):
         elif source3Data != '':
             try:
                 source3Data = byteify(json.loads(source3Data))
+                if 'sources' in source3Data:
+                    source3Data = source3Data['sources']
                 for key,val in source3Data.iteritems():
-                    sources.append({'quality':key.replace('src', ''), 'src': '/play/%s' % val })
+                    if val != '':
+                        key = key.replace('src', '')
+                        sources.append({'quality':key, 'src': '/play/%s' % val })
             except Exception:
                 printExc()
         
@@ -229,7 +242,7 @@ class Playpuls(CBaseHostClass):
                     url = "http://193.187.64.119:1935/Edge/_definst_/mp4:s3%s/playlist.m3u8" % item['src']
                 else:
                     url = 'rtmp://193.187.64.119:1935/Edge/_definst_ playpath=mp4:s3%s swfUrl=http://vjs.zencdn.net/4.12/video-js.swf pageUrl=%s' % (item['src'], cItem['url'])
-                videoUrls.append({'bitrate':qualityMap[item['quality']], 'name':'%s - %s' % (item['quality'], qualityMap[item['quality']]), 'url':url})
+                videoUrls.append({'bitrate':qualityMap.get(item['quality'], '0'), 'name':'%s - %s' % (item['quality'], qualityMap.get(item['quality'], '0')), 'url':url})
             
         if 0 < len(videoUrls):
             max_bitrate = int(config.plugins.iptvplayer.playpuls_defaultformat.value)
@@ -239,6 +252,12 @@ class Playpuls(CBaseHostClass):
             if config.plugins.iptvplayer.playpuls_usedf.value:
                 videoUrls = [videoUrls[0]]            
         return videoUrls
+        
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("Playpuls.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        cItem = dict(cItem)
+        cItem['url'] = self.SEARCH_URL + urllib.quote_plus(searchPattern)
+        self.listCategory(cItem, True)
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('Playpuls.handleService start')
@@ -252,12 +271,14 @@ class Playpuls(CBaseHostClass):
             self.listsMainMenu()
         elif 'menu' == category:
             self.listCategory(self.currItem)
-    #WYSZUKAJ
-        elif category == "Wyszukaj":
-            self.listCategory({'url':self.SEARCH_URL + searchPattern}, True)
-    #HISTORIA WYSZUKIWANIA
-        elif category == "Historia wyszukiwania":
-            self.listsHistory()
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
             printExc()
 

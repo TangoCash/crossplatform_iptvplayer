@@ -8,7 +8,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetSkinsList, GetHostsList, GetEnabledHostsList, \
-                                                          IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize
+                                                          IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize, \
+                                                          IsWebInterfaceModuleAvailable
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit
 ###################################################
 
@@ -18,6 +19,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Screens.Screen import Screen
 
 from Components.config import config, ConfigSubsection, ConfigSelection, ConfigDirectory, ConfigYesNo, ConfigOnOff, Config, ConfigInteger, ConfigSubList, ConfigText, getConfigListEntry, configfile
+from Tools.Directories import resolveFilename, fileExists, SCOPE_PLUGINS
 ###################################################
 
 
@@ -61,6 +63,7 @@ config.plugins.iptvplayer.IPTVDMMaxDownloadItem = ConfigSelection(default = "1",
 config.plugins.iptvplayer.AktualizacjaWmenu = ConfigYesNo(default = True)
 config.plugins.iptvplayer.sortuj = ConfigYesNo(default = True)
 config.plugins.iptvplayer.remove_diabled_hosts = ConfigYesNo(default = False)
+config.plugins.iptvplayer.IPTVWebIterface = ConfigYesNo(default = False)
 
 def GetMoviePlayerName(player):
     map = {"auto":_("auto"), "mini": _("internal"), "standard":_("standard"), 'exteplayer': _("external eplayer3"), 'extgstplayer': _("external gstplayer")}
@@ -139,7 +142,7 @@ config.plugins.iptvplayer.IconsSize = ConfigSelection(default = "100", choices =
 config.plugins.iptvplayer.numOfRow = ConfigSelection(default = "0", choices = [("1", "1"),("2", "2"),("3", "3"),("4", "4"),("0", "auto")])
 config.plugins.iptvplayer.numOfCol = ConfigSelection(default = "0", choices = [("1", "1"),("2", "2"),("3", "3"),("4", "4"),("5", "5"),("6", "6"),("7", "7"),("8", "8"),("0", "auto")])
 
-config.plugins.iptvplayer.skin = ConfigSelection(default = "rafalcoo1", choices = GetSkinsList())
+config.plugins.iptvplayer.skin = ConfigSelection(default = "auto", choices = GetSkinsList())
 
 #Pin code
 

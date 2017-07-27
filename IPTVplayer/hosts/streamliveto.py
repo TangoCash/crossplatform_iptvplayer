@@ -97,8 +97,8 @@ class StreamLiveTo(CBaseHostClass):
     def fillCategories(self):
         printDBG("StreamLiveTo.fillCategories")
         self.cacheFilters = {}
-        #sts, data = self.getPage(self._getFullUrl('channels/'), self.defaultParams)
-        sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
+        sts, data = self.getPage(self._getFullUrl('channels'), self.defaultParams)
+        #sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
         if not sts: return
         
         catTab = []

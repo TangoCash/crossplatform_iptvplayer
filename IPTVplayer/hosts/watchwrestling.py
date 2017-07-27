@@ -16,7 +16,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
-import urlparse
 import base64
 try:    import json
 except Exception: import simplejson as json
@@ -41,32 +40,35 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://watchwrestling.uno/'
+    return 'http://watchwrestling.nl/'
 
-class WatchwrestlingUNO(CBaseHostClass):
+class Watchwrestling(CBaseHostClass):
+ 
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'watchwrestling.uno', 'cookie':'watchwrestling.uno.cookie'})
-        self.MAIN_URL    = 'http://watchwrestling.uno/'
-        self.SRCH_URL    = self.getFullUrl('index.php?s=')
-        self.DEFAULT_ICON_URL = 'http://i.imgur.com/UsYsZ.png' #'http://watchwrestling.uno/wp-content/uploads/2016/03/wwunologo2.png'
+        CBaseHostClass.__init__(self, {'history':'Watchwrestling', 'cookie':'Watchwrestling.cookie'})
+        self.serversCache = []
         
-        self.MAIN_CAT_TAB = [{'category':'categories',    'title': _('Categories'),  'url':self.getMainUrl(),  'm1':'Categories</h3>'              },
-                             {'category':'categories',    'title': _('WWE'),         'url':self.getFullUrl('category/wwe/'),  'm1':'>WWE</a>'      },
-                             {'category':'live',          'title': _('LIVE 24/7'),   'url':self.getFullUrl('watch-wwe-network-247-live-free/')     },
-                             {'category':'list_filters',  'title': _('Replay Shows'),'url':self.getFullUrl('category/wwe-network/')                },
-                             {'category':'list_filters',  'title': _('iMPACT Wrestling'), 'url':self.getFullUrl('category/tna/')                   },
-                             {'category':'list_filters',  'title': _('RAW'),              'url':self.getFullUrl('category/wwe/raw/')               },
-                             {'category':'list_filters',  'title': _('Smackdown'),        'url':self.getFullUrl('category/wwe/smackdown/')         },
-                             {'category':'list_filters',  'title': _('Total Divas'),      'url':self.getFullUrl('category/wwe-total-divas/')       },
-                             {'category':'list_filters',  'title': _('NXT'),              'url':self.getFullUrl('category/wwe/nxt/')               },
-                             {'category':'list_filters',  'title': _('Main Event'),       'url':self.getFullUrl('category/wwe/main-event/')        },
-                             {'category':'list_filters',  'title': _('UFC'),              'url':self.getFullUrl('category/ufc/')                   },
-                             {'category':'categories',    'title': _('Indy'),             'url':self.getFullUrl('category/indy/'), 'm1':'>Indy</a>'},
-                             {'category':'list_filters',  'title': _('NJPW'),             'url':self.getFullUrl('category/njpw/')                  },
-                             {'category':'list_filters',  'title': _('Others'),           'url':self.getFullUrl('category/wrestling-archives/')    },
+        self.MAIN_URL = 'http://watchwrestling.nl/'
+        self.SRCH_URL = self.getFullUrl('index.php?s=')
+        self.DEFAULT_ICON_URL = 'http://watchwrestling.to/wp-content/uploads/2014/11/ww_fb.png'
+        
+        self.MAIN_CAT_TAB = [{'category':'categories',    'title': _('Categories'),   'url':self.getMainUrl(),                              'm1':'Categories</h3>'   },
+                             {'category':'categories',    'title': _('Monthly'),      'url':self.getFullUrl('video/watch-wwe-raw-101915/'), 'm1':'Monthly Posts</h3>'},
+                             {'category':'live',          'title': _('LIVE 24/7'),    'url':self.getFullUrl('watch-wwe-network-live/')                               },
+                             {'category':'categories',    'title': _('WWE'),          'url':self.getFullUrl('category/wwe/'),               'm1':'>WWE</a>'          },
+                             {'category':'list_filters',  'title': _('WWE Network'),  'url':self.getFullUrl('category/wwenetwork/')                                  },
+                             {'category':'categories',    'title': _('TNA'),          'url':self.getFullUrl('category/tna/'),               'm1':'>TNA</a>'          },
+                             {'category':'categories',    'title': _('Weekly Indys'), 'url':self.getFullUrl('category/weekly-indys/'),      'm1':'>Weekly Indys</a>' },
+                             {'category':'list_filters',  'title': _('NJPW'),         'url':self.getFullUrl('category/njpw/')                                        },
+                             {'category':'categories',    'title': _('Other Sports'), 'url':self.getFullUrl('category/other-sports/'),      'm1':'>Other Sports</a>' },
+                             {'category':'list_filters',  'title': _('RAW'),          'url':self.getFullUrl('category/wwe/raw/')                                     },
+                             {'category':'list_filters',  'title': _('Smackdown'),    'url':self.getFullUrl('category/wwe/smackdown/')                               },
+                             {'category':'list_filters',  'title': _('Total Divas'),  'url':self.getFullUrl('category/wwe/totaldivas/')                              },
+                             {'category':'list_filters',  'title': _('NXT'),          'url':self.getFullUrl('category/wwe/nxt/')                                     },
+                             {'category':'list_filters',  'title': _('Archives'),     'url':self.getFullUrl('category/archives/')                                    },
                              
-                             {'category':'search',             'title': _('Search'),       'search_item':True},
-                             {'category':'search_history',     'title': _('Search history')} 
+                             {'category':'search',        'title': _('Search'),       'search_item':True},
+                             {'category':'search_history','title': _('Search history')} 
                             ]
         
         self.SORT_TAB = [{'sort':'date',     'title':_('DATE')},
@@ -74,10 +76,9 @@ class WatchwrestlingUNO(CBaseHostClass):
                          {'sort':'likes',    'title':_('LIKES')},
                          {'sort':'comments', 'title':_('COMMENTS')}
                         ]
-        self.serversCache = []
-            
+    
     def listCategories(self, cItem, nexCategory):
-        printDBG("WatchwrestlingUNO.listCategories")
+        printDBG("Watchwrestling.listCategories")
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
@@ -98,13 +99,13 @@ class WatchwrestlingUNO(CBaseHostClass):
             self.addDir(params)
             
     def listFilters(self, cItem, category):
-        printDBG("WatchwrestlingUNO.listFilters")
+        printDBG("Watchwrestling.listFilters")
         cItem = dict(cItem)
         cItem['category'] = category
         self.listsTab(self.SORT_TAB, cItem)
             
     def listMovies(self, cItem, nextCategory):
-        printDBG("WatchwrestlingUNO.listMovies")
+        printDBG("Watchwrestling.listMovies")
         url = cItem['url']
         page = cItem.get('page', 1)
         if page > 1:
@@ -121,28 +122,23 @@ class WatchwrestlingUNO(CBaseHostClass):
             nextPage = True
         else: nextPage = False
         
-        posts = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="post-', '</div>')
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="data"', '</div>')
-        for idx in range(len(posts)):
-            item   = posts[idx]
+        if '<div class="loop-nav pag-nav">' in data:
+            m2 = '<div class="loop-nav pag-nav">'
+        else:
+            m2 = '<div id="sidebar"'
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="nag cf">', m2, False)[1]
+        
+        data = data.split('<div id="post-')
+        if len(data): del data[0]
+        
+        for item in data:
+            tmp    = item.split('<p class="stats">')
             url    = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
             icon   = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
             title  = self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0]
-            if title == '': title = self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0]
-            
-            if len(data) < len(posts):
-                printDBG("FIX ME: data_len[%d] posts_len[%d]" % (len(data), len(posts)))
-                desc = ''
-            else:
-                desc = []
-                tmp = [self.cm.ph.getDataBeetwenMarkers(data[idx], '<time', '</time>')[1]]
-                tmp.extend(self.cm.ph.getAllItemsBeetwenMarkers(data[idx], '<i', '</span>'))
-                for item in tmp:
-                    item = self.cleanHtmlStr(item)
-                    if item != '': desc.append(item)
-                desc = ' | '.join(desc)
+            desc   = tmp[-1]
             params = dict(cItem)
-            params.update( {'good_for_fav': True, 'category':nextCategory, 'title': self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'desc': desc, 'icon':self.getFullIconUrl(icon)} )
+            params.update( {'good_for_fav': True, 'category':nextCategory, 'title': self.cleanHtmlStr( title ), 'url':self.getFullUrl(url), 'desc': self.cleanHtmlStr( desc ), 'icon':self.getFullUrl(icon)} )
             self.addDir(params)
         
         if nextPage:
@@ -151,34 +147,22 @@ class WatchwrestlingUNO(CBaseHostClass):
             self.addDir(params)
             
     def listServers(self, cItem, nextCategory):
-        printDBG("WatchwrestlingUNO.listServers [%s]" % cItem)
+        printDBG("Watchwrestling.listServers [%s]" % cItem)
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
-        
-        baseUrl = self.cm.ph.getSearchGroups(data, '''<base[^>]+?href=["'](https?://[^"^']+?)['"]''')[0]
-        
         self.serversCache = []
         matchObj = re.compile('href="([^"]+?)"[^>]*?>([^>]+?)</a>')
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="entry-content rich-content">', '<p class="no-break">', False)[1]
-        sp = '<span style="font-size:'
-        if sp in data: 
-            data = data.split(sp)
-            sp = '</span>'
-        else: 
-            data = data.split('color:')
-            sp = '</p>'
-        
+        sp = '<div style="text-align: center;">'
+        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '<div id="extras">', False)[1]
+        data = data.split(sp)
         if len(data): del data[0]
-        printDBG(data)
         for item in data:
-            sts, serverName = self.cm.ph.getDataBeetwenMarkers(item, '>', sp, False)
+            sts, serverName = self.cm.ph.getDataBeetwenMarkers(item, 'geneva;">', '</span>', False)
             if not sts: continue
             parts = matchObj.findall(item)
             partsTab = []
             for part in parts:
-                url = urlparse.urljoin(baseUrl, part[0])
-                title = cItem['title'] + '[%s]' % part[1]
-                partsTab.append({'title':title, 'url':strwithmeta(url, {'live':True, 'Referer':cItem['url']})})
+                partsTab.append({'title':cItem['title'] + '[%s]' % part[1], 'url':part[0], 'Referer':cItem['url']})
             if len(partsTab):
                 params = dict(cItem)
                 params.update( {'good_for_fav': False, 'category':nextCategory, 'title':serverName, 'part_idx':len(self.serversCache)} )
@@ -186,24 +170,20 @@ class WatchwrestlingUNO(CBaseHostClass):
                 self.serversCache.append(partsTab)
         
     def listParts(self, cItem):
-        printDBG("WatchwrestlingUNO.listServers [%s]" % cItem)
+        printDBG("Watchwrestling.listServers [%s]" % cItem)
         partIdx = cItem['part_idx']
         self.listsTab(self.serversCache[partIdx], cItem, 'video')
         
     def listLiveStreams(self, cItem):
-        printDBG("WatchwrestlingUNO.listLiveStreams [%s]" % cItem)
+        printDBG("Watchwrestling.listLiveStreams [%s]" % cItem)
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
-        
-        baseUrl = self.cm.ph.getSearchGroups(data, '''<base[^>]+?href=["'](https?://[^"^']+?)['"]''')[0]
         sp = '<div style="text-align: center;">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<p style="text-align: center;"><a', '</p>')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>', True)
+        data = self.cm.ph.getDataBeetwenMarkers(data, sp, '</div>', False)[1]
+        data = re.compile('href="([^"]+?)"[^>]*?>([^>]+?)</a>').findall(data)
         for item in data:
-            title  = self.cleanHtmlStr(item)
-            url    = urlparse.urljoin(baseUrl, self.cm.ph.getSearchGroups(item, '''href=["']([^"^']+?)['"]''')[0])
             params = dict(cItem)
-            params.update({'good_for_fav': False, 'title':title, 'url':strwithmeta(url, {'live':True, 'Referer':cItem['url']}), 'live':True})
+            params.update({'good_for_fav': False, 'title':item[1], 'url':item[0], 'Referer':cItem['url'], 'live':True})
             self.addVideo(params)
         
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -219,17 +199,14 @@ class WatchwrestlingUNO(CBaseHostClass):
         return data
         
     def getLinksForVideo(self, cItem):
-        printDBG("WatchwrestlingUNO.getLinksForVideo [%s]" % cItem)
+        printDBG("Watchwrestling.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        live = cItem.get('live', False)
-        if live: return [{'name':cItem['title'], 'url':cItem['url'], 'need_resolve':1}]
-        
-        url = strwithmeta(cItem['url'])
-        referer =  url.meta.get('Referer', '')
+        url = cItem['url']
+        Referer =  cItem.get('Referer', '')
         if 1 != self.up.checkHostSupport(url):  
             tries = 0
             while tries < 3:
-                sts, data = self.cm.getPage(url, {'header':{'Referer':referer, 'User-Agent':'Mozilla/5.0'}})
+                sts, data = self.cm.getPage(url, {'header':{'Referer':Referer, 'User-Agent':'Mozilla/5.0'}})
                 if not sts: return urlTab
                 data = data.replace('// -->', '')
                 data = self._clearData(data)
@@ -237,34 +214,35 @@ class WatchwrestlingUNO(CBaseHostClass):
                 if 'eval(unescape' in data:
                     data = urllib.unquote(self.cm.ph.getSearchGroups(data, '''eval\(unescape\(['"]([^"^']+?)['"]''')[0])
                 url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]*?src=['"]([^"^']+?)['"]''', 1, True)[0]
-                if '/cgi-bin/' in url:
-                    referer = cItem['url']
+                if 'protect.cgi' in url:
+                    Referer = cItem['url']
                 else:
                     break
                 tries += 1
         url = strwithmeta(url)
-        url.meta['Referer'] = referer
+        url.meta['Referer'] = Referer
         url.meta['live'] = cItem.get('live', False)
         
         urlTab.append({'name':cItem['title'], 'url':url, 'need_resolve':1})
         return urlTab
         
     def getVideoLinks(self, baseUrl):
-        printDBG("WatchwrestlingUNO.getVideoLinks [%s]" % baseUrl)
+        printDBG("Watchwrestling.getVideoLinks [%s]" % baseUrl)
         urlTab = []
+        
         url = strwithmeta(baseUrl)
         if url.meta.get('live'):
             urlTab = self.up.getAutoDetectedStreamLink(url)
         else:
             urlTab = self.up.getVideoLinkExt(url)
         return urlTab
-        
+
     def getFavouriteData(self, cItem):
-        printDBG('WatchwrestlingUNO.getFavouriteData')
+        printDBG('Watchwrestling.getFavouriteData')
         return json.dumps(cItem) 
         
     def getLinksForFavourite(self, fav_data):
-        printDBG('WatchwrestlingUNO.getLinksForFavourite')
+        printDBG('Watchwrestling.getLinksForFavourite')
         links = []
         try:
             cItem = byteify(json.loads(fav_data))
@@ -273,7 +251,7 @@ class WatchwrestlingUNO(CBaseHostClass):
         return links
         
     def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('WatchwrestlingUNO.setInitListFromFavouriteItem')
+        printDBG('Watchwrestling.setInitListFromFavouriteItem')
         try:
             params = byteify(json.loads(fav_data))
         except Exception: 
@@ -281,7 +259,7 @@ class WatchwrestlingUNO(CBaseHostClass):
             printExc()
         self.addDir(params)
         return True
-
+    
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -321,12 +299,11 @@ class WatchwrestlingUNO(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
-
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, WatchwrestlingUNO(), True, [])
-        
+        CHostBase.__init__(self, Watchwrestling(), True, [])
+
     def getSearchTypes(self):
         searchTypesOptions = []
         searchTypesOptions.append((_("DATE"),         "date"))

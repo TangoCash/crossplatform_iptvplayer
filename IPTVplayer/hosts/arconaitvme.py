@@ -57,13 +57,17 @@ class ArconaitvME(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL      = 'https://www.arconaitv.me/'
-        self.DEFAULT_ICON_URL  = "https://arconaitv.me/wp-content/uploads/2017/05/logo-white-1.png"
+        self.MAIN_URL      = 'http://www.arconaitv.me/'
+        self.DEFAULT_ICON_URL  = "https://pbs.twimg.com/profile_images/590745210000433152/2u_nu2TM.png"
 
         self.MAIN_CAT_TAB = [{'category':'list_main',      'title': _('Main'),      'url':self.MAIN_URL},
-                             {'category':'list_channels',  'title': _('Channels'),  'url':self.MAIN_URL},
-                             {'category':'list_cabletv',   'title': _('Cable Tv'),  'url':self.MAIN_URL},
-                             {'category':'list_movies',    'title': _('Movies'),    'url':self.MAIN_URL} ]
+                             {'category':'list_shows',     'title': _('Shows'),     'url':self.MAIN_URL},
+                             {'category':'list_cabletv',   'title': _('Cable'),     'url':self.MAIN_URL},
+                             {'category':'list_movies',    'title': _('Movies'),    'url':self.MAIN_URL},
+                             
+                             {'category':'search',            'title': _('Search'), 'search_item':True,},
+                             {'category':'search_history',    'title': _('Search history'),            } 
+                            ]
     
     def isProxyNeeded(self, url):
         return 'arconaitv.me' in url
@@ -73,8 +77,8 @@ class ArconaitvME(CBaseHostClass):
         
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= dict(self.HEADER)
+        if post_data != None: HTTP_HEADER['Content-Type'] = 'application/x-www-form-urlencoded'
         params.update({'header':HTTP_HEADER})
-        
         if self.isProxyNeeded( url ):
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=240'.format(urllib.quote(url, ''))
             params['header']['Referer'] = proxy
@@ -101,54 +105,46 @@ class ArconaitvME(CBaseHostClass):
             url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
         return CBaseHostClass.getFullUrl(self, url)
     
-    def listMain(self, cItem):
-        printDBG("ArconaitvME.listMain")
-        
-        sts, data = self.getPage(cItem['url'])
+    def listItems(self, cItem, m1='', m2='', post_data=None):
+        printDBG("ArconaitvME.listItems")
+        sts, data = self.getPage(cItem['url'], post_data=post_data)
         if not sts: return
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'vc_align_center">', '</a>', False)
+        data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>', False)
+        
         for item in data:
             icon  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
-            if icon == '': icon = cItem['icon']
             url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
             if url == '': continue
-            title = self.getFullUrl( icon ).split('/')[-1][:-4].replace('-', ' ').title()
-            desc = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0] )
-            if desc == '': desc = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0] )
+            title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0] )
             
             params = dict(cItem)
-            params.update({'title':title, 'url':url, 'icon':self.getFullIconUrl( icon ), 'desc':desc})
-            self.addVideo(params)
-            
-    def listItems(self, cItem, m1='', m2=''):
-        printDBG("ArconaitvME.listItems")
-        sts, data = self.getPage(cItem['url'])
-        if not sts: return
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2, False)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li ', '</a>')
-        for item in data:
-            if 'menu-item-has-children' in item: continue
-            url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
-            if url == '': continue
-            title = self.cleanHtmlStr( item )
-            
-            params = dict(cItem)
-            params.update({'title':title, 'url':url})
+            params.update({'title':title, 'url':url, 'icon':self.getFullIconUrl( icon )})
             self.addVideo(params)
         
-    def listChannels(self, cItem):
-        printDBG("ArconaitvME.listChannels")
-        self.listItems(cItem, 'Channels', 'Cable Tv')
+    def listMain(self, cItem):
+        printDBG("ArconaitvME.listMain")
+        self.listItems(cItem, '<div class="content">', '<div class="row">')
+        
+    def listShows(self, cItem):
+        printDBG("ArconaitvME.listShows")
+        self.listItems(cItem, '''<div class='stream-category'>Shows</div>''', '<div class="box-content">')
         
     def listCableTv(self, cItem):
         printDBG("ArconaitvME.listCableTv")
-        self.listItems(cItem, 'Cable Tv', 'Movies')
+        self.listItems(cItem, '''div class='stream-category'>Cable</div>''', '<div class="box-content">')
         
     def listMovies(self, cItem):
         printDBG("ArconaitvME.listMovies")
-        self.listItems(cItem, 'Movies', 'Donate')
+        self.listItems(cItem, '''<div class='stream-category'>Movies</div>''', '<div class="box-content">')
+        
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("ArconaitvME.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        url = self.getFullUrl('/search.php')
+        cItem = dict(cItem)
+        cItem['url'] = url
+        self.listItems(cItem, '<div class="searchresults">', '<div class="acontainer">', post_data={'q':searchPattern})
         
     def getLinksForVideo(self, cItem):
         printDBG("ArconaitvME.getLinksForVideo [%s]" % cItem)
@@ -168,8 +164,10 @@ class ArconaitvME(CBaseHostClass):
         try: playerUrl = byteify(json.loads('"%s"' % playerUrl))
         except Exception: printExc()
         
+        playerUrl = strwithmeta(playerUrl, {'Referer':cItem['url'], 'Origin':self.getMainUrl()})
+        
         if self.cm.isValidUrl(playerUrl):
-            tmp = getDirectM3U8Playlist(playerUrl)
+            tmp = getDirectM3U8Playlist(playerUrl, checkContent=True)
             for item in tmp:
                 item['need_resolve'] = 0
                 urlsTab.append(item)
@@ -199,12 +197,22 @@ class ArconaitvME(CBaseHostClass):
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif category == 'list_main':
             self.listMain(self.currItem)
-        elif category == 'list_channels':
-            self.listChannels(self.currItem)
+        elif category == 'list_shows':
+            self.listShows(self.currItem)
         elif category == 'list_cabletv':
             self.listCableTv(self.currItem)
         elif category == 'list_movies':
             self.listMovies(self.currItem)
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
+        else:
+            printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
 class IPTVHost(CHostBase):

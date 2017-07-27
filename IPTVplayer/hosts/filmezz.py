@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -33,21 +33,27 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
+from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.filmezzeu_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.filmezzeu_password = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("login")+":", config.plugins.iptvplayer.filmezzeu_login))
+    optionList.append(getConfigListEntry(_("password")+":", config.plugins.iptvplayer.filmezzeu_password))
     return optionList
 ###################################################
 
 def gettytul():
     return 'http://filmezz.eu/'
 
-class AnimeTo(CBaseHostClass):
+class FilmezzEU(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'filmezz.eu', 'cookie':'filmezzeu.cookie', 'cookie_type':'MozillaCookieJar'})
@@ -60,6 +66,9 @@ class AnimeTo(CBaseHostClass):
         self.cacheLinks    = {}
         self.cacheFilters  = {}
         self.cacheFiltersKeys = []
+        self.loggedIn = None
+        self.login = ''
+        self.password = ''
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
     
         self.MAIN_CAT_TAB = [{'category':'list_filters',    'title': _('Home'),               'url':self.getFullUrl('kereses.php')   },
@@ -92,7 +101,7 @@ class AnimeTo(CBaseHostClass):
         return sts, data
     
     def fillCacheFilters(self, cItem):
-        printDBG("AnimeTo.listCategories")
+        printDBG("FilmezzEU.listCategories")
         self.cacheFilters = {}
         self.cacheFiltersKeys = []
         
@@ -123,7 +132,7 @@ class AnimeTo(CBaseHostClass):
         printDBG(self.cacheFilters)
         
     def listFilters(self, cItem, nextCategory):
-        printDBG("AnimeTo.listFilters")
+        printDBG("FilmezzEU.listFilters")
         cItem = dict(cItem)
         
         f_idx = cItem.get('f_idx', 0)
@@ -139,7 +148,7 @@ class AnimeTo(CBaseHostClass):
         self.listsTab(self.cacheFilters.get(filter, []), cItem)
         
     def listItems(self, cItem, nextCategory):
-        printDBG("AnimeTo.listItems")
+        printDBG("FilmezzEU.listItems")
         url = cItem['url']
         page = cItem.get('page', 0)
         
@@ -199,7 +208,7 @@ class AnimeTo(CBaseHostClass):
             self.addDir(params)
             
     def exploreItem(self, cItem):
-        printDBG("AnimeTo.exploreItem")
+        printDBG("FilmezzEU.exploreItem")
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
@@ -219,7 +228,8 @@ class AnimeTo(CBaseHostClass):
         titlesTab = []
         self.cacheLinks  = {}
         data = self.cm.ph.getDataBeetwenMarkers(data, 'url-list', '</section>')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="col-sm-4 col-xs-12 host">', '</a>')
+        data = data.split('<div class="col-sm-4 col-xs-12 host">')
+        if len(data): del data[0]
         for tmp in data:
             dTab = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<div', '</div>')
             if len(dTab) < 2: continue 
@@ -248,13 +258,13 @@ class AnimeTo(CBaseHostClass):
             self.addVideo(params)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("AnimeTo.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        printDBG("FilmezzEU.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
         cItem['url'] = self.getFullUrl('kereses.php?s=' + urllib.quote_plus(searchPattern))
         self.listItems(cItem, 'explore_item')
         
     def getLinksForVideo(self, cItem):
-        printDBG("AnimeTo.getLinksForVideo [%s]" % cItem)
+        printDBG("FilmezzEU.getLinksForVideo [%s]" % cItem)
         if 1 == self.up.checkHostSupport(cItem.get('url', '')):
             videoUrl = cItem['url'].replace('youtu.be/', 'youtube.com/watch?v=')
             return self.up.getVideoLinkExt(videoUrl)
@@ -263,7 +273,7 @@ class AnimeTo(CBaseHostClass):
         return self.cacheLinks.get(key, [])
         
     def getVideoLinks(self, videoUrl):
-        printDBG("AnimeTo.getVideoLinks [%s]" % videoUrl)
+        printDBG("FilmezzEU.getVideoLinks [%s]" % videoUrl)
         videoUrl = strwithmeta(videoUrl)
         urlTab = []
         
@@ -276,18 +286,99 @@ class AnimeTo(CBaseHostClass):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
                         
-        try:         
-            sts, response = self.cm.getPage(videoUrl, {'return_data':False})
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return []
-        
-        if self.up.getDomain(self.getMainUrl()) in videoUrl:
-            sts, data = self.getPage(videoUrl)
-            if not sts: return []
-            videoUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+        url = videoUrl
+        post_data = None
+        while True:
+            try:
+                httpParams = dict(self.defaultParams)
+                httpParams['return_data'] = False
+                
+                sts, response = self.cm.getPage(url, httpParams, post_data)
+                videoUrl = response.geturl()
+                response.close()
+            except Exception:
+                printExc()
+                return []
+            
+            if self.up.getDomain(self.getMainUrl()) in videoUrl:
+                sts, data = self.getPage(videoUrl)
+                if not sts: return []
+                
+                if 'captcha' in data: data = re.sub("<!--[\s\S]*?-->", "", data)
+                
+                if 'google.com/recaptcha/' in data and 'sitekey' in data:
+                    message = _('Link protected with google recaptcha v2.')
+                    if True != self.loggedIn:
+                        message += '\n' + _('Please fill your login and password in the host configuration (available under blue button) and try again.')
+                    SetIPTVPlayerLastHostError(message)
+                    break
+                elif '<input name="captcha"' in data:
+                    data = self.cm.ph.getDataBeetwenMarkers(data, '<div align="center">', '</form>')[1]
+                    captchaTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h3', '</h3>')[1])
+                    captchaDesc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '</h3>', '</span>')[1])
+                    
+                    # parse form data
+                    data = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>')[1]
+                    
+                    imgUrl = self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"')[0]
+                    if imgUrl != '': imgUrl = '/' + imgUrl
+                    if imgUrl.startswith('/'): imgUrl = urlparse.urljoin(videoUrl, imgUrl)
+                    
+                    printDBG("img URL [%s]" % imgUrl)
+                        
+                    actionUrl = self.cm.ph.getSearchGroups(data, 'action="([^"]+?)"')[0]
+                    if actionUrl != '': actionUrl = '/' + actionUrl
+                    if actionUrl.startswith('/'): actionUrl = urlparse.urljoin(videoUrl, actionUrl)
+                    elif actionUrl == '': actionUrl = videoUrl
+                        
+                    captcha_post_data = dict(re.findall(r'''<input[^>]+?name=["']([^"^']*)["'][^>]+?value=["']([^"^']*)["'][^>]*>''', data))
+                    
+                    if self.cm.isValidUrl(imgUrl):
+                        params = dict(self.defaultParams)
+                        params['header'] = dict(params['header'] )
+                        params['header']['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                        params = dict(self.defaultParams)
+                        params.update( {'maintype': 'image', 'subtypes':['jpeg', 'png'], 'check_first_bytes':['\xFF\xD8','\xFF\xD9','\x89\x50\x4E\x47'], 'header':params['header']} )
+                        filePath = GetTmpDir('.iptvplayer_captcha.jpg')
+                        ret = self.cm.saveWebFile(filePath, imgUrl.replace('&amp;', '&'), params)
+                        if not ret.get('sts'):
+                            SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
+                            return urlTab
+
+                        params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
+                        params['accep_label'] = _('Send')
+                        params['title'] = captchaTitle
+                        params['status_text'] = captchaDesc
+                        params['with_accept_button'] = True
+                        params['list'] = []
+                        item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
+                        item['label_size'] = (160,75)
+                        item['input_size'] = (480,25)
+                        item['icon_path'] = filePath
+                        item['title'] = _('Answer')
+                        item['input']['text'] = ''
+                        params['list'].append(item)
+            
+                        ret = 0
+                        retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
+                        printDBG(retArg)
+                        if retArg and len(retArg) and retArg[0]:
+                            printDBG(retArg[0])
+                            captcha_post_data['captcha'] = retArg[0][0]
+                            post_data = captcha_post_data
+                            url = actionUrl
+                        
+                        if not sts:
+                            return urlTab
+                        else:
+                            continue
+                
+                tmp = re.compile('''<iframe[^>]+?src=['"]([^"^']+?)['"]''', re.IGNORECASE).findall(data)
+                for url in tmp:
+                    if 1 == self.up.checkHostSupport(url):
+                        videoUrl = url
+                        break
+            break
         
         if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)
@@ -295,12 +386,12 @@ class AnimeTo(CBaseHostClass):
         return urlTab
     
     def getFavouriteData(self, cItem):
-        printDBG('AnimeTo.getFavouriteData')
+        printDBG('FilmezzEU.getFavouriteData')
         params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem['desc'], 'icon':cItem['icon']}
         return json.dumps(params) 
         
     def getLinksForFavourite(self, fav_data):
-        printDBG('AnimeTo.getLinksForFavourite')
+        printDBG('FilmezzEU.getLinksForFavourite')
         if self.MAIN_URL == None:
             self.selectDomain()
         links = []
@@ -311,7 +402,7 @@ class AnimeTo(CBaseHostClass):
         return links
         
     def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('AnimeTo.setInitListFromFavouriteItem')
+        printDBG('FilmezzEU.setInitListFromFavouriteItem')
         if self.MAIN_URL == None:
             self.selectDomain()
         try:
@@ -323,7 +414,7 @@ class AnimeTo(CBaseHostClass):
         return True
         
     def getArticleContent(self, cItem):
-        printDBG("AnimeTo.getArticleContent [%s]" % cItem)
+        printDBG("FilmezzEU.getArticleContent [%s]" % cItem)
         retTab = []
         
         url = cItem.get('prev_url', '')
@@ -370,8 +461,40 @@ class AnimeTo(CBaseHostClass):
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
         
+    def tryTologin(self):
+        printDBG('tryTologin start')
+        
+        rm(self.COOKIE_FILE)
+        
+        self.login = config.plugins.iptvplayer.filmezzeu_login.value
+        self.password = config.plugins.iptvplayer.filmezzeu_password.value
+        
+        if '' == self.login.strip() or '' == self.password.strip():
+            printDBG('tryTologin wrong login data')
+            #self.sessionEx.open(MessageBox, _('The host %s requires registration. \nPlease fill your login and password in the host configuration. Available under blue button.' % self.getMainUrl()), type = MessageBox.TYPE_ERROR, timeout = 10 )
+            return False
+            
+        url = self.getFullUrl('/bejelentkezes.php')
+        
+        post_data = {'logname':self.login, 'logpass':self.password, 'ref':self.getFullUrl('/index.php')}
+        httpParams = dict(self.defaultParams)
+        httpParams['header'] = dict(httpParams['header'])
+        httpParams['header']['Referer'] = url
+        sts, data = self.cm.getPage(url, httpParams, post_data)
+        if sts and 'kijelentkezes.php' in data:
+            printDBG('tryTologin OK')
+            return True
+     
+        self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_ERROR, timeout = 10)
+        printDBG('tryTologin failed')
+        return False
+    
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
+        
+        if None == self.loggedIn or self.login != config.plugins.iptvplayer.filmezzeu_login.value or\
+            self.password != config.plugins.iptvplayer.filmezzeu_password.value:
+            self.loggedIn = self.tryTologin()
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
 
@@ -408,7 +531,7 @@ class AnimeTo(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, AnimeTo(), True, [])
+        CHostBase.__init__(self, FilmezzEU(), True, [])
         
     def withArticleContent(self, cItem):
         if (cItem['type'] != 'video' and cItem['category'] != 'explore_item'):

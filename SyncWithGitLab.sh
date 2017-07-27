@@ -25,6 +25,15 @@ else
   cd ~/Archive/iptvplayerXXX-GitLab-master-version
   git pull
 fi
+if [ ! -d ~/Archive/zdzislaw-iptvplayer-GitLab-version ];then
+  mkdir -p ~/Archive
+  echo 'Cloning...'
+  git clone https://gitlab.com/zdzislaw22/iptvplayer-for-e2.git ~/Archive/zdzislaw-iptvplayer-GitLab-version
+else
+  echo 'Syncing Zdzislaw22 version...'
+  cd ~/Archive/zdzislaw-iptvplayer-GitLab-version
+  git pull
+fi
 ############################## Syncing neutrinoIPTV ##############################
 echo 'Syncing neutrinoIPTV...'
 cd ~/Archive/iptvplayer-GitLab-master-version/

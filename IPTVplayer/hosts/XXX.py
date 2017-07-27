@@ -11,6 +11,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError 
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html 
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getDirectM3U8Playlist
 ###################################################
 # FOREIGN import
 ###################################################
@@ -150,7 +151,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.1.1.7"
+    XXXversion = "21.1.2.1"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -280,6 +281,7 @@ class Host:
            valTab.append(CDisplayListItem('THE NEW PORN',     'www.thenewporn.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.thenewporn.com'],'UpdateTube', 'http://www.thenewporn.com/thenewporn_images/logo.png?rnd=1', None)) 
            valTab.append(CDisplayListItem('MOVIEFAP',     'http://www.moviefap.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.moviefap.com/browse/'],'MOVIEFAP', 'http://www.moviefap.com/images/logo.gif', None)) 
            valTab.append(CDisplayListItem('YOURPORN.SEXY',     'https://yourporn.sexy', CDisplayListItem.TYPE_CATEGORY, ['https://yourporn.sexy'],'yourporn', 'http://cdn.itsyourporn.com/assets/images/logo.jpg', None)) 
+           valTab.append(CDisplayListItem('FREEOMOVIE',     'http://www.freeomovie.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.freeomovie.com'],'freeomovie', 'http://www.freeomovie.com/wp-content/uploads/2013/04/logo.png', None)) 
 
            if config.plugins.iptvplayer.xxxsortall.value:
                valTab.sort(key=lambda poz: poz.name)
@@ -3059,7 +3061,7 @@ class Host:
                   printDBG( 'Host listsItems phImage: '+phImage )
                   printDBG( 'Host listsItems phTitle: '+phTitle )
                   printDBG( 'Host listsItems phRuntime: '+phRuntime )
-                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+                  valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+phRuntime+'] '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            match = re.findall('"next" href="(.*?)"', data, re.S)
            if match:
               phUrl = match[0]
@@ -3598,11 +3600,11 @@ class Host:
                         line = line.strip()
                         Name = str(line.split(',')[-2])
                         Url = str(line.split(',')[-1])
-                        if '.ts' in Url: 
-                            Name = Name+'   (ts)'
-                            Url = Url.replace('.ts','.ts?|MPEGTS-Live=1') 
-                        if 'mp4' in Url: Name = Name+'   (mp4)'
                         if 'm3u8' in Url: Name = Name+'   (m3u8)'
+                        if '.ts' in Url: 
+                            Name = Name+'   (ts - m3u8)'
+                            Url = Url.replace('.ts','.m3u8') 
+                        if 'mp4' in Url: Name = Name+'   (mp4)'
                         if '/udp/' in Url: Name = Name+'   (udp)'
                         if 'wmv' in Url: Name = Name+'   (wmv)'
                         printDBG( 'Host name:  '+Name )
@@ -4254,6 +4256,87 @@ class Host:
            printDBG( 'Host listsItems end' )
            return valTab
 
+        if 'freeomovie' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           self.MAIN_URL = 'http://www.freeomovie.com/'
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error url:'+url )
+              return valTab
+           printDBG( 'Host listsItems data: '+data )
+           data = self.cm.ph.getDataBeetwenMarkers(data, 'Categories</h3>', '</div>', False)[1]
+           data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+           for item in data:
+              phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
+              phTitle = self._cleanHtmlStr(item) 
+              if phUrl.startswith('//'): phUrl = 'http:' + phUrl
+              if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
+              printDBG( 'Host listsItems phUrl: '  +phUrl )
+              printDBG( 'Host listsItems phTitle: '+phTitle )
+              valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_CATEGORY, [phUrl],'freeomovie-clips', '', None)) 
+           valTab.sort(key=lambda poz: poz.name)
+           valTab.insert(0,CDisplayListItem("--- Newest ---","Newest",     CDisplayListItem.TYPE_CATEGORY,['http://www.freeomovie.com'],             'freeomovie-clips',    '',None))
+           self.SEARCH_proc='freeomovie-search'
+           valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
+           valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'freeomovie-search' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           valTab = self.listsItems(-1, 'http://www.freeomovie.com/?s=%s' % url, 'freeomovie-clips')
+           printDBG( 'Host listsItems end' )
+           return valTab              
+        if 'freeomovie-clips' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           self.MAIN_URL = 'http://www.freeomovie.com/'
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           printDBG( 'Host listsItems data: '+data )
+           next_page = self.cm.ph.getSearchGroups(data, '''<link rel='next' href=['"]([^"^']+?)['"]''', 1, True)[0] 
+           data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'class="boxtitle">', 'class="metargt">')
+           for item in data:
+              phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
+              phImage = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
+              phTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
+              if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
+              if phImage.startswith('/'): phImage = 'http:' + phImage
+              printDBG( 'Host listsItems phUrl: '  +phUrl )
+              printDBG( 'Host listsItems phImage: '+phImage )
+              printDBG( 'Host listsItems phTitle: '+phTitle )
+              valTab.append(CDisplayListItem(decodeHtml(phTitle),decodeHtml(phTitle),CDisplayListItem.TYPE_CATEGORY, [ phUrl], 'freeomovie-serwer', phImage, None)) 
+           if next_page:
+              if next_page.startswith('/'): next_page = self.MAIN_URL + next_page
+              valTab.append(CDisplayListItem('Next', next_page, CDisplayListItem.TYPE_CATEGORY, [next_page], name, '', None))                
+           printDBG( 'Host listsItems end' )
+           return valTab
+        if 'freeomovie-serwer' == name:
+           printDBG( 'Host listsItems begin name='+name )
+           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except:
+              printDBG( 'Host listsItems query error url: '+url )
+              return valTab
+           printDBG( 'Host listsItems data: '+data )
+           data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'myURL[]=', 'rel=')
+           for item in data:
+              phUrl = self.cm.ph.getSearchGroups(item, '''(http[^"^']+?)['"&]''', 1, True)[0] 
+              printDBG( 'Host listsItems phUrl: '  +phUrl )
+              phTitle = ''
+              if 'streamcloud.eu' in phUrl: phTitle = 'Streamcloud'
+              if 'flashx.tv' in phUrl: phTitle = 'Flashx'
+              if 'thevideo.me' in phUrl: phTitle = 'Thevideo'
+              if 'openload.co' in phUrl: phTitle = 'Openload'
+              #if phUrl.startswith('http://dato.porn'): phTitle = 'Dato.porn'
+              if phTitle:
+                 valTab.append(CDisplayListItem(phTitle,phUrl,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, '', None)) 
+
 
         return valTab
 
@@ -4276,7 +4359,8 @@ class Host:
         printDBG( 'Host getParser begin' )
         printDBG( 'Host getParser mainurl: '+self.MAIN_URL )
         printDBG( 'Host getParser url    : '+url )
-        if self.MAIN_URL == 'https://yourporn.sexy':       return self.MAIN_URL
+
+        if self.MAIN_URL == 'https://yourporn.sexy':         return self.MAIN_URL
         if self.MAIN_URL == 'http://www.moviefap.com':       return self.MAIN_URL
         if self.MAIN_URL == 'http://www.updatetube.com':     return 'http://www.updatetube.com'
         if self.MAIN_URL == 'http://www.homemoviestube.com': return self.MAIN_URL
@@ -4395,6 +4479,9 @@ class Host:
         if url.startswith('https://www.rapidvideo.com'):     return 'xxxlist.txt'
         if url.startswith('http://videomega.tv'):            return 'xxxlist.txt'
         if url.startswith('http://www.flashx.tv'):           return 'xxxlist.txt'
+        if url.startswith('http://streamcloud.eu'):          return 'xxxlist.txt'
+        if url.startswith('http://thevideo.me'):             return 'xxxlist.txt'
+        if url.startswith('http://dato.porn'):               return 'http://dato.porn'
         if url.startswith('http://www.porndreamer.com'):     return 'http://www.x3xtube.com'
         if url.startswith('http://pornicom.com'):            return 'http://pornicom.com'
         if url.startswith('https://pornicom.com'):           return 'http://pornicom.com'
@@ -5061,7 +5148,12 @@ class Host:
         if parser == 'https://chaturbate.com':
            videoPage = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''')[0] 
            if videoPage:
-              return urllib2.unquote(videoPage.replace('&amp;','&'))
+              videoUrl = urllib2.unquote(videoPage.replace('&amp;','&'))
+              if self.cm.isValidUrl(videoUrl): 
+                 tmp = getDirectM3U8Playlist(videoUrl)
+                 for item in tmp:
+                    printDBG( 'Host listsItems valtab: '  +str(item))
+                    return item['url']
            return ''
 
         if parser == 'http://www.amateurporn.net':
@@ -5632,9 +5724,13 @@ class Host:
            if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
            return videoUrl
 
+        if parser == 'http://dato.porn':
+           return ''
+
 
         printDBG( 'Host getResolvedURL end' )
         return videoUrl
+
 
 
 

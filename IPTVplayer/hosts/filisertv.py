@@ -59,7 +59,7 @@ class FiliserTv(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'https://fili.tv/'
-        self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.filisertv.png.pagespeed.ic.TvuWrsxCIN.png'
+        self.DEFAULT_ICON_URL = 'https://fili.tv/assets/img/logo.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Movies'),                       'url':self.getFullUrl('filmy')   },
                              {'category':'list_items',        'title': _('Series'),                       'url':self.getFullUrl('seriale') },

@@ -54,7 +54,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://seriesonline.io/'
+    return 'http://theseriesonline.com/'
 
 class SeriesOnlineIO(CBaseHostClass):
  
@@ -156,7 +156,7 @@ class SeriesOnlineIO(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['https://123movieshd.tv/', 'https://seriesonline.io/']
+        domains = ['http://123movieshd.us/', 'http://theseriesonline.com/']
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'

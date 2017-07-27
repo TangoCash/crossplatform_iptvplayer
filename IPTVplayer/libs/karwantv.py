@@ -23,6 +23,7 @@ import random
 import string
 try:    import json
 except Exception: import simplejson as json
+from urlparse import urljoin
 ############################################
 
 ###################################################
@@ -56,6 +57,14 @@ class KarwanTvApi(CBaseHostClass):
         self.http_params = {}
         self.http_params.update({'header':self.HEADER, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
     
+    def getMainUrl24(self):
+        return 'http://www.karwan24.com/'
+    
+    def getFullUrl24(self, url):
+        if self.cm.isValidUrl(url): return url
+        elif url == '': return ''
+        return urljoin(self.getMainUrl24(), url)
+    
     def getList(self, cItem):
         printDBG("KarwanTvApi.getChannelsList")
         channelsTab = []
@@ -63,25 +72,39 @@ class KarwanTvApi(CBaseHostClass):
         try:
             initList = cItem.get('init_list', True)
             if initList:
-                for item in [{'title':'TV', 'priv_cat':'tv'}, {'url':self.getFullUrl('radio.html'), 'title':'Radio', 'priv_cat':'radio'}]:
+                for item in [{'title':'TV', 'priv_cat':'tv'}, {'url':self.getFullUrl('radio.html'), 'title':'Radio', 'priv_cat':'radio'}, {'url':self.getMainUrl24(), 'title':'Karwan24.com', 'priv_cat':'karwan24_tv'}]:
                     params = dict(cItem)
                     params.update(item)
                     params['init_list'] = False
                     channelsTab.append(params)
             else:
                 category = cItem.get('priv_cat', '')
-                
                 sts, data = self.cm.getPage(cItem['url'])
                 if not sts: return []
-                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="bt-inner">', '</div>')
-                for item in data:
-                    icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0] )
-                    url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
-                    title = self.cleanHtmlStr( item )                
-                    params = {'name':'karwan.tv', 'title':title, 'url':url, 'icon':icon}
-                    if category == 'radio': params['type'] = 'audio'
-                    else: params['type'] = 'video'
-                    channelsTab.append(params)
+                
+                if category in ['radio', 'tv']:
+                    data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="bt-inner">', '</div>')
+                    for item in data:
+                        icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0] )
+                        url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+                        title = self.cleanHtmlStr( item )                
+                        params = {'name':'karwan.tv', 'title':title, 'url':url, 'icon':icon}
+                        if category == 'radio': params['type'] = 'audio'
+                        else: params['type'] = 'video'
+                        channelsTab.append(params)
+                elif category == 'karwan24_tv':
+                    m1 = '<div class=column'
+                    if m1 not in data: m1 = '<div class="column"'
+                    data = self.cm.ph.getAllItemsBeetwenMarkers(data, m1, '</a>')
+                    for item in data:
+                        icon  = self.getFullUrl24( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0] )
+                        url   = self.getFullUrl24( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+                        title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0] )
+                        desc = self.cleanHtmlStr( item )                
+                        params = {'name':'karwan.tv', 'title':title, 'url':url, 'desc':desc, 'icon':icon}
+                        if category == 'radio': params['type'] = 'audio'
+                        else: params['type'] = 'video'
+                        channelsTab.append(params)
         except Exception:
             printExc()
         return channelsTab
@@ -93,8 +116,13 @@ class KarwanTvApi(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return urlsTab
         
-        data = self.cm.ph.getDataBeetwenMarkers(data,'<div class="art-article">', '<tbody>', False)[1]
-        url  = self.getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0])
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="art-article">', '<tbody>', False)[1]
+        if tmp == '': tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="video-player">', '</div>', False)[1]
+        
+        url  = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0]
+        if 'karwan24' in self.up.getDomain(cItem['url']): url = self.getFullUrl24(url)
+        else: url = self.getFullUrl(url)
+        
         if not self.cm.isValidUrl(url): return urlsTab
         
         sts, data = self.cm.getPage(url)

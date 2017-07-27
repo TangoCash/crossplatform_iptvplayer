@@ -173,7 +173,7 @@ class IITVPL(CBaseHostClass):
             tabs.append(tabTitle)
             lData = self.cm.ph.getAllItemsBeetwenMarkers(tItem, '<li', '</li>', withMarkers=True)
             for item in lData:
-                tmp   = self.cm.ph.getSearchGroups(item, '<a[^>]+?class="video-link"[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)<', 2)
+                tmp   = self.cm.ph.getSearchGroups(item, '<a[^>]+?class="_?video-link"[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)<', 2)
                 if tmp[0].startswith('http://') or tmp[0].startswith('https://'):
                     links[tabTitle].append({'name':'[{0}] '.format(tabTitle) + self.cleanHtmlStr(tmp[1]), 'url':tmp[0], 'need_resolve':1})
         

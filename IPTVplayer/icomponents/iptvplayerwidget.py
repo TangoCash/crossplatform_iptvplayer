@@ -26,6 +26,7 @@ from Components.config import config, configfile
 from Components.Sources.StaticText import StaticText
 from Tools.BoundFunction import boundFunction
 from Tools.LoadPixmap import LoadPixmap
+from Tools.Directories import fileExists
 from enigma import getDesktop, eTimer
 
 ####################################################
@@ -130,8 +131,17 @@ class IPTVPlayerWidget(Screen):
     def __init__(self, session):
         printDBG("IPTVPlayerWidget.__init__ desktop IPTV_VERSION[%s]\n" % (IPTVPlayerWidget.IPTV_VERSION) )
         self.session = session
-        path = GetSkinsDir(config.plugins.iptvplayer.skin.value) + "/playlist.xml" 
-        if os_path.exists(path):
+        selSkin = config.plugins.iptvplayer.skin.value
+        if selSkin == 'Auto':
+            screenwidth = getDesktop(0).size().width()
+            if screenwidth and screenwidth > 1900:
+                selSkin = 'halidri1080p1'
+            else:
+                selSkin = 'rafalcoo1'
+            
+        path = GetSkinsDir(selSkin) + "/playlist.xml" 
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> [%s]" % path)
+        if fileExists(path):
             try:    
                 with open(path, "r") as f:
                     self.skin = f.read()
