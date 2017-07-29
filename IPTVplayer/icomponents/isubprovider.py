@@ -224,7 +224,10 @@ class CBaseSubProviderClass:
             self.addDir(params)
             
     def iptv_execute(self, cmd):
-        return iptv_execute(1)(cmd)
+        printDBG("iptv_execute cmd_exec [%s]" % cmd)
+        ret = iptv_execute(1)(cmd)
+        printDBG("iptv_execute cmd_ret sts[%s] code[%s] data[%s]" % (ret.get('sts', ''), ret.get('code', ''), ret.get('data', '')))
+        return ret
         
     @staticmethod 
     def cleanHtmlStr(str):
@@ -490,13 +493,12 @@ class CBaseSubProviderClass:
         if not ret['sts'] or 0 != ret['code']:
             errorCode = ret['code']
             if errorCode == 0: errorCode = 9
-        elif '..' in ret['data'] or 'files' not in ret['data']:
+        elif '..' in ret['data']:
             errorCode = 9
         
         # if archive is valid then upack it
         if errorCode == 0:
             cmd = "unzip -o '{0}' -d '{1}' 2>/dev/null".format(tmpFile, tmpDIR)
-            printDBG("cmd[%s]" % cmd)
             ret = self.iptv_execute(cmd)
             if not ret['sts'] or 0 != ret['code']:
                 errorCode = ret['code']

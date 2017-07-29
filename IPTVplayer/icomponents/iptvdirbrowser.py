@@ -34,6 +34,9 @@ class CListItem:
         self.type = type
         self.name = name
         self.fullDir = fullDir
+        
+    def getDisplayTitle(self):
+        return self.name
 
 class IPTVDirBrowserList(IPTVMainNavigatorList):
     def __init__(self):

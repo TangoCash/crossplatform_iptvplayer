@@ -23,6 +23,7 @@ from os import path as os_path
 ###################################################
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -41,11 +42,10 @@ def GetConfigList():
 ###################################################
 
 
-class WagasWorldApi:
+class WagasWorldApi(CBaseHostClass):
 
     def __init__(self):
-        self.cm = common()
-        self.up = urlparser()
+        CBaseHostClass.__init__(self)
         self.sessionEx = MainSessionWrapper()
         self.MAIN_URL      = 'http://www.wagasworld.com/'
         self.HTTP_HEADER  = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': self.MAIN_URL }
@@ -136,10 +136,13 @@ class WagasWorldApi:
         return list
         
     def _getEpisode(self, baseUrl, episode=-1):
-        url = '/'.join(baseUrl.split('/')[:-1]) + '/x.php'
+        tmp = baseUrl.split('/')
+        url = '/'.join(tmp[:-2]) + '/x.php?%s=%s&' % (tmp[-2], tmp[-1])
         
         if episode > -1:
-            url += '?episode=%s&v=%s' % (episode, int(time()*1000))
+            url += 'episode=%s&' % episode
+        
+        url += 'v=%s' % (int(time()*1000))
         
         HTTP_HEADER = dict(self.HTTP_HEADER)
         HTTP_HEADER['Referer'] = baseUrl
@@ -148,11 +151,15 @@ class WagasWorldApi:
         if not sts: return []
         
         ret = None
+        errorMsg = ''
         try:
             data = byteify(json.loads(data))
+            errorMsg = self.cleanHtmlStr(data.get('err', ''))
             ret = {'url':data['url'], 'episode':data['episode'], 'title':data['name']}
         except Exception:
             printExc()
+            if errorMsg != '':
+                self.sessionEx.open(MessageBox, errorMsg, type = MessageBox.TYPE_ERROR, timeout = 10 )
         return ret
 
     def exploreItem(self, cItem):

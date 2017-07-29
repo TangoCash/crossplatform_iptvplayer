@@ -151,7 +151,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.1.2.1"
+    XXXversion = "21.1.2.2"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -4359,7 +4359,7 @@ class Host:
         printDBG( 'Host getParser begin' )
         printDBG( 'Host getParser mainurl: '+self.MAIN_URL )
         printDBG( 'Host getParser url    : '+url )
-
+        if url.startswith('https://videos.porndig.com'):     return 'https://porndig.com'
         if self.MAIN_URL == 'https://yourporn.sexy':         return self.MAIN_URL
         if self.MAIN_URL == 'http://www.moviefap.com':       return self.MAIN_URL
         if self.MAIN_URL == 'http://www.updatetube.com':     return 'http://www.updatetube.com'
@@ -4751,7 +4751,7 @@ class Host:
            except:
               printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
-           #printDBG( 'Host getResolvedURL data: '+data )
+           printDBG( 'Host getResolvedURL data: '+data )
            videoUrl = re.search('<iframe.*?src="(.*?)"', data, re.S)
            if videoUrl:
               link = ''
@@ -4761,24 +4761,34 @@ class Host:
               except:
                  printDBG( 'Host getResolvedURL query error xml: '+xml )
                  return ''
-              #printDBG( 'Host getResolvedURL data: '+data )
-              videoPage = re.search('file:"(.*?)"', data, re.S)   
-              if videoPage: return videoPage.group(1).replace('\/','/')
-              videoPage = re.search('<source.*?src="(.*?)"', data, re.S)   
-              if videoPage: return videoPage.group(1).replace('\/','/')
-              videoPage = re.search('<source src="(.*?)"', data, re.S)   
-              if videoPage: return videoPage.group(1).replace('\/','/')
-              videoPage = re.search("'file': '(.*?)'", data, re.S)   
-              if videoPage: return videoPage.group(1).replace('\/','/')
-              videoPage = re.search('Uppod.*?file: "#(.*?)"', data, re.S)   
-              if videoPage: return ''
-              videoPage = re.search(';src=(.*?)"', data, re.S)   
-              if videoPage: return videoPage.group(1).replace('\/','/')
+              printDBG( 'Host getResolvedURL data: '+data )
+              videoUrl = self.cm.ph.getSearchGroups(data, '''file:['"]([^"^']+?)['"]''')[0] 
+              if not videoUrl: videoUrl = self.cm.ph.getSearchGroups(data, '''<source[^>]*?src=['"]([^"^']+?)['"]''')[0] 
+              if not videoUrl: videoUrl = self.cm.ph.getSearchGroups(data, '''<source[^>]+?src=['"]([^"^']+?)['"]''')[0] 
+              if not videoUrl: videoUrl = self.cm.ph.getSearchGroups(data, '''file\': ['"]([^"^']+?)['"]''')[0] 
+              if not videoUrl: videoUrl = self.cm.ph.getSearchGroups(data, ''';src=([^"^']+?)['"]''')[0] 
+              printDBG( 'Host videoUrl: '+videoUrl )
+              if '.mp4' in videoUrl: return videoUrl.replace('\/','/')
+              if '.m3u8' in videoUrl:
+                 if self.cm.isValidUrl(videoUrl): 
+                    tmp = getDirectM3U8Playlist(videoUrl)
+                    for item in tmp:
+                       printDBG( 'Host listsItems valtab: '  +str(item))
+                       return item['url']
+              else:
+                 videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''')[0] 
+                 if videoUrl:
+                    return self.getResolvedURL(videoUrl)
            return ''
 
         if parser == 'http://www.myfreecams.com':
            videoUrl = myfreecam_start(url)
-           if videoUrl: return videoUrl
+           if videoUrl:
+              if self.cm.isValidUrl(videoUrl): 
+                 tmp = getDirectM3U8Playlist(videoUrl)
+                 for item in tmp:
+                    printDBG( 'Host listsItems valtab: '  +str(item))
+                    return item['url']
            return ''
 
         def _get_stream_uid(username):
@@ -4912,7 +4922,11 @@ class Host:
                  name = re.sub('-enc.+', '', stream_name)
                  if rtmp == 0:
                     Url = 'https://%s/%s/mp4:%s_mjpeg/playlist.m3u8?token=%s' % (serwer, app, stream_name, token )
-                    return Url
+                    if self.cm.isValidUrl(Url): 
+                       tmp = getDirectM3U8Playlist(Url)
+                       for item in tmp:
+                          printDBG( 'Host listsItems valtab: '  +str(item))
+                          return item['url']
                  else:
                     Url = 'rtmp://%s:1935/%s?token=%s/ playpath=?mp4:%s swfUrl=https://www.camsoda.com/lib/video-js/video-js.swf live=1 pageUrl=https://www.camsoda.com/%s' % (serwer, app, token, stream_name, name)
                     return Url
@@ -5727,6 +5741,16 @@ class Host:
         if parser == 'http://dato.porn':
            return ''
 
+        if parser == 'https://porndig.com':
+           videoUrl = self.cm.ph.getSearchGroups(data, '''<source\ssrc=['"]([^"^']+?)['"]''')[0].replace('&amp;','&')
+           if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+           if '.m3u8' in videoUrl:
+              if self.cm.isValidUrl(videoUrl): 
+                 tmp = getDirectM3U8Playlist(videoUrl)
+                 for item in tmp:
+                    printDBG( 'Host listsItems valtab: '  +str(item))
+                    return item['url']
+           return videoUrl
 
         printDBG( 'Host getResolvedURL end' )
         return videoUrl

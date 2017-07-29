@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
@@ -54,7 +54,6 @@ class CartoonHD(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'CartoonHD.tv', 'cookie':'cartoonhdtv.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
@@ -63,6 +62,8 @@ class CartoonHD(CBaseHostClass):
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'https://cartoonhd.global/'
         self.SEARCH_URL = 'https://api.cartoonhd.global/api/v1/0A6ru35yevokjaqbb8'
@@ -76,7 +77,7 @@ class CartoonHD(CBaseHostClass):
         try:
             params = dict(self.defaultParams)
             params['return_data'] = False
-            sts, response = self.cm.getPage('https://cartoonhd.cc/', params)
+            sts, response = self.cm.getPage('https://cartoonhd.global/', params)
             url = response.geturl()
             domain = self.up.getDomain(url, False)
             self.MAIN_URL  = domain
@@ -451,22 +452,33 @@ class CartoonHD(CBaseHostClass):
         login = config.plugins.iptvplayer.cartoonhd_login.value
         password = config.plugins.iptvplayer.cartoonhd_password.value
         
+        rm(self.COOKIE_FILE)
+        
         if '' == login.strip() or '' == password.strip():
             printDBG('tryTologin wrong login data')
-            #self.sessionEx.open(MessageBox, _('This host requires registration. \nPlease fill your login and password in the host configuration. Available under blue button.'), type = MessageBox.TYPE_ERROR, timeout = 10 )
             return False
         
-        post_data = {'username':login, 'password':password, 'action':'login', 't':''}
-        params = {'header':self.HEADER, 'cookiefile':self.COOKIE_FILE, 'use_cookie': True, 'save_cookie':True}
-        sts, data = self.cm.getPage(self.MAIN_URL, params, post_data)
-        if sts:
-            if '>Logout<' in data:
+        sts, data = self.cm.getPage(self.MAIN_URL, self.defaultParams)
+        while sts:
+            tor = self._getToken(data)
+            post_data = {'username':login, 'password':password, 'action':'login', 't':'', 'token':tor}
+            params = dict(self.defaultParams)
+            params['header'] = dict(params['header'])
+            params['header']['Referer'] = self.getMainUrl()
+            sts, data = self.cm.getPage(self.getFullUrl('/ajax/login.php'), params, post_data)
+            printDBG(">> [%s]" % data)
+            if sts: sts, data = self.cm.getPage(self.getMainUrl(), params)
+            if sts and '>Logout<' in data:
                 printDBG('tryTologin OK')
-                return True
-     
-        self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_ERROR, timeout = 10)
+                break
+            else:
+                sts = False
+            break
+        
+        if not sts:
+            self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_ERROR, timeout = 10)
         printDBG('tryTologin failed')
-        return False
+        return sts
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')

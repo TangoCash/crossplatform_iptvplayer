@@ -5,11 +5,8 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.libs.crypto.hash.sha1Hash import SHA1
 ###################################################
 
 ###################################################
@@ -20,6 +17,7 @@ from datetime import timedelta
 from binascii import hexlify
 import re
 import urllib
+import urlparse
 import time
 import random
 try:    import simplejson as json
@@ -36,13 +34,11 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.tvgrypl                 = ConfigSelection(default = "small", choices = [ ("large", _("large")), ("medium", _("medium")), ("small", _("small")) ])
 config.plugins.iptvplayer.tvgrypl_default_quality = ConfigSelection(default = "SD", choices = [("MOB", "MOB: niska"),("SD", "SD: standardowa"),("HD", "HD: wysoka")]) #, ("FHD", "FHD: bardzo wysoka")
 config.plugins.iptvplayer.tvgrypl_use_dq          = ConfigYesNo(default = True)
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Wielkość ikon"), config.plugins.iptvplayer.tvgrypl))
     optionList.append(getConfigListEntry(_("Domyślna jakość wideo:"), config.plugins.iptvplayer.tvgrypl_default_quality))
     optionList.append(getConfigListEntry(_("Używaj domyślnej jakości wideo:"), config.plugins.iptvplayer.tvgrypl_use_dq))
     return optionList
@@ -52,197 +48,209 @@ def gettytul():
     return 'tvgry.pl'
 
 class TvGryPL(CBaseHostClass):
-    MAIN_URL = 'http://tvgry.pl/'
-    SEARCH_URL = MAIN_URL + 'wyszukiwanie.asp'
-    MAIN_CAT_TAB = [{'category':'newest',         'title':_('Najnowsze filmy'), 'url': MAIN_URL+'ajax/waypoint.asp', 'list_type':'0'},
-                    {'category':'newest',         'title':_('Popularne filmy'), 'url': MAIN_URL+'ajax/waypoint.asp', 'list_type':'1'},
-                    {'category':'films',          'title':_('Tematy filmów'),   'url': MAIN_URL+'tematy.asp'},
-                    {'category':'films',          'title':_('Redakcyjne'),      'url': MAIN_URL+'temat.asp?ID=83'},
-                    {'category':'films',          'title':_('RPG akcji'),       'url': MAIN_URL+'temat.asp?ID=37'},
-                    {'category':'films',          'title':_('Wiedźmin'),        'url': MAIN_URL+'temat.asp?ID=78'},
-                    {'category':'search',         'title':_('Search'), 'search_item':True},
-                    {'category':'search_history', 'title':_('Search history')} ]
-     
-    
+
     def __init__(self):
         printDBG("TvGryPL.__init__")
         CBaseHostClass.__init__(self, {'history':'TvGryPL.tv'})
-        self.DEFAULT_ICON_URL = 'http://tvgry.pl/images/tvgry_logotype2.png'
-        
-    def _getFullUrl(self, url):
-        if 0 < len(url) and not url.startswith('http'):
-            url =  self.MAIN_URL + url
-        return url
+        self.DEFAULT_ICON_URL = 'http://www.gry-online.pl/apple-touch-icon-120x120.png'
+        self.MAIN_URL = 'http://tvgry.pl/'
+        self.SEARCH_URL = self.getFullUrl('wyszukiwanie.asp')
+        self.MAIN_CAT_TAB = [{'category':'list_tabs',          'title':'Materiały',            'url': self.getFullUrl('/wideo-tvgry.asp')},
+                             {'category':'list_items',         'title':'Tematy',               'url': self.getFullUrl('/tematy.asp')},
+                             {'category':'list_tabs',          'title':'Zwiastuny gier',       'url': self.getFullUrl('/trailery-z-gier.asp')},
+                             {'category':'list_tabs',          'title':'Zwiastuny filmów',     'url': self.getFullUrl('/trailery-filmowe.asp')},
+                             {'category':'search',         'title':_('Search'), 'search_item':True},
+                             {'category':'search_history', 'title':_('Search history')} ]
         
     def _decodeData(self, data):
         try: return data.decode('cp1250').encode('utf-8')
         except Exception: return data
-        
-    def _getIcon(self, url):
-        map  = {'small':'N300', 'medium':'N460', 'large':'N960'}
-        url  = self._getFullUrl(url)
-        size = self.cm.ph.getSearchGroups(url, '/(N[0-9]+?)/', 1)[0]
-        if '' != size: return url.replace(size, map[config.plugins.iptvplayer.tvgrypl.value])
-        return url
 
     def getPage(self, url, params={}, post_data=None):
         sts,data = self.cm.getPage(url, params, post_data)
         if sts: data = self._decodeData(data)
         return sts,data
+    
+    def listTabs(self, cItem, post_data=None):
+        printDBG("TvGryPL.listTabs")
+        tabIdx = cItem.get('tab_idx', 0)
+        sts, data = self.getPage(cItem['url'], {}, post_data)
+        if not sts: return
         
-
-    def listsTab(self, tab, cItem):
-        printDBG("TvGryPL.listsMainMenu")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            self.addDir(params)
-            
-    def listFilms(self, cItem):
-        printDBG("TvGryPL.listGames")
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="tvgry-lista-menu', '</div>')[1]
+        data = data.split('<br>')
+        if tabIdx < len(data):
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data[tabIdx], '<a ', '</a>')
+            for item in data:
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                title = self.cleanHtmlStr(item)
+                if self.cm.isValidUrl(url):
+                    params = dict(cItem)
+                    params.update({'tab_idx':tabIdx+1, 'title':title, 'url':url})
+                    self.addDir(params)
+                
+        if 0 == len(self.currList):
+            self.listItems(cItem, post_data)
+    
+    def listItems(self, cItem, post_data=None):
+        printDBG("TvGryPL.listItems")
         page = cItem.get('page', 1)
         url  = cItem['url']
-        post_data = cItem.get('post_data', None)
         if 1 < page:
-            if '?' in url: url += '&STRONA=%d' % page
-            else: url += '?STRONA=%d' % page
+            if '?' in url: url += '&'
+            else: url += '?'
+            url += 'STR=%d' % page
         
         sts, data = self.getPage(url, {}, post_data)
         if not sts: return
         
-        if 'tematy.asp' in url:
-            if 1 == page:
-                tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="lista-w-kat">', '</div>', False)[1]
-                tmp = tmp.split('</a>')
-                if len(tmp): del tmp[-1]
-                for item in tmp:
-                    icon = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', 1)[0]
-                    url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0]
-                    params = dict(cItem)
-                    params.update( {'title':self.cleanHtmlStr(item), 'url':self._getFullUrl(url), 'desc':'', 'icon':self._getIcon(icon)} )
-                    self.addDir(params)
-
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="moviebox">', '</footer>', False)[1]
-        if 'class="pagi-next"' in data: haveNextPage = True
-        else: haveNextPage = False
+        data = self.cm.ph.getDataBeetwenMarkers(data, '-wide">', '<div class="clr">', False)[1]
+        data = data.split('<div class="next-prev')
         
-        data = data.split('<div class="half-box promo')
-        if len(data): del data[0]
+        if len(data) == 2 and '' != self.cm.ph.getSearchGroups(data[1], '''STR=(%s)[^0-9]''' % (page + 1))[0]:
+            nextPage = True
+        else: nextPage = False
+        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data[0], '<a ', '</a>')
         for item in data:
-            tmp = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)" alt="([^"]+?)"', 2)
-            url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0]
-            params = dict(cItem)
-            params.update( {'title':self.cleanHtmlStr(tmp[1]), 'url':self._getFullUrl(url), 'desc':self.cleanHtmlStr('<"'+item), 'icon':self._getIcon(tmp[0])} )
-            if 'temat.asp' in url: self.addDir(params)
-            else: self.addVideo(params)
-                
-        if haveNextPage:
-            params = dict(cItem)
-            params.update({'title':_("Następna strona"), 'page':page+1})
-            self.addDir(params)
+            url  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p class="tv-box-title"', '</p>')[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p class="title"', '</p>')[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0])
             
-    def listNewest(self, cItem):
-        printDBG("TvGryPL.listNewest")
-        listType = cItem.get('list_type', '0')
-        page = cItem.get('page', 1)
-        url  = cItem['url']
-        if '?' in url: url += '&PART=%d' % page
-        else: url += '?PART=%d' % page
-        HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0', 'Cookie': 'typlisty=%s' % listType} 
-        sts, data = self.getPage(url, {'header':HEADER})
-        if not sts: return
-        pattern = '<div class="container">'
-        descPattern = '<div class="description">'
-        data = data
-        data = data.split(pattern)
-        if len(data): del data[0]
-        for item in data:
-            tmp = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)" alt="([^"]+?)"', 2)
-            url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', 1)[0]
-            if descPattern in item: desc = self.cleanHtmlStr( item.split(descPattern)[-1] )
-            else: desc = ''
-            #printDBG("[%s]\n[%s]\n" % (tmp[0], tmp[1]) )
-            params = {'title':self.cleanHtmlStr(tmp[1]), 'url':self._getFullUrl(url), 'desc':desc, 'icon':self._getIcon(tmp[0])}
-            self.addVideo(params)
+            descTab = []
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="tv-box-time"', '</div>')[1])
+            if tmp != '': descTab.append(tmp)
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="tv-box-thumb-c"', '</div>')[1])
+            if tmp != '': descTab.append(tmp.replace(' ', '/'))
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p class="tv-box-desc"', '</p>')[1])
+            if tmp != '': descTab.append(tmp)
             
-        # next page check
-        page += 1
-        url  = cItem['url']
-        if '?' in url: url += '&PART=%d' % page
-        else: url += '?PART=%d' % page
-        sts, data = self.getPage(url, {'header':HEADER})
-        if not sts: return
-        if pattern in data:
+            params = {'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':' | '.join(descTab)}
+            if '/wideo.asp' in url:
+                self.addVideo(params)
+            elif '/temat.asp' in url:
+                params.update({'name':'category', 'category':'list_tabs'})
+                self.addDir(params)
+            
+        if nextPage:
             params = dict(cItem)
-            params.update({'title':_("Następna strona"), 'page':page+1})
+            params.update({'name':'category', 'category':'list_items', 'title':_('Next page'), 'page':page + 1})
             self.addDir(params)
-
-
+        
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("TvGryPL.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
-        searchPattern = urllib.quote_plus(searchPattern)
+        
+        baseUrl = 'https://tvgry.pl/wyszukiwanie.asp'
         post_data = {'search':searchPattern}
-        params = {'name':'category', 'category':'films', 'url': TvGryPL.SEARCH_URL, 'post_data':post_data}
-        self.listFilms(params)
+        
+        cItem = dict(cItem)
+        cItem.update({'url':baseUrl})
+        self.listItems(cItem, post_data)
     
     def getLinksForVideo(self, cItem):
         printDBG("TvGryPL.getLinksForVideo [%s]" % cItem)
-        id = self.cm.ph.getSearchGroups(cItem['url'] + '_', 'ID=([0-9]+?)[^0-9]', 1)[0]
-        
+        allLinksTab = []
         urlTab = []
-        sts, data = self.cm.getPage('http://tvgry.pl/video/source.v2.asp?SC=TV&ID=%s&QL=SD' % id)
-        if not sts: return urlTab
-        data = re.compile('file="([^"]+?)"[^>]*?label="([^"]+?)"').findall(data)
-        for item in data:
-            q = ""
-            if '_C/500_' in item[0] or "Mobile" in item[1]:
-                q = 'MOB'
-            elif '_C/750_' in item[0] or "SD" in item[1]:
-                q = 'SD'
-            elif '_C/1280_' in item[0] or "720p" in item[1]:
-                q = 'HD'
-            #elif '_C/1920_' in item[0] or "1080p" in item[1]:
-            #    q = 'FHD'
-            if '' != q:
-                urlTab.append({'name':item[1], 'url':urlparser.decorateUrl(item[0].replace('&amp;', '&'), {'Referer':'http://p.jwpcdn.com/6/12/jwplayer.flash.swf'}), 'q':q}) 
         
-        # for item in ['MOB', 'SD', 'HD']:
-            # url = 'http://tvgry.pl/video/source.asp?SC=TV&ID=%s&QL=%s' % (id, item[:2])
-            # sts,data = self.getPage(url)
-            # if not sts: continue
-            # url = self.cm.ph.getSearchGroups(data, 'file>(http[^<]+?)<', 1)[0]
-            # if '' != url: urlTab.append({'name':item, 'url':url, 'q':item})
-            
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return urlTab
+        
+        url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
+        if self.cm.isValidUrl(url):
+            allLinksTab = self.up.getVideoLinkExt(url)
+        
+        urlIDS = []
+        urlTemplate = ''
+        data = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', ']')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '{', '}')
+        for item in data:
+            url = self.cm.ph.getSearchGroups(item, '''['"]?file['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
+            name = self.cm.ph.getSearchGroups(item, '''['"]?label['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
+            if self.cm.isValidUrl(url):
+                id = self.cm.ph.getSearchGroups(url, '''(/[0-9]+_)[0-9]+''')[0]
+                if id != '' and id not in urlIDS:
+                    urlIDS.append(id)
+                    if urlTemplate == '': urlTemplate = url.replace(id, '{0}')
+                    
+                q = ""
+                if '/500_' in url or "Mobile" in url:
+                    q = 'MOB'
+                elif '/750_' in url or "SD" in url:
+                    q = 'SD'
+                elif '/1280_' in url or "720p" in url:
+                    q = 'HD'
+                if q != '': urlTab.append({'name':name, 'url':url, 'q':q, 'need_resolve':0})
+        
+        if urlTemplate != '':
+            for item in [('/500_', 'MOB'), ('/750_', 'SD'), ('/1280_', 'HD')]:
+                if item[0] in urlIDS: continue
+                try:
+                    url = urlTemplate.format(item[0])
+                    sts, response = self.cm.getPage(url, {'return_data':False})
+                    if 'mp4' in response.info().get('Content-Type', '').lower():
+                        urlTab.append({'name':item[1], 'url':url, 'q':item[1], 'need_resolve':0})
+                    response.close()
+                except Exception:
+                    printExc()
+        
         if 1 < len(urlTab):
             map = {'MOB':0, 'SD':1, 'HD':2, 'FHD':3}
             oneLink = CSelOneLink(urlTab, lambda x: map[x['q']], map[config.plugins.iptvplayer.tvgrypl_default_quality.value])
             if config.plugins.iptvplayer.tvgrypl_use_dq.value: urlTab = oneLink.getOneLink()
             else: urlTab = oneLink.getSortedLinks()
+        
+        if 0 == len(urlTab):
+            return allLinksTab
+        
         return urlTab
+        
+    def getFavouriteData(self, cItem):
+        printDBG('TvGryPL.getFavouriteData')
+        return json.dumps(cItem) 
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('TvGryPL.getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('TvGryPL.setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('TvGryPL.handleService start')
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         name     = self.currItem.get("name", None)
         category = self.currItem.get("category", '')
-        printDBG( "TvGryPL.handleService: ---------> name[%s], category[%s] " % (name, category) )
-        searchPattern = self.currItem.get("search_pattern", searchPattern)
+        
+        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = [] 
 
         if None == name:
-            self.listsTab(TvGryPL.MAIN_CAT_TAB, {'name':'category'})
-    #FILMS
-        elif 'films' == category:
-            self.listFilms(self.currItem)
-        elif 'newest' == category:
-            self.listNewest(self.currItem)
-    #WYSZUKAJ
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+    #ITEMS
+        elif 'list_tabs' == category:
+            self.listTabs(self.currItem)
+        elif 'list_items' == category:
+            self.listItems(self.currItem)
+    #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)
             cItem.update({'search_item':False, 'name':'category'}) 
             self.listSearchResult(cItem, searchPattern, searchType)
-    #HISTORIA WYSZUKIWANIA
+    #HISTORIA SEARCH
         elif category == "search_history":
             self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:

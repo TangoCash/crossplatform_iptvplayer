@@ -286,9 +286,11 @@ class BSTO(CBaseHostClass):
         sts, data = self.getPage(cItem.get('url', ''))
         if not sts: return retTab
         
+        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="justify" id="desc_spoiler">', '</div>')[1])
+        
         data  = self.cm.ph.getDataBeetwenMarkers(data, '<div id="sp_left">', '<script', False)[1]
         title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2', '</h2>')[1].split('<small>')[0])
-        desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p ', '</p>')[1])
+        if desc == '': desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p ', '</p>')[1])
         icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(data, '''src=['"]([^'^"]+?)['"]''')[0])
         
         if title == '': title = cItem['title']

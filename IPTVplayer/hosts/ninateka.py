@@ -3,9 +3,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CHostBase, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CHostBase, CDisplayListItem, RetHost, CUrlItem, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, GetLogoDir, printExc
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, GetLogoDir, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import unescapeHTML
@@ -15,6 +15,8 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import unescapeHTML
 # FOREIGN import
 ###################################################
 import re, urllib
+try: import json
+except Exception: import simplejson
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -32,40 +34,29 @@ def GetConfigList():
 def gettytul():
     return 'Ninateka'
 
-class Ninateka:
-    MAIN_URL = 'http://ninateka.pl/'
-    VIDEOS_URL = MAIN_URL + 'filmy?MediaType=video&Paid=False&CategoryCodenames='
-    SEARCH_URL = VIDEOS_URL + '&SearchQuery='
-    
-    DEFAULT_GET_PARAM = 'MediaType=video&Paid=False'
-  
-    MENU_TAB = {
-        1: "Wszystkie",
-        2: "Kategorie",
-        3: "Wyszukaj",
-        4: "Historia Wyszukiwania"
-    }
+class Ninateka(CBaseHostClass):
     def __init__(self):
+        CBaseHostClass.__init__(self, {'history':'ninateka', 'cookie':'ninateka.cookie', 'cookie_type':'MozillaCookieJar'})
+        self.DEFAULT_ICON_URL = 'http://ninateka.pl/Content/images/ninateka_logo.png'
+        
         self.menuHTML = ''
         self.refresh = False
         self.cm = common()
         self.history = CSearchHistoryHelper('ninateka')
 
-        # temporary data
-        self.currList = []
-        self.currItem = {}
-
-    def getCurrList(self):
-        return self.currList
-
-    def setCurrList(self, list):
-        self.currList = list
         
-    def getCurrItem(self):
-        return self.currItem
-
-    def setCurrItem(self, item):
-        self.currItem = item
+        self.MAIN_URL = 'http://ninateka.pl/'
+        self.VIDEOS_URL = self.getFullUrl('filmy?MediaType=video&Paid=False&CategoryCodenames=')
+        self.SEARCH_URL = self.VIDEOS_URL + '&SearchQuery='
+        
+        #DEFAULT_GET_PARAM = 'MediaType=video&Paid=False'
+        
+        self.MAIN_CAT_TAB = [{'category':'list_all',       'title': 'Wszystkie',             'url':self.VIDEOS_URL},
+                             {'category':'list_cats',      'title': 'Kategorie',             'url':self.MAIN_URL  },
+                             
+                             {'category':'search',            'title': _('Search'), 'search_item':True,},
+                             {'category':'search_history',    'title': _('Search history'),            } 
+                            ]
         
     def getMenuHTML(self):
         printDBG("getMenuHTML start")
@@ -76,22 +67,14 @@ class Ninateka:
             if sts: self.menuHTML = CParsingHelper.getDataBeetwenMarkers(data, '<div class="nav-collapse collapse">', '<!--/.nav-collapse -->', False)[1]
         return self.menuHTML
         
-    def setTable(self):
-        return self.MENU_TAB
-        
-    def listsMainMenu(self, table):
-        for num, val in table.items():
-            params = {'type': 'category', 'name': 'main-menu', 'category': val, 'title': val}
-            self.currList.append( params )
-        
     def getMainCategory(self):
         menuHTML = self.getMenuHTML()
         
         match = re.compile('<li data-codename="([^"]+?)"><a href="/filmy/([^"^,^/]+?)">([^<]+?)</a>').findall( menuHTML )
         if len(match) > 0:
             for i in range(len(match)):
-                params = {'type': 'category', 'name': 'main-category', 'page': match[i][0], 'title': match[i][2]}
-                self.currList.append( params )
+                params = {'name': 'main-category', 'page': match[i][0], 'title': match[i][2]}
+                self.addDir( params )
                 
     def getSubCategory(self, cat):
         menuHTML = self.getMenuHTML()
@@ -100,12 +83,13 @@ class Ninateka:
         match = re.compile( pattern ).findall( menuHTML )
         if len(match) > 0:
             for i in range(len(match)):
-                params = {'type': 'category', 'name': 'sub-category', 'page': self.VIDEOS_URL + (match[i][1]).replace(',', '%2C'), 'title': match[i][2]}
-                self.currList.append( params )
+                params = {'name': 'sub-category', 'page': self.VIDEOS_URL + (match[i][1]).replace(',', '%2C'), 'title': match[i][2]}
+                self.addDir( params )
 
-    def getVideoUrl(self, url):
-        printDBG("getVideoUrl url[%s]" % url)
+    def getLinksForVideo(self, cItem):
+        printDBG("getVideoUrl url[%s]" % cItem)
         linksTab = []
+        url = cItem['url']
         sts, data = self.cm.getPage(url)
         if not sts:
             printDBG("getVideoUrl except")
@@ -114,29 +98,29 @@ class Ninateka:
         try:
             arg = self.cm.ph.getDataBeetwenMarkers(data, '(playerOptionsWithMainSource,', ')', False)[1].strip()
             arg = int(arg)
-            def _repFun(matchObj):
+            def _repFun(item):
                 url = ''
-                item = matchObj.group(1) 
-                
                 if not self.cm.isValidUrl(item):
                     for c in item:
                         url += chr(arg ^ ord(c))
                 else:
                     url = item
-                
                 printDBG(">>>> " + url)
-                return matchObj.group(0).replace(matchObj.group(1), url) 
-            data = re.sub('{"file":"([^"]+?)"}', _repFun, data)
+                return url
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'playerOptionsWithMainSource =', '};', False)[1]
+            printDBG(data)
+            data = byteify(json.loads(data+'}'))
+            for item in data['sources']:
+                type = item.get('type', '').lower()
+                if '/mp4' in type:
+                    url = _repFun(item['src'])
+                    linksTab.append( {'name': 'mp4', 'url': url, 'need_resolve':0} )
+                if '/x-mpegurl' in type:
+                    url = _repFun(item['src'])
+                    linksTab.extend(getDirectM3U8Playlist(url))
+            printDBG(data)
         except Exception:
             printExc()
-        
-        match = re.search( '{"file":"([^"]+?.mp4)"}', data )
-        if match: 
-            linksTab.append( {'name': 'mp4', 'url': match.group(1)} )
-        match = re.search( '{"file":"([^"]+?.m3u8)"}', data )
-        if match: 
-            m3u8Tab = getDirectM3U8Playlist( match.group(1))
-            linksTab.extend(m3u8Tab)
         return linksTab
 
     def getVideosList(self, url):
@@ -153,11 +137,11 @@ class Ninateka:
         del data[0]
         
         for videoItemData in data:
-            printDBG('                              videoItemData')
+            printDBG('videoItemData')
             icon     = ''
             duration = ''
             gatunek  = ''
-            plot     = ''
+            desc     = ''
             title    = ''
             url      = ''
             
@@ -166,21 +150,19 @@ class Ninateka:
                 match = re.search('src="(http://[^"]+?)"', videoItemData)
                 if match: icon = match.group(1).replace('&amp;', '&')
                 # get duration
-                match = re.search('class="duration"[^>]*?>([^<]+?)<', videoItemData)
-                if match: duration = match.group(1).replace('&#39;', "'")
+                duration = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(videoItemData, '<span class="duration">', '</span>')[1])
                 # get gatunek
-                match = re.search('"gatunek"[^>]*?>([^<]+?)<', videoItemData)
-                if match: gatunek = match.group(1)
-                # get plot
+                gatunek = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(videoItemData, '<a class="gatunek" ', '</a>')[1])
+                # get desc
                 match = re.search('class="text"[^>]*?>([^<]+?)<', videoItemData)
-                if match: plot = match.group(1)
+                if match: desc = match.group(1)
                 # get title and url
                 match = re.search('<a href="([^"]+?)" class="title"[^>]*?>([^<]+?)</a>', videoItemData)
                 if match:
                     url   = self.MAIN_URL + match.group(1)
                     title = match.group(2)
-                    params = {'type': 'video', 'page': url, 'title': title, 'icon': icon, 'duration': duration, 'gatunek': gatunek, 'plot': plot}
-                    self.currList.append( params )
+                    params = {'good_for_fav': True, 'url': url, 'title': title, 'icon': icon, 'desc': ' | '.join([duration, gatunek]) + '[/br]' + desc}
+                    self.addVideo( params )
 
         # check next page
         nextPageUrl = ''
@@ -193,59 +175,72 @@ class Ninateka:
                 nextPageUrl = match.group(1)
 
         if '' != nextPageUrl:
-            params = {'type': 'category', 'name': 'sub-category', 'page': self.MAIN_URL + nextPageUrl.replace('&amp;', '&'), 'title': 'Następna strona'}
-            self.currList.append( params )
+            params = {'name': 'sub-category', 'page': self.MAIN_URL + nextPageUrl.replace('&amp;', '&'), 'title': 'Następna strona'}
+            self.addDir( params )
     # end getVideosList
     
-    def listsHistory(self):
-            list = self.history.getHistoryList()
-            for item in list:
-                params = { 'type': 'category', 'name': 'history', 'category': 'Wyszukaj', 'title': item, 'plot': 'Szukaj: "%s"' % item, 'icon': ''}
-                self.currList.append( params )
+    def getFavouriteData(self, cItem):
+        printDBG('getFavouriteData')
+        return json.dumps(cItem) 
+        
+    def getLinksForFavourite(self, fav_data):
+        printDBG('getLinksForFavourite')
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForVideo(cItem)
+        except Exception: printExc()
+        return links
+        
+    def setInitListFromFavouriteItem(self, fav_data):
+        printDBG('setInitListFromFavouriteItem')
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+        self.addDir(params)
+        return True
+    
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        self.getVideosList(self.SEARCH_URL + urllib.quote_plus(searchPattern))
             
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
-        if 0 == refresh:
-            if len(self.currList) <= index:
-                printDBG( "handleService wrong index: %s, len(self.currList): %d" % (index, len(self.currList)) )
-                return
-            if -1 == index:
-                # use default value
-                self.currItem = { "name": None }
-                printDBG( "handleService for first self.category" )
-            else:
-                self.currItem = self.currList[index]
+        
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
 
         name     = self.currItem.get("name", '')
-        title    = self.currItem.get("title", '')
         category = self.currItem.get("category", '')
+        mode     = self.currItem.get("mode", '')
         page     = self.currItem.get("page", '')
-        icon     = self.currItem.get("icon", '')
-
-        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| [%s] " % name )
+        
+        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
 
     #MAIN MENU
         if name == None:
-            self.listsMainMenu(self.MENU_TAB)
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
     #WSZYSTKIE
-        elif category == self.setTable()[1]:
-            self.getVideosList(self.VIDEOS_URL)
+        elif category == 'list_all':
+            self.getVideosList(self.currItem['url'])
     #KATEGORIE
-        elif category == self.setTable()[2]:
+        elif category == 'list_cats':
             self.getMainCategory()
     #SUB-KATEGORIE
         elif name == 'main-category':
             self.getSubCategory(page)
         elif name == 'sub-category':
             self.getVideosList(page)
-    #WYSZUKAJ
-        elif category == self.setTable()[3]:
-            text = searchPattern
-            self.getVideosList(self.SEARCH_URL + urllib.quote_plus(text))
-    #HISTORIA WYSZUKIWANIA
-        elif category == self.setTable()[4]:
-            self.listsHistory()
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
     #WRONG WAY
         else:
             printDBG('handleService WRONG WAY')
@@ -253,89 +248,4 @@ class Ninateka:
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, Ninateka(), True)
-
-    def getLogoPath(self):  
-        return RetHost(RetHost.OK, value = [GetLogoDir('ninatekalogo.png')] )
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] != 'video':
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-
-        retlist = []
-        urlsTab = self.host.getVideoUrl(self.host.currList[Index]["page"])
-        for item in urlsTab:
-            retlist.append(CUrlItem(item['name'], item['url'], 0))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def convertList(self, cList):
-        hostList = []
-        
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-
-            if cItem['type'] == 'category':
-                if cItem['title'] == 'Wyszukaj':
-                    type = CDisplayListItem.TYPE_SEARCH
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-                page = cItem.get('page', '')
-                if '' != page:
-                    hostLinks.append(CUrlItem("Link", page, 1))
-                
-            title     =  cItem.get('title',    '')
-            icon      =  cItem.get('icon',     '')
-
-            # prepar description
-            descTab = ( (cItem.get('duration', ''), '|', '' ),
-                        (cItem.get('gatunek',  ''), '|', '' ),
-                        (cItem.get('plot',     ''), '|\t',  '' ) )
-            description = ''
-            for descItem in descTab:
-                if '' != descItem[0]:
-                    description += descItem[1] + descItem[0] + descItem[2] 
-            
-            hostItem = CDisplayListItem( name        = unescapeHTML(title.decode("utf-8")).encode("utf-8"),
-                                         description = unescapeHTML(description.decode("utf-8")).encode("utf-8"),
-                                         type        = type,
-                                         urlItems    = hostLinks,
-                                         urlSeparateRequest = 1,
-                                         iconimage   = icon )
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
-
-    def getSearchItemInx(self):
-        # Find 'Wyszukaj' item
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'Wyszukaj':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                self.host.history.addHistoryItem( pattern )
-                self.searchPattern = pattern
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-        return
+        CHostBase.__init__(self, Ninateka(), True, [])

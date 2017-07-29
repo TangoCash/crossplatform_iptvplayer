@@ -78,6 +78,12 @@ class CDisplayListItem:
         self.possibleTypesOfSearch = possibleTypesOfSearch
         self.privateData = None
         self.itemIdx = -1
+        
+    def getDisplayTitle(self):
+        if self.isWatched:
+            return '*' + self.name
+        else:
+            return self.name
 
 class ArticleContent:
     VISUALIZER_DEFAULT = 'DEFAULT'

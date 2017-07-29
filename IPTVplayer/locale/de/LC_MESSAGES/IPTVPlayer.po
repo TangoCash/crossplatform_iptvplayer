@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.0\n"
+"X-Generator: Poedit 2.0.2\n"
 "X-Poedit-Basepath: .\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "X-Poedit-SearchPath-0: ../plugin\n"
@@ -3004,7 +3004,7 @@ msgid ""
 "Please fill your login and password in the host configuration. Available under blue button."
 msgstr ""
 "Dieser Host benötigt eine Registrierung.\n"
-"Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration. Zugänglich über die blaue Taste."
+"Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration aus. Zugänglich über die blaue Taste."
 
 msgid "Default video quality"
 msgstr "Vorgewählte Video-Qualität"
@@ -3547,10 +3547,10 @@ msgstr "Duktape ist eine einbettbare Javascript-Engine, mit Fokus auf Portabilit
 
 msgid ""
 "Access to this service requires login.\n"
-"Please register on the site \"%s\" and then put your e-mail and password in the host configuration under blue button."
+"Please register on the site \"%s\". Then log in and then put your login data in the host configuration under blue button."
 msgstr ""
 "Der Zugang zu diesem Service benötigt ein Login.\n"
-"Bitte registrieren Sie sich auf der Seite \"%s\" und geben danach Ihre E-Mail und das Passwort in der Host Konfiguration ein."
+"Bitte registrieren Sie sich auf der Seite \"%s\" und geben danach Ihre Login Daten in der Host Konfiguration ein."
 
 msgid "Login failed for user \"%s\"."
 msgstr "Anmeldung fehlgeschlagen für Benutzer \"%s\"."
@@ -3567,3 +3567,30 @@ msgstr "Erkennung der MIPSEL FPU ABI."
 
 msgid "This step is required to proper select binaries for installation."
 msgstr "Dieser Vorgang ist notwendig, um die passenden Binärdateien für die Installation zu ermitteln."
+
+msgid "Failed to log in user \"%s\". Please check your login and password."
+msgstr "Anmeldung von Benutzer \"%s\" fehlgeschlagen. Bitte überprüfen Sie Ihre Login Daten."
+
+msgid "This service requires a new Enigma2 image with a Python version %s or later."
+msgstr "Dieser Service benötigt ein Enigma2 Image mit einer Python Version %s oder höher."
+
+msgid "Alternative domain:"
+msgstr "Alternative Domain:"
+
+msgid "Initialize web interface (experimental)"
+msgstr "Initialisiere Web-Interface (experimentell)"
+
+msgid "Link protected with google recaptcha v2."
+msgstr "Link ist geschützt mit Google reCAPTCHA v2."
+
+msgid "Please fill your login and password in the host configuration (available under blue button) and try again."
+msgstr "Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration aus und versuchen Sie es danach erneut."
+
+msgid "Allow watched flag to be set (experimental)"
+msgstr "Setzen von Gesehen-Marker erlauben (experimentell)"
+
+msgid "Unset watched"
+msgstr "Als gesehen entmarkieren"
+
+msgid "Set watched"
+msgstr "Als gesehen markieren"
