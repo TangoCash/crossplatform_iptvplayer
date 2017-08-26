@@ -108,8 +108,7 @@ class IPTVFavouritesAddItemWidget(Screen):
     def addFavouriteToGroup(self, retArg):
         if retArg and 2 == len(retArg):
             if None != retArg[1]:
-                sts = True
-                if self.saveLoad: sts = self.favourites.loadGroupItems(retArg[1])
+                sts = self.favourites.loadGroupItems(retArg[1], force=False)
                 if sts: sts = self.favourites.addGroupItem(self.favItem, retArg[1])
                 if sts: sts = self.favourites.saveGroupItems(retArg[1])
                 if sts:

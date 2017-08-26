@@ -111,7 +111,7 @@ class HoofootCom(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        sp = "<li class='has-sub"
+        sp = '''<li class="has-sub'''
         tmp = self.cm.ph.getDataBeetwenMarkers(data, sp, 'Community', False)[1]
         tmp = tmp.split(sp)
         for item in tmp:

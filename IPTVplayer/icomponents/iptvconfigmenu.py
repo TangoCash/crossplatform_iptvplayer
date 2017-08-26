@@ -11,6 +11,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
                                                           IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize, \
                                                           IsWebInterfaceModuleAvailable
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit
+from Plugins.Extensions.IPTVPlayer.icomponents.configbase import COLORS_DEFINITONS
 ###################################################
 
 ###################################################
@@ -182,6 +183,8 @@ config.plugins.iptvplayer.hidden_ext_player_def_aspect_ratio = ConfigSelection(d
         
 config.plugins.iptvplayer.search_history_size  = ConfigInteger(50, (0, 1000000))
 config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (1, 1000000))
+
+config.plugins.iptvplayer.watched_item_color = ConfigSelection(default = "#808080", choices = COLORS_DEFINITONS)
 
 ###################################################
 

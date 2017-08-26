@@ -59,7 +59,7 @@ class CartoonME(CBaseHostClass):
         self.MAIN_URL = 'http://9cartoon.me/'
         self.SEARCH_URL = self.MAIN_URL +'Search?s='
         
-        self.DEFAULT_ICON_URL  = "http://www.siwallpaperhd.com/wp-content/uploads/2015/07/spongebob_squarepants_face_wallpaper_hd_8_cartoon-724x453.png"
+        self.DEFAULT_ICON_URL  = "http://logos.textgiraffe.com/logos/logo-name/Cartoon-designstyle-cartoon-m.png"
         
         self.MAIN_CAT_TAB = [{'category':'list_types',      'title': _('Cartoon list'),   'url':self.getFullUrl('CartoonList')},
                              {'category':'categories',      'title': _('Genres'),         'url':self.getMainUrl()             },
@@ -338,30 +338,6 @@ class CartoonME(CBaseHostClass):
         elif videoUrl.startswith('http'):
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
-        
-    def getFavouriteData(self, cItem):
-        printDBG('CartoonME.getFavouriteData')
-        params = dict(cItem)
-        return json.dumps(params) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('CartoonME.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('CartoonME.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("CartoonME.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))

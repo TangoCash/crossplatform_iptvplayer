@@ -435,6 +435,12 @@ class urlparser:
                        'uploadx.link':         self.pp.parserUPLOAD         ,
                        'uploadz.org':          self.pp.parserUPLOAD         ,
                        'stopbot.tk':           self.pp.parserSTOPBOTTK      ,
+                       'publicvideohost.org':  self.pp.parserPUBLICVIDEOHOST,
+                       'vidnode.net':          self.pp.parserVIDNODENET     ,
+                       'videa.hu':             self.pp.parserVIDEAHU        ,
+                       'streamcherry.com':     self.pp.parserSTREAMCHERRYCOM,
+                       'aflamyz.com':          self.pp.parserAFLAMYZCOM     ,
+                       'polsatsport.pl':       self.pp.parserPOLSATSPORTPL  ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -1261,9 +1267,8 @@ class pageParser:
         def _decorateUrl(inUrl, host, referer):
             # prepare extended link
             retUrl = strwithmeta( inUrl )
-            retUrl.meta['Host']              = host
             retUrl.meta['Referer']           = referer
-            retUrl.meta['Cookie']            = self.cm.getCookieHeader(COOKIE_FILE) #"PHPSESSID=1"
+            retUrl.meta['Cookie']            = "PHPSESSID=1" #self.cm.getCookieHeader(COOKIE_FILE) 
             retUrl.meta['iptv_proto']        = 'http'
             retUrl.meta['iptv_urlwithlimit'] = False
             retUrl.meta['iptv_livestream']   = False
@@ -1344,9 +1349,12 @@ class pageParser:
             tmpData += pageData
             
             tmp = self.cm.ph.getDataBeetwenMarkers(tmpData, "player_data='", "'", False)[1].strip()
-            #printDBG("===========================================")
-            #printDBG(tmp)
-            #printDBG("===========================================")
+            if tmp == '': tmp = self.cm.ph.getDataBeetwenMarkers(tmpData, 'player_data="', '"', False)[1].strip()
+            tmp = clean_html(tmp).replace('&quot;', '"')
+            
+            printDBG("===========================================")
+            printDBG(tmp)
+            printDBG("===========================================")
             try:
                 if tmp != '':
                     tmp = byteify(json.loads(tmp))
@@ -1402,7 +1410,7 @@ class pageParser:
     
         #if len(videoUrls):
         #    videoUrls = [videoUrls[0]]
-        return videoUrls
+        return videoUrls[::-1]
 
     def parserDWN(self,url):
         if "play4.swf" in url:
@@ -1719,6 +1727,9 @@ class pageParser:
             if not sts: return False            
             if 'logout_link' not in data: return False
             return True
+            
+        if baseUrl.startswith('http://'):
+            baseUrl = 'https' + baseUrl[4:]
         
         sts, data = self.cm.getPage(baseUrl, params)
         if not sts: return False
@@ -2654,12 +2665,20 @@ class pageParser:
         
     def parserMYCLOUDTO(self, baseUrl):
         printDBG("parserMYCLOUDTO baseUrl[%r]" % baseUrl)
-        sts, data = self.cm.getPage(baseUrl)
+        header = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36', 'Accept':'*/*', 'Accept-Encoding':'gzip, deflate'}
+        
+        
+        sts, data = self.cm.getPage(baseUrl, {'header': header})
         if not sts: return False
         url = self.cm.ph.getSearchGroups(data, '''['"]((:?https?:)?//[^"^']+\.m3u8[^'^"]*?)['"]''')[0]
         if url.startswith('//'):
             url = 'http:' + url
-        return getDirectM3U8Playlist(url, checkContent=True)[::-1]
+        
+        url = strwithmeta(url, {'User-Agent':header['User-Agent'], 'Origin':urlparser.getDomain(baseUrl), 'Referer':baseUrl})
+        tab =  getDirectM3U8Playlist(url, checkContent=True)[::-1]
+        
+        printDBG("parserMYCLOUDTO tab[%s]" % tab)
+        return tab
         
     def parserVODSHARECOM(self, baseUrl):
         printDBG("parserVODSHARECOM baseUrl[%r]" % baseUrl)
@@ -3387,11 +3406,33 @@ class pageParser:
         # http://vshare.io/d/72f9061/1
         video_id = self.cm.ph.getSearchGroups(baseUrl+'/', '/[dv]/([A-Za-z0-9]{7})/')[0]
         url = 'http://vshare.io/v/{0}/width-470/height-305/'.format(video_id)
-        HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0', 'Referer':baseUrl}
+        HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36', 'Accept-Encoding':'gzip, deflate', 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Referer':baseUrl}
         
         vidTab = []
-        sts, data = self.cm.getPage(url, {'header' : HTTP_HEADER})
-        if not sts: return
+        
+        sts, data = self.cm.getPageWithWget(url, {'header' : HTTP_HEADER})
+        if not sts: sts, data = self.cm.getPage(url, {'header' : HTTP_HEADER})
+        if not sts: return []
+        
+        tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<div[^>]+?class="xxx-error"[^>]*>'), re.compile('</div>'), False)[1]
+        SetIPTVPlayerLastHostError(clean_html(tmp).strip())
+        
+        printDBG(data)
+        
+        enc = self.cm.ph.getDataBeetwenMarkers(data, 'eval(', '{}))')[1]
+        if enc != '':
+            try:
+                jscode = base64.b64decode('''dmFyIGRlY29kZWQgPSAiIjsNCnZhciAkID0gZnVuY3Rpb24oKXsNCiAgcmV0dXJuIHsNCiAgICBhcHBlbmQ6IGZ1bmN0aW9uKGEpew0KICAgICAgaWYoYSkNCiAgICAgICAgZGVjb2RlZCArPSBhOw0KICAgICAgZWxzZQ0KICAgICAgICByZXR1cm4gaWQ7DQogICAgfQ0KICB9DQp9Ow0KDQolczsNCg0KcHJpbnQoZGVjb2RlZCk7DQo=''') % (enc)                     
+                printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                printDBG(jscode)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                ret = iptv_js_execute( jscode )
+                if ret['sts'] and 0 == ret['code']:
+                    decoded = ret['data'].strip()
+                    printDBG('DECODED DATA -> [%s]' % decoded)
+                    data = decoded + '\n' + data
+            except Exception:
+                printExc()
         
         stream   = self.cm.ph.getSearchGroups(data, '''['"](http://[^"^']+?/stream\,[^"^']+?)['"]''')[0]
         if '' == stream: stream   = byteify(json.loads('"%s"' % self.cm.ph.getSearchGroups(data, '''['"](http://[^"^']+?\.flv)['"]''')[0]))
@@ -3561,6 +3602,7 @@ class pageParser:
                 tmpTab.extend(vidTab)
                 vidTab = tmpTab
             else:
+                url = urlparser.decorateUrl(url, HTTP_HEADER)
                 vidTab.append({'name':label, 'url':url})
         return vidTab
         
@@ -5366,6 +5408,9 @@ class pageParser:
         sts, data = self.cm.getPage(baseUrl)
         if not sts: return False
         
+        msg = clean_html(self.cm.ph.getDataBeetwenMarkers(data, 'The file was deleted', '<')[1]).strip()
+        if msg != '': SetIPTVPlayerLastHostError(msg)
+        
         # get JS player script code from confirmation page
         sts, tmp = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
         if sts:
@@ -7000,7 +7045,7 @@ class pageParser:
                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
                'Accept-Encoding': 'none',
                'Accept-Language': 'en-US,en;q=0.8',
-               'Referer':baseUrl} #'Connection': 'keep-alive'           
+               'Referer':baseUrl} #'Connection': 'keep-alive'
 
         sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
         if not sts: return False
@@ -8550,6 +8595,169 @@ class pageParser:
         
         return False
         
+    def parserPUBLICVIDEOHOST(self, baseUrl):
+        printDBG("parserPUBLICVIDEOHOST baseUrl[%s]\n" % baseUrl)
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return []
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, 'playlist:', ']', False)[1].strip()
+        printDBG(data)
+        videoUrl = self.cm.ph.getSearchGroups(data, r'''['"]?file['"]?\s*:\s*['"]((:?https?:)?//[^"^']+(:?\.mp4|\.flv))['"]''')[0]
+        if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+        if self.cm.isValidUrl(videoUrl):
+            return videoUrl
+        return False
+        
+    def parserVIDNODENET(self, baseUrl):
+        printDBG("parserVIDNODENET baseUrl[%s]\n" % baseUrl)
+        
+        baseUrl = strwithmeta(baseUrl)
+        referer = baseUrl.meta.get('Referer', baseUrl)
+        
+        HTTP_HEADER = { 'User-Agent':'Mozilla/5.0', 'Referer':referer}
+        params = {'header':HTTP_HEADER}
+        
+        sts, data = self.cm.getPage(baseUrl, params)
+        if not sts: return []
+        
+        urlTab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source ', '>', False, False)
+        for item in data:
+            url  = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+            if url.startswith('//'):
+                url = 'http:' + url
+            if not url.startswith('http'):
+                continue
+            
+            if 'video/mp4' in item:
+                type = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
+                res  = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
+                label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+                if label == '': label = res
+                url = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.append({'name':'{0}'.format(label), 'url':url})
+            elif 'mpegurl' in item:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                tmpTab = getDirectM3U8Playlist(url, checkExt=True, checkContent=True)
+                urlTab.extend(tmpTab)
+        return urlTab
+        
+    def parserVIDEAHU(self, baseUrl):
+        printDBG("parserVIDEAHU baseUrl[%s]\n" % baseUrl)
+        
+        baseUrl = strwithmeta(baseUrl)
+        referer = baseUrl.meta.get('Referer', baseUrl)
+        
+        HTTP_HEADER = { 'User-Agent':'Mozilla/5.0', 'Referer':referer}
+        params = {'header':HTTP_HEADER}
+        
+        sts, data = self.cm.getPage(baseUrl, params)
+        if not sts: return []
+        
+        f = self.cm.ph.getSearchGroups(data, '''"/player\?f=([0-9\.]+?)&''')[0]
+        if f == '': return []
+        
+        sts, data = self.cm.getPage('http://videa.hu/videaplayer_get_xml.php?f={0}&start=0&enablesnapshot=0&platform=desktop&referrer={1}'.format(f, urllib.quote(baseUrl)))
+        if not sts: return []
+        
+        urlTab = []
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<video_sources', '</video_sources>', False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<video_source', '</video_source>')
+        for item in data:
+            printDBG(item)
+            url  = self.cm.ph.getDataBeetwenMarkers(item, '>', '<', False)[1].strip()
+            if url.startswith('//'):
+                url = 'http:' + url
+            if not url.startswith('http'):
+                continue
+                
+            printDBG('>>>>>>>>>>>>> ' + url)
+            
+            if 'video/mp4' in item:
+                width  = self.cm.ph.getSearchGroups(item, '''width=['"]([^"^']+?)['"]''')[0]
+                height = self.cm.ph.getSearchGroups(item, '''height=['"]([^"^']+?)['"]''')[0]
+                name   = self.cm.ph.getSearchGroups(item, '''name=['"]([^"^']+?)['"]''')[0]
+                url    = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.append({'name':'{0} - {1}x{2}'.format(name, width, height), 'url':url})
+            elif 'mpegurl' in item:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                tmpTab = getDirectM3U8Playlist(url, checkExt=False, checkContent=True)
+                urlTab.extend(tmpTab)
+        urlTab.reverse()
+        return urlTab
+        
+    def parserSTREAMCHERRYCOM(self, baseUrl):
+        printDBG("parserSTREAMCHERRYCOM baseUrl[%s]\n" % baseUrl)
+        
+        baseUrl = strwithmeta(baseUrl)
+        referer = baseUrl.meta.get('Referer', baseUrl)
+        
+        HTTP_HEADER = { 'User-Agent':'Mozilla/5.0', 'Referer':referer}
+        params = {'header':HTTP_HEADER}
+        
+        sts, data = self.cm.getPage(baseUrl, params)
+        if not sts: return []
+        
+        urlTab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '.push(', ')')
+        for item in data:
+            printDBG(item)
+            url  = self.cm.ph.getSearchGroups(item, '''['"]?src['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+            if url.startswith('//'): url = 'http:' + url
+            if not url.startswith('http'): continue
+            type = self.cm.ph.getSearchGroups(item, '''['"]?type['"]?\s*:\s*['"]([^"^']+?)['"]''')[0].lower()
+            printDBG('>>>>>>>>>>>>> ' + url)
+            
+            if 'video/mp4' in type:
+                height = self.cm.ph.getSearchGroups(item,  '''['"]?height['"]?\s*:\s*['"]?([0-9]+)['"]?''')[0]
+                bitrate = self.cm.ph.getSearchGroups(item,  '''['"]?bitrate['"]?\s*:\s*['"]?([0-9]+)['"]?''')[0]
+                url    = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.insert(0, {'name':'{0} [{1}]'.format(height, bitrate), 'url':url})
+            elif 'mpegurl' in type:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                tmpTab = getDirectM3U8Playlist(url, checkExt=False, checkContent=True)
+                urlTab.extend(tmpTab)
+            elif 'dash' in type:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'dash', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.extend(getMPDLinksWithMeta(url, False))
+        return urlTab
+    
+    def parserAFLAMYZCOM(self, baseUrl):
+        printDBG("parserAFLAMYZCOM baseUrl[%s]\n" % baseUrl)
+        baseUrl = strwithmeta(baseUrl)
+        referer = baseUrl.meta.get('Referer', baseUrl)
+        
+        HTTP_HEADER = { 'User-Agent':'Mozilla/5.0', 'Referer':referer}
+        params = {'header':HTTP_HEADER}
+        
+        sts, data = self.cm.getPage(baseUrl, params)
+        if not sts: return []
+        
+        urlTab = []
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '.setup(', ')')
+        for item in data:
+            printDBG(item)
+            url  = self.cm.ph.getSearchGroups(item, '''['"]?file['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+            if url.startswith('//'): url = 'http:' + url
+            if not url.startswith('http'): continue
+            type = self.cm.ph.getSearchGroups(item, '''['"]?type['"]?\s*:\s*['"]([^"^']+?)['"]''')[0].lower()
+            printDBG('>>>>>>>>>>>>> ' + url)
+            
+            if 'mp4' in type:
+                url    = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.insert(0, {'name':type, 'url':url})
+            elif 'mpegurl' in type or 'hls' in type:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                tmpTab = getDirectM3U8Playlist(url, checkExt=False, variantCheck=False, checkContent=True)
+                try: tmpTab = sorted(tmpTab, key=lambda item: int(item.get('bitrate', '0')))
+                except Exception: pass
+                urlTab.extend(tmpTab)
+            elif 'dash' in type:
+                url = urlparser.decorateUrl(url, {'iptv_proto':'dash', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                urlTab.extend(getMPDLinksWithMeta(url, False))
+        urlTab.reverse()
+        return urlTab
+    
     def parserKINGVIDTV(self, baseUrl):
         printDBG("parserKINGVIDTV url[%s]\n" % baseUrl)
         baseUrl = strwithmeta(baseUrl)
@@ -8770,3 +8978,25 @@ class pageParser:
         else:
             SetIPTVPlayerLastHostError(data['message']+' Error: ' + str(data['error']))
         return []
+        
+    def parserPOLSATSPORTPL(self, baseUrl):
+        printDBG("parserPOLSATSPORTPL baseUrl[%s]" % baseUrl)
+        baseUrl = strwithmeta(baseUrl)
+        referer = baseUrl.meta.get('Referer', baseUrl)
+
+        domain = urlparser.getDomain(baseUrl)
+        sts, data = self.cm.getPage(baseUrl)
+        
+        sts, tmp = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')
+        if not sts: return False
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<source', '>')
+        
+        videoTab = []
+        for item in tmp:
+            if 'video/mp4' not in item and 'video/x-flv' not in item: continue
+            tType = self.cm.ph.getSearchGroups(item, '''type=['"]([^'^"]+?)['"]''')[0].replace('video/', '')
+            tUrl  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
+            printDBG(tUrl)
+            if self.cm.isValidUrl(tUrl):
+                videoTab.append({'name':'[%s] %s' % (tType, domain), 'url':strwithmeta(tUrl)})#, {'User-Agent': userAgent})})
+        return videoTab

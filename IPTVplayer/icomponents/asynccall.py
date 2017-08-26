@@ -300,6 +300,10 @@ class CFunctionProxyQueue:
         self.mainThreadName = threading.currentThread().getName()
         self.procFun = None
         
+        # this flag will be checked with mutex taken 
+        # to less lock check
+        self.QueueEmpty = True
+        
     ############################################################
     #       This method can be called only from mainThread
     #       so there is no need to synchronize it by mutex
@@ -314,15 +318,25 @@ class CFunctionProxyQueue:
         self.procFun = fun
         return True 
         
+    def isQueueEmpty(self):
+        try:
+            if self.QueueEmpty:
+                return True
+        except Exception:
+            pass
+        return False
+        
     def clearQueue(self):
         printDBG('clearQueue')
         self.QueueLock.acquire()
         self.Queue = []
+        self.QueueEmpty = True
         self.QueueLock.release()
         
     def addItemQueue(self, item):
         self.QueueLock.acquire()
         self.Queue.append(item)
+        self.QueueEmpty = False
         self.QueueLock.release()
 
     def addToQueue(self, funName, retValue):
@@ -330,6 +344,18 @@ class CFunctionProxyQueue:
         item = CPQItemCallBack(funName, retValue)
         self.addItemQueue(item)
         
+    def peekClientFunName(self):
+        name = None
+        if not self.isQueueEmpty(): 
+            self.QueueLock.acquire()
+            try:
+                item = self.Queue[-1]
+                if isinstance(item, CPQItemCallBack):
+                    name = str(item.clientFunName)
+            except Exception: pass
+            self.QueueLock.release()
+        return name
+    
     def processQueue(self):
        # Queue can be processed only from main thread
         currThreadName = threading.currentThread().getName()
@@ -337,6 +363,10 @@ class CFunctionProxyQueue:
             printDBG("ERROR CFunctionProxyQueue.processQueue: Queue can be processed only from main thread, thread [%s] is not main thread" % currThreadName)
             raise AssertionError, ("ERROR CFunctionProxyQueue.processQueue: Queue can be processed only from main thread, thread [%s] is not main thread" % currThreadName)
             return False
+            
+        if self.isQueueEmpty():
+            return
+            
             
         while True:
             QueueIsEmpty = False
@@ -348,6 +378,7 @@ class CFunctionProxyQueue:
                 printDBG("CFunctionProxyQueue.processQueue")
             else:
                 QueueIsEmpty = True 
+            if QueueIsEmpty: self.QueueEmpty = True
             self.QueueLock.release()
             
             if QueueIsEmpty: return

@@ -190,6 +190,8 @@ class RteIE(CBaseHostClass):
                     data = item
                     break
             del tmp
+        else:
+            data = ''
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article', '</article>')
         for item in data:

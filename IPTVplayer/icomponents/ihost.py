@@ -8,8 +8,14 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSearchHistoryHelper, GetCookieDir, printDBG, printExc, GetLogoDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSearchHistoryHelper, GetCookieDir, printDBG, printExc, GetLogoDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+
+from Components.config import config
+from skin import parseColor
+
+try:    import json
+except Exception: import simplejson as json
 
 class CUrlItem:
     def __init__(self, name = "", url = "", urlNeedsResolve = 0):
@@ -84,17 +90,30 @@ class CDisplayListItem:
             return '*' + self.name
         else:
             return self.name
+        
+    def getTextColor(self):
+        try:
+            if self.isWatched:
+                return parseColor(config.plugins.iptvplayer.watched_item_color.value).argb()
+        except Exception:
+            printExc()
+        return None
 
 class ArticleContent:
     VISUALIZER_DEFAULT = 'DEFAULT'
     # Posible args and values for richDescParams:
-    RICH_DESC_PARAMS        = ["alternate_title", "views", "status", "country", "language", "quality", "subtitles", "year", "imdb_rating", \
-                               "released", "broadcast", "remaining", "rating", "rated", "duration", "genre", "production", "director", "directors", "writer", "writers", \
-                               "creator", "creators", "actors", "stars", "awards", "budget" ]
+    RICH_DESC_PARAMS        = ["alternate_title", "age_limit", "views", "status", "first_air_date", "last_air_date", "seasons", "episodes", "country", "language", "duration", "quality", "subtitles", "year", "imdb_rating", "tmdb_rating",\
+                               "released", "broadcast", "remaining", "rating", "rated", "genre", "genres", "production", "director", "directors", "writer", "writers", \
+                               "creator", "creators", "cast", "actors", "stars", "awards", "budget", ]
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
     RICH_DESC_LABELS = {"alternate_title":   "Alternate Title:",
                         "status":            "Status:",
+                        "age_limit":         "Age limit:",
+                        "first_air_date":    "First air date:",  
+                        "last_air_date":     "Last air date:", 
+                        "seasons":           "Seasons:",
+                        "episodes":          "Episodes:",
                         "quality":           "Quality:",
                         "subtitles":         "Subtitles:",
                         "country":           "Country:", 
@@ -104,10 +123,12 @@ class ArticleContent:
                         "broadcast":         "Broadcast:",
                         "remaining":         "Remaining:",
                         "imdb_rating":       "IMDb Rating:",
+                        "tmdb_rating":       "TMDb Rating:",
                         "rating":            "Rating:", 
                         "rated":             "Rated:",
                         "duration":          "Duration:", 
                         "genre":             "Genre:", 
+                        "genres":            "Genres:", 
                         "production":        "Production:",
                         "director":          "Director:",
                         "directors":         "Directors:",
@@ -115,11 +136,13 @@ class ArticleContent:
                         "writers":           "Writers:",
                         "creator":           "Creator:",
                         "creators":          "Creators:",
+                        "cast":              "Cast:",
                         "actors":            "Actors:", 
                         "stars":             "Stars:",
                         "awards":            "Awards:",
                         "views":             "Views:",
-                        "budget":            "Budget:",}
+                        "budget":            "Budget:",
+                        }
     def __init__(self, title = '', text = '', images = [], trailers = [], richDescParams = {}, visualizer=None):
         self.title    = title
         self.text     = text
@@ -265,6 +288,10 @@ class IHost:
         
     def performCustomAction(self, privateData):
         return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
+        
+    def markItemAsViewed(self, Index = 0):
+        return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
+    
 '''
 CHostBase implements some typical methods
           from IHost interface
@@ -696,8 +723,40 @@ class CBaseHostClass:
                 self.addDir(params)
             except Exception: printExc()
             
+    def getFavouriteData(self, cItem):
+        try:
+            return json.dumps(cItem)
+        except Exception: 
+            printExc()
+        return ''
+        
+    def getLinksForFavourite(self, fav_data):
+        try:
+            if self.MAIN_URL == None:
+                self.selectDomain()
+        except Exception: 
+            printExc()
+        links = []
+        try:
+            cItem = byteify(json.loads(fav_data))
+            links = self.getLinksForItem(cItem)
+        except Exception: printExc()
+        return links
+        
     def setInitListFromFavouriteItem(self, fav_data):
-        return False
+        try:
+            if self.MAIN_URL == None:
+                self.selectDomain()
+        except Exception: 
+            printExc()
+        try:
+            params = byteify(json.loads(fav_data))
+        except Exception: 
+            params = {}
+            printExc()
+            return False
+        self.currList.append(params)
+        return True
         
     def getLinksForItem(self, cItem):
         return self.getLinksForVideo(cItem)

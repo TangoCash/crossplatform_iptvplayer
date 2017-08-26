@@ -457,7 +457,7 @@ msgid "Disable live at plugin start"
 msgstr "Отключить просмотр каналов при старте плагина"
 
 msgid "Disable reordering mode"
-msgstr "Отключить режим переназначения"
+msgstr "Отключить режим перемещения"
 
 msgid "Display order:"
 msgstr "Отобразить заказ:"
@@ -4181,6 +4181,194 @@ msgid ""
 msgstr ""
 "Логин пользователя \"%s\" войти http://vk.com/ не удалось!\n"
 "Пожалуйста , проверьте свои данные для входа в конфигурации IPTVPlayer."
+
+msgid "The problem with user logon \"%s\"."
+msgstr "Проблема входа пользователя в систему \"%s\"."
+
+msgid "http://sovdub.ru/"
+msgstr "Совесткий дубляж"
+
+msgid "Video mode"
+msgstr "Режим видео"
+
+msgid "Is this message displayed correctly?"
+msgstr "Отображается это сообщение правильно?"
+
+msgid "Preferred format:"
+msgstr "Предпочтительный формат:"
+
+msgid "Use web-proxy (it may be illegal):"
+msgstr "Использование веб-прокси (это может быть незаконно):"
+
+msgid "Latest programs"
+msgstr "Последние программы"
+
+msgid "Latest news broadcast"
+msgstr "Последние новости вещания"
+
+msgid "Last chance"
+msgstr "Последний шанс"
+
+msgid "Live broadcasts"
+msgstr "Прямые трансляции"
+
+msgid "Programs A-Ö"
+msgstr "Программы A-Ö"
+
+msgid "Only available in Sweden.\n"
+msgstr "Доступно только в Швеции.\n"
+
+msgid "Only available in Sweden."
+msgstr "Доступно только в Швеции."
+
+msgid "Detection of glibc version."
+msgstr "Обнаружение glibc версии."
+
+msgid "Detection version of installed standard C library."
+msgstr "Обнаружение версии установленной стандартной библиотеки C."
+
+msgid "hlsdl downloader"
+msgstr "hlsdl загрузчик"
+
+msgid ""
+"\n"
+"For more info please ask samsamsam@o2.pl"
+msgstr ""
+"\n"
+"Для получения дополнительной информации, пожалуйста спросите  у samsamsam@o2."
+"pl"
+
+msgid "It improves HLS/M3U8 stream download.\n"
+msgstr "Это улучшает HLS/M3U8 потока загрузки.\n"
+
+msgid "Alternative domain:"
+msgstr "Альтернативный домен:"
+
+msgid ""
+"Fatal Error!\n"
+"Plugin is not supported with your platform."
+msgstr ""
+"Фатальная ошибка!\n"
+"Плагин не поддерживается на вашей платформе."
+
+msgid ""
+"\n"
+"Please visit http://duktape.org/"
+msgstr ""
+"\n"
+"Пожалуйста, посетите http://duktape.org/"
+
+msgid ""
+"Duktape is an embeddable Javascript engine, with a focus on portability and "
+"compact footprint.\n"
+msgstr ""
+"Duktape - это встраиваемый движок Javascript с акцентом на портативность и "
+"компактность.\n"
+
+msgid "TV Show"
+msgstr "ТВ шоу"
+
+msgid ""
+"Access to this service requires login.\n"
+"Please register on the site \"%s\" and then put your e-mail and password in "
+"the host configuration under blue button."
+msgstr ""
+"Для доступа к этой услуге требуется вход в систему.\n"
+"Пожалуйста, зарегистрируйтесь на сайте \"%s\", после чего введите свою "
+"электронную почту и пароль в конфигурацию хоста по голубой кнопке."
+
+msgid "Login mode"
+msgstr "Режим входа"
+
+msgid "Secure cookie name"
+msgstr "Безопасное имя файла cookie"
+
+msgid "Secure cookie value"
+msgstr "Безопасное значение cookie"
+
+msgid "Name"
+msgstr "Имя"
+
+msgid "ID"
+msgstr "Идентификация"
+
+msgid "Trailer"
+msgstr "Трейлер"
+
+msgid ""
+"This service requires a new Enigma2 image with a Python version %s or later."
+msgstr ""
+"Этот сервис требует нового enigma2 изображения с версией Python %s или более "
+"поздней версией."
+
+msgid "Genre: "
+msgstr "Жанр: "
+
+msgid "Order by: "
+msgstr "Сортировать по: "
+
+msgid "Score at least: "
+msgstr "Оценка по крайней мере: "
+
+msgid "trailer"
+msgstr "Трейлер"
+
+msgid "Advance (cookie item)"
+msgstr "Авансовый (элемент cookie)"
+
+msgid "Simple (e-mail, password)"
+msgstr "Простой (адрес электронной почты, пароль)"
+
+msgid "Top series"
+msgstr "Лучшие серии"
+
+msgid "Top movies"
+msgstr "Лучшие фильмы"
+
+msgid "Upcoming"
+msgstr "Предстоящие"
+
+msgid "Most watched"
+msgstr "Самые просматриваемые"
+
+msgid "Last update"
+msgstr "Последнее обновление"
+
+msgid "Cartoon list"
+msgstr "Список мультфильмов"
+
+msgid "Initialize web interface (experimental)"
+msgstr "Включить веб-интерфейс (экспериментальный)"
+
+msgid "Allow watched flag to be set (experimental)"
+msgstr "Разрешить просмотр установленного флага (экспериментальный)"
+
+msgid "The color of the viewed item"
+msgstr "Цвет просматриваемого объекта"
+
+msgid "The color of the watched item"
+msgstr "Цвет из часов эд пункта"
+
+msgid "Unset watched"
+msgstr "Отменить просмотр"
+
+msgid "Set watched"
+msgstr "Установить наблюдаемый"
+
+msgid "http://kinotan.ru/"
+msgstr "Кинотан"
+
+msgid "Show paid items (it may be illegal)"
+msgstr "Показывать платные предметы (это может быть незаконно)"
+
+msgid "Show items with DRM"
+msgstr "Показывать элементы с DRM"
+
+msgid "Items with DRM protection."
+msgstr "Элементы с защитой DRM."
+
+msgid "Video with DRM protection."
+msgstr "Видео с защитой DRM."
 
 msgid "Trailers"
 msgstr "Трейлеры"

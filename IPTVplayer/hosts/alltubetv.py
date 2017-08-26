@@ -46,17 +46,17 @@ class AlltubeTV(CBaseHostClass):
     USER_AGENT = 'curl/7'
     MAIN_URL    = 'http://alltube.tv/'
     SRCH_URL    = MAIN_URL + 'szukaj'
-    DEFAULT_ICON = 'http://alltube.tv/static/main/newlogoall.png'
+    DEFAULT_ICON_URL = 'http://alltube.tv/static/main/newlogoall.png'
     #{'category':'latest_added',       'title': _('Latest added'),  'url':MAIN_URL,                   'icon':DEFAULT_ICON},
-    MAIN_CAT_TAB = [{'category':'genres_movies',      'title': _('Movies'),        'url':MAIN_URL+'filmy-online/',   'icon':DEFAULT_ICON},
-                    {'category':'cat_series',         'title': _('Series'),        'url':MAIN_URL+'seriale-online/', 'icon':DEFAULT_ICON},
-                    {'category':'list_movies',        'title': _('Junior'),        'url':MAIN_URL+'dla-dzieci/',     'icon':DEFAULT_ICON},
-                    {'category':'search',             'title': _('Search'), 'search_item':True, 'icon':DEFAULT_ICON},
-                    {'category':'search_history',     'title': _('Search history'), 'icon':DEFAULT_ICON} ]
+    MAIN_CAT_TAB = [{'category':'genres_movies',      'title': _('Movies'),        'url':MAIN_URL+'filmy-online/',   },
+                    {'category':'cat_series',         'title': _('Series'),        'url':MAIN_URL+'seriale-online/', },
+                    {'category':'list_movies',        'title': _('Junior'),        'url':MAIN_URL+'dla-dzieci/',     },
+                    {'category':'search',             'title': _('Search'), 'search_item':True, },
+                    {'category':'search_history',     'title': _('Search history'), } ]
                       
-    SERIES_CAT_TAB = [{'category':'list_series_list', 'title': _('List'),                       'url':MAIN_URL+'seriale-online/', 'icon':DEFAULT_ICON},
-                      {'category':'list_series_abc',  'title': _('ABC'),                        'url':MAIN_URL+'seriale-online/', 'icon':DEFAULT_ICON},
-                      {'category':'list_series',      'title': _('All'), 'letter':'all',        'url':MAIN_URL+'seriale-online/', 'icon':DEFAULT_ICON} ]
+    SERIES_CAT_TAB = [{'category':'list_series_list', 'title': _('List'),                       'url':MAIN_URL+'seriale-online/', },
+                      {'category':'list_series_abc',  'title': _('ABC'),                        'url':MAIN_URL+'seriale-online/', },
+                      {'category':'list_series',      'title': _('All'), 'letter':'all',        'url':MAIN_URL+'seriale-online/', } ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'AlltubeTV', 'cookie':'alltubetv.cookie'})
@@ -73,8 +73,8 @@ class AlltubeTV(CBaseHostClass):
         params['cloudflare_params'] = {'domain':'alltube.tv', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self.getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
-    def getIconUrl(self, url):
-        url = self.getFullUrl(url.strip())
+    def getFullIconUrl(self, url):
+        url = CBaseHostClass.getFullIconUrl(self, url.strip())
         if url == '': return ''
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID'])
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
@@ -307,8 +307,12 @@ class AlltubeTV(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("AlltubeTV.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
-        sts, data = self.getPage(self.SRCH_URL, {}, post_data={'search':searchPattern})
+        params = dict(self.defaultParams)
+        params['header'] = {'User-Agent':self.USER_AGENT, 'Content-Type':'application/x-www-form-urlencoded'}
+        sts, data = self.getPage(self.SRCH_URL, params, post_data={'search':searchPattern})
         if not sts: return
+        
+        printDBG(data)
         
         data = self.cm.ph.rgetDataBeetwenMarkers(data, '<div class="container-fluid">', 'Kontakt')[1]
         data = data.split('<h2 class="headline">')
@@ -416,30 +420,6 @@ class AlltubeTV(CBaseHostClass):
                 videoUrl = 'http:' + videoUrl
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
-        
-    def getFavouriteData(self, cItem):
-        printDBG('AlltubeTV.getFavouriteData')
-        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem.get('icon', '')}
-        return json.dumps(params) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('AlltubeTV.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('AlltubeTV.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -492,84 +472,10 @@ class AlltubeTV(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, AlltubeTV(), True)#, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
+        CHostBase.__init__(self, AlltubeTV(), True)
 
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    '''
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        hList = self.host.getArticleContent(self.host.currList[Index])
-        for item in hList:
-            title  = item.get('title', '')
-            text   = item.get('text', '')
-            images = item.get("images", [])
-            retlist.append( ArticleContent(title = title, text = text, images =  images) )
-        return RetHost(RetHost.OK, value = retlist)
-    # end getArticleContent
-    '''
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        searchTypesOptions.append((_("Movies"), "movies"))
-        searchTypesOptions.append((_("Series"), "series"))
-    
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  self.host.getIconUrl( cItem.get('icon', '') )
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem
+    def getSearchTypes(self):
+        searchTypesOptions = []
+        searchTypesOptions.append(("Filmy", "movies"))
+        searchTypesOptions.append(("Seriale", "series"))
+        return searchTypesOptions

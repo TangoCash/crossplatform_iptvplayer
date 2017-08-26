@@ -10,7 +10,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetHostsList, IsHostEnabled, SaveHostsOrderList, SortHostsList, \
                                                           GetE2VideoAspectChoices, GetE2VideoAspect, SetE2VideoAspect, GetE2VideoPolicyChoices, \
                                                           GetE2VideoPolicy, SetE2VideoPolicy, GetE2AudioCodecMixChoices, GetE2AudioCodecMixOption, IsExecutable
-from Plugins.Extensions.IPTVPlayer.icomponents.configbase import ConfigBaseWidget, ConfigIPTVFileSelection
+from Plugins.Extensions.IPTVPlayer.icomponents.configbase import ConfigBaseWidget, ConfigIPTVFileSelection, COLORS_DEFINITONS
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 ###################################################
 
@@ -23,9 +23,6 @@ from Screens.MessageBox import MessageBox
 from Screens.ChoiceBox import ChoiceBox
 from Components.config import config, ConfigSubsection, ConfigSelection, ConfigDirectory, ConfigYesNo, ConfigOnOff, Config, ConfigInteger, ConfigSubList, ConfigText, getConfigListEntry, configfile
 ###################################################
-COLORS_DEFINITONS = [("#000000", _("black")), ("#C0C0C0", _("silver")), ("#808080", _("gray")), ("#FFFFFF", _("white")), ("#800000", _("maroon")), ("#FF0000", _("red")), ("#800080", _("purple")), ("#FF00FF", _("fuchsia")), \
-                     ("#008000", _("green")), ("#00FF00", _("lime")), ("#808000", _("olive")), ("#FFFF00", _("yellow")), ("#000080", _("navy")), ("#0000FF", _("blue")), ("#008080", _("teal")), ("#00FFFF", _("aqua"))]
-
 config.plugins.iptvplayer.show_iframe = ConfigYesNo(default = False)
 config.plugins.iptvplayer.iframe_file = ConfigIPTVFileSelection(fileMatch = "^.*\.mvi$", default = "/usr/share/enigma2/radio.mvi")
 config.plugins.iptvplayer.clear_iframe_file = ConfigIPTVFileSelection(fileMatch = "^.*\.mvi$", default = "/usr/share/enigma2/black.mvi")

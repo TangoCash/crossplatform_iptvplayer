@@ -47,13 +47,14 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           eConnectCallback, GetSkinsDir, GetIconDir, GetPluginDir,\
                                                           SortHostsList, GetHostsOrderList, CSearchHistoryHelper, IsExecutable, \
                                                           CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
-                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode
+                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, ClearTmpCookieDir
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import IPTVPlayerBufferingWidget
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdmapi import IPTVDMApi, DMItem
 from Plugins.Extensions.IPTVPlayer.iptvupdate.updatemainwindow import IPTVUpdateWindow, UpdateMainAppImpl
 
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit, GetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit, GetIPTVPlayerLastHostError, GetIPTVNotify
+
 from Plugins.Extensions.IPTVPlayer.setup.iptvsetupwidget import IPTVSetupMainWidget
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvextmovieplayer import IPTVExtMoviePlayer
@@ -303,6 +304,10 @@ class IPTVPlayerWidget(Screen):
         self.canRandomizeList = False
         
         self.prevVideoMode = None
+        
+        # clear temp cookie location to use path from configuration
+        ClearTmpCookieDir()
+    
     #end def __init__(self, session):
         
     def __del__(self):
@@ -419,11 +424,31 @@ class IPTVPlayerWidget(Screen):
             self.prevSelList = []
             self.back_pressed()
         except Exception: printExc()
+        
+    def processIPTVNotify(self, callbackArg1=None, callbackArg2=None):
+        try:
+            notifyObj = GetIPTVNotify()
+            if not notifyObj.isEmpty():
+                notification = notifyObj.pop()
+                typeMap = {'info'   : MessageBox.TYPE_INFO, 
+                           'error'  : MessageBox.TYPE_ERROR, 
+                           'warning': MessageBox.TYPE_WARNING,
+                          }
+                self.session.openWithCallback(self.processIPTVNotify, MessageBox, notification.message, type = typeMap.get(notification.type, MessageBox.TYPE_INFO), timeout = notification.timeout )    
+                return
+        except Exception:
+            printExc()
+        self.processProxyQueue()
 
     def processProxyQueue(self):
         if None != self.mainTimer:
-            asynccall.gMainFunctionsQueueTab[0].processQueue()
-            self.mainTimer.start(self.mainTimer_interval, True)
+            funName = asynccall.gMainFunctionsQueueTab[0].peekClientFunName()
+            notifyObj = GetIPTVNotify()
+            if funName != None and notifyObj != None and not notifyObj.isEmpty() and funName in ['showArticleContent', 'selectMainVideoLinks', 'selectResolvedVideoLinks', 'reloadList']:
+                self.processIPTVNotify()
+            else:
+                asynccall.gMainFunctionsQueueTab[0].processQueue()
+                self.mainTimer.start(self.mainTimer_interval, True)
         return
         
     def doProcessProxyQueueItem(self, item):
@@ -797,6 +822,13 @@ class IPTVPlayerWidget(Screen):
             self.stopAutoPlaySequencer()
         if self.visible:
             sel = None
+            try:
+                if len(self.currList) > 0 and not self["list"].getVisible():
+                    printDBG("ok_pressed -> ignored /\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\")
+                    return
+            except Exception:
+                printExc()
+            
             try:
                 sel = self["list"].l.getCurrentSelection()[0]
             except Exception:
@@ -1415,7 +1447,7 @@ class IPTVPlayerWidget(Screen):
                 self.session.open(MessageBox, _("No valid links available."), type=MessageBox.TYPE_INFO, timeout=10)
     #end playVideo(self, ret):
         
-    def leaveMoviePlayer(self, answer = None, lastPosition = None, *args, **kwargs):
+    def leaveMoviePlayer(self, answer = None, lastPosition = None, clipLength = None, *args, **kwargs):
         self.writeCurrentTitleToFile("")
         videoMode = GetE2VideoMode()
         printDBG("Current video mode [%s], previus video mode [%s]" % (videoMode, self.prevVideoMode))
@@ -1424,6 +1456,16 @@ class IPTVPlayerWidget(Screen):
             SetE2VideoMode(self.prevVideoMode)
         if not config.plugins.iptvplayer.disable_live.value:
             self.session.nav.playService(self.currentService)
+        
+        if 'favourites' == self.hostName and lastPosition != None and clipLength != None:
+            try:
+                if config.plugins.iptvplayer.favourites_use_watched_flag.value and (lastPosition*100 / clipLength) > 80:
+                    currSelIndex = self["list"].getCurrentIndex()
+                    self.requestListFromHost('MarkItemAsViewed', currSelIndex)
+                    return
+            except Exception:
+                printExc()
+            
         self.checkAutoPlaySequencer()
 
     def leavePicturePlayer(self, answer = None, lastPosition = None, *args, **kwargs):
@@ -1491,6 +1533,8 @@ class IPTVPlayerWidget(Screen):
                     self.workThread = asynccall.AsyncMethod(self.host.getFavouriteItem, self.getFavouriteItemCallback, True)(currSelIndex)
                 elif type == 'PerformCustomAction':
                     self.workThread = asynccall.AsyncMethod(self.host.performCustomAction, self.performCustomActionCallback, True)(privateData)
+                elif type == 'MarkItemAsViewed':
+                    self.workThread = asynccall.AsyncMethod(self.host.markItemAsViewed, self.markItemAsViewedCallback, True)(currSelIndex)
                 else:
                     printDBG( 'requestListFromHost unknown list type: ' + type )
                 self.showSpinner()
@@ -1564,10 +1608,10 @@ class IPTVPlayerWidget(Screen):
     def reloadList(self, params):
         printDBG( "reloadList" )
         refresh  = params['add_param'].get('refresh', 0)
-        selIndex = params['add_param'].get('selIndex', 0)
+        selIndex = params['add_param'].get('selIndex', -1)
         ret      = params['ret']
         printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IPTVPlayerWidget.reloadList refresh[%s], selIndex[%s]" % (refresh, selIndex))
-        if 0 < refresh and 0 < selIndex:
+        if 0 < refresh and -1 < selIndex:
             self.nextSelIndex = selIndex
         # ToDo: check ret.status if not OK do something :P
         if ret.status != RetHost.OK:
@@ -1629,6 +1673,8 @@ class IPTVPlayerWidget(Screen):
             self["list"].show()
         if 2 == refresh:
             self.autoPlaySequencerNext(False)
+        elif 1 == refresh:
+            self.autoPlaySequencerNext()
     #end reloadList(self, ret):
     
     def getCategoryPath(self):
@@ -1752,7 +1798,24 @@ class IPTVPlayerWidget(Screen):
              isinstance(ret.value, list) and 1 == len(ret.value) and \
              isinstance(ret.value[0], basestring):
            self.session.open(MessageBox, ret.value[0], type = MessageBox.TYPE_ERROR)
-        
+           
+    def markItemAsViewedCallback(self, thread, ret):
+        asynccall.gMainFunctionsQueueTab[0].addToQueue("handleMarkItemAsViewedCallback", [thread, ret])
+           
+    def handleMarkItemAsViewedCallback(self, ret):
+        printDBG("IPTVPlayerWidget.handleMarkItemAsViewedCallback")
+        self["statustext"].setText("")
+        self["list"].show()
+        linkList = []
+        if ret.status == RetHost.OK and \
+           isinstance(ret.value, list) and 1 == len(ret.value) and 'refresh' in ret.value:
+           self.getRefreshedCurrList()
+        elif ret.status == RetHost.ERROR and \
+             isinstance(ret.value, list) and 1 == len(ret.value) and \
+             isinstance(ret.value[0], basestring):
+           self.session.open(MessageBox, ret.value[0], type = MessageBox.TYPE_ERROR)
+        else:
+            self.checkAutoPlaySequencer()
 #class IPTVPlayerWidget
 
 class IPTVPlayerLCDScreen(Screen):

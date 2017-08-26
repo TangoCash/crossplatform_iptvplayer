@@ -461,6 +461,7 @@ class IPTVExtMoviePlayer(Screen):
         # to fix problems with small subtitles at first run with custom 
         # exteplayer skin
         self.setMoviePlayerConfig = True
+        self.clipLength = None
         
     def showMenuOptions(self):
         printDBG("showMenuOptions")
@@ -1032,6 +1033,7 @@ class IPTVExtMoviePlayer(Screen):
                     self['bufferingBar'].value = (downloadDuration * 100000) / totalDuration
                     if self.playback['Length'] < totalDuration:
                         self.setPlaybackLength(totalDuration)
+                        self.clipLength = totalDuration
                 return
         
             remoteFileSize = self.downloader.getRemoteFileSize()
@@ -1090,7 +1092,9 @@ class IPTVExtMoviePlayer(Screen):
                         self.extPlayerCmddDispatcher.doGoToSeek(str(self.lastPosition-5))
                         self.lastPosition = 0
                     tmpLength = self.playback['CurrentTime']
-                    if val > self.playback['CurrentTime']: tmpLength = val
+                    if val > self.playback['CurrentTime']: 
+                        tmpLength = val
+                        self.clipLength = val
                     if self.playback['Length'] < tmpLength:
                         if None == self.downloader or not self.downloader.hasDurationInfo():
                             self.setPlaybackLength(tmpLength)
@@ -1608,7 +1612,7 @@ class IPTVExtMoviePlayer(Screen):
             self.iframeParams['console'].kill()
         self.iframeParams['console'] = None
         
-        self.close(sts, currentTime)
+        self.close(sts, currentTime, self.clipLength)
         
     def openChild(self, *args, **kwargs):
         self.childWindowsCount += 1

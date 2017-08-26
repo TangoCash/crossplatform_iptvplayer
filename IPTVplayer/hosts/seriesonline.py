@@ -2,12 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm, GetDefaultLang
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm, GetDefaultLang
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -26,14 +23,14 @@ try:    import json
 except Exception: import simplejson as json
 from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v1 import UnCaptchaReCaptcha
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
+from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
@@ -54,7 +51,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://theseriesonline.com/'
+    return 'http://theseriesonline.net/'
 
 class SeriesOnlineIO(CBaseHostClass):
  
@@ -63,8 +60,9 @@ class SeriesOnlineIO(CBaseHostClass):
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'http://static.www.real.com/resources/wp-content/uploads/2013/01/stream-live-tv2.jpg'
-        self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language':'pl,en-US;q=0.7,en;q=0.3', 'Accept-Encoding':'gzip, deflate'}
+        
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.MAIN_URL = None
@@ -86,59 +84,121 @@ class SeriesOnlineIO(CBaseHostClass):
             addParams.update({'http_proxy':proxy})
             
         def _getFullUrl(url):
+            if url == '': return ''
+            
             if self.cm.isValidUrl(url):
                 return url
             else:
                 return urlparse.urljoin(baseUrl, url)
             
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
-        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-        if not sts: return sts, data
-        if 'Incapsula_Resource' in data and ('Incapsula incident ID' in data or 'jsTest.html' in data):
-            domainUrl = self.up.getDomain(baseUrl, False)
         
-            tmpUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0].replace(' ', '%20')
-            if tmpUrl.startswith('//'): tmpUrl = 'https:' + tmpUrl
-            tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
-            tmpParams = deepcopy(addParams)
-            tmpParams['header']['Referer'] = domainUrl
-            sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
-            tries = 0
-            while tries < 6:
-                tries += 1
-                if tries > 1: time.sleep(1)
-                tmpParams = deepcopy(addParams)
-                sts, tmpData = self.cm.getPage(domainUrl, tmpParams)
-                if not sts: return False, None
-                tmpUrl = self.cm.ph.getSearchGroups(tmpData, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0].replace(' ', '%20')
-                tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
-                if 'Incapsula_Resource' in tmpUrl:
-                    break
-                else:
-                    if tmpUrl.startswith('//'): tmpUrl = 'https:' + tmpUrl
-                    tmpUrl = urlparse.urljoin(domainUrl, tmpUrl)
-                    tmpParams['header']['Referer'] = domainUrl
-                    sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
+        url = baseUrl
+        urlParams = deepcopy(addParams)
+        urlData = deepcopy(post_data)
+        unloadUrl = None #
+        tries = 0
+        while tries < 20:
+            tries += 1
+            sts, data = self.cm.getPageCFProtection(url, urlParams, urlData)
+            if not sts: return sts, data
             
-            printDBG("========================================================================")
-            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            sts, tmpData = self.cm.getPage(tmpUrl, tmpParams)
-            if not sts: return False, None
+            if unloadUrl != None:
+                self.cm.getPageCFProtection(unloadUrl, urlParams)
+                unloadUrl = None
             
-            sitekey = self.cm.ph.getSearchGroups(tmpData, 'challenge\?k=([^"]+?)"')[0]
-            if sitekey != '':
-                recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
-                recaptcha.HTTP_HEADER['Referer'] = tmpUrl
-                recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
-                token = recaptcha.processCaptcha(sitekey)
-                if token == '':
-                    return False, 'NOT OK'
-                tmp_post_data = {'g-recaptcha-response_field':'', 'recaptcha_challenge_field':token, 'recaptcha_response_field':'manual_challenge'}
+            if '_Incapsula_Resource' in data and None != re.compile('NAME="ROBOTS"', re.IGNORECASE).search(data):
+                errorMSG = _('Bypass the Incapsula protection failed.')
+                if 'eval' not in data:
+                    if tries == 1:
+                        rm(self.COOKIE_FILE)
+                        printDBG("try %s: >>> re-try after cookie remove" % tries)
+                        continue
+                    elif tries < 5:
+                        if tries == 10: t = 10
+                        else: t = random.randint(1, 10)
+                        
+                        printDBG("try %s: >>> re-try after sleep [%s]" % (tries, t))
+                        time.sleep(t)
+                        continue
+                    else:
+                        self.sessionEx.waitForFinishOpen(MessageBox, errorMSG + '\n' + _('Google ReCAPTCHA not supported.'), type = MessageBox.TYPE_ERROR, timeout = 10)
+                        break
+                
+                printDBG("try %s: >>> ReCAPTCHA less check" % tries)
+                printDBG("========================================================================")
+                printDBG(data)
+                printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                
+                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>', withMarkers=True, caseSensitive=False)
+                jscode = ''
+                for item in data:
+                    src = _getFullUrl(self.cm.ph.getSearchGroups(item, '''<script[^>]+?src=['"]([^"^"]+?)['"]''')[0])
+                    if self.cm.isValidUrl(src):
+                        tmpParams = deepcopy(urlParams)
+                        tmpParams['header']['Referer'] = baseUrl
+                        tmpParams['return_data'] = True
+                        sts, tmp = self.cm.getPageCFProtection(src, urlParams)
+                        
+                    else:
+                        sts, tmp = self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<script[^>]*?>', re.IGNORECASE), re.compile('</script>', re.IGNORECASE), withMarkers=False)
+                    if sts: jscode += '\n' + tmp
+                
+                printDBG("try %s: >>> ReCAPTCHA less check js code" % tries)
+                printDBG("========================================================================")
+                printDBG(jscode)
+                printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE).replace('; ', ';')
+                printDBG("try %s: >>> ReCAPTCHA less check cookies" % tries)
+                printDBG("========================================================================")
+                printDBG(cookieHeader)
+                printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                
+                try:
+                    alljscode = base64.b64decode('''dmFyIHdpbmRvdyA9IHRoaXM7DQp2YXIgZG9jdW1lbnQgPSB7fTsNCnZhciBwYXJlbnQgPSB7bG9jYXRpb24gOiB7IHJlbG9hZCA6IGZ1bmN0aW9uICgpew0KICAgIGlwdHZVbmxvYWQgPSB0cnVlOw0KICAgIHRyeSB7DQogICAgICAgIHdpbmRvdy5vbnVubG9hZCgpOw0KICAgIH0gY2F0Y2ggKGMpIHsNCiAgICAgICAgcHJpbnQoYyk7DQogICAgfQ0KICAgIH0NCn0NCn07DQoNCnZhciBpcHR2VW5sb2FkID0gZmFsc2U7DQoNCnZhciBfaXB0dkxvZyA9IHsNCiAgICBlbGVtcyA6IFtdDQp9Ow0KDQp2YXIgWE1MSHR0cFJlcXVlc3QgPSBmdW5jdGlvbiAoKXsNCiAgICB0aGlzLm9wZW4gPSBmdW5jdGlvbiAobWV0aG9kLCB1cmwsIGFzeW5jLCB1c2VyLCBwYXNzd29yZCl7DQogICAgICAgIHRoaXMucGFyYW1zID0ge3R5cGUgOiAneGhyJywgbWV0aG9kIDogbWV0aG9kLCB1cmwgOiB1cmwsIGFzeW5jIDogYXN5bmMsIHVzZXIgOiB1c2VyLCBwYXNzd29yZCA6IHBhc3N3b3JkLCBjb29raWUgOiBkb2N1bWVudC5jb29raWV9Ow0KICAgIH07DQogICAgdGhpcy5zZW5kID0gZnVuY3Rpb24gKHBvc3Qpew0KICAgICAgICB0aGlzLnBhcmFtc1sncG9zdCddID0gcG9zdDsNCiAgICAgICAgdGhpcy5wYXJhbXNbJ3VubG9hZCddID0gaXB0dlVubG9hZDsNCiAgICAgICAgX2lwdHZMb2cuZWxlbXNbX2lwdHZMb2cuZWxlbXMubGVuZ3RoXSA9IHRoaXMucGFyYW1zOw0KICAgICAgICB0cnkgew0KICAgICAgICAgICAgdGhpcy5zdGF0dXMgPSAyMDA7DQogICAgICAgICAgICB0aGlzLnJlYWR5U3RhdGUgPSA0Ow0KICAgICAgICAgICAgdGhpcy5vbnJlYWR5c3RhdGVjaGFuZ2UoKTsNCiAgICAgICAgfSBjYXRjaCAoYykgew0KICAgICAgICAgICAgcHJpbnQoYyk7DQogICAgICAgIH0NCiAgICB9Ow0KfTsNCg0KdmFyIGVsZW1lbnQgPSBmdW5jdGlvbiAodHlwZSkNCnsNCiAgICB0aGlzLl90eXBlID0gdHlwZTsNCiAgICANCiAgICBPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywgInNyYyIsIHsNCiAgICAgICAgZ2V0IDogZnVuY3Rpb24gKCkgew0KICAgICAgICAgICAgcmV0dXJuIHRoaXMuX3NyYzsNCiAgICAgICAgfSwNCiAgICAgICAgc2V0IDogZnVuY3Rpb24gKHZhbCkgew0KICAgICAgICAgICAgdGhpcy5fc3JjID0gdmFsOw0KICAgICAgICAgICAgX2lwdHZMb2cuZWxlbXNbX2lwdHZMb2cuZWxlbXMubGVuZ3RoXSA9IHt0eXBlIDogdGhpcy5fdHlwZSwgIHNyYyA6IHRoaXMuX3NyYywgdW5sb2FkIDogaXB0dlVubG9hZCwgY29va2llIDogZG9jdW1lbnQuY29va2llfQ0KICAgICAgICB9DQogICAgfSk7DQp9Ow0KDQpkb2N1bWVudC5jcmVhdGVFbGVtZW50ID0gZnVuY3Rpb24gKHR5cGUpIHsNCiAgICByZXR1cm4gbmV3IGVsZW1lbnQodHlwZSk7IA0KfTsNCg0KdmFyIG5hdmlnYXRvciA9IHt9Ow0KdmFyIGNocm9tZSA9IHt9Ow0KdmFyIHdlYmtpdFVSTCA9IHt9Ow0KDQpuYXZpZ2F0b3IudmVuZG9yID0gIkdvb2dsZSBJbmMuIjsNCm5hdmlnYXRvci5hcHBOYW1lID0gIk5ldHNjYXBlIjsNCm5hdmlnYXRvci5wbHVnaW5zID0gW107DQpuYXZpZ2F0b3IucGxhdGZvcm0gPSAiTGludXggeDg2XzY0IjsNCndpbmRvdy5XZWJHTFJlbmRlcmluZ0NvbnRleHQgPSB7fTsNCg0K''')
+                    alljscode += '\ndocument.cookie = "%s";\n%s\nprint(JSON.stringify(_iptvLog));' % (cookieHeader, jscode)
+                    printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                    printDBG(alljscode)
+                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    ret = iptv_js_execute( alljscode )
+                    if ret['sts'] and 0 == ret['code']:
+                        decoded = ret['data'].strip()
+                        printDBG('DECODED DATA -> \n[%s]\n' % decoded)
+                    decoded = byteify(json.loads(decoded))
+                    for item in decoded['elems']:
+                        cookie = item['cookie'].split(';')[0].split('=', 1)
+                        cookie = {cookie[0]:urllib.unquote(cookie[1])}
+                        urlParams['cookie_items'] = cookie
+                        addParams['cookie_items'] = cookie
+                        if not item.get('unload', False):
+                            tmpParams = deepcopy(urlParams)
+                            tmpParams['header']['Referer'] = baseUrl
+                            tmpParams['return_data'] = True
+                            
+                            if item['type'] == 'img':
+                                tmpParams['header']['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                                sts, tmp = self.cm.getPage(_getFullUrl(item['src']), tmpParams)
+                            elif item['type'] == 'xhr':
+                                tmpParams['header']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                                sts, tmp = self.cm.getPage(_getFullUrl(item['url']), tmpParams)
+                        else:
+                            printDBG(item)
+                            tmpParams['header']['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                            sts, tmp = self.cm.getPage(_getFullUrl(item['src']), tmpParams)
+                            unloadUrl = _getFullUrl(item['src'])
+                    continue
+                except Exception as e:
+                    self.sessionEx.waitForFinishOpen(MessageBox, errorMSG + '\n' + str(e), type = MessageBox.TYPE_ERROR, timeout = 10)
+                    printExc()
+                
+                return False, None
             
-                tmpData  = self.cm.ph.getDataBeetwenMarkers(tmpData, '<form', '</form>', False)[1]
-                tmpUrl   = _getFullUrl(self.cm.ph.getSearchGroups(tmpData, '''action=['"]([^'^"]+?)['"]''')[0]).replace(' ', '%20')
-                sts, tmpData = self.cm.getPage(tmpUrl, tmpParams, tmp_post_data)
-                if not sts: return False, None
+            # remove not needed used cookie
+            self.defaultParams.pop('cookie_items', None)
+            self.cm.clearCookie(self.COOKIE_FILE, removeNames=['___utmvc'])
+            printDBG(data)
+            return sts, data
+        
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
@@ -156,28 +216,30 @@ class SeriesOnlineIO(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['http://123movieshd.us/', 'http://theseriesonline.com/']
+        domains = ['http://theseriesonline.net/'] #'http://123movieshd.us/'
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
             domains.insert(0, domain)
         
+        confirmedDomain = None
         for domain in domains:
+            self.MAIN_URL = domain
             for i in range(2):
                 sts, data = self.getPage(domain)
                 if sts:
                     if 'genre/action/' in data:
-                        self.MAIN_URL = domain
+                        confirmedDomain = domain
                         break
                     else: 
                         continue
                 break
             
-            if self.MAIN_URL != None:
+            if confirmedDomain != None:
                 break
-                
-        if self.MAIN_URL == None:
-            self.MAIN_URL = 'https://seriesonline.io/'
+        
+        if confirmedDomain == None:
+            self.MAIN_URL = 'http://theseriesonline.net/'
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'

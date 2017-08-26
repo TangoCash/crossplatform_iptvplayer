@@ -11,6 +11,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerParams, VIDEOWEED_decryptPlayerParams, VIDEOWEED_decryptPlayerParams2, SAWLIVETV_decryptPlayerParams
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.base import noPadding
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 ###################################################
 
 ###################################################
@@ -326,26 +327,19 @@ class YifyTV(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return urlTab
         
-        #printDBG(data)
-        
-        #data = self.cm.ph.getSearchGroups(data, 'var[^"]*?parametros[^"]*?=[^"]*?"([^"]+?)"')[0]
-        #dat1 = self.cm.ph.getSearchGroups(data, '\}([^\{^\}]+?)var mouse_and_cat_playing_for_ever')[0].replace('var ', '')
-        dat1 = ""
-        
-        #parametros = self.cm.ph.getDataBeetwenMarkers(data, 'var mouse_and_cat_playing_for_ever', ';', False)[1]
-        parametros = self.cm.ph.getSearchGroups(data, 'var[^"]*?parametros[^=]*?(=[^;]+?);')[0]
-        
-        #dd = self.cm.ph.getDataBeetwenMarkers(data, 'sourcesConfigMod', 'var mouse_and_cat_playing_for_ever', False)[1]
-        dd = self.cm.ph.getDataBeetwenMarkers(data, 'function fofofo(){};', '"?" +')[1]
-        
-        globalTabCode, pyCode, args = self.getPyCode(dd)
-        
-        pyCode = dat1.strip() + '\n' +  pyCode  + 'parametros ' + parametros.strip()
-        pyCode = 'def retA():\n\t' + globalTabCode.replace('\n', '\n\t') + '\n' + pyCode.replace('\n', '\n\t') + '\n\treturn parametros\n' + 'param = retA()'
-        printDBG(pyCode)
-        data = self.unpackJS(pyCode, 'param')
-        #printDBG(pyCode)
-        printDBG(data)
+        jscode = self.cm.ph.getDataBeetwenMarkers(data, 'jQuery.noConflict();', '</script>', False)[1]
+        try:
+            jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCnZhciBsb2NhdGlvbiA9IHt9Ow0KbG9jYXRpb24uaG9zdG5hbWUgPSAiJXMiOw0KbG9jYXRpb24udG9TdHJpbmcgPSBmdW5jdGlvbigpew0KICAgICAgICAgICAgICAgICAgICAgIHJldHVybiAiJXMiOw0KICAgICAgICAgICAgICAgICAgICB9Ow0KJXM7DQoNCnByaW50KHdpbmRvdy5wYXJhbWV0cm9zKQ==''') % (self.up.getDomain(self.getMainUrl()), self.getMainUrl(), jscode)                   
+            printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+            printDBG(jscode)
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ret = iptv_js_execute( jscode )
+            if ret['sts'] and 0 == ret['code']:
+                decoded = ret['data'].strip()
+                printDBG('DECODED DATA -> [%s]' % decoded)
+            data = decoded
+        except Exception:
+            printExc()
         
         sub_tracks = []
         subLangs = self.cm.ph.getSearchGroups(data, '&sub=([^&]+?)&')[0]

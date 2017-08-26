@@ -30,28 +30,10 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'Kinotan'
+    return 'http://kinotan.ru/'
 
 
 class Kinotan(CBaseHostClass):
-
-    MAIN_URL = 'http://kinotan.ru/'
-    DEFAULT_ICON_URL = 'http://ipic.su/img/img7/fs/logo2.1460442551.png'
-    SRCH_URL = MAIN_URL + '?do = search & mode = advanced & subaction = search & story ='
-    SERIES_URL = MAIN_URL + 'serial/'
-
-
-    MAIN_CAT_TAB = [dict(category='cat_serials', title=_('Serials'), icon=DEFAULT_ICON_URL, url=SERIES_URL),
-                    dict(category='cat_tv_shows', title=_('TV shows'), icon=DEFAULT_ICON_URL, url=MAIN_URL + 'tv-shou/'),
-                    dict(category='cat_mult', title=_('Cartoons'), icon=DEFAULT_ICON_URL, url=MAIN_URL + 'multserial/'),
-                    dict(category='search', title=_('Search'), search_item=True),
-                    dict(category='search_history', title=_('Search history'))]
-
-    SERIALS_CAT_TAB = [dict(category='genre', title=_('Genre selection'), icon=DEFAULT_ICON_URL, url=SERIES_URL),
-                       dict(category='country', title=_('By country'), icon=DEFAULT_ICON_URL, url=SERIES_URL),
-                       dict(category='trans', title=_('Translations'), icon=DEFAULT_ICON_URL, url=SERIES_URL),
-                       dict(category='sel', title=_('Collections'), icon=DEFAULT_ICON_URL, url=SERIES_URL),
-                       dict(category='years', title=_('By Year'), icon=DEFAULT_ICON_URL, url=SERIES_URL)]
 
     def __init__(self):
         CBaseHostClass.__init__(self, {'history': 'Kinotan', 'cookie': 'Kinotan.cookie'})
@@ -60,6 +42,25 @@ class Kinotan(CBaseHostClass):
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.MAIN_URL = 'http://kinotan.ru/'
+        self.DEFAULT_ICON_URL = 'http://ipic.su/img/img7/fs/logo2.1460442551.png'
+
+
+        self.MAIN_CAT_TAB = [{'category':'cat_serials',  'title':_('Serials'),    'url':self.getFullUrl('/serial/')    },
+                             {'category':'cat_tv_shows', 'title':_('TV shows'),   'url':self.getFullUrl('/tv-shou/')   },
+                             {'category':'cat_mult',     'title':_('Cartoons'),   'url':self.getFullUrl('/multserial/')},
+                             
+                             {'category':'search',         'title':_('Search'), 'search_item':True},
+                             {'category':'search_history', 'title':_('Search history')}
+                             ]
+
+        self.SERIALS_CAT_TAB = [{'category':'genre',   'title':_('Genre selection'), 'url':self.getFullUrl('/serial/')},
+                                {'category':'country', 'title':_('By country'),      'url':self.getFullUrl('/serial/')},
+                                {'category':'trans',   'title':_('Translations'),    'url':self.getFullUrl('/serial/')},
+                                {'category':'sel',     'title':_('Collections'),     'url':self.getFullUrl('/serial/')},
+                                {'category':'years',   'title':_('By Year'),         'url':self.getFullUrl('/serial/')}
+                               ]
 
     def getPage(self, url, params={}, post_data=None):
         sts, data = self.cm.getPage(url, params, post_data)
@@ -287,13 +288,28 @@ class Kinotan(CBaseHostClass):
             params = dict(cItem)
             params.update( {'title': '{0} - s{1}e{2} {3}'.format(title, id, item['id'], item['title']), 'url': item['url']})
             self.addVideo(params)
-
+        
     def listSearchResult(self, cItem, searchPattern, searchType):
-        searchPattern = urllib.quote_plus(searchPattern)
-        cItem = dict(cItem)
-        cItem['url'] = self.SRCH_URL
-        cItem['post_data'] = {'do': 'search', 'subaction': 'search', 'x': 0, 'y': 0, 'story': searchPattern}
-        self.listItems(cItem, 'list_content')
+        #searchPattern = 'сезон'
+        
+        post_data = {'do':'search', 'titleonly':3, 'subaction':'search', 'story':searchPattern}
+        
+        sts, data = self.getPage(self.getMainUrl(), post_data=post_data)
+        if not sts: return
+        
+        m1 = '<div class="short-item">'
+        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '<div class="navigright">', False)[1]
+        data = data.split(m1)
+        for item in data:
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3', '</h3>')[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0])
+            icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<a', '</a>')[1])
+            if self.cm.isValidUrl(url):
+                params = dict(cItem)
+                params.update({'category': 'list_content', 'title': title, 'icon': icon, 'desc': desc, 'url': url})
+                self.addDir(params)
 
     def getLinksForVideo(self, cItem):
         printDBG("Kinotan.getLinksForVideo [%s]" % cItem)
@@ -370,89 +386,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, Kinotan(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('kinotanlogo.png')])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-
-    def getResolvedURL(self, url):
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif 'video' == cItem['type']:
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range(len(list)):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem(pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return
-
-
-

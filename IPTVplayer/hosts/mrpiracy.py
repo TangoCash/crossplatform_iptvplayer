@@ -354,10 +354,10 @@ class MRPiracyGQ(CBaseHostClass):
         
         trailerUrl = self.cm.ph.getSearchGroups(data, '''trailer\(\s*["'](https?://youtube.com/[^"^']+?)["']''')[0]
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="deleted">', '</center>')[1]
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div id="deleted">', '</center>')[1]
         
-        errorMsg = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2', '</h2>')[1])
-        errorMsg += ' ' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p', '</p>')[1])
+        errorMsg = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<h2', '</h2>')[1])
+        errorMsg += ' ' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<p', '</p>')[1])
         SetIPTVPlayerLastHostError(errorMsg)
         
         token = self.cm.ph.getSearchGroups(data, '''var\s+form_data\s*=\s*['"]([^'^"]+?)['"]''')[0]

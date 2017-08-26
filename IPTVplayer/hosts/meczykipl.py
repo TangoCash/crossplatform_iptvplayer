@@ -155,6 +155,7 @@ class MeczykiPL(CBaseHostClass):
         tmp = re.compile('''['"]([^'^"]*?//config\.playwire\.com[^'^"]+?\.json)['"]''').findall(data)
         tmp.extend(re.compile('<iframe[^>]+?src="([^"]+?)"').findall(data))
         tmp.extend(re.compile('''<a[^>]+?href=['"](https?://[^'^"]*?ekstraklasa.tv[^'^"]+?)['"]''').findall(data))
+        tmp.extend(re.compile('''<a[^>]+?href=['"](https?://[^'^"]*?polsatsport.pl[^'^"]+?)['"]''').findall(data))
         
         for idx in range(len(tmp)):
             url = self.getFullUrl(tmp[idx])

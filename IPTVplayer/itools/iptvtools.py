@@ -252,22 +252,38 @@ def GetUchardetPath():
     
 def GetDukPath():
     return config.plugins.iptvplayer.dukpath.value
+
+gIPTVPlayerTempCookieDir = None
+def SetTmpCookieDir():
+    global gIPTVPlayerTempCookieDir
+    gIPTVPlayerTempCookieDir = '/tmp/iptvplayer_cookies/'
+    mkdirs(gIPTVPlayerTempCookieDir)
+    
+def ClearTmpCookieDir():
+    global gIPTVPlayerTempCookieDir
+    if gIPTVPlayerTempCookieDir != None:
+        try:
+            for file in os.listdir( gIPTVPlayerTempCookieDir ):
+                rm(gIPTVPlayerTempCookieDir + '/' + file)
+        except Exception:
+            printExc()
+    
+    gIPTVPlayerTempCookieDir = None
     
 def GetCookieDir(file = ''):
-    cookieDir = '/tmp/'
-    tmpDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
+    global gIPTVPlayerTempCookieDir
+    if gIPTVPlayerTempCookieDir == None: cookieDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
+    else: cookieDir = gIPTVPlayerTempCookieDir
     try:
-        if os.path.isdir(tmpDir) or mkdirs(tmpDir):
-            cookieDir = tmpDir
-    except Exception:
-        printExc()
+        if not os.path.isdir(cookieDir):
+            mkdirs(cookieDir)
+    except Exception: printExc()
     return cookieDir + file
     
 def GetTmpDir(file = ''):
     path = config.plugins.iptvplayer.NaszaTMP.value
     path = path.replace('//', '/')
-    try: mkdirs(path)
-    except Exception: printExc()
+    mkdirs(path)
     return path + '/' + file
     
 def CreateTmpFile(filename, data=''):
@@ -284,8 +300,7 @@ def CreateTmpFile(filename, data=''):
 def GetCacheSubDir(dir, file = ''):
     path = config.plugins.iptvplayer.SciezkaCache.value + "/" + dir
     path = path.replace('//', '/')
-    try: mkdirs(path)
-    except Exception: printExc()
+    mkdirs(path)
     return path + '/' + file
 
 def GetSearchHistoryDir(file = ''):

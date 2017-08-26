@@ -29,6 +29,8 @@ from Components.config import config, ConfigDirectory, ConfigText, ConfigPasswor
 from Components.ConfigList import ConfigListScreen
 from Tools.BoundFunction import boundFunction
 ###################################################
+COLORS_DEFINITONS = [("#000000", _("black")), ("#C0C0C0", _("silver")), ("#808080", _("gray")), ("#FFFFFF", _("white")), ("#800000", _("maroon")), ("#FF0000", _("red")), ("#800080", _("purple")), ("#FF00FF", _("fuchsia")), \
+                     ("#008000", _("green")), ("#00FF00", _("lime")), ("#808000", _("olive")), ("#FFFF00", _("yellow")), ("#000080", _("navy")), ("#0000FF", _("blue")), ("#008080", _("teal")), ("#00FFFF", _("aqua"))]
 
 class ConfigIPTVFileSelection(ConfigDirectory):
     def __init__(self, ignoreCase=True, fileMatch=None, default="", visible_width=60):

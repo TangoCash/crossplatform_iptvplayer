@@ -37,6 +37,9 @@ class CListItem:
         
     def getDisplayTitle(self):
         return self.name
+        
+    def getTextColor(self):
+        return None
 
 class IPTVDirBrowserList(IPTVMainNavigatorList):
     def __init__(self):

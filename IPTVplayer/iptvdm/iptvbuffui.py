@@ -124,6 +124,9 @@ class IPTVPlayerBufferingWidget(Screen):
         self.requestedBuffSize = requestedBuffSize
         self.playerAdditionalParams = playerAdditionalParams
         
+        self.clipLength = None
+        self.lastPosition = None
+        self.lastSize = 0
         
     #end def __init__(self, session):
  
@@ -131,15 +134,13 @@ class IPTVPlayerBufferingWidget(Screen):
         '''
             this method is called once like __init__ but in __init__ we cannot display MessageBox
         '''
-        self.lastPosition  = None
-        self.lastSize = 0
         # create downloader
         self.downloader = DownloaderCreator(self.url)
         self._cleanedUp()
         if self.downloader:
             self.downloader.isWorkingCorrectly(self._startDownloader)
         else:
-            self.session.openWithCallback(self.close, MessageBox, _("Downloading can not be started.\n The address ('%r') is incorrect.") % self.url, type = MessageBox.TYPE_ERROR, timeout = 10)
+            self.session.openWithCallback(self.iptvDoClose, MessageBox, _("Downloading can not be started.\n The address ('%r') is incorrect.") % self.url, type = MessageBox.TYPE_ERROR, timeout = 10)
 
     def _isFlvInfiniteFile(self, url):
         try:
@@ -157,7 +158,7 @@ class IPTVPlayerBufferingWidget(Screen):
             self.setMainTimerSts(True)
             self.canRunMoviePlayer = True
         else:
-            self.session.openWithCallback(self.close, MessageBox, _("Downloading can not be started.\n Downloader %s does not work properly.\nStatus[%s]") % (self.downloader.getName(), reason.strip()), type = MessageBox.TYPE_ERROR, timeout = 10 )
+            self.session.openWithCallback(self.iptvDoClose, MessageBox, _("Downloading can not be started.\n Downloader %s does not work properly.\nStatus[%s]") % (self.downloader.getName(), reason.strip()), type = MessageBox.TYPE_ERROR, timeout = 10 )
 
     def _isInLiveMode(self):
         if isinstance(self.url, strwithmeta):
@@ -178,12 +179,13 @@ class IPTVPlayerBufferingWidget(Screen):
             self.downloader = None
         self._cleanedUp()
 
-    def leaveMoviePlayer(self, ret=None, lastPosition=None, *args, **kwargs):
+    def leaveMoviePlayer(self, ret=None, lastPosition=None, clipLength=None, *args, **kwargs):
         printDBG("leaveMoviePlayer ret[%r], lastPosition[%r]" % (ret, lastPosition))
         # There is need to set None for current service
         # otherwise there is a problem with resuming play
         self.session.nav.playService(None)
         self.lastPosition = lastPosition
+        self.clipLength = clipLength
         self.canRunMoviePlayer = False
         self.inMoviePlayer = False
         
@@ -197,9 +199,9 @@ class IPTVPlayerBufferingWidget(Screen):
             else:
                 printDBG("IPTVPlayerBufferingWidget.leaveMoviePlayer: movie player consume all data from buffer - downloading finished")
                 if DMHelper.STS.DOWNLOADED != self.downloader.getStatus(): 
-                    self.session.openWithCallback(self.close, MessageBox, text=_("Error occurs during download."), type = MessageBox.TYPE_ERROR, timeout=5)
+                    self.session.openWithCallback(self.iptvDoClose, MessageBox, text=_("Error occurs during download."), type = MessageBox.TYPE_ERROR, timeout=5)
                 else:
-                    self.close()
+                    self.iptvDoClose()
         elif 0 == ret or None == ret:
             # ask if we should close
             self.lastSize = self.downloader.getLocalFileSize(True)
@@ -207,7 +209,7 @@ class IPTVPlayerBufferingWidget(Screen):
 
     def confirmExitCallBack(self, ret=None):
         if ret and ret == True:
-            self.close()
+            self.iptvDoClose()
         else:
             if not self._isInLiveMode():
                 self.canRunMoviePlayer = True
@@ -218,9 +220,13 @@ class IPTVPlayerBufferingWidget(Screen):
                 self.onStart()
 
     def back_pressed(self):
-        self.close()
+        self.iptvDoClose()
         return
-
+        
+    def iptvDoClose(self, *args, **kwargs):
+        self.onEnd()
+        self.close(None, self.lastPosition, self.clipLength)
+    
     def ok_pressed(self):
         if self.canRunMoviePlayer and self.downloader.getPlayableFileSize() > 0:
             self.runMovePlayer()
@@ -348,7 +354,7 @@ class IPTVPlayerBufferingWidget(Screen):
         
         # check if it is downloading 
         if self.downloader.getStatus() not in [DMHelper.STS.POSTPROCESSING, DMHelper.STS.DOWNLOADING, DMHelper.STS.WAITING]:
-            self.session.openWithCallback(self.close, MessageBox, _("Error occurs during download. \nStatus[%s], tmpBuffSize[%r], canRunMoviePlayer[%r]") % (self.downloader.getStatus(), tmpBuffSize, self.canRunMoviePlayer), type = MessageBox.TYPE_ERROR, timeout = 10 )
+            self.session.openWithCallback(self.iptvDoClose, MessageBox, _("Error occurs during download. \nStatus[%s], tmpBuffSize[%r], canRunMoviePlayer[%r]") % (self.downloader.getStatus(), tmpBuffSize, self.canRunMoviePlayer), type = MessageBox.TYPE_ERROR, timeout = 10 )
             self.canRunMoviePlayer = False
             # stop timer before message
             self.setMainTimerSts(False)

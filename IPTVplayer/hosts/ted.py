@@ -4,13 +4,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir, GetDefaultLang, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 ###################################################
 
 ###################################################
@@ -24,7 +20,6 @@ import random
 import base64
 import hashlib
 from datetime import timedelta
-from binascii import hexlify, unhexlify
 from urlparse import urlparse, urljoin
 try:    import json
 except Exception: import simplejson as json
@@ -469,7 +464,6 @@ class TED(CBaseHostClass):
         def _addLinkItem(urlTab, item, url):
             try:
                 if not self.cm.isValidUrl(url): return
-                
                 if 'width' in item and 'height' in item:
                     name = '%sx%s' % (item['width'], item['height'])
                 else:
@@ -481,7 +475,17 @@ class TED(CBaseHostClass):
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'talkPage.init",', ')<', False)[1]
         try:
-            tmp = byteify(json.loads(tmp))['__INITIAL_DATA__']['talks'][0]['player_talks'][0]
+            playerData = byteify(json.loads(tmp))['__INITIAL_DATA__']
+            tmp = playerData['media'].get('internal', {})
+            for key in tmp:
+                bitrate = self.cm.ph.getSearchGroups(key, '([0-9]+)k')[0]
+                if bitrate == '': continue
+                item = tmp[key]
+                item['bitrate'] = int(bitrate)
+                if '/mp4' not in item.get('mime_type', ''): continue
+                _addLinkItem(urlTab, item, item.get('uri', ''))
+            
+            tmp = playerData['talks'][0]['player_talks'][0]
             rtmpTab = tmp['resources'].get('rtmp', [])
             if rtmpTab == None: rtmpTab = []
             for item in rtmpTab:
@@ -489,13 +493,19 @@ class TED(CBaseHostClass):
                 if not url.startswith('mp4:'): continue
                 url = 'https://pc.tedcdn.com/' + url[4:]
                 _addLinkItem(urlTab, item, url)
-
+            
             if 0 == len(urlTab):
                 h264Tab = tmp['resources'].get('h264', [])
                 if h264Tab == None: h264Tab = []
                 for item in h264Tab:
                     _addLinkItem(urlTab, item, item['file'])
-                    
+            
+            def __getLinkQuality( itemLink ):
+                try: return int(itemLink['bitrate'])
+                except Exception: return 0
+            
+            urlTab = CSelOneLink(urlTab, __getLinkQuality, 99999999).getSortedLinks()
+            
             if 0 == len(urlTab):
                 if self.cm.isValidUrl(tmp['external']['uri']):
                     urlTab.append({'name':tmp['external']['service'], 'url':tmp['external']['uri'], 'need_resolve':1})
@@ -526,33 +536,6 @@ class TED(CBaseHostClass):
     def getVideoLinks(self, videoUrl):
         printDBG("LosMovies.getVideoLinks [%s]" % videoUrl)
         return self.up.getVideoLinkExt(videoUrl)
-    
-    def getFavouriteData(self, cItem):
-        printDBG('TED.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('TED.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('TED.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -627,7 +610,6 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, TED(), True, [])
     
-
     def getSearchTypes(self):
         searchTypesOptions = []
         searchTypesOptions.append((_("Talks"), "talks"))

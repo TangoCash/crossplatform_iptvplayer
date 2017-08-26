@@ -46,18 +46,18 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://fightvideo.mmatd.com/'
+    return 'http://fight.mmashare.club/'
 
 class FightVideo(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'paczamy.pl', 'cookie':'fightvideommatd.cookie', 'cookie_type':'MozillaCookieJar'})
-        self.DEFAULT_ICON_URL = 'http://fightvideo.mmatd.com/images/big-mmashare.png'
+        self.DEFAULT_ICON_URL = 'http://fight.mmashare.club/images/big-mmashare.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'http://fightvideo.mmatd.com/'
+        self.MAIN_URL = 'http://fight.mmashare.club/'
         self.cacheLinks    = {}
         self.cacheFilters  = {}
         self.cacheFiltersKeys = []
@@ -192,12 +192,20 @@ class FightVideo(CBaseHostClass):
             
     def exploreItem(self, cItem):
         printDBG("FightVideo.exploreItem [%s]" % cItem)
+        page = cItem.get('page', 0)
         allUrls = []
+        url = cItem['url']
+        if page > 0:
+            url += '&start=%s' % (page * 14)
         
-        sts, data = self.getPage(cItem['url'])
+        sts, data = self.getPage(url)
         if not sts: return []
         
-        idx = 1
+        if self.cm.ph.getSearchGroups(data, '''[&;]start=(%s)[^0-9]''' % ((page+1)*14))[0] != '':
+            nextPage = True
+        else: nextPage = False
+        
+        idx = cItem.get('video_idx', 1)
         data1 = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="content">', '<div class="back2top">')
         for item1 in data1:
             tmp = self.cm.ph.getDataBeetwenMarkers(item1, '<a', '</a>')[1]
@@ -209,26 +217,27 @@ class FightVideo(CBaseHostClass):
                 url  = self.cm.ph.getSearchGroups(tmp, 'href="(https?://[^"]+?)"')[0].replace('&amp;', '&')
                 sts, data = self.getPage(url)
                 if not sts: break
-                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="content">', '<div class="back2top">')
-                for item in data:
+                tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="content">', '<div class="back2top">')
+                for item in tmp:
                     tItems = self.cm.ph.getAllItemsBeetwenMarkers(item, '<strong', '</table>')
                     if 0 == len(tItems):
                         tItems.extend(self.cm.ph.getAllItemsBeetwenMarkers(item, '<table', '</table>'))
-                    
-                    for tItem in tItems:
-                        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tItem, '<strong', '</strong>')[1])
-                        directUrl = True
-                        url = self.cm.ph.getSearchGroups(tItem, '<source[^>]+?src="(https?://[^"]+?)"[^>]*?type="video')[0]
-                        url = url.replace(' ', '%20')
-                        if url == '': 
-                            url = self.getFullUrl(self.cm.ph.getSearchGroups(tItem, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-                            directUrl = False
-                        if url not in allUrls and self.cm.isValidUrl(url) and (directUrl or 1 == self.up.checkHostSupport(url)):
-                            allUrls.append(url)
-                            if title == '': title = 'Video %d - %s' % (idx, self.up.getDomain(url))
-                            params = {'title':title, 'url':url, 'direct_url':directUrl}
-                            self.addVideo(params)
-                            idx += 1
+                tItems.extend(self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="postbody"', '</div>'))
+                for tItem in tItems:
+                    title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tItem, '<strong', '</strong>')[1])
+                    if title == '': title = self.cleanHtmlStr(tItem)
+                    directUrl = True
+                    url = self.cm.ph.getSearchGroups(tItem, '<source[^>]+?src="(https?://[^"]+?)"[^>]*?type="video')[0]
+                    url = url.replace(' ', '%20')
+                    if url == '': 
+                        url = self.getFullUrl(self.cm.ph.getSearchGroups(tItem, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+                        directUrl = False
+                    if url not in allUrls and self.cm.isValidUrl(url) and (directUrl or 1 == self.up.checkHostSupport(url)):
+                        allUrls.append(url)
+                        if title == '': title = 'Video %d - %s' % (idx, self.up.getDomain(url))
+                        params = {'title':title, 'url':url, 'direct_url':directUrl}
+                        self.addVideo(params)
+                        idx += 1
             else:
                 tmpVideos = re.compile('''['"](https?://video\[^'^"]+?\.mp4)['"]''').findall(item1)
                 for url in tmpVideos:
@@ -249,6 +258,11 @@ class FightVideo(CBaseHostClass):
                         params = {'title':title, 'url':url, 'direct_url':False}
                         self.addVideo(params)
                         idx += 1
+                        
+        if nextPage:
+            params = dict(cItem)
+            params.update({'title':_("Next page"), 'video_idx':idx, 'page':page+1})
+            self.addDir(params)
         
     def getLinksForVideo(self, cItem):
         printDBG("FightVideo.getLinksForVideo [%s]" % cItem)

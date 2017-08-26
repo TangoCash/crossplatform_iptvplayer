@@ -63,7 +63,6 @@ class HDPopcornsCom(CBaseHostClass):
                             ]
         
         self.cacheFilters = {}
-        self.cacheSeasons = {}
         
     def fillFilters(self, cItem):
         self.cacheFilters = {}
@@ -156,55 +155,59 @@ class HDPopcornsCom(CBaseHostClass):
             desc  = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0])
             if desc == '': desc = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0])
             title = self.cleanHtmlStr(item)
-            params = {'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':desc}
-            self.addVideo(params)
+            params = {'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':desc}
+            self.addDir(params)
         
         if self.cm.isValidUrl(nextPage):
             params = dict(cItem)
             params.update({'title':_('Next page'), 'page':page + 1, 'url':nextPage})
             self.addDir(params)
         
-    def listSeasons(self, cItem, nextCategory):
-        printDBG("HDPopcornsCom.listSeasons")
-        
-        self.cacheSeasons = {'keys':[], 'dict':{}}
+    def listEpisodes(self, cItem):
+        printDBG("HDPopcornsCom.listEpisodes")
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        data = data.split('<div id="episodes">')
-        if 2 != len(data): return
+        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])
+        cItem = dict(cItem)
+        cItem['desc'] = desc
         
-        tmp = self.cm.ph.getDataBeetwenMarkers(data[0], '<div id="seasons_list">', '<div class="clear">')[1]
-        tmp = re.compile('<[^>]+?num\="([0-9]+?)"[^>]*?>([^<]+?)<').findall(tmp)
+        tmp = self.cm.ph.rgetAllItemsBeetwenMarkers(data, '</iframe>', '<h2', withMarkers=True, caseSensitive=False)
         for item in tmp:
-            self.cacheSeasons['keys'].append({'key':item[0], 'title':self.cleanHtmlStr(item[1])})
-        
-        del data[0]
-        
-        # fill episodes
-        for season in self.cacheSeasons['keys']:
-            tmp = self.cm.ph.getDataBeetwenMarkers(data[0], 'data-season-num="%s"' % season['key'], '</ul>')[1]
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li', '</li>', withMarkers=True)
-            self.cacheSeasons['dict'][season['key']] = []
-            for item in tmp:
-                url    = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
-                title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<a class="episodeName"', '</a>')[1])
-                es     = self.cm.ph.getSearchGroups(url, '''/(s[0-9]+?e[0-9]+?)/''')[0]
-                self.cacheSeasons['dict'][season['key']].append({'good_for_fav': True, 'title': '%s: %s %s' % (cItem['title'], es, title), 'url':url})
-                
-        for season in self.cacheSeasons['keys']:
+            url = self.cm.ph.getSearchGroups(item, '''src=['"](https?://[^'^"]+?)['"]''')[0]
+            if 1 != self.up.checkHostSupport(url): continue 
+            title = self.cleanHtmlStr(item)
+            
             params = dict(cItem)
-            params.update({'good_for_fav': False, 'category':nextCategory, 'title':season['title'], 's_key':season['key']})
-            self.addDir(params)
-        
-    def listEpisodes(self, cItem):
-        printDBG("HDPopcornsCom.listEpisodes")
-        
-        tab = self.cacheSeasons.get('dict', {}).get(cItem['s_key'], [])
-        for item in tab:
+            params.update({'good_for_fav': True, 'title':title, 'url':url})
+            self.addVideo(params)
+            
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '>', withMarkers=True, caseSensitive=False)
+        for item in tmp:
+            if 'playTrailer' not in item: continue 
+            
+            url = self.cm.ph.getSearchGroups(item, '''href=['"](https?://[^'^"]+?)['"]''')[0]
+            if 1 != self.up.checkHostSupport(url): continue 
+            
+            title = '%s - Trailer %s' % (cItem['title'], len(self.currList)+1)
             params = dict(cItem)
-            params.update(item)
+            params.update({'good_for_fav': True, 'title':title, 'url':url})
+            self.addVideo(params)
+            
+        if '<form action' in data:
+            params = dict(cItem)
+            params.update({'good_for_fav': True})
+            self.addVideo(params)
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<table', '</table>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<tr', '</tr>')
+        for item in data:
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(item)
+            if not self.cm.isValidUrl(url): continue
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'title':title, 'urls':[{'name':'default', 'url':url, 'need_resolve':False}]})
             self.addVideo(params)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -213,20 +216,19 @@ class HDPopcornsCom(CBaseHostClass):
         cItem = dict(cItem)
         cItem['url'] = self.getFullUrl('?s=' + urllib.quote_plus(searchPattern))
         
-        self.listItems(cItem, 'list_seasons')
+        self.listItems(cItem, 'list_episodes')
     
     def getLinksForVideo(self, cItem):
         printDBG("HDPopcornsCom.getLinksForVideo [%s]" % cItem)
+        if 'urls' in cItem:
+            return cItem.get('urls', [])
+        elif 1 == self.up.checkHostSupport(cItem.get('url', '')):
+            return self.up.getVideoLinkExt(cItem['url'])
+        
         urlTab = []
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
-        
-        trailerUrl = self.cm.ph.getSearchGroups(data, '''href=['"](https?://[^'^"]+?)['"][^>]+?id=['"]playTrailer['"]''')[0]
-        if '' == trailerUrl: trailerUrl = self.cm.ph.getSearchGroups(data, '''id=['"]playTrailer['"][^>]+?href=['"](https?://[^'^"]+?)['"][^>]''')[0]
-        
-        if self.cm.isValidUrl(trailerUrl) and 1 == self.up.checkHostSupport(trailerUrl):
-            urlTab.append({'name':_('Trailer'), 'url':trailerUrl, 'need_resolve':1})
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<form action', '</form>')[1]
         try:
@@ -248,6 +250,8 @@ class HDPopcornsCom(CBaseHostClass):
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="btn', '</a>', withMarkers=True)
             for item in data:
                 url  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                if '///downloads/' in url: continue
+                if not self.cm.isValidUrl(url): continue
                 name = self.cleanHtmlStr(item)
                 url = strwithmeta(url.replace('&#038;', '&'), {'popcornsubtitles_url':popcornsubtitlesUrl})
                 urlTab.append({'name':name, 'url':url, 'need_resolve':0})
@@ -288,6 +292,42 @@ class HDPopcornsCom(CBaseHostClass):
         self.addDir(params)
         return True
         
+    def getArticleContent(self, cItem):
+        printDBG("Movs4uCOM.getArticleContent [%s]" % cItem)
+        retTab = []
+        
+        otherInfo = {}
+        
+        url = cItem.get('prev_url', '')
+        if url == '': url = cItem.get('url', '')
+        
+        sts, data = self.cm.getPage(url)
+        if not sts: return retTab
+        
+        desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="single_post">', '</h2>')[1]
+        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<header', '</header>')[1])
+        icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^"^']+?\.jpe?g[^"^']*?)["']''')[0] )
+        
+        mapDesc = {'Year':'year', 'Quality':'quality', 'Language':'language',  'Genre': 'genres', 'Cast:':'cast', 'Episodes':'episodes'}
+        tmp = re.compile('''>\s*([^\:]+?)\:(.+?)<br''').findall(data)
+        for item in tmp:
+            key = self.cleanHtmlStr(item[0])
+            key = mapDesc.get(key, '')
+            if key == '': continue
+            value  = self.cleanHtmlStr(item[1]).replace(' , ', ', ')
+            if value != '': otherInfo[key] = value
+            
+        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<a[^>]+?alt="IMDb-Rating"[^>]*?>'), re.compile('</a>'))[1])
+        if tmp != '': otherInfo['imdb_rating'] = tmp
+        
+        if title == '': title = cItem['title']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
+        
+        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
+        
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -309,9 +349,7 @@ class HDPopcornsCom(CBaseHostClass):
             if idx < len(filtersTab):
                 self.listFilter(self.currItem, filtersTab)
             else:
-                self.listItems(self.currItem, 'list_seasons')
-        elif category == 'list_seasons':
-            self.listSeasons(self.currItem, 'list_episodes')
+                self.listItems(self.currItem, 'list_episodes')
         elif category == 'list_episodes':
             self.listEpisodes(self.currItem)
     #SEARCH
@@ -331,4 +369,10 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, HDPopcornsCom(), True, [])
 
-
+    def withArticleContent(self, cItem):
+        try:
+            if (cItem['type'] == 'video' or cItem['category'] == 'list_episodes') and self.host.up.getDomain(cItem['url']) in self.host.getMainUrl():
+                return True
+        except Exception:
+            printExc()
+        return False

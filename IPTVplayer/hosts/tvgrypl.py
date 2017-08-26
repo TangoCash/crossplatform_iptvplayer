@@ -3,9 +3,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
@@ -36,11 +36,13 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 config.plugins.iptvplayer.tvgrypl_default_quality = ConfigSelection(default = "SD", choices = [("MOB", "MOB: niska"),("SD", "SD: standardowa"),("HD", "HD: wysoka")]) #, ("FHD", "FHD: bardzo wysoka")
 config.plugins.iptvplayer.tvgrypl_use_dq          = ConfigYesNo(default = True)
+config.plugins.iptvplayer.tvgrypl_date_of_birth   = ConfigText(default = "2017-01-31", fixed_size = False)
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Domyślna jakość wideo:"), config.plugins.iptvplayer.tvgrypl_default_quality))
-    optionList.append(getConfigListEntry(_("Używaj domyślnej jakości wideo:"), config.plugins.iptvplayer.tvgrypl_use_dq))
+    optionList.append(getConfigListEntry("Domyślna jakość wideo:", config.plugins.iptvplayer.tvgrypl_default_quality))
+    optionList.append(getConfigListEntry("Używaj domyślnej jakości wideo:", config.plugins.iptvplayer.tvgrypl_use_dq))
+    optionList.append(getConfigListEntry("Wprowadź datę urodzenia [RRRRR-MM-DD]:", config.plugins.iptvplayer.tvgrypl_date_of_birth))
     return optionList
 ###################################################
 
@@ -51,7 +53,13 @@ class TvGryPL(CBaseHostClass):
 
     def __init__(self):
         printDBG("TvGryPL.__init__")
-        CBaseHostClass.__init__(self, {'history':'TvGryPL.tv'})
+        CBaseHostClass.__init__(self, {'history':'TvGryPL.tv', 'cookie':'grypl.cookie', 'cookie_type':'MozillaCookieJar'})
+        self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        
         self.DEFAULT_ICON_URL = 'http://www.gry-online.pl/apple-touch-icon-120x120.png'
         self.MAIN_URL = 'http://tvgry.pl/'
         self.SEARCH_URL = self.getFullUrl('wyszukiwanie.asp')
@@ -154,8 +162,31 @@ class TvGryPL(CBaseHostClass):
         allLinksTab = []
         urlTab = []
         
-        sts, data = self.cm.getPage(cItem['url'])
+        rm(self.COOKIE_FILE)
+        
+        sts, data = self.getPage(cItem['url'], self.defaultParams) #{'use_cookie':True, 'cookie_items':{'agegate':1}})
         if not sts: return urlTab
+        
+        ageMarker = '<div class="player-AGEGATE">'
+        if ageMarker in data:
+            tmp = self.cm.ph.getSearchGroups(config.plugins.iptvplayer.tvgrypl_date_of_birth.value, '''([0-9]{4})[-]?([0-9][0-9]?)[-]?([0-9][0-9]?)''', 3)
+            printDBG(">>>>>YEAR[%s] MONTH[%s] DAY[%s]" % (tmp[0], tmp[1], tmp[2]))
+            if '' != tmp[0] and '' != tmp[1] and '' != tmp[2]:
+                urlParams = dict(self.defaultParams)
+                urlParams['header'] = dict(self.AJAX_HEADER)
+                urlParams['header']['Referer'] = cItem['url']
+                
+                sts, data = self.getPage('https://tvgry.pl/ajax/agegate.asp', urlParams, {'day':int(tmp[2]), 'month':int(tmp[1]), 'year':int(tmp[0])})
+                if not sts: return []
+                
+                sts, data = self.getPage(cItem['url'], self.defaultParams)
+                if not sts: return urlTab
+                
+                if ageMarker in data:
+                    SetIPTVPlayerLastHostError("Twój wiek nie został poprawnie zweryfikowany przez serwis http://tvgry.pl/.\nSprawdź ustawioną datę urodzenia w konfiguracji hosta.")
+            else:
+                SetIPTVPlayerLastHostError("Wprowadź datę urodzenia w konfiguracji hosta - wymagane przez serwis http://tvgry.pl/.")
+                
         
         url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
         if self.cm.isValidUrl(url):

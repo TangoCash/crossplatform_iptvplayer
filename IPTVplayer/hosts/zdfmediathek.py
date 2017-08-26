@@ -61,7 +61,6 @@ class ZDFmediathek(CBaseHostClass):
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Connection': 'keep-alive', 'Pragma': 'no-cache', 'Cache-Control': 'no-cache'} )
     
-    DEFAULT_ICON = 'http://www.zdf.de/ZDFmediathek/img/fallback/236x133.jpg'
     MAIN_URL     = 'https://www.zdf.de/'
     MAIN_API_URL = 'https://zdf-cdn.live.cellular.de/'
     ZDF_API_URL  = 'https://api.zdf.de/'
@@ -101,7 +100,7 @@ class ZDFmediathek(CBaseHostClass):
     def __init__(self):
         printDBG("ZDFmediathek.__init__")
         CBaseHostClass.__init__(self, {'history':'ZDFmediathek.tv', 'cookie':'zdfde.cookie'})
-        self.DEFAULT_ICON_URL = 'http://www.supportnet.de/articleimage/2384046/01-ZDF-Mediathek-App-Startbildschirm-200.png'
+        self.DEFAULT_ICON_URL = 'https://axinomcdn.blob.core.windows.net/wwwaxinomcom/2016/10/ZDF_Logo.jpg'
     
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= dict(self.HEADER)

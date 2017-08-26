@@ -51,14 +51,7 @@ def GetConfigList():
 def gettytul():
     return 'http://online-kinopokaz.ru/'
 
-
 class Kinopokaz(CBaseHostClass):
-    MAIN_URL = 'http://online-kinopokaz.ru/'
-    DEFAULT_ICON_URL = "http://ipic.su/img/img7/fs/logi.1456142273.png"
-
-    MAIN_CAT_TAB = [{'category':'categories',     'title':_('Movie categories'),     'url':MAIN_URL, 'icon':DEFAULT_ICON_URL},
-                    {'category':'search',         'title':_('Search'),         'icon':DEFAULT_ICON_URL, 'search_item':True},
-                    {'category':'search_history', 'title':_('Search history'), 'icon':DEFAULT_ICON_URL}]
 
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'Kinopokaz', 'cookie':'Kinopokaz.cookie'})
@@ -68,33 +61,22 @@ class Kinopokaz(CBaseHostClass):
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-
-    def _getFullUrl(self, url):
-        mainUrl = self.MAIN_URL
-        if 0 < len(url) and not url.startswith('http'):
-            if url.startswith('/'):
-                url = url[1:]
-            url = mainUrl + url
-        if not mainUrl.startswith('https://'):
-            url = url.replace('https://', 'http://')
-        return url
         
-    def cleanHtmlStr(self, str):
-        return self.cm.ph.removeDoubles(CBaseHostClass.cleanHtmlStr(str), '&nbsp;').replace('&nbsp;', ' ').strip()
+        self.MAIN_URL = 'http://online-kinopokaz.ru/'
+        self.DEFAULT_ICON_URL = "http://ipic.su/img/img7/fs/logi.1456142273.png"
 
+        self.MAIN_CAT_TAB = [{'category':'categories',         'title':_('Movie categories'),     'url':self.getMainUrl()},
+                             {'category':'search',              'title':_('Search'),          'search_item':True          },
+                             {'category':'search_history',      'title':_('Search history'),                              }
+                            ]
+    
     def getPage(self, url, params={}, post_data=None):
         sts,data = self.cm.getPage(url, params, post_data)
         return sts,data
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("Kinopokaz.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
+    
+    def getFullUrl(self, url):
+        url = url.replace('&amp;', '&')
+        return CBaseHostClass.getFullUrl(self, url)
 
     def listMainMenu(self, cItem, category):
         printDBG("Kinopokaz.listCategories")
@@ -108,7 +90,7 @@ class Kinopokaz(CBaseHostClass):
                 if item[0] in ['/load/serialy/12','/load/multiplikacionnye/13','/load/anime/24','/load/tv_onlajn/23','/load/trillery/10']:
                     continue
                 params = dict(cItem)
-                params.update({'category':category, 'title':item[1], 'url':self._getFullUrl(item[0])})
+                params.update({'category':category, 'title':item[1], 'url':self.getFullUrl(item[0])})
                 self.catCache.append(params)
 
         mainMenuData = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="uMenuRoot">', '</ul>', False)[1]
@@ -117,7 +99,7 @@ class Kinopokaz(CBaseHostClass):
             if item[0] in ['/load/tv_onlajn/tv_onlajn_prjamoj_ehfir/23-1-0-4951','index/pomoshh/0-2', 'index/stol_zakazov/0-5','index/ne_rabotaet_film/0-6']: 
                 continue
             params = dict(cItem)
-            params.update({'category':category, 'title':item[1], 'url':self._getFullUrl(item[0])})
+            params.update({'category':category, 'title':item[1], 'url':self.getFullUrl(item[0])})
             self.addDir(params)
 
         self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
@@ -127,12 +109,12 @@ class Kinopokaz(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
 
-        desc=''
+        desc = ''
         title = cItem['title']
+        url = cItem['url']
+        
         seriesData = self.cm.ph.getDataBeetwenMarkers(data, '<h2 style=', '<div id=', False)[1]#
-        if len(seriesData) == 0:
-            url = cItem['url']
-        else:
+        if len(seriesData):
             desc  = self.cm.ph.getDataBeetwenMarkers(data, 'colspan="2">', '<h2 style="text-align:', False)[1]
             desc  = self.cleanHtmlStr(desc)
             tranData = re.compile('<div align="center">(.*)</div>\n.*\s.+?src="(http:[^"]+?)"').findall(seriesData)
@@ -144,11 +126,14 @@ class Kinopokaz(CBaseHostClass):
                     param.update({'category':'tran', 'title':item[0], 'url':item[1]})
                     self.addDir(param)
                 return
-            else:
-                url = self.cm.ph.getSearchGroups(seriesData, 'src="htt.*(//.*?)"')[0]
-                if url.startswith('//'):
-                    url = 'http:' + url
-
+        
+        if self.up.getDomain(url) in self.getMainUrl():
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '>')
+            for item in tmp:
+                url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                if 1 == self.up.checkHostSupport(url):
+                    break
+        
         params = dict(cItem)
         params['desc'] = desc
         params['url'] = strwithmeta(url, {'Referer':cItem['url']})
@@ -187,7 +172,6 @@ class Kinopokaz(CBaseHostClass):
             
             if 0 != len(episodes):
                 return
-
         
         if self.up.checkHostSupport(url) == 1:
             self.addVideo(params)
@@ -210,39 +194,20 @@ class Kinopokaz(CBaseHostClass):
 
     def listItems(self, cItem, category):
         printDBG("Kinopokaz.listItems")
-        tmp2 = cItem['url'].split('?')
-        url= tmp2[0]
-        tmp = cItem['url'].replace(self.MAIN_URL,'').split('/')
-        if 1 == len(tmp):
-            args = cItem.get('title', None)
-            url = '{0}search/?q={1}'.format(self.MAIN_URL, args)
-            tmp1 = 1
-        else:
-            arg = tmp[-1].split('-')
-            page = cItem.get('page', 1)
-            if 1 == page:
-                if 2 == len(tmp):
-                    tmp1 = arg[0]+'-'+str(page+1)
-                else:
-                    tmp1 = tmp[1]+'/'+arg[0]+'-'+str(page+1)
-            if 1 < page:
-                if 2 == len(tmp):
-                    tmp1 = arg[0]+'-'+str(page+1)
-                    url = self.MAIN_URL+tmp[0]+'/'+arg[0]+'-'+str(page)
-                else:
-                    tmp1 = tmp[1]+'/'+arg[0]+'-'+str(page+1)
-                    url = self.MAIN_URL+tmp[0]+'/'+tmp[1]+'/'+arg[0]+'-'+str(page)
+        url = cItem['url']
+        page = cItem.get('page', 1)
+        if page > 1:
+            url += '-' + str(page)
+        
         post_data = cItem.get('post_data', None)
         sts, data = self.getPage(url, {}, post_data)
         if not sts: return
 
         nextPage = False
-        if ('/load/%s' % tmp1) in data:
+        if '' != self.cm.ph.getSearchGroups(data, '''spages\(\s*['"](%s)['"]''' % (page+1))[0]:
             nextPage = True
 
-        m1 = '<div class="eTitle"'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '<div id="rightcol">', False)[1]
-        data = data.split(m1)
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="eTitle"', '</table>')
         for item in data:
             url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
             title = self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0]
@@ -257,19 +222,17 @@ class Kinopokaz(CBaseHostClass):
             desc = data.replace('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', '')
             desc = self.cleanHtmlStr(desc)
             params = dict(cItem)
-            params.update({'category':category, 'title':title, 'icon':self._getFullUrl(icon), 'desc':desc, 'url':self._getFullUrl(url)})
+            params.update({'category':category, 'title':title, 'icon':self.getFullUrl(icon), 'desc':desc, 'url':self.getFullUrl(url)})
             self.addDir(params)
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':cItem.get('page', 1)+1})
+            params.update({'title':_('Next page'), 'page':page+1})
             self.addDir(params)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
-        searchPattern = searchPattern
-        searchPattern = urllib.quote_plus(searchPattern)
+        #searchPattern = 'Колонна'
         cItem = dict(cItem)
-        cItem['url'] = self.MAIN_URL
-        cItem['post_data'] = {'do':'search', 'subaction':'search', 'x':0, 'y':0, 'story':searchPattern}
+        cItem['url'] = self.getFullUrl('search/?q=%s&m=site&m=load&t=0' % urllib.quote_plus(searchPattern))
         self.listItems(cItem, 'list_content')
 
     def getLinksForVideo(self, cItem):
@@ -331,89 +294,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, Kinopokaz(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('kinopokazlogo.png')])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-
-    def getResolvedURL(self, url):
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif 'video' == cItem['type']:
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

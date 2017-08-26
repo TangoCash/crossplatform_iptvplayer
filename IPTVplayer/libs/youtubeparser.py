@@ -43,6 +43,12 @@ class YouTubeParser():
             dash = False
         list = []
         try:
+            if self.cm.isValidUrl(url) and '/channel/' in url and url.endswith('/live'):
+                sts, data = self.cm.getPage(url)
+                if sts:
+                    videoId = self.cm.ph.getSearchGroups(data, '''<meta[^>]+?itemprop=['"]videoId['"][^>]+?content=['"]([^'^"]+?)['"]''')[0]
+                    if videoId == '': videoId = self.cm.ph.getSearchGroups(data, '''['"]REDIRECT_TO_VIDEO['"]\s*\,\s*['"]([^'^"]+?)['"]''')[0]
+                    if videoId != '': url = 'https://www.youtube.com/watch?v=' + videoId
             list = YoutubeIE()._real_extract(url)
         except Exception:
             printExc()

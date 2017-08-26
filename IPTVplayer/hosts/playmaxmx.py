@@ -207,6 +207,9 @@ class PlayMaxMX(CBaseHostClass):
         sts, data = self.getPage(url)
         if not sts: return
         
+        dc = self.cm.ph.getSearchGroups(data, '''var\s*dc(?:_amp|_ic)\s*=\s['"]([^'^"]+?)['"]''')[0]
+        if len(dc): dc = dc[1:]
+        
         tabTmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="f_b_r">', '<cb')[1]
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'load_trailers()', '}')[1]
@@ -223,7 +226,7 @@ class PlayMaxMX(CBaseHostClass):
         if '<div class="f_cl_t">' not in data:
             link = self.cm.ph.getSearchGroups(tabTmp, '''onclick="load_f_links\(\s*([0-9]+)\s*\,\s*([0-9]+)\s*\,''', 2)
             if '' not in link:
-                url = self.getFullUrl('/c_enlaces_n.php?ficha=%s&c_id=%s' % (link[1], link[0]))       
+                url = self.getFullUrl('/c_enlaces_n.php?ficha=%s&c_id=%s&dc=%s' % (link[1], link[0], dc))       
                 params = dict(cItem)
                 params.update({'good_for_fav': False, 'url':url})
                 self.addVideo(params)
@@ -255,7 +258,7 @@ class PlayMaxMX(CBaseHostClass):
                 num = self.cm.ph.getSearchGroups(it, '''c_num=['"]([0-9]+)[Xx]([0-9]+)['"]''', 2)
                 title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(it, '''c_name=['"]([^'^"]+?)['"]''')[0])
                 link  = self.cm.ph.getSearchGroups(it, '''load_f_links\(\s*([0-9]+)\s*\,\s*([0-9]+)\s*\,''', 2)
-                url   = self.getFullUrl('/c_enlaces_n.php?ficha=%s&c_id=%s' % (link[1], link[0]))
+                url   = self.getFullUrl('/c_enlaces_n.php?ficha=%s&c_id=%s&dc=%s' % (link[1], link[0], dc))
                 
                 if seasonId not in self.cacheSeasons:
                     self.cacheSeasons[seasonId] = []
@@ -327,8 +330,8 @@ class PlayMaxMX(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<divd class="tipodeenlaces" id="online1">', '<divd class="tipodeenlaces" id="descarga1">')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<divdd', '</divdd>')
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="tipodeenlaces" id="online1">', '<div class="tipodeenlaces" id="descarga1">')[1]
+        data = data.split('<div class="capitulo f_link')
         for item in data:
             url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
             if not self.cm.isValidUrl(url): continue
@@ -336,15 +339,15 @@ class PlayMaxMX(CBaseHostClass):
             # hostings
             titles = [self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0].split('/')[-1].replace('.png', '')]
             # version
-            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<divd class="version', '</divd>')[1]))
+            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="version', '</div>')[1]))
             # quality
-            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<divd class="calidad"', '</divd>')[1]))
+            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="calidad"', '</div>')[1]))
             # language
-            titles.append(self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<divd\s+class="idioma"\s+title=['"]([^"^']+?)['"]''')[0]))
+            titles.append(self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<div\s+class="idioma"\s+title=['"]([^"^']+?)['"]''')[0]))
             # subtitles
-            titles.append(self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<divd\s+class="subtitulos"\s+title=['"]([^"^']+?)['"]''')[0]))
+            titles.append(self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''<div\s+class="subtitulos"\s+title=['"]([^"^']+?)['"]''')[0]))
             # audio
-            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<divd class="calidadaudio"', '</divd>')[1]))
+            titles.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="calidadaudio', '</div>')[1]))
             
             linksTab.append({'name':' | '.join(titles), 'url':strwithmeta(url, {'Referer':cItem['url']}), 'need_resolve':1})
         

@@ -179,7 +179,9 @@ class EskaGo(CBaseHostClass):
             if not self.cm.isValidUrl(url): return []
         
         sts, data = self.cm.getPage(url)
-        if not sts: return []
+        if not sts: data = ''
+        
+        printDBG('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         
         if '/radio/' in  url:
             tmp = self.cm.ph.getDataBeetwenMarkers(data, 'input[name="data-radio-url"]', ';', withMarkers=False)[1]
@@ -209,24 +211,45 @@ class EskaGo(CBaseHostClass):
                                 streamUrl = streamUrl.replace('.aac', '.mp3')
                             urlTab.append({'name':streamType, 'url':streamUrl})
                         
-        elif '/tv/' in url:
+        elif '/tv/' in url or url.endswith('/player'):
+            streamUriMap = {'eska-tv':['eskatv-t/eskatv_720p', 'eskatv-t/eskatv_360p'],
+                            'polo-tv':['polotv-p/stream1'],
+                            'eska-best-music-tv':['best-t/best_720p', 'best-t/best_360p'],
+                            'eska-party-tv':['eska_party-t/eska_party_720p', 'eska_party-t/eska_party_360p'],
+                            'music-vox-tv':['vox2-p/stream1'],
+                            'vox-olds-cool-tv':['vox-t/vox_720p', 'vox-t/vox_360p'],
+                            'eska-rock-tv':['eska_rock-t/eska_rock_720p', 'eska_rock-t/eska_rock_360p'],
+                            'wawa-tv':['wawa-t/wawa_720p', 'wawa-t/wawa_360p'],
+                            'polo-party-tv':['polo_party-t/polo_party_720p', 'polo_party-t/polo_party_360p'],
+                            'player':['fokustv-p/stream1'],
+                            'hip-hop-tv':['hiphoptv-p/stream1'],}
+                            
+            marker = cItem['url'].split('/')[-1]
+            printDBG(">>>>>>>>>>>>>>> marker [%s]" % marker)
+            tab = streamUriMap.get(marker, [])
             data = self.cm.ph.getDataBeetwenMarkers(data, '$.post(', 'function', withMarkers=False)[1]
             printDBG(data)
-            url  =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
+            secureUri =  self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?)['"]''')[0]
             streamUri = self.cm.ph.getSearchGroups(data, '''streamUri['"\s]*?:\s*?['"]([^'^"]+?)['"]''')[0]
-            sts, url = self.cm.getPage(url, post_data={'streamUri':streamUri})
-            if not sts: return []
             
-            printDBG('++++++++++++++++++++++++++')
-            printDBG(url)
-            printDBG('++++++++++++++++++++++++++')
+            if secureUri == '': secureUri = 'https://api.stream.smcdn.pl/api/secureToken.php'
+            elif streamUri not in tab: tab.insert(0, streamUri)
             
-            if self.cm.isValidUrl(url) and url.split('?')[0].endswith('m3u8'):
-                data = getDirectM3U8Playlist(url, checkExt=False)
-                for item in data:
-                    item['url'] = urlparser.decorateUrl(item['url'], {'iptv_proto':'m3u8', 'iptv_livestream':True})
-                    urlTab.append(item)
-        
+            printDBG(">>>>>>>>>>>>>>> tab %s" % tab)
+            for streamUri in tab:
+                sts, url = self.cm.getPage(secureUri, post_data={'streamUri':streamUri})
+                if not sts: continue
+                
+                printDBG('++++++++++++++++++++++++++')
+                printDBG(url)
+                printDBG('++++++++++++++++++++++++++')
+                
+                if self.cm.isValidUrl(url):
+                    data = getDirectM3U8Playlist(url, checkExt=True, checkContent=True)
+                    for item in data:
+                        item['url'] = urlparser.decorateUrl(item['url'], {'iptv_proto':'m3u8', 'iptv_livestream':True})
+                        urlTab.append(item)
+                
         return urlTab
         
     def getVideoLinks(self, videoUrl):
@@ -247,7 +270,7 @@ class EskaGo(CBaseHostClass):
         links = []
         try:
             cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
+            links = self.getLinksForItem(cItem)
         except Exception: printExc()
         return links
         

@@ -352,6 +352,7 @@ class Laola1TV(CBaseHostClass):
         except Exception:
             printExc()
         
+        comment = ''
         for streamaccess in streamaccessTab:
             for myip in ['', config.plugins.iptvplayer.laola1tv_myip1.value, config.plugins.iptvplayer.laola1tv_myip2.value]:
                 if '' != myip: header = {'X-Forwarded-For':myip}

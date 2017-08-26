@@ -78,6 +78,7 @@ class TantiFilmOrg(CBaseHostClass):
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
         for item in data:
             title = self.cleanHtmlStr(item)
+            if title.upper() == 'HOME': continue # not items on home page
             url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             params = dict(cItem)
             if 'elenco-saghe' not in url:
@@ -93,7 +94,7 @@ class TantiFilmOrg(CBaseHostClass):
         
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul id="cat_mob">', '</ul>', withMarkers=False)[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="table-list">', '</ul>', withMarkers=False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
         for item in data:
             title = self.cleanHtmlStr(item)

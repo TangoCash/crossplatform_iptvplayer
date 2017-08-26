@@ -265,9 +265,9 @@ class Tata(CBaseHostClass):
             hlsUrl = strwithmeta(hlsUrl, {'Referer':videoUrl, 'User-Agent':self.USER_AGENT})
             
             linksTab = getDirectM3U8Playlist(hlsUrl, checkContent=True)
-            for idx in range(len(linksTab)):
-                if linksTab[idx]['url'].startswith('https:'):
-                    linksTab[idx]['url'] = strwithmeta('http' + linksTab[idx]['url'][5:], {'User-Agent':self.USER_AGENT})
+            #for idx in range(len(linksTab)):
+            #    if linksTab[idx]['url'].startswith('https:'):
+            #        linksTab[idx]['url'] = strwithmeta('http' + linksTab[idx]['url'][5:], linksTab[idx]['url'].meta)
             
         if len(linksTab) and self.cm.isValidUrl(trailerUrl):
             linksTab.append({'name':'Trailer', 'url':trailerUrl, 'need_resolve':1})

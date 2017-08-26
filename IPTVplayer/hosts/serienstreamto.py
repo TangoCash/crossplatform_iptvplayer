@@ -51,7 +51,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://serienstream.to/'
+    return 'https://serienstream.to/'
 
 class SerienStreamTo(CBaseHostClass):
  
@@ -64,8 +64,8 @@ class SerienStreamTo(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://serienstream.to/'
-        self.DEFAULT_ICON_URL = 'http://serienstream.to/public/img/facebook.jpg'
+        self.MAIN_URL = 'https://serienstream.to/'
+        self.DEFAULT_ICON_URL = 'https://serienstream.to/public/img/facebook.jpg'
         
         self.MAIN_CAT_TAB = [{'category':'list_abc',          'title': _('A-Z'),                          'url':self.MAIN_URL                       },
                              {'category':'list_genres',       'title': _('Genres'),                       'url':self.MAIN_URL                       },
@@ -199,8 +199,11 @@ class SerienStreamTo(CBaseHostClass):
             try: episodeNum = str(int(self.cm.ph.getSearchGroups(item, '''episode\-([0-9]+?)[^0-9]''')[0]))
             except Exception: episodeNum = ''
             if '' != episodeNum and '' != seasonNum: title = 's%se%s'% (seasonNum.zfill(2), episodeNum.zfill(2)) + ' - ' + title
+            
+            langs = re.compile('/public/img/([a-z]+?)\.png').findall(item)
+            desc = '[{0}]'.format(' | '.join(langs)) + '[/br]' + cItem.get('desc', '')
             params = dict(cItem)
-            params.update({'good_for_fav':True, 'title':'{0}: {1}'.format(seriesTitle, title), 'url':url})
+            params.update({'good_for_fav':True, 'title':'{0}: {1}'.format(seriesTitle, title), 'url':url, 'desc':desc})
             self.addVideo(params)
         
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -210,6 +213,8 @@ class SerienStreamTo(CBaseHostClass):
         post_data = {'keyword':searchPattern}
         sts, data = self.getPage(baseUrl, {}, post_data)
         if not sts: return
+        
+        printDBG(data)
 
         try:
             data = byteify(json.loads(data))

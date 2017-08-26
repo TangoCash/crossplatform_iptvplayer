@@ -6,7 +6,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -256,6 +256,9 @@ class EkinoTv(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return []
         
+        baseVidUrl = self.cm.ph.getSearchGroups(data, '''src=['"]([^'^"]*?/watch/[^'^"]*?)['"]''')[0]
+        if baseVidUrl == '': baseVidUrl = 'watch/f/'
+        
         if 'dmcabitch.jpg' in data:
             message = self.cm.ph.getDataBeetwenMarkers(data, '<div class="playerContainer"', '<br style="clear:both">', True)[1]
             SetIPTVPlayerLastHostError(self.cleanHtmlStr(message))
@@ -282,24 +285,25 @@ class EkinoTv(CBaseHostClass):
         for item in data:
             id  = self.cm.ph.getSearchGroups(item, 'id="([^"]+?)"')[0]
             playerParams = self.cm.ph.getSearchGroups(item, '''ShowPlayer[^"^']*?['"]([^"^']+?)['"]\s*\,\s*['"]([^"^']+?)['"]''', 2)
+            url = ''
             if playerParams[0] != '' and playerParams[1] != '':
-                url = 'watch/' + '/'.join(playerParams)
+                url = baseVidUrl + '/'.join(playerParams)
             if url == '': url = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
             url = self._getFullUrl(url)
             if url == '' or url.split('.')[-1] in ['jpg', 'jepg', 'gif']:
                 continue
             for p in players:
                 if p['id'] == id:
-                    urlTab.append({'name':p['title'], 'url':url, 'need_resolve':1})
+                    urlTab.append({'name':p['title'], 'url':strwithmeta(url, {'Referer':cItem['url']}), 'need_resolve':1})
                     break
         return urlTab
         
     def getVideoLinks(self, baseUrl):
         printDBG("EkinoTv.getVideoLinks [%s]" % baseUrl)
         urlTab = []
-        
+        referer = strwithmeta(baseUrl).meta.get('Referer', baseUrl)
         try:
-            sts, response = self.cm.getPage(baseUrl, {'return_data':False})
+            sts, response = self.cm.getPage(baseUrl, {'header':{'Referer':referer}, 'return_data':False})
             baseUrl = response.geturl()
             response.close()
             printDBG(baseUrl)
@@ -310,7 +314,7 @@ class EkinoTv(CBaseHostClass):
         tries = 1
         while 'ekino-tv.pl' in url and tries < 3:
             tries += 1
-            sts, data = self.cm.getPage(url)
+            sts, data = self.cm.getPage(url, {'header':{'Referer':referer}})
             if not sts: return urlTab
             printDBG(data)
             url = self._getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0])

@@ -3,11 +3,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -21,6 +18,8 @@ import urllib
 import base64
 try:    import json
 except Exception: import simplejson as json
+try:    from urlparse import urljoin
+except Exception: printExc()
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -28,7 +27,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -66,7 +65,7 @@ class CartoonHD(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'https://cartoonhd.global/'
-        self.SEARCH_URL = 'https://api.cartoonhd.global/api/v1/0A6ru35yevokjaqbb8'
+        self.SEARCH_URL = None
         
         self.MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php'},
                              {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php'},
@@ -82,7 +81,6 @@ class CartoonHD(CBaseHostClass):
             domain = self.up.getDomain(url, False)
             self.MAIN_URL  = domain
             domain = self.up.getDomain(url, True)
-            self.SEARCH_URL = 'https://api.%s/api/v1/0A6ru35yevokjaqbb8' % domain
             if not sts: return
         except Exception:
             printExc()
@@ -90,24 +88,6 @@ class CartoonHD(CBaseHostClass):
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()
         return self.cm.ph.getSearchGroups(data, '''var[\s]*{0}[\s]*=[\s]*['"]([^'^"]+?)['"]'''.format(torName))[0]
-        
-    def _makeid(self):
-        text = ""
-        possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        for i in range(25):
-            text += possible[random.randint(0, len(possible)-1)]
-        return text
-        
-    def _rflix(self, a):
-        def _repFun(matchObj):
-            a = matchObj.group(0) 
-            if a <= 'Z': tmp = 90
-            else: tmp = 122
-            a = ord(a) + 13
-            if tmp < a:
-                a = a - 26
-            return chr(a)
-        return re.sub('[a-zA-Z]', _repFun, a)
             
     def fillSortNav(self, type):
         self.cacheSortNav[type] = []
@@ -270,11 +250,32 @@ class CartoonHD(CBaseHostClass):
         sts, data = self.cm.getPage(self.MAIN_URL, self.defaultParams)
         if not sts: return
         
-        tor = self._getToken(data)
-        currid = self._makeid()
+        vars = self.cm.ph.getDataBeetwenMarkers(data, 'var ', '</script>')[1]
+        if vars == '': return
+        vars = vars[:-9]
         
-        q = searchPattern
-        post_data = {'q':q, 'limit':100, 'timestamp':str(time.time()).split('.')[0], 'verifiedCheck':tor, 'set':currid, 'rt':self._rflix(tor+currid), 'sl':'c3037ef6538bf7e3c048fd6997ca37d3'}
+        jsUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]*?foxycomplete.js[^'^"]*?)['"]''')[0])
+        if not self.cm.isValidUrl(jsUrl): return
+        
+        sts, jsdata = self.cm.getPage(jsUrl, self.defaultParams)
+        if not sts: return
+        
+        post_data = {'q':searchPattern, 'limit':100, 'timestamp':str(int(time.time()*1000))}
+        try:
+            jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCg0KZnVuY3Rpb24gdHlwZU9mKCBvYmogKSB7DQogIHJldHVybiAoe30pLnRvU3RyaW5nLmNhbGwoIG9iaiApLm1hdGNoKC9ccyhcdyspLylbMV0udG9Mb3dlckNhc2UoKTsNCn0NCg0KZnVuY3Rpb24galF1ZXJ5UmVzdWx0T2JqKCl7DQogICAgcmV0dXJuIGpRdWVyeVJlc3VsdE9iajsNCn0NCmpRdWVyeVJlc3VsdE9iai5ibHVyID0gZnVuY3Rpb24oKXt9Ow0KDQpmdW5jdGlvbiBqUXVlcnlBdXRvY29tcGxldGVPYmooKXsNCiAgICBhcmd1bWVudHNbMV0uZXh0cmFQYXJhbXNbJ3VybCddID0gYXJndW1lbnRzWzBdOw0KICAgIHByaW50KEpTT04uc3RyaW5naWZ5KGFyZ3VtZW50c1sxXS5leHRyYVBhcmFtcykpOw0KICAgIHJldHVybiBqUXVlcnk7DQp9DQoNCmZ1bmN0aW9uIGpRdWVyeSgpew0KICAgIGlmICggdHlwZU9mKCBhcmd1bWVudHNbMF0gKSA9PSAnZnVuY3Rpb24nICkgew0KICAgICAgICBhcmd1bWVudHNbMF0oKTsNCiAgICB9IA0KICAgIA0KICAgIHJldHVybiBqUXVlcnk7DQp9DQoNCmpRdWVyeS5yZXN1bHQgPSBqUXVlcnlSZXN1bHRPYmo7DQpqUXVlcnkuaHRtbCA9IHt9Ow0KalF1ZXJ5LmJsdXIgPSBmdW5jdGlvbigpe307DQoNCmpRdWVyeS5hdXRvY29tcGxldGUgPSBqUXVlcnlBdXRvY29tcGxldGVPYmo7DQpqUXVlcnkuYWpheFNldHVwID0gZnVuY3Rpb24oKXt9Ow0KalF1ZXJ5LnJlYWR5ID0galF1ZXJ5Ow==''')                  
+            jscode += '%s %s' % (vars, jsdata) 
+            printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+            printDBG(jscode)
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            ret = iptv_js_execute( jscode )
+            if ret['sts'] and 0 == ret['code']:
+                decoded = ret['data'].strip()
+                printDBG('DECODED DATA -> [%s]' % decoded)
+                decoded = byteify(json.loads(decoded))
+                self.SEARCH_URL = decoded.pop('url', None)
+                post_data.update(decoded)
+        except Exception:
+            printExc()
         
         httpParams = dict(self.defaultParams)
         httpParams['header'] =  {'Referer':self.MAIN_URL, 'User-Agent':self.cm.HOST, 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
@@ -358,6 +359,20 @@ class CartoonHD(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
+        jsUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]*?videojs-f[^'^"]*?)['"]''')[0])
+        if not self.cm.isValidUrl(jsUrl): return []
+        
+        sts, jsUrl = self.cm.getPage(jsUrl, self.defaultParams)
+        if not sts: return []
+        
+        jsUrl = self.cm.ph.getSearchGroups(jsUrl, '''['"]([^'^"]*?/ajax/[^'^"]*?embed[^'^"]*?)['"]''')[0]
+        printDBG("jsUrl [%s]" % jsUrl)
+        if jsUrl == '': return []
+        
+        baseurl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''var\s+?baseurl\s*=\s*['"]([^'^"]+?)['"]''')[0])
+        printDBG("baseurl [%s]" % baseurl)
+        if not self.cm.isValidUrl(baseurl): return []
+        
         tor  = self._getToken(data)
         elid = self.cm.ph.getSearchGroups(data, '''elid[\s]*=[\s]['"]([^"^']+?)['"]''')[0]
         if '' == elid: elid = self.cm.ph.getSearchGroups(data, 'data-id="([^"]+?)"')[0]
@@ -383,14 +398,14 @@ class CartoonHD(CBaseHostClass):
         __utmx = getCookieItem('__utmx')
         httpParams['header']['Authorization'] = 'Bearer ' + urllib.unquote(__utmx)
         
-        requestLinks = ['ajax/tnembeds.php']
+        requestLinks = [urljoin(baseurl, jsUrl)]
         if 'class="play"' in data and 'id="updateSources"' not in data:
             requestLinks.append('ajax/embeds.php')
         
         #httpParams['header']['Cookie'] = '%s=%s; PHPSESSID=%s; flixy=%s;'% (elid, urllib.quote(encElid), getCookieItem('PHPSESSID'), getCookieItem('flixy'))
         for url in requestLinks:
             post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid)}
-            sts, data = self.cm.getPage(self.getFullUrl(url), httpParams, post_data)
+            sts, data = self.cm.getPage(url, httpParams, post_data)
             if not sts: continue
             printDBG('===============================================================')
             printDBG(data)

@@ -4,8 +4,9 @@
 ###################################################
 # LOCAL import
 ###################################################
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir
 ###################################################
 # FOREIGN import
 ###################################################
@@ -304,20 +305,20 @@ class common:
                     printExc()
         return self.geolocation.get('countryCode', '').lower()
         
-    def clearCookie(self, cookiefile, leaveNames=[]):
+    def clearCookie(self, cookiefile, leaveNames=[], removeNames=None, ignore_discard = True):
         try:
             toRemove = []
             if not self.useMozillaCookieJar:
                 cj = cookielib.LWPCookieJar()
             else:
                 cj = cookielib.MozillaCookieJar()
-            cj.load(cookiefile, ignore_discard = True)
+            cj.load(cookiefile, ignore_discard = ignore_discard)
             for cookie in cj:
-                if cookie.name not in leaveNames:
+                if cookie.name not in leaveNames and (None == removeNames or cookie.name in removeNames):
                     toRemove.append(cookie)
             for cookie in toRemove:
                 cj.clear(cookie.domain, cookie.path, cookie.name)
-            cj.save(cookiefile, ignore_discard = True)
+            cj.save(cookiefile, ignore_discard = ignore_discard)
         except Exception:
             printExc()
             return False
@@ -396,7 +397,7 @@ class common:
         
     def getPageWithWget(self, url, params={}, post_data=None):
         from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-        cmd = DMHelper.getBaseWgetCmd(params.get('header', {})) +  (" '%s' " % url)
+        cmd = DMHelper.getBaseWgetCmd(params.get('header', {})) +  (" --timeout=20 --tries=1 '%s' " % url)
         if post_data != None:
             if params.get('raw_post_data', False):
                 post_data_str = post_data
@@ -758,8 +759,15 @@ class common:
                 data = response.read()
                 response.close()
             except urllib2.HTTPError, e:
-                if e.code in [404, 500]:
-                    printDBG('!!!!!!!! 404: getURLRequestData - page not found handled')
+                ignoreCodeRanges = params.get('ignore_http_code_ranges', [(404, 404), (500, 500)])
+                ignoreCode = False
+                for ignoreCodeRange in ignoreCodeRanges:
+                    if e.code >= ignoreCodeRange[0] and e.code <= ignoreCodeRange[1]:
+                        ignoreCode = True
+                        break
+                
+                if ignoreCode:
+                    printDBG('!!!!!!!! %s: getURLRequestData - handled' % e.code)
                     if e.fp.info().get('Content-Encoding', '') == 'gzip':
                         gzip_encoding = True
                     data = e.fp.read()
@@ -791,10 +799,29 @@ class common:
                 out_data = data
  
         if params.get('use_cookie', False) and params.get('save_cookie', False):
-            cj.save(params['cookiefile'], ignore_discard = True)
+            try:
+                cj.save(params['cookiefile'], ignore_discard = True)
+            except Exception as e:
+                printExc()
+                msg1 = _("Critical Error – cookie can't be saved!")
+                msg2 = _("Last error:\n%s" % str(e))
+                msg3 = _("Please make sure that the folder for cache data (set in the configuration) is writable.")
+                GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 20)
+                SetTmpCookieDir()
+                raise e
 
         return out_data 
 
+    def urlEncodeNonAscii(self, b):
+        return re.sub('[\x80-\xFF]', lambda c: '%%%02x' % ord(c.group(0)), b)
+
+    def iriToUri(self, iri):
+        import urlparse
+        parts = urlparse.urlparse(iri.decode('utf-8'))
+        return urlparse.urlunparse(
+            part.encode('idna') if parti==1 else self.urlEncodeNonAscii(part.encode('utf-8'))
+            for parti, part in enumerate(parts)
+        )
 
     def makeABCList(self, tab = ['0 - 9']):
         strTab = list(tab)

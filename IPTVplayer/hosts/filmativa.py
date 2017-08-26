@@ -168,18 +168,22 @@ class Filmotopia(CBaseHostClass):
             item = item.split('</dt>')[-1]
             season = self.seasons[-1]['season']
             tmp = item.split('<button class="download-button">')
-            linksUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data="([^"]+?)"')[0]
-            if '' != linksUrl:  linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(linksUrl)
-            if '' == linksUrl:
-                linksUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data-open="([^"]+?)"')[0]
-                if '' != linksUrl: linksUrl = 'http://openload.co/embed/{0}/'.format(linksUrl)
-            if '' == linksUrl: linksUrl = self.cm.ph.getSearchGroups(item, '''['"](http[^'^"]+?openload[^'^"]+?)['"]''')[0]
-            if '' == linksUrl: continue
+            linkUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data="([^"]+?)"')[0]
+            
+            if '' != linkUrl:  linkUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(linkUrl)
+            if '' == linkUrl:
+                linkUrl = self.cm.ph.getSearchGroups(tmp[-1], 'data-open="([^"]+?)"')[0]
+                linkHosting = self.cm.ph.getSearchGroups(tmp[-1], 'data-source="([^"]+?)"')[0]
+                if '' != linkUrl: 
+                    if 'vidoza' in linkHosting: linkUrl = 'https://vidoza.net/embed-{0}.html'.format(linkUrl)
+                    else: linkUrl = 'http://openload.co/embed/{0}/'.format(linkUrl)
+            if '' == linkUrl: linkUrl = self.cm.ph.getSearchGroups(item, '''['"](http[^'^"]+?openload[^'^"]+?)['"]''')[0]
+            if '' == linkUrl: continue
             episodeTitle = self.cleanHtmlStr( tmp[0] )
             if 0 == len(self.seriesCache.get(season, [])):
                 self.seriesCache[season] = []
             sNum = season.upper().replace('SEZONA', '').strip()
-            self.seriesCache[season].append({'title':'{0}: s{1}e{2}'.format(tvShowTitle, sNum, episodeTitle), 'url':linksUrl, 'direct':True})
+            self.seriesCache[season].append({'title':'{0}: s{1}e{2}'.format(tvShowTitle, sNum, episodeTitle), 'url':linkUrl, 'direct':True})
             
         cItem = dict(cItem)
         cItem['category'] = category
@@ -217,8 +221,8 @@ class Filmotopia(CBaseHostClass):
                 sts, data = self.cm.getPage(url, {'header':{'Referer':cItem['url'], 'User-Agent':'Mozilla/5.0'}})
                 if sts:
                     data = self.cm.ph.getSearchGroups(data, 'ref="([^"]+?)"')[0]
-                    linksUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(data)
-                    urlTab.append({'name':'videomega.tv', 'url':linksUrl, 'need_resolve':1})
+                    linkUrl = 'http://videomega.tv/view.php?ref={0}&width=700&height=460&val=1'.format(data)
+                    urlTab.append({'name':'videomega.tv', 'url':linkUrl, 'need_resolve':1})
             elif url.startswith('http://') or url.startswith('https://'):
                 urlTab.append({'name':'link', 'url':url, 'need_resolve':1})
         

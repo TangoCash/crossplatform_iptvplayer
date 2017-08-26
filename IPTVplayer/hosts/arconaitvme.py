@@ -105,12 +105,12 @@ class ArconaitvME(CBaseHostClass):
             url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
         return CBaseHostClass.getFullUrl(self, url)
     
-    def listItems(self, cItem, m1='', m2='', post_data=None):
+    def listItems(self, cItem, m1, m2, post_data=None):
         printDBG("ArconaitvME.listItems")
         sts, data = self.getPage(cItem['url'], post_data=post_data)
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2)[1]
+        data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile(m1), re.compile(m2))[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>', False)
         
         for item in data:
@@ -125,19 +125,19 @@ class ArconaitvME(CBaseHostClass):
         
     def listMain(self, cItem):
         printDBG("ArconaitvME.listMain")
-        self.listItems(cItem, '<div class="content">', '<div class="row">')
-        
+        self.listItems(cItem, '''<div[^>]+?class=['"]content['"][^>]*?>''', '''<div[^>]+?class=['"]stream-category['"][^>]*?>Shows</div>''')
+    
     def listShows(self, cItem):
         printDBG("ArconaitvME.listShows")
-        self.listItems(cItem, '''<div class='stream-category'>Shows</div>''', '<div class="box-content">')
+        self.listItems(cItem, '''<div[^>]+?class=['"]stream-category['"][^>]*?>Shows</div>''', '''<div[^>]+?class=['"]acontainer['"][^>]*?>''')
         
     def listCableTv(self, cItem):
         printDBG("ArconaitvME.listCableTv")
-        self.listItems(cItem, '''div class='stream-category'>Cable</div>''', '<div class="box-content">')
+        self.listItems(cItem, '''<div[^>]+?class=['"]stream-category['"][^>]*?>Cable</div>''', '''<div[^>]+?class=['"]acontainer['"][^>]*?>''')
         
     def listMovies(self, cItem):
         printDBG("ArconaitvME.listMovies")
-        self.listItems(cItem, '''<div class='stream-category'>Movies</div>''', '<div class="box-content">')
+        self.listItems(cItem, '''<div[^>]+?class=['"]stream-category['"][^>]*?>Movies</div>''', '''<div[^>]+?class=['"]acontainer['"][^>]*?>''')
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("ArconaitvME.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))

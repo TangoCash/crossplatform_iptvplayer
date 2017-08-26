@@ -88,6 +88,7 @@ do
 done
 ############################## Adapt congig.py file ##############################
 myFile=$publicGitDir/icomponents/iptvconfigmenu.py
+sed -i 's/import ConfigBaseWidget,/import/' $myFile
 sed -i '/class ConfigMenu(ConfigBaseWidget)/,$d' $myFile
 #remove unnecesary stuff
 sed -i 's;from iptvpin import IPTVPinWidget;;g

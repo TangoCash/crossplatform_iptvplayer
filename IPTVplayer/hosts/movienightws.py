@@ -171,8 +171,8 @@ class MoviesNight(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, "<div id='cssmenu'>", '</div>', False)[1]
-        data = data.split("<li class='has-sub'>")
+        data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div id=['"]cssmenu['"]>'''), re.compile('</div>'), False)[1]
+        data = re.split('''<li class=['"]has-sub['"]>''', data)
         if len(data): 
             del data[0]
         
@@ -184,7 +184,7 @@ class MoviesNight(CBaseHostClass):
             episodesTab = []
             episodesData = self.cm.ph.getAllItemsBeetwenMarkers(item, '<li', '</li>')
             for eItem in episodesData:
-                eTmp = eItem.split('<span class="datix">')
+                eTmp = re.split('''<span class=['"]datix['"]>''', eItem)
                 title = self.cleanHtmlStr( eTmp[0] )
                 desc  = self.cleanHtmlStr( eTmp[-1] )
                 url   = self._getFullUrl(self.cm.ph.getSearchGroups(eItem, '''href=['"]([^"^']+?)["']''', 1, True)[0])
@@ -255,32 +255,53 @@ class MoviesNight(CBaseHostClass):
         printDBG("MoviesNight.getArticleContent [%s]" % cItem)
         retTab = []
         
-        sts, data = self.cm.getPage(cItem['url'])
+        otherInfo = {}
+        
+        url = cItem.get('url', '')
+        
+        sts, data = self.cm.getPage(url)
         if not sts: return retTab
         
-        icon  = cItem.get('icon', '')
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="single_left">', '<div class="twttr_button">', False)[1]
-        title = self.cm.ph.getDataBeetwenMarkers(data, '<h1>', '</h1>', False)[1]
-        data = data.split('<strong>')
-        desc  = data[0]
+        m2 = '<div class="tsll">'
+        if m2 not in data: m2 = ' id="player'
         
-        descData = data[1:]
-        descTabMap = {"QUALITY":     "quality",
-                      "SUBTITLES":   "subtitles",
-                      "RUNTIME":     "duration",
-                      "IMDB RATING": "rating"}
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="post">', m2)[1]
+        title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<h1', '</h1>')[1] )
+        icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^"^']+?\.jpe?g[^"^']*?)["']''')[0] )
+        desc  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div id="dato-2"', '</p>')[1].split('</h2>')[-1] )
         
-        otherInfo = {}
-        for item in descData:
-            item = item.split('</strong>')
-            if len(item) < 2: continue
-            key = self.cleanHtmlStr( item[0] ).replace(':', '').strip()
-            val = self.cleanHtmlStr( item[1] )
-            if key in descTabMap:
-                otherInfo[descTabMap[key]] = val
+        if '/episode/' in url:
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<p', '</p>')
+            if len(data) > 1: 
+                title += ' - ' + self.cleanHtmlStr(data[0])
+                desc = self.cleanHtmlStr(data[1])
+        else:
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<span class="original">', '</span>')[1])
+            if tmp != '': otherInfo['alternate_title'] = tmp
+            
+            tmp = self.cm.ph.getSearchGroups(data, '>\s*([12][0-9]{3})\s*<')[0]
+            if tmp != '': otherInfo['year'] = tmp
+            
+            tmp = self.cm.ph.getSearchGroups(data, '>\s*([0-9]+\s*min)\s*<')[0]
+            if tmp != '': otherInfo['duration'] = tmp
+            
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="imdbdatos">', '</div>')[1])
+            if tmp != '': otherInfo['rating'] = tmp
+            
+            tmp = []
+            tmp2 = re.compile('<a[^>]+?rel="category[^>]+?>([^>]+?)<').findall(data)
+            for t in tmp2:
+                t = self.cleanHtmlStr(t)
+                if t != '': tmp.append(t)
+            if len(tmp): otherInfo['genres'] = ', '.join(tmp)
+
         
-        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self._getFullUrl(icon)}], 'other_info':otherInfo}]
+        if title == '': title = cItem['title']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
+        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
+    
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -320,76 +341,8 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, MoviesNight(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('movienightwslogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
         
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-        
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        cItem = self.host.currList[Index]
-        
-        if cItem['type'] != 'video':
-            return RetHost(retCode, value=retlist)
-        hList = self.host.getArticleContent(cItem)
-        for item in hList:
-            title      = item.get('title', '')
-            text       = item.get('text', '')
-            images     = item.get("images", [])
-            othersInfo = item.get('other_info', '')
-            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem
+    def withArticleContent(self, cItem):
+        if (cItem['type'] == 'video') or cItem.get('category', '') in ['list_seasons', 'list_episodes']:
+            return True
+        return False

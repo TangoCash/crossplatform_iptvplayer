@@ -52,7 +52,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://mythewatchseries.com/'
+    return 'http://mythewatchseries.net/'
 
 class HDStreams(CBaseHostClass):
  
@@ -65,12 +65,12 @@ class HDStreams(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://mythewatchseries.com/img/icon/logo.png'
+        self.DEFAULT_ICON_URL = 'http://mythewatchseries.net/img/icon/logo.png'
         self.MAIN_URL = None
         self.cacheLinks = {}
         
     def selectDomain(self):
-        self.MAIN_URL = 'http://mythewatchseries.com/'
+        self.MAIN_URL = 'http://mythewatchseries.net/'
         self.MAIN_CAT_TAB = [{'category':'list_items',       'title': _("MOVIES"),                     'url':self.getFullUrl('/movies')},
                              {'category':'list_items',       'title': _("CINEMA MOVIES"),              'url':self.getFullUrl('/cinema-movies')},
                              {'category':'list_items',       'title': _("THIS WEEK'S SERIES POPULAR"), 'url':self.getFullUrl('/recommended-series')},

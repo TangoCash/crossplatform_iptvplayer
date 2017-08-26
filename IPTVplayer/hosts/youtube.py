@@ -72,7 +72,7 @@ class Youtube(CBaseHostClass):
             category = 'playlists'
         elif None != re.search('/watch\?v=[^\&]+?\&list=',  url):
             category = 'traylist'
-        elif 'user/' in url or 'channel/' in url:
+        elif 'user/' in url or ('channel/' in url and not url.endswith('/live')):
             category = 'channel'
         else:
             category = 'video'

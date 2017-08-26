@@ -148,7 +148,6 @@ class Host:
 
     def listsItems(self, Index, url, name = ''):
         printDBG( 'Host listsItems begin' )
-        printDBG( 'Host listsItems url: '+url )
         valTab = []
         if name == 'main-menu':
            printDBG( 'Host listsItems begin name='+name )

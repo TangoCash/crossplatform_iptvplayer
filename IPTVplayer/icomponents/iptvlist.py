@@ -120,7 +120,7 @@ class IPTVMainNavigatorList(IPTVListComponentBase):
         width  = self.l.getItemSize().width()
         height = self.l.getItemSize().height()
         res = [ None ]
-        res.append((eListboxPythonMultiContent.TYPE_TEXT, 45, 0, width-45, height, 1, RT_HALIGN_LEFT|RT_VALIGN_CENTER, item.getDisplayTitle()))
+        res.append((eListboxPythonMultiContent.TYPE_TEXT, 45, 0, width-45, height, 1, RT_HALIGN_LEFT|RT_VALIGN_CENTER, item.getDisplayTitle(), item.getTextColor()))
         res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHABLEND, 3, 1, 40, 40, self.dictPIX.get(item.type, None)))  
         return res
         
