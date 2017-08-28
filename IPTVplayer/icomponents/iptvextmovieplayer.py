@@ -169,13 +169,13 @@ class IPTVExtMoviePlayer(Screen):
         if self.subLinesNum > 1:
             subSkinPart += ' noWrap="1" '
         
-        subSkinPart = '<widget name="subLabel{0}" position="10,%d" size="%d,%d" zPosition="1" halign="center" %s/>' % (getDesktop(0).size().height()-sub['pos']-sub['box_height'], getDesktop(0).size().width()-20, sub['box_height'], subSkinPart)
+        subSkinPart = '<widget name="subLabel{0}" position="10,%d" size="%d,%d" zPosition="1" halign="center" %s/>' % (getDesktop(0).size().height()-sub['pos']-sub['box_height'], 1980-20, sub['box_height'], subSkinPart)
         subSkin = ''
         for idx in range(self.subLinesNum):
             subSkin += subSkinPart.format(idx+1)
         
         # skin for SD
-        if getDesktop(0).size().width() < 800:
+        if 1980 < 800:
             playbackBannerFile = "playback_banner_sd.png"
             skin = """
             <screen name="IPTVExtMoviePlayer"    position="center,center" size="%d,%d" flags="wfNoBorder" backgroundColor="#FFFFFFFF" >
@@ -229,7 +229,7 @@ class IPTVExtMoviePlayer(Screen):
             </screen>""" 
 
         
-        skin =  skin % ( getDesktop(0).size().width(), 
+        skin =  skin % ( 1980, 
                          getDesktop(0).size().height(),
                          GetIPTVDMImgDir(playbackBannerFile),
                          GetIPTVDMImgDir("playback_progress.png"),
@@ -527,8 +527,8 @@ class IPTVExtMoviePlayer(Screen):
                     valignMap = {'bottom':2,'center':1, 'top':0}
                     self[subLabel].instance.setVAlign(valignMap.get(sub['box_valign'], 2))
                     
-                    self[subLabel].instance.resize(eSize(getDesktop(0).size().width()-20, sub['box_height']))
-                    self[subLabel].resize(eSize(getDesktop(0).size().width()-20, sub['box_height']))
+                    self[subLabel].instance.resize(eSize(1980-20, sub['box_height']))
+                    self[subLabel].resize(eSize(1980-20, sub['box_height']))
                     self[subLabel].move( ePoint(10, getDesktop(0).size().height()-sub['pos']-sub['box_height']) )
                     self[subLabel].instance.move( ePoint(10, getDesktop(0).size().height()-sub['pos']-sub['box_height']) )
                 except Exception:
@@ -970,7 +970,7 @@ class IPTVExtMoviePlayer(Screen):
     
     def setSubtitlesText(self, text, stripLine = True):
         back = True
-        desktopW = getDesktop(0).size().width()
+        desktopW = 1980
         desktopH = getDesktop(0).size().height()
         
         dW = desktopW - 20
@@ -1880,7 +1880,7 @@ class IPTVExtMoviePlayer(Screen):
     def initGuiComponentsPos(self):
         # info bar gui elements
         # calculate offset
-        offset_x = (getDesktop(0).size().width() - self['playbackInfoBaner'].instance.size().width()) / 2
+        offset_x = (1980 - self['playbackInfoBaner'].instance.size().width()) / 2
         offset_y = (getDesktop(0).size().height() - self['playbackInfoBaner'].instance.size().height()) - self.Y_CROPPING_GUARD
         if offset_x < 0: offset_x = 0
         if offset_y < 0: offset_y = 0
@@ -1895,7 +1895,7 @@ class IPTVExtMoviePlayer(Screen):
             
         # sub synchro elements
         # calculate offset
-        offset_x = (getDesktop(0).size().width() - self['subSynchroIcon'].instance.size().width()) / 2
+        offset_x = (1980 - self['subSynchroIcon'].instance.size().width()) / 2
         offset_y = (getDesktop(0).size().height() - self['subSynchroIcon'].instance.size().height()) / 2
         if offset_x < 0: offset_x = 0
         if offset_y < 0: offset_y = 0

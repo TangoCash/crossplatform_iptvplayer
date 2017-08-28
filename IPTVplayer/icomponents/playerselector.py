@@ -21,7 +21,7 @@ class PlayerSelectorWidget(Screen):
     LAST_SELECTION = 0
     def __init__(self, session, list):
         printDBG("PlayerSelectorWidget.__init__ --------------------------------")
-        screenwidth = getDesktop(0).size().width()
+        screenwidth = 1980
         iconSize = GetAvailableIconSize()
         if len(list) >= 30 and iconSize == 100 and screenwidth and screenwidth > 1100:
             numOfRow = 4

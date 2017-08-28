@@ -219,14 +219,34 @@ def GetUchardetPath():
 def GetDukPath():
     return config.plugins.iptvplayer.dukpath.value
 
+gIPTVPlayerTempCookieDir = None
+def SetTmpCookieDir():
+    global gIPTVPlayerTempCookieDir
+    for cookiePath in ['/tmp', '/storage/emulated/o/Android/data/org.xbmc.kodi/files/.kodi/temp']:
+        if os.path.isdir(cookiePath):
+            gIPTVPlayerTempCookieDir = cookiePath + '/iptvplayer_cookies/'
+            break
+    mkdirs(gIPTVPlayerTempCookieDir)
+    
+def ClearTmpCookieDir():
+    global gIPTVPlayerTempCookieDir
+    if gIPTVPlayerTempCookieDir != None:
+        try:
+            for file in os.listdir( gIPTVPlayerTempCookieDir ):
+                rm(gIPTVPlayerTempCookieDir + '/' + file)
+        except Exception:
+            printExc()
+    
+    gIPTVPlayerTempCookieDir = None
+    
 def GetCookieDir(file = ''):
-    cookieDir = '/tmp/'
-    tmpDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
+    global gIPTVPlayerTempCookieDir
+    if gIPTVPlayerTempCookieDir == None: cookieDir = config.plugins.iptvplayer.SciezkaCache.value + '/cookies/'
+    else: cookieDir = gIPTVPlayerTempCookieDir
     try:
-        if os.path.isdir(tmpDir) or mkdirs(tmpDir):
-            cookieDir = tmpDir
-    except Exception:
-        printExc()
+        if not os.path.isdir(cookieDir):
+            mkdirs(cookieDir)
+    except Exception: printExc()
     return cookieDir + file
     
 def GetTmpDir(file = ''):

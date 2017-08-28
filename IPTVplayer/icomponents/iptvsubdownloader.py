@@ -51,7 +51,7 @@ import Plugins.Extensions.IPTVPlayer.icomponents.asynccall as asynccall
 
 class IPTVSubDownloaderWidget(Screen):
     IPTV_VERSION = GetIPTVPlayerVerstion()
-    screenwidth = getDesktop(0).size().width()
+    screenwidth = 1980
     if screenwidth and screenwidth == 1920:
         skin =  """
                     <screen name="IPTVSubDownloaderWidget" position="center,center" size="1590,825" title="IPTV Player HD v%s">

@@ -132,7 +132,7 @@ class IPTVFavouritesAddItemWidget(Screen):
         self.close(self.result)
 
 class IPTVFavouritesMainWidget(Screen):
-    sz_w = getDesktop(0).size().width() - 190
+    sz_w = 1980 - 190
     sz_h = getDesktop(0).size().height() - 195
     if sz_h < 500:
         sz_h += 4

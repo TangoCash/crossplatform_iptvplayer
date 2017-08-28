@@ -464,7 +464,7 @@ class AlltubeTV(CBaseHostClass):
             self.listSearchResult(cItem, searchPattern, searchType)
     #HISTORIA SEARCH
         elif category == "search_history":
-            self.listsHistory({'name':'history', 'category': 'search', 'icon':self.DEFAULT_ICON}, 'desc', _("Type: "))
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
             printExc()
         

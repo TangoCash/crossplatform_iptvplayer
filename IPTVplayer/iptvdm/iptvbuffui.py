@@ -42,7 +42,7 @@ class IPTVPlayerBufferingWidget(Screen):
     #######################
     # screen size
     # we do not want borders, so make the screen lager than a desktop
-    sz_w = getDesktop(0).size().width() 
+    sz_w = 1980 
     sz_h = getDesktop(0).size().height()
     # icon
     i_w = 128

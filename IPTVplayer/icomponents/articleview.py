@@ -16,7 +16,7 @@ from enigma import getDesktop
 ###################################################
 
 class ArticleView(Screen):
-    sz_w = getDesktop(0).size().width() - 200
+    sz_w = 1980 - 200
     sz_h = getDesktop(0).size().height() - 200
     
     skin = """

@@ -91,7 +91,7 @@ class IPTVMainNavigatorList(IPTVListComponentBase):
     def __init__(self):
         IPTVListComponentBase.__init__(self)
         
-        self.screenwidth = getDesktop(0).size().width()
+        self.screenwidth = 1980
         try: self.font = skin.fonts["iptvlistitem"]
         except Exception:
             if self.screenwidth and self.screenwidth == 1920: self.font = ("Regular", 28, 40, 0)

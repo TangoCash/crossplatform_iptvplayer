@@ -39,7 +39,7 @@ class ConfigIPTVFileSelection(ConfigDirectory):
         ConfigDirectory.__init__(self, default, visible_width)
 
 class ConfigBaseWidget(Screen, ConfigListScreen):
-    screenwidth = getDesktop(0).size().width()
+    screenwidth = 1980
     if screenwidth and screenwidth == 1920:
         skin = """
             <screen position="center,center" size="920,860" title="" >

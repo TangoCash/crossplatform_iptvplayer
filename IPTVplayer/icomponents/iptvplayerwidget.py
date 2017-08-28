@@ -76,7 +76,7 @@ gDownloadManager = None
 
 class IPTVPlayerWidget(Screen):
     IPTV_VERSION = GetIPTVPlayerVerstion()
-    screenwidth = getDesktop(0).size().width()
+    screenwidth = 1980
     if screenwidth and screenwidth == 1920:
         skin =  """
                     <screen name="IPTVPlayerWidget" position="center,center" size="1590,825" title="IPTV Player HD v%s">
@@ -134,7 +134,7 @@ class IPTVPlayerWidget(Screen):
         self.session = session
         selSkin = config.plugins.iptvplayer.skin.value
         if selSkin == 'Auto':
-            screenwidth = getDesktop(0).size().width()
+            screenwidth = 1980
             if screenwidth and screenwidth > 1900:
                 selSkin = 'halidri1080p1'
             else:

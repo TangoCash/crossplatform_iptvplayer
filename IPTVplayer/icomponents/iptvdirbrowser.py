@@ -47,7 +47,7 @@ class IPTVDirBrowserList(IPTVMainNavigatorList):
         IPTVMainNavigatorList.__init__(self)
 
 class IPTVDirectorySelectorWidget(Screen):
-    screenwidth = getDesktop(0).size().width()
+    screenwidth = 1980
     if screenwidth and screenwidth == 1920:  
         skin = """
         <screen name="IPTVDirectorySelectorWidget" position="center,center" size="820,860" title="">
@@ -276,7 +276,7 @@ class IPTVDirectorySelectorWidget(Screen):
                 self.session.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout=5)
 
 class IPTVFileSelectorWidget(IPTVDirectorySelectorWidget):
-    screenwidth = getDesktop(0).size().width()
+    screenwidth = 1980
     if screenwidth and screenwidth == 1920:  
         skin = """
         <screen name="IPTVFileSelectorWidget" position="center,center" size="820,860" title="">
