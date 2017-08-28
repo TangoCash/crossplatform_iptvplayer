@@ -146,6 +146,7 @@ do
   sed -i "s;\(import .*\.\)components\(.*\);\1icomponents\2;g" $myfile #new folders structure to workarround with fat issues
   sed -i "s;\(import .*\.\)tools\(.*\);\1itools\2;g" $myfile #new folders structure to workarround with fat issues
   sed -i "s;\(import .*\dToolsSet.\)itools\(.*\);\1iptvtools\2;g" $myfile #new folders structure to workarround with fat issues
+  sed -i "s;getDesktop(0).size().width();1980;g" $myfile #e2 emulator does not have it, so setting 1980 FHD it eill br nrvrt used
 done
 #removing local imports from the list
 echo 'Removing some hosts and adding couple new 3rd party...'
