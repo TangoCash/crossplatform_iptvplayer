@@ -1,0 +1,88 @@
+# This is fake enigma file
+# do whatever you need with it.
+from os import devnull, path
+from eConsoleImpl import eConsoleImpl
+from twisted.internet import reactor, defer
+
+class eConsoleAppContainer():
+    m_cwd=""
+    def setCWD(self, myPath): #int setCWD( const char *path );
+        if not os.path.exists(myPath):
+            return -1
+        elif os.path.isfile(myPath):
+            return -2
+        else:
+            m_cwd=myPath
+            return 0
+
+    def kill(self): #void kill();
+        #reactor.stop() ????
+        pass
+
+    def sendCtrlC(self): #void sendCtrlC();
+        self.kill()
+
+    def sendEOF(self): #void sendEOF();
+        self.kill()
+
+    def appClosed(self, retval): #PSignal1<void,int> appClosed;
+        pass
+    
+    def stderrAvail(self, str): #PSignal1<void, const char*> stderrAvail;
+        pass
+    
+    def dataSent(self): #PSignal1<void,int> dataSent;
+        pass
+
+    def stdoutAvail(self, str): #PSignal1<void, const char*> stdoutAvail;
+        pass
+
+    def dataAvail(self, str): #PSignal1<void, const char*> dataAvail;
+        pass
+
+    def write(self, str): #void write( const char *data, int len );
+        pass
+
+    def setFileFD(self, str): #void setFileFD(int num, int fd) { if (num >= 0 && num <= 2) filefd[num] = fd; }
+        pass
+
+    def running(self, str): #bool running() { return (fd[0]!=-1) && (fd[1]!=-1) && (fd[2]!=-1); }
+        pass
+
+    def execute(self,cmdlineSRC): #int execute( const char *cmdline, const char *const argv[] );
+        #print cmdlineSRC
+        #FNULL = open(devnull, 'w')
+        if not isinstance(cmdlineSRC, basestring):
+            cmdParameters=cmdline
+        else:
+            print "isLine"
+            cmdline=cmdlineSRC
+            cmdParameters=cmdline.split(" ")
+            
+        print cmdParameters
+        if 'wget' in cmdParameters: #for wget separate process and logs
+            iindex = 1
+            from subprocess import Popen
+            if cmdline.find(' -O ') >= 0: #each wget contains own log
+                fileName = cmdline[cmdline.find(' -O ')+len(' -O '):].replace('> /dev/null','').replace('"','').strip()
+                try:
+                    FNULL = open('%s.wget' % fileName, 'w') #each wget contains own log
+                except:
+                    while True:
+                        if not path.exists('/tmp/.IPTVdaemon/wget%d.log' % iindex):
+                            break
+                        iindex += 1
+                    FNULL = open('/tmp/.IPTVdaemon/wget%d.log' % iindex, 'w') #each wget contains own log
+            else:
+                FNULL = open('/tmp/.IPTVdaemon/eConsole.log', 'w')
+            Popen(cmdline, stdout=FNULL, stderr=FNULL, shell=True)
+            return
+        else:
+            myConsole = eConsoleImpl()
+            reactor.spawnProcess(myConsole, cmdParameters[0], cmdParameters, path = m_cwd, usePTY = True)
+            reactor.run()
+            
+##################### ENIGMA ACTIONS
+class eActionMap:
+    def __init__(self):
+        pass
