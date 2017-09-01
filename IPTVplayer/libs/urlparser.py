@@ -1993,7 +1993,14 @@ class pageParser:
             value="([^"]*)"
             ''', data)
             
-        time.sleep(12)
+        if 0 == len(fields):
+            msg = self.cm.ph.getDataBeetwenMarkers(data, '<div id="file"', '</div>')[1]
+            msg = clean_html(self.cm.ph.getDataBeetwenMarkers(data, '<p', '</p>')[1])
+            SetIPTVPlayerLastHostError(msg)
+        else:
+            try: t = int(self.getSearchGroups(data, '''var\s*count\s*=\s*([0-9]+?)\s*;''')[0])
+            except Exception: t = 12
+            time.sleep(t)
         
         sts, data = self.cm.getPage(url, {}, fields)
         if not sts: return False

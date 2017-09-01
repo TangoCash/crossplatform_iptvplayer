@@ -269,7 +269,11 @@ class MoovieCC(CBaseHostClass):
             
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<tr', '</tr>')
             for item in tmp:
-                url = self.cm.ph.getSearchGroups(item, '''href=['"][^'^"]*/(https?://[^'^"]+?)['"]''')[0]
+                printDBG(item)
+                url = self.cm.ph.getSearchGroups(item, '''href=['"](https?://[^'^"]+?)['"]''')[0]
+                tmpUrl = self.cm.ph.getSearchGroups(url, '''[^'^"]*/(https?://[^'^"]+?)['"]''')[0]
+                if self.cm.isValidUrl(tmpUrl): url = tmpUrl
+                printDBG(">>> " + url)
                 if not self.cm.isValidUrl(url): continue
                 serverName = []
                 item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<td', '</td>')
@@ -494,6 +498,7 @@ class MoovieCC(CBaseHostClass):
                         break
                 if not found or 'flashx' in videoUrl:
                     tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'embedFrame', '</a>')
+                    tmp.extend(self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>'))
                     for urlItem in tmp:
                         url = self.cm.ph.getSearchGroups(urlItem, '''href=['"](https?://[^'^"]+?)['"]''')[0]
                         if 1 == self.up.checkHostSupport(url):

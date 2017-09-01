@@ -131,7 +131,7 @@ class XrysoiSE(CBaseHostClass):
         sts, data = self.cm.getPage(url) #, {'header':self.AJAX_HEADER}
         if not sts: return
         
-        nextPage = self.cm.ph.getDataBeetwenMarkers(data, "class='pages'", '</div>', False)[1]
+        nextPage = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''class=['"]pages['"]'''), re.compile('</div>'), False)[1]
         if 'rel="next"' in nextPage:
             nextPage = True
         else: nextPage = False

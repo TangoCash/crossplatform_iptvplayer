@@ -25,6 +25,14 @@ else
   cd ~/Archive/iptvplayerXXX-GitLab-master-version
   git pull
 fi
+if [ ! -d ~/Archive/iptvplayer-infoversion-host ];then
+  echo 'Cloning XXX host...'
+  git clone https://gitlab.com/mosz_nowy/infoversion.git ~/Archive/iptvplayer-infoversion-host
+else
+  echo 'Syncing GitLab XXX host...'
+  cd ~/Archive/iptvplayer-infoversion-host
+  git pull
+fi
 if [ ! -d ~/Archive/zdzislaw-iptvplayer-GitLab-version ];then
   mkdir -p ~/Archive
   echo 'Cloning...'
@@ -61,6 +69,7 @@ do
   touch $publicGitDir/$subDIR/__init__.py
 done
 cp -a ~/Archive/iptvplayerXXX-GitLab-master-version/IPTVPlayer/hosts/* $publicGitDir/hosts/
+cp -a ~/Archive/iptvplayer-infoversion-host/hosts/* $publicGitDir/hosts/
 cp -f ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/version.py $publicGitDir
 wersja=`cat ./IPTVPlayer/version.py|grep 'IPTV_VERSION='|cut -d '"' -f2`
 sed -i "s/^name=.*$/name=IPTV for Neutrino @j00zek v.$wersja/" $NpluginDir/neutrinoIPTV.cfg
@@ -70,6 +79,7 @@ echo "$wersja">$daemonDir/version
 rm -f $publicGitDir/icons/*
 mv -f $publicGitDir/icons/logos/*.png $publicGitDir/icons/
 cp -a ~/Archive/iptvplayerXXX-GitLab-master-version/IPTVPlayer/icons/logos/XXXlogo.png $publicGitDir/icons/XXX.png
+cp -a ~/Archive/iptvplayer-infoversion-host/icons/logos/infologo.png $publicGitDir/icons/infoversion.png
 rm -rf $publicGitDir/icons/logos/
 rm -rf $publicGitDir/icons/favourites*
 cd $publicGitDir/icons/
