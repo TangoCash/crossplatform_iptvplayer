@@ -107,6 +107,8 @@ config.plugins.iptvplayer.ekinotv_password = ConfigText(default = "", fixed_size
 config.plugins.iptvplayer.ekinotv_sortby = ConfigSelection(default = "data-dodania", choices = [("alfabetycznie", "nazwy"), ("ocena", "oceny"),("odslony", "ilości odsłon"),("data-dodania", "daty dodania"),("data-premiery", "daty premiery"), ('data-aktualizacji', 'daty aktualizacji')])            
 config.plugins.iptvplayer.ekinotv_sortorder = ConfigSelection(default = "desc", choices = [("desc", "malejąco"),("asc", "rosnąco")]) 
 config.plugins.iptvplayer.serienstreamto_langpreference = ConfigSelection(default = "de,de_sub,en", choices = [("de,de_sub,en", "de,sub,en"), \
+config.plugins.iptvplayer.serienstreamto_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.serienstreamto_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.seriesonlineio_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.seriesonlineio_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(default = "rtmp", choices = [("rtmp", "rtmp"),("hls", "HLS - m3u8")]) 
@@ -134,6 +136,9 @@ config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
 config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_proxygateway = ConfigYesNo(default = False)
+config.plugins.iptvplayer.kinomanco_vip_only = ConfigYesNo(default=False)
+config.plugins.iptvplayer.kinomanco_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.kinomanco_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.svt_default_quality = ConfigSelection(default = "99999999", choices = [
 config.plugins.iptvplayer.svt_use_default_quality = ConfigYesNo(default = False)
 config.plugins.iptvplayer.svt_prefered_format     = ConfigSelection(default = "hls", choices = [
@@ -182,6 +187,7 @@ config.plugins.iptvplayer.camsoda = ConfigSelection(default="0", choices = [("0"
 config.plugins.iptvplayer.delay = ConfigInteger(2, (0, 5))   
 config.plugins.iptvplayer.xhamstertag = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xhamsterchannel = ConfigYesNo(default = False)
+config.plugins.iptvplayer.bonga = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
 config.plugins.iptvplayer.CartoonME_language = ConfigSelection(default = "en", choices = [("en", _("English")), ("es", _("Spanish"))])
 config.plugins.iptvplayer.tvnowde_show_paid_items = ConfigYesNo(default = False)
 config.plugins.iptvplayer.tvnowde_show_drm_items = ConfigYesNo(default = False)

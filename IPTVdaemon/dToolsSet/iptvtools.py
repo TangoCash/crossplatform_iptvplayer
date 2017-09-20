@@ -8,7 +8,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-import Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu
+
 ###################################################
  
 ###################################################
@@ -16,6 +16,7 @@ import Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu
 ###################################################
 from Components.config import config
 from Tools.Directories import resolveFilename, fileExists, SCOPE_PLUGINS, SCOPE_CONFIG
+from enigma import eConsoleAppContainer
 from Components.Language import language
 from time import sleep as time_sleep, time
 from urllib2 import Request, urlopen, URLError, HTTPError
@@ -30,6 +31,24 @@ import stat
 import codecs
 try:    import json
 except Exception: import simplejson as json
+import datetime
+
+###################################################
+def DaysInMonth(dt):
+    return (datetime.date(dt.year+(dt.month / 12), (dt.month % 12) + 1, 1) - dt).days + dt.day - 1
+    
+def NextMonth(dt):
+    return (dt.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
+    
+def PrevMonth(dt):
+    return (dt.replace(day=1) - datetime.timedelta(days=1)).replace(day=1)
+    
+def NextDay(dt):
+    return (dt + datetime.timedelta(days=1))
+    
+def PrevDay(dt):
+    return (dt - datetime.timedelta(days=1))
+
 ###################################################
 def GetNice(pid=None):
     nice = 0
@@ -1092,13 +1111,17 @@ class CMoviePlayerPerHost():
     def set(self, activePlayer):
         self.activePlayer = activePlayer
         
-def byteify(input):
+def byteify(input, noneReplacement=None, baseTypesAsString=False):
     if isinstance(input, dict):
-        return dict([(byteify(key), byteify(value)) for key, value in input.iteritems()])
+        return dict([(byteify(key, noneReplacement, baseTypesAsString), byteify(value, noneReplacement, baseTypesAsString)) for key, value in input.iteritems()])
     elif isinstance(input, list):
-        return [byteify(element) for element in input]
+        return [byteify(element, noneReplacement, baseTypesAsString) for element in input]
     elif isinstance(input, unicode):
         return input.encode('utf-8')
+    elif input == None and noneReplacement != None:
+        return noneReplacement
+    elif baseTypesAsString:
+        return str(input)
     else:
         return input
 

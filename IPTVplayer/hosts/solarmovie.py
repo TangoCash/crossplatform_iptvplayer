@@ -22,7 +22,7 @@ import urllib
 import string
 import random
 import base64
-from urlparse import urlparse
+from urlparse import urlparse, urljoin
 from binascii import hexlify, unhexlify
 from hashlib import md5
 try:    import json
@@ -112,10 +112,11 @@ class SolarMovie(CBaseHostClass):
             if self.cm.isValidUrl(url):
                 return url
             else:
-                return urlparse.urljoin(baseUrl, url)
+                return urljoin(baseUrl, url)
             
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
         sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        return sts, data
         if sts:
             try:
                 tmpUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script src=['"]([^'^"]*?/token[^'^"]*?)['"]''')[0])
@@ -370,15 +371,15 @@ class SolarMovie(CBaseHostClass):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
                         
-        sts, data = self.getPage(self.getFullUrl('token'))
-        if not sts: return []
-        cookieItem = self.uncensored(data)
+        #sts, data = self.getPage(self.getFullUrl('token'))
+        #if not sts: return []
+        #cookieItem = self.uncensored(data)
         
         id = videoUrl.meta.get('id', '')
         params = dict(self.defaultParams)
         params['header'] = dict(self.AJAX_HEADER)
         params['header']['Referer'] = str(videoUrl)
-        params['cookie_items'] = cookieItem
+        #params['cookie_items'] = cookieItem
         
         sts, data = self.getPage(videoUrl, params)
         if not sts: return []

@@ -27,8 +27,9 @@ import os
 #import codecs
 #try:    import json
 #except: import simplejson as json
+from tempfile import gettempdir
 
-config.misc.sysTempPath = ConfigText(default = "/tmp", fixed_size = False)
+config.misc.sysTempPath = ConfigText(default = gettempdir() , fixed_size = False)
     
 #############################################################
 # e2 support functions

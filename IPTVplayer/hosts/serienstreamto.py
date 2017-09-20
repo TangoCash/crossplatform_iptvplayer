@@ -30,6 +30,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
@@ -41,14 +42,17 @@ config.plugins.iptvplayer.serienstreamto_langpreference = ConfigSelection(defaul
                                                                                                                ("de_sub,en,de", "sub,en,de"), \
                                                                                                                ("en,de_sub,de", "en,sub,de"), \
                                                                                                                ("en,de,de_sub", "en,de,sub")]) 
+config.plugins.iptvplayer.serienstreamto_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.serienstreamto_password = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
     optionList.append( getConfigListEntry( _("Your language preference:"), config.plugins.iptvplayer.serienstreamto_langpreference ) )
     
+    optionList.append(getConfigListEntry(_("e-mail")+":", config.plugins.iptvplayer.serienstreamto_login))
+    optionList.append(getConfigListEntry(_("password")+":", config.plugins.iptvplayer.serienstreamto_password))
     return optionList
 ###################################################
-
 
 def gettytul():
     return 'https://serienstream.to/'
@@ -78,6 +82,9 @@ class SerienStreamTo(CBaseHostClass):
         self.cacheLinks = {}
         self.cacheFilters = {}
         self.cookieHeader = ''
+        self.login = ''
+        self.password = ''
+        self.loggedIn = None
         
     def getPage(self, baseUrl, params={}, post_data=None):
         if params == {}: params = dict(self.defaultParams)
@@ -294,7 +301,7 @@ class SerienStreamTo(CBaseHostClass):
                     tries = 0
                     tmpUrl = videoUrl
                     while tries < 3:
-                        sts, response = self.cm.getPage(videoUrl, params)
+                        sts, response = self.getPage(videoUrl, params)
                         printDBG("+++++++++++")
                         printDBG(response.info())
                         printDBG("+++++++++++")
@@ -309,33 +316,56 @@ class SerienStreamTo(CBaseHostClass):
                         tries += 1
                 except Exception:
                     printExc()
-                
+            
+            if 1 != self.up.checkHostSupport(videoUrl):
+                sts, data = self.getPage(videoUrl)
+                if sts and 'google.com/recaptcha/' in data and 'sitekey' in data:
+                    message = _('Link protected with google recaptcha v2.')
+                    if True != self.loggedIn:
+                        message += '\n' + _('Please fill your login and password in the host configuration (available under blue button) and try again.')
+                    else:
+                        message += '\n' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<small', '</small>')[1])
+                        message += '\n' + _('Please retry later.')
+                    SetIPTVPlayerLastHostError(message)
+            
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         
-    def getFavouriteData(self, cItem):
-        printDBG('SerienStreamTo.getFavouriteData')
-        return json.dumps(cItem)
+    def tryTologin(self):
+        printDBG('tryTologin start')
         
-    def getLinksForFavourite(self, fav_data):
-        printDBG('SerienStreamTo.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception:
-            printExc()
-        return links
+        if self.login == config.plugins.iptvplayer.serienstreamto_login.value and \
+           self.password == config.plugins.iptvplayer.serienstreamto_password.value:
+           return 
         
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('SerienStreamTo.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
+        self.cm.clearCookie(self.COOKIE_FILE, ['__cfduid', 'cf_clearance'])
+        self.login = config.plugins.iptvplayer.serienstreamto_login.value
+        self.password = config.plugins.iptvplayer.serienstreamto_password.value
+        
+        if '' == self.login.strip() or '' == self.password.strip():
+            printDBG('tryTologin wrong login data')
+            self.loggedIn = None
+            return
+            
+        url = self.getFullUrl('/login')
+        
+        post_data = {'email':self.login, 'password':self.password, 'autoLogin':'on'}
+
+        httpParams = dict(self.defaultParams)
+        httpParams['header'] = dict(httpParams['header'])
+        httpParams['header']['Referer'] = url
+        sts, data = self.getPage(url, httpParams, post_data)
+        printDBG(data)
+        sts, data = self.getPage(url)
+        if sts and '/home/logout' in data:
+            printDBG('tryTologin OK')
+            self.loggedIn = True
+            return
+     
+        self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_ERROR, timeout = 10)
+        printDBG('tryTologin failed')
+        self.loggedIn = False
+        return
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -348,6 +378,8 @@ class SerienStreamTo(CBaseHostClass):
         
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
+        
+        self.tryTologin()
         
     #MAIN MENU
         if name == None:

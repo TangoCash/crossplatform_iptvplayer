@@ -199,6 +199,101 @@ class CParsingHelper:
         else:
             idx1 = idx1 + len(marker1)
         return True, data[idx1:idx2]
+    
+    @staticmethod
+    def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True):
+        if len(node1) < 2 or len(node2) < 2:
+            return []
+        itemsTab = []
+        n1S = node1[0]
+        n1E = node1[1]
+        if len(node1) > 2: n1P = node1[2]
+        else: n1P = None
+        n2S = node2[0]
+        n2E = node2[1]
+        if len(node2) > 2: n2P = node2[2]
+        else: n2P = None
+        lastIdx = 0
+        search = 1
+        sData = data
+        while True:
+            if search == 1:
+                # node 1 - start
+                idx1 = sData.find(n1S, lastIdx)
+                if -1 == idx1: return itemsTab
+                lastIdx = idx1 + len(n1S)
+                idx2 = sData.find(n1E, lastIdx)
+                if -1 == idx2: return itemsTab
+                lastIdx = idx2 + len(n1E)
+                if n1P != None and sData.find(n1P, idx1 + len(n1S), idx2) == -1:
+                    continue
+                search = 2
+            else:
+                # node 2 - end
+                tIdx1 = sData.find(n2S, lastIdx)
+                if -1 == tIdx1: return itemsTab
+                lastIdx = tIdx1 + len(n2S)
+                tIdx2 = sData.find(n2E, lastIdx)
+                if -1 == tIdx2: return itemsTab
+                lastIdx = tIdx2 + len(n2E)
+
+                if n2P != None and sData.find(n2P, tIdx1 + len(n2S), tIdx2) == -1:
+                    continue
+
+                if withNodes:
+                    idx2 = tIdx2 + len(n2E)
+                else:
+                    idx1 = idx2 + len(n1E)
+                    idx2 = tIdx1
+                search = 1
+                itemsTab.append(sData[idx1:idx2])
+        return itemsTab
+        
+    @staticmethod
+    def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True):
+        if len(node1) < 2 or len(node2) < 2:
+            return []
+        itemsTab = []
+        n1S = node1[0]
+        n1E = node1[1]
+        if len(node1) > 2: n1P = node1[2]
+        else: n1P = None
+        n2S = node2[0]
+        n2E = node2[1]
+        if len(node2) > 2: n2P = node2[2]
+        else: n2P = None
+        lastIdx = len(data)
+        search = 1
+        sData = data
+        while True:
+            if search == 1:
+                # node 1 - end
+                idx1 = sData.rfind(n1S, 0, lastIdx)
+                if -1 == idx1: return itemsTab
+                lastIdx = idx1
+                idx2 = sData.find(n1E, idx1+len(n1S))
+                if -1 == idx2: return itemsTab
+                if n1P != None and sData.find(n1P, idx1 + len(n1S), idx2) == -1:
+                    continue
+                search = 2
+            else:
+                # node 2 - start
+                tIdx1 = sData.rfind(n2S, 0, lastIdx)
+                if -1 == tIdx1: return itemsTab
+                lastIdx = tIdx1
+                tIdx2 = sData.find(n2E, tIdx1+len(n2S), idx1)
+                if -1 == tIdx2: return itemsTab
+                if n2P != None and sData.find(n2P, tIdx1 + len(n2S), tIdx2) == -1:
+                    continue
+                if withNodes:
+                    s1 = tIdx1
+                    s2 = idx2 + len(n1E)
+                else:
+                    s1 = tIdx2 + len(n2E)
+                    s2 = idx1
+                search = 1
+                itemsTab.insert(0, sData[s1:s2])
+        return itemsTab
         
     @staticmethod    
     def removeDoubles(data, pattern):
@@ -475,11 +570,14 @@ class common:
         
         current = 0
         while current < 3:
+            #if True:
             if not sts and None != data:
                 start_time = time.time()
                 current += 1
                 doRefresh = False
                 try:
+                    #try: verData = data.fp.read()
+                    #except Exception: verData = data
                     verData = data.fp.read()
                     printDBG("===============================================================")
                     printDBG(verData)

@@ -438,9 +438,11 @@ class urlparser:
                        'publicvideohost.org':  self.pp.parserPUBLICVIDEOHOST,
                        'vidnode.net':          self.pp.parserVIDNODENET     ,
                        'videa.hu':             self.pp.parserVIDEAHU        ,
-                       'streamcherry.com':     self.pp.parserSTREAMCHERRYCOM,
+                       'streamcherry.com':     self.pp.parserSTREAMANGOCOM  ,
                        'aflamyz.com':          self.pp.parserAFLAMYZCOM     ,
                        'polsatsport.pl':       self.pp.parserPOLSATSPORTPL  ,
+                       'sharevideo.pl':        self.pp.parserSHAREVIDEOPL   ,
+                       'sharing-box.cloud':    self.pp.parserSHAREVIDEOPL   ,
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                     }
         return
@@ -1555,15 +1557,32 @@ class pageParser:
         if not sts: return False
         
         printDBG(data)
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ');', False)[1].strip()
-        data = self.cm.ph.getDataBeetwenMarkers(data, '"sources":', ']', False)[1].strip()
-        data = byteify(json.loads(data+']'))
-        printDBG(data)
         retTab = []
-        for item in data:
+        try:
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ');', False)[1].strip()
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, '"sources":', ']', False)[1].strip()
+            tmp = byteify(json.loads(data+']'))
+            printDBG(tmp)
+        except Exception:
+            printExc()
+        
+        for item in tmp:
             try: retTab.append({'name':'rapidvideo.com ' + item.get('label', item.get('res', '')), 'url':item['file']})
             except Exception: pass
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<source', '>', False)
+        for item in tmp:
+            url = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
+            type = self.cm.ph.getSearchGroups(item, '''type=['"]([^'^"]+?)['"]''')[0] 
+            if 'video' not in type and 'x-mpeg' not in type: continue
+            if url.startswith('/'):
+                url = domain + url[1:]
+            if self.cm.isValidUrl(url):
+                if 'video' in type:
+                    retTab.append({'name':'[%s]' % type, 'url':url})
+                elif 'x-mpeg' in type:
+                    retTab.extend(getDirectM3U8Playlist(url, checkContent=True))
         return retTab
         
     def parserVIDEOSLASHER(self, url):
@@ -5136,6 +5155,7 @@ class pageParser:
         
     def parserFLASHXTV(self, baseUrl):
         printDBG("parserFLASHXTV baseUrl[%s]" % baseUrl)
+        
         HTTP_HEADER = { 'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0',
                         'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                         'Accept-Language':'pl,en-US;q=0.7,en;q=0.3',
@@ -5146,41 +5166,108 @@ class pageParser:
         COOKIE_FILE = GetCookieDir('flashxtv.cookie')
         params = {'header':HTTP_HEADER, 'cookiefile':COOKIE_FILE, 'use_cookie': True, 'save_cookie':True, 'return_data':True}
         
+        def __parseErrorMSG(data):
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<center>', '</center>', False, False)
+            for item in data:
+                if 'color="red"' in item or ('ile' in item and '<script' not in item):
+                    SetIPTVPlayerLastHostError(clean_html(item))
+                    break
+        
+        def __getJS(data, params):
+            tmpUrls = re.compile("""<script[^>]+?src=['"]([^'^"]+?)['"]""", re.IGNORECASE).findall(data)
+            printDBG(tmpUrls)
+            for tmpUrl in tmpUrls:
+                if tmpUrl.startswith('.'):
+                    tmpUrl = tmpUrl[1:]
+                if tmpUrl.startswith('//'):
+                    tmpUrl = 'http:' + tmpUrl
+                if tmpUrl.startswith('/'):
+                    tmpUrl = 'http://www.flashx.tv' + tmpUrl
+                if self.cm.isValidUrl(tmpUrl) and ('flashx' in tmpUrl and 'jquery' not in tmpUrl): 
+                    printDBG('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+                    sts, tmp = self.cm.getPage(tmpUrl, params)
+            
+            sts, tmp = self.cm.getPage('https://www.flashx.tv/js/code.js', params)
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'function', ';');
+            for tmpItem in tmp:
+                tmpItem = tmpItem.replace(' ', '')
+                if '!=null' in tmpItem:
+                    tmpItem   = self.cm.ph.getDataBeetwenMarkers(tmpItem, 'get(', ')')[1]
+                    tmpUrl    = self.cm.ph.getSearchGroups(tmpItem, """['"](https?://[^'^"]+?)['"]""")[0]
+                    if not self.cm.isValidUrl(tmpUrl): continue
+                    getParams = self.cm.ph.getDataBeetwenMarkers(tmpItem, '{', '}', False)[1]
+                    getParams = getParams.replace(':', '=').replace(',', '&').replace('"', '').replace("'", '')
+                    tmpUrl += '?' + getParams
+                    sts, tmp = self.cm.getPage(tmpUrl, params)
+                    break
+        
         if baseUrl.split('?')[0].endswith('.jsp'):
             rm(COOKIE_FILE)
             sts, data = self.cm.getPage(baseUrl, params)
             if not sts: return False
             
+            __parseErrorMSG(data)
+            
             cookies = dict(re.compile(r'''cookie\(\s*['"]([^'^"]+?)['"]\s*\,\s*['"]([^'^"]+?)['"]''', re.IGNORECASE).findall(data))
             tmpParams = dict(params)
             tmpParams['cookie_items'] = cookies
+            tmpParams['header']['Referer'] = baseUrl
+            
+            __getJS(data, tmpParams)
             
             data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<form[^>]+?method="POST"', re.IGNORECASE),  re.compile('</form>', re.IGNORECASE), True)[1]
-            #printDBG(data)
-            action = self.cm.ph.getSearchGroups(data, "action='([^']+?)'", ignoreCase=True)[0]
+            printDBG(data)
+            printDBG("================================================================================")
+            
+            action = self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
             post_data = dict(re.compile(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', re.IGNORECASE).findall(data))
+            try:
+                tmp = dict(re.findall(r'<button[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', data))
+                post_data.update(tmp)
+            except Exception:
+                printExc()
             
             try: time.sleep(int(self.cm.ph.getSearchGroups(data, '>([0-9])</span> seconds<')[0])+1)
             except Exception:
                 printExc()
             
             if {} == post_data:  post_data = None
-            action = urljoin(baseUrl, action)
+            if not self.cm.isValidUrl(action) and url != '':
+                action = urljoin(baseUrl, action)
             
-            tmpParams['header']['Referer'] = baseUrl
             sts, data = self.cm.getPage(action, tmpParams, post_data)
             if not sts: return False
             
             printDBG(data)
+            __parseErrorMSG(data)
+            
             # get JS player script code from confirmation page
-            sts, tmp = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
-            if sts:
-                try:
-                    tmp = urllib.unquote(unpackJSPlayerParams(tmp, SAWLIVETV_decryptPlayerParams, 0))
-                    baseUrl = self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src="(https?://[^/]+?/embed\-[^\.]+?\.html)"''', ignoreCase=True)[0]
-                except Exception: printExc()
-            if '/embed-' not in baseUrl:
-                baseUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src="(https?://[^/]+?/embed\-[^\.]+?\.html)"''', ignoreCase=True)[0]
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, ">eval(", '</script>', False)
+            for item in tmp:
+                printDBG("================================================================================")
+                printDBG(item)
+                printDBG("================================================================================")
+                item = item.strip()
+                if item.endswith(')))'): idx = 1
+                else: idx = 0
+                printDBG("IDX[%s]" % idx)
+                for decFun in [SAWLIVETV_decryptPlayerParams, KINGFILESNET_decryptPlayerParams]:
+                    decItem = urllib.unquote(unpackJSPlayerParams(item, decFun, idx))
+                    printDBG('[%s]' % decItem)
+                    data += decItem + ' '
+                    if decItem != '': break
+            
+            urls = []
+            tmp = re.compile('''\{[^}]*?src[^}]+?video/mp4[^}]+?\}''').findall(data )
+            for item in tmp:
+                label = self.cm.ph.getSearchGroups(item, '''['"]?label['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+                res = self.cm.ph.getSearchGroups(item, '''['"]?res['"]?\s*:\s*[^0-9]?([0-9]+?)[^0-9]''')[0]
+                name = '%s - %s' % (res, label)
+                url = self.cm.ph.getSearchGroups(item, '''['"]?src['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
+                params = {'name':name, 'url':url}
+                if params not in urls: urls.append(params)
+            
+            return urls
         
         if '.tv/embed-' not in baseUrl:
             baseUrl = baseUrl.replace('.tv/', '.tv/embed-')
@@ -5208,56 +5295,22 @@ class pageParser:
         params['return_data'] = True
         sts, data = self.cm.getPage(baseUrl, params)
         params['header']['Referer'] = redirectUrl
-        params['return_data'] = True
         params['load_cookie'] = True
         
-        def _first_of_each(*sequences):
-            return (next((x for x in sequence if x), '') for sequence in sequences)
+        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG(data)
+        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
         
-        def _url_path_join(*parts):
-            """Normalize url parts and join them with a slash."""
-            schemes, netlocs, paths, queries, fragments = zip(*(urlsplit(part) for part in parts))
-            scheme, netloc, query, fragment = _first_of_each(schemes, netlocs, queries, fragments)
-            path = '/'.join(x.strip('/') for x in paths if x)
-            return urlunsplit((scheme, netloc, path, query, fragment))
         
         vid = self.cm.ph.getSearchGroups(redirectUrl+'/', '[^A-Za-z0-9]([A-Za-z0-9]{12})[^A-Za-z0-9]')[0]
-        for item in ['playvid', 'playthis', 'playit']:
+        for item in ['playvid', 'playthis', 'playit', 'playme']:
             if item+'-' in data:
                 play = item
                 break
         
         printDBG("vid[%s] play[%s]" % (vid, play))
         
-        #tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?counter[^'^"]+?)['"]""")[0]
-        #if tmpUrl == '': tmpUrl = self.cm.ph.getSearchGroups(data, """['"]([^'^"]+?jquery2[^'^"]+?)['"]""")[0]
-        tmpUrls = re.compile("""['"]([^'^"]+?\.js[^'^"]+?)['"]""").findall(data)
-        for tmpUrl in tmpUrls:
-            if tmpUrl.startswith('.'):
-                tmpUrl = tmpUrl[1:]
-            if tmpUrl.startswith('//'):
-                tmpUrl = 'http:' + tmpUrl
-            if tmpUrl.startswith('/'):
-                tmpUrl = 'http://www.flashx.tv' + tmpUrl
-            if tmpUrl != '':
-                printDBG('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-                printDBG(tmpUrl)
-                sts, tmp = self.cm.getPage(tmpUrl, params)
-        #sts, tmp = self.cm.getPage(tmpUrl, params)
-        
-        sts, tmp = self.cm.getPage('https://www.flashx.tv/js/code.js', params)
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'function', ';');
-        for tmpItem in tmp:
-            tmpItem = tmpItem.replace(' ', '')
-            if '!=null' in tmpItem:
-                tmpItem   = self.cm.ph.getDataBeetwenMarkers(tmpItem, 'get(', ')')[1]
-                tmpUrl    = self.cm.ph.getSearchGroups(tmpItem, """['"](https?://[^'^"]+?)['"]""")[0]
-                if not self.cm.isValidUrl(tmpUrl): continue
-                getParams = self.cm.ph.getDataBeetwenMarkers(tmpItem, '{', '}', False)[1]
-                getParams = getParams.replace(':', '=').replace(',', '&').replace('"', '').replace("'", '')
-                tmpUrl += '?' + getParams
-                sts, tmp = self.cm.getPage(tmpUrl, params)
-                break
+        __getJS(data, params)
         
         url = self.cm.ph.getSearchGroups(redirectUrl, """(https?://[^/]+?/)""")[0] + play + '-{0}.html?{1}'.format(vid, play)
         sts, data = self.cm.getPage(url, params)
@@ -5271,8 +5324,7 @@ class pageParser:
         
         try:
             printDBG(data)
-            if 'Sorry, file was deleted!' in data:
-                SetIPTVPlayerLastHostError(_('Sorry, file was deleted!'))
+            __parseErrorMSG(data)
             
             tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(data, ">eval(", '</script>', False, False)
             for tmp in tmpTab:
@@ -5297,6 +5349,7 @@ class pageParser:
         linksTab.extend(re.compile("""["']*src["']*[ ]*?:[ ]*?["']([^"^']+?)['"]""").findall(data))
         linksTab = set(linksTab)
         for item in linksTab:
+            if item.endswith('/trailer.mp4'): continue
             if self.cm.isValidUrl(item):
                 if item.split('?')[0].endswith('.smil'):
                     # get stream link
@@ -6913,6 +6966,32 @@ class pageParser:
         params.update({'header':{'header':HTTP_HEADER}})
         sts, data = self.cm.getPage(baseUrl, params)
         if not sts: return False 
+        
+        associativeArray = ['var associativeArray = {};']
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<span', '</span>')
+        for item in tmp:
+            if 'display:none' not in item: continue
+            id = self.cm.ph.getSearchGroups(item, '''id\s*=['"]?([^'^"^>]+?)['">]''')[0].strip()
+            if id == '': continue
+            value = clean_html(item).strip()
+            associativeArray.append('associativeArray["%s"] = "%s";' % (id, value))
+        
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>')
+        for item in tmp:
+            if 'sources' in item:
+                tmp = item
+                break
+        
+        jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCg0KJXMNCg0KdmFyIGVsZW1lbnQgPSBmdW5jdGlvbiAoaW5uZXJIVE1MKQ0Kew0KICAgIHRoaXMuX2lubmVySFRNTCA9IGlubmVySFRNTDsNCiAgICANCiAgICBPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywgImlubmVySFRNTCIsIHsNCiAgICAgICAgZ2V0IDogZnVuY3Rpb24gKCkgew0KICAgICAgICAgICAgcmV0dXJuIHRoaXMuX2lubmVySFRNTDsNCiAgICAgICAgfSwNCiAgICAgICAgc2V0IDogZnVuY3Rpb24gKHZhbCkgew0KICAgICAgICAgICAgdGhpcy5faW5uZXJIVE1MID0gdmFsOw0KICAgICAgICB9DQogICAgfSk7DQp9Ow0KDQpkb2N1bWVudC5nZXRFbGVtZW50QnlJZCA9IGZ1bmN0aW9uKGlkKXsNCiAgICByZXR1cm4gbmV3IGVsZW1lbnQoYXNzb2NpYXRpdmVBcnJheVtpZF0pOw0KfQ0KDQpmdW5jdGlvbiBqd3BsYXllcigpIHsNCiAgICByZXR1cm4gandwbGF5ZXI7DQp9DQoNCmp3cGxheWVyLnNldHVwID0gZnVuY3Rpb24oc3JjZXMpew0KICAgIHByaW50KEpTT04uc3RyaW5naWZ5KHNyY2VzKSk7DQp9''')
+        jscode = jscode % ('\n'.join(associativeArray))
+        jscode += self.cm.ph.getDataBeetwenReMarkers(tmp, re.compile('<script[^>]*?>'), re.compile('</script>'), False)[1]
+        ret = iptv_js_execute( jscode )
+        if ret['sts'] and 0 == ret['code']:
+            tmp = ret['data'].strip()
+            data += tmp
+            #tmp = byteify(json.loads(tmp))
+            #print(tmp)
+        
         streamHlsUrls = re.compile('"((?:https:)?//[^"]+?\.m3u8[^"]*?)"').findall(data)
         for streamHlsUrl in streamHlsUrls:
             if streamHlsUrl.startswith('//'):
@@ -8414,27 +8493,41 @@ class pageParser:
         
         printDBG(data)
         
+        # select valid section
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>')
+        for item in data:
+            if 'srces.push' in item:
+                data = item
+                break
+                
+        jscode = 'var document = {};\nvar window = this;\n' + self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<script[^>]*?>'), re.compile('var\s*srces\s*=\s*\[\];'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'srces.push(', ');')
+        jscode += '\nvar srces=[];\n' + '\n'.join(data) + '\nprint(JSON.stringify(srces));'
+        ret = iptv_js_execute( jscode )
+        if ret['sts'] and 0 == ret['code']:
+            data = ret['data'].strip()
+            data = byteify(json.loads(data))
         
         dashTab = []
         hlsTab = []
         mp4Tab = []
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'srces.push(', ')', False)
         printDBG(data)
         for tmp in data:
-            tmp = tmp.split('}')
+            tmp = str(tmp).split('}')
             for item in tmp:
+                item += ','
                 url = self.cm.ph.getSearchGroups(item, r'''['"]?src['"]?\s*:\s*['"]([^"^']+)['"]''')[0]
                 if url.startswith('//'): url = 'http:' + url
                 type = self.cm.ph.getSearchGroups(item, r'''['"]?type['"]?\s*:\s*['"]([^"^']+)['"]''')[0]
                 if not self.cm.isValidUrl(url): continue
             
                 #url = strwithmeta(url, {'User-Agent':params['header']})
-                if '/dash' in type:
+                if 'dash' in type:
                     dashTab.extend(getMPDLinksWithMeta(url, False))
                 elif 'hls' in type:
                     hlsTab.extend(getDirectM3U8Playlist(url, checkExt=False, checkContent=True))
-                elif '/mp4' in type:
-                    name = self.cm.ph.getSearchGroups(item, '''height\s*\:\s*([^\,]+?)[\,]''')[0]
+                elif 'mp4' in type or 'mpegurl' in type:
+                    name = self.cm.ph.getSearchGroups(item, '''['"]?height['"]?\s*\:\s*([^\,]+?)[\,]''')[0]
                     mp4Tab.append({'name':'[%s] %sp' % (type, name), 'url':url})
 
         videoTab.extend(mp4Tab)
@@ -8691,42 +8784,6 @@ class pageParser:
                 tmpTab = getDirectM3U8Playlist(url, checkExt=False, checkContent=True)
                 urlTab.extend(tmpTab)
         urlTab.reverse()
-        return urlTab
-        
-    def parserSTREAMCHERRYCOM(self, baseUrl):
-        printDBG("parserSTREAMCHERRYCOM baseUrl[%s]\n" % baseUrl)
-        
-        baseUrl = strwithmeta(baseUrl)
-        referer = baseUrl.meta.get('Referer', baseUrl)
-        
-        HTTP_HEADER = { 'User-Agent':'Mozilla/5.0', 'Referer':referer}
-        params = {'header':HTTP_HEADER}
-        
-        sts, data = self.cm.getPage(baseUrl, params)
-        if not sts: return []
-        
-        urlTab = []
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '.push(', ')')
-        for item in data:
-            printDBG(item)
-            url  = self.cm.ph.getSearchGroups(item, '''['"]?src['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
-            if url.startswith('//'): url = 'http:' + url
-            if not url.startswith('http'): continue
-            type = self.cm.ph.getSearchGroups(item, '''['"]?type['"]?\s*:\s*['"]([^"^']+?)['"]''')[0].lower()
-            printDBG('>>>>>>>>>>>>> ' + url)
-            
-            if 'video/mp4' in type:
-                height = self.cm.ph.getSearchGroups(item,  '''['"]?height['"]?\s*:\s*['"]?([0-9]+)['"]?''')[0]
-                bitrate = self.cm.ph.getSearchGroups(item,  '''['"]?bitrate['"]?\s*:\s*['"]?([0-9]+)['"]?''')[0]
-                url    = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
-                urlTab.insert(0, {'name':'{0} [{1}]'.format(height, bitrate), 'url':url})
-            elif 'mpegurl' in type:
-                url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
-                tmpTab = getDirectM3U8Playlist(url, checkExt=False, checkContent=True)
-                urlTab.extend(tmpTab)
-            elif 'dash' in type:
-                url = urlparser.decorateUrl(url, {'iptv_proto':'dash', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
-                urlTab.extend(getMPDLinksWithMeta(url, False))
         return urlTab
     
     def parserAFLAMYZCOM(self, baseUrl):
@@ -9006,4 +9063,80 @@ class pageParser:
             printDBG(tUrl)
             if self.cm.isValidUrl(tUrl):
                 videoTab.append({'name':'[%s] %s' % (tType, domain), 'url':strwithmeta(tUrl)})#, {'User-Agent': userAgent})})
+        return videoTab
+        
+    def parserSHAREVIDEOPL(self, baseUrl):
+        printDBG("parserSHAREVIDEOPL url[%s]\n" % baseUrl)
+        baseUrl = strwithmeta(baseUrl)
+        HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0',
+                       'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' }
+        COOKIE_FILE = GetCookieDir("sharevideo.pl.cookie")
+        rm (COOKIE_FILE)
+        params = {'header':HTTP_HEADER, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': COOKIE_FILE}
+        
+        videoTab = []
+        baseUrl = baseUrl.replace('/f/', '/e/')
+        sts, data = self.cm.getPage(baseUrl, params)
+        if not sts: return videoTab
+        
+        post_data = {}
+        try:
+            tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<form[^>]+?method="post"[^>]*?>', re.IGNORECASE), re.compile('</form>', re.IGNORECASE), False)[1]
+            post_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
+            post_data.update(dict(re.findall(r'<button[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp)))
+        except Exception:
+            printExc()
+        sleep_time = self.cm.ph.getSearchGroups(tmp, '''\s([0-9]+?)s''')[0]
+        printDBG("Wait for: %s" % sleep_time)
+        if sleep_time == '': sleep_time = 5
+        else: sleep_time = int(sleep_time)
+        
+        time.sleep(sleep_time)
+        videoTab = []
+        HTTP_HEADER['Referer'] = baseUrl
+        sts, data = self.cm.getPage(baseUrl, params, post_data)
+        if not sts: return False
+        
+        videoTags = self.cm.ph.getAllItemsBeetwenMarkers(data, '<video', '>')
+        if len(videoTags) == 0: return
+        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>')
+        tmp = ''
+        for item in data:
+            if 'eval(' in item:
+                tmp += '\n %s' % self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<script[^>]*?>'), re.compile('</script>'), False)[1].strip()
+        
+        jscode = base64.b64decode('''ZnVuY3Rpb24gaXRhbGljcygpe3JldHVybiI8aT4iK3RoaXMrIjwvaT4ifWZ1bmN0aW9uIGxpbmsoKXtyZXR1cm4nPGEgaHJlZj0iJythcmd1bWVudHNbMF0ucmVwbGFjZSgnIicsIiZxdW90ZTsiKSsnIj4nK3RoaXMrIjwvYT4ifWZ1bmN0aW9uIGZvbnRjb2xvcigpe3JldHVybic8Zm9udCBjb2xvcj0iJythcmd1bWVudHNbMF0rJyI+Jyt0aGlzKyI8L2ZvbnQ+In1mdW5jdGlvbiBmaW5kKCl7dmFyIHQsbj1hcmd1bWVudHNbMF0sZT1hcmd1bWVudHNbMV0scj1PYmplY3QodGhpcyksaT0wO2lmKCJudW1iZXIiPT10eXBlb2Ygci5sZW5ndGgmJnIubGVuZ3RoPj0wKWZvcih0PU1hdGguZmxvb3Ioci5sZW5ndGgpO3Q+aTsrK2kpaWYobi5jYWxsKGUscltpXSxpLHIpKXJldHVybiByW2ldfWZ1bmN0aW9uIGVudHJpZXMoKXt2YXIgdD1PYmplY3QodGhpcyk7cmV0dXJuIG5ldyBBcnJheUl0ZXJhdG9yKHQsMSl9ZnVuY3Rpb24gZmlsbCgpe2Zvcih2YXIgdD1hcmd1bWVudHNbMF0sbj1PYmplY3QodGhpcyksZT1wYXJzZUludChuLmxlbmd0aCwxMCkscj1hcmd1bWVudHNbMV0saT1wYXJzZUludChyLDEwKXx8MCxvPTA+aT9NYXRoLm1heChlK2ksMCk6TWF0aC5taW4oaSxlKSxzPWFyZ3VtZW50c1syXSx1PXZvaWQgMD09PXM/ZTpwYXJzZUludChzKXx8MCxhPTA+dT9NYXRoLm1heChlK3UsMCk6TWF0aC5taW4odSxlKTthPm87bysrKW5bb109dDtyZXR1cm4gbn1mdW5jdGlvbiBmaWx0ZXIoKXtmdW49YXJndW1lbnRzWzBdO3ZhciB0PXRoaXMubGVuZ3RoO2lmKCJmdW5jdGlvbiIhPXR5cGVvZiBmdW4pdGhyb3cgbmV3IFR5cGVFcnJvcjtmb3IodmFyIG49bmV3IEFycmF5LGU9YXJndW1lbnRzWzFdLHI9MDt0PnI7cisrKWlmKHIgaW4gdGhpcyl7dmFyIGk9dGhpc1tyXTtmdW4uY2FsbChlLGkscix0aGlzKSYmbi5wdXNoKGkpfXJldHVybiBufWZ1bmN0aW9uIHNldFRpbWVvdXQoKXt9ZnVuY3Rpb24gRGF0ZSgpe3JldHVybiJTdW4gU2VwIDE3IDIwMTcgMjM6NTQ6NDMgR01UKzAyMDAgKENlbnRyYWwgRXVyb3BlYW4gRGF5bGlnaHQgVGltZSkifXZhciBpcHR2X3NyY2VzPVtdLGRvY3VtZW50PXt9LHdpbmRvdz10aGlzO1N0cmluZy5wcm90b3R5cGUuaXRhbGljcz1pdGFsaWNzLFN0cmluZy5wcm90b3R5cGUubGluaz1saW5rLFN0cmluZy5wcm90b3R5cGUuZm9udGNvbG9yPWZvbnRjb2xvcjt2YXIgQXJyYXlJdGVyYXRvcj1mdW5jdGlvbih0LG4pe3RoaXMuX2FycmF5PXQsdGhpcy5fZmxhZz1uLHRoaXMuX25leHRJbmRleD0wfTtBcnJheS5wcm90b3R5cGUuZmlsdGVyPWZpbHRlcixBcnJheS5wcm90b3R5cGUuZmlsbD1maWxsLEFycmF5LnByb3RvdHlwZS5lbnRyaWVzPWVudHJpZXMsQXJyYXkucHJvdG90eXBlLmZpbmQ9ZmluZDt2YXIgZWxlbWVudD1mdW5jdGlvbih0KXt0aGlzLl9uYW1lPXQsdGhpcy5fc3JjPSIiLHRoaXMuX2lubmVySFRNTD0iIix0aGlzLl9wYXJlbnRFbGVtZW50PSIiLHRoaXMuc2hvdz1mdW5jdGlvbigpe30sdGhpcy5hdHRyPWZ1bmN0aW9uKHQsbil7cmV0dXJuInNyYyI9PXQmJiIjdmlkZW8iPT10aGlzLl9uYW1lJiZpcHR2X3NyY2VzLnB1c2gobiksdGhpc30sdGhpcy5tZWRpYWVsZW1lbnRwbGF5ZXI9ZnVuY3Rpb24oKXt9LE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh0aGlzLCJzcmMiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4gdGhpcy5fc3JjfSxzZXQ6ZnVuY3Rpb24odCl7dGhpcy5fc3JjPXQscHJpbnREQkcodCl9fSksT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsImlubmVySFRNTCIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9pbm5lckhUTUx9LHNldDpmdW5jdGlvbih0KXt0aGlzLl9pbm5lckhUTUw9dH19KSxPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywicGFyZW50RWxlbWVudCIse2dldDpmdW5jdGlvbigpe3JldHVybiBuZXcgZWxlbWVudH0sc2V0OmZ1bmN0aW9uKHQpe319KX0sJD1mdW5jdGlvbih0KXtyZXR1cm4gbmV3IGVsZW1lbnQodCl9O2RvY3VtZW50LmdldEVsZW1lbnRCeUlkPWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX0sZG9jdW1lbnQuY3VycmVudFNjcmlwdD1uZXcgZWxlbWVudCxkb2N1bWVudC5ib2R5PW5ldyBlbGVtZW50LGRvY3VtZW50LmRvY3VtZW50RWxlbWVudD1uZXcgZWxlbWVudCx0aGlzLnRvU3RyaW5nPWZ1bmN0aW9uKCl7cmV0dXJuIltvYmplY3QgV2luZG93XSJ9Ow==''')
+        jscode += tmp + '\nprint(JSON.stringify(iptv_srces));'
+        tmp = []
+        ret = iptv_js_execute( jscode )
+        if ret['sts'] and 0 == ret['code']:
+            tmp = ret['data'].strip()
+            tmp = byteify(json.loads(tmp))
+        
+        cookieHeader = self.cm.getCookieHeader(COOKIE_FILE)
+        dashTab = []
+        hlsTab = []
+        mp4Tab = []
+        for idx in range(len(videoTags)):
+            item = videoTags[idx]
+            print(item)
+            url = tmp[idx]
+            printDBG("url -> " + url)
+            if url.startswith('//'): url = 'http:' + url
+            type = self.cm.ph.getSearchGroups(item, r'''['"]?type['"]?\s*[:=]\s*['"]([^"^']+)['"]''')[0]
+            if not self.cm.isValidUrl(url): continue
+        
+            url = strwithmeta(url, {'Cookie':cookieHeader, 'Referer':HTTP_HEADER['Referer'], 'User-Agent':HTTP_HEADER['User-Agent']})
+            if 'dash' in type:
+                dashTab.extend(getMPDLinksWithMeta(url, False))
+            elif 'hls' in type:
+                hlsTab.extend(getDirectM3U8Playlist(url, checkExt=False, checkContent=True))
+            elif 'mp4' in type or 'mpegurl' in type:
+                name = self.cm.ph.getSearchGroups(item, '''['"]?height['"]?\s*[:=]\s*['"]?([0-9]+?)[^0-9]''')[0]
+                mp4Tab.append({'name':'[%s] %sp' % (type, name), 'url':url})
+        
+        videoTab.extend(mp4Tab)
+        videoTab.extend(hlsTab)
+        videoTab.extend(dashTab)
         return videoTab

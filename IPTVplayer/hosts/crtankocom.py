@@ -46,37 +46,34 @@ def gettytul():
     return 'http://www.crtanko.com/'
 
 class CrtankoCom(CBaseHostClass):
-    HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-    AJAX_HEADER = dict(HEADER)
-    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    
-    MAIN_URL      = 'http://www.crtanko.com/'
-    SEARCH_URL    = MAIN_URL
-    DEFAULT_ICON  = "http://www.crtanko.com/wp-content/uploads/2015/04/logo5.png"
-    
-    MAIN_CAT_TAB = [{'category':'search',          'title': _('Search'), 'search_item':True, 'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),             'icon':DEFAULT_ICON} ]
-                    
-    BY_LETTER_TAB = [{'title':_('All')},
-                     {'title':'#', 'letter':'numeric'}, {'title':'', 'letter':'A'},
-                     {'title':'', 'letter':'B'},        {'title':'', 'letter':'C'},
-                     {'title':'', 'letter':'Č'},        {'title':'', 'letter':'D'},
-                     {'title':'', 'letter':'E'},        {'title':'', 'letter':'F'},
-                     {'title':'', 'letter':'G'},        {'title':'', 'letter':'H'},
-                     {'title':'', 'letter':'I'},        {'title':'', 'letter':'J'},
-                     {'title':'', 'letter':'K'},        {'title':'', 'letter':'L'},
-                     {'title':'', 'letter':'LJ'},       {'title':'', 'letter':'M'},
-                     {'title':'', 'letter':'N'},        {'title':'', 'letter':'O'},
-                     {'title':'', 'letter':'P'},        {'title':'', 'letter':'R'},
-                     {'title':'', 'letter':'S'},        {'title':'', 'letter':'Š'},
-                     {'title':'', 'letter':'T'},        {'title':'', 'letter':'U'},
-                     {'title':'', 'letter':'V'},        {'title':'', 'letter':'W'},
-                     {'title':'', 'letter':'Y'},        {'title':'', 'letter':'Z'},
-                     {'title':'', 'letter':'Ž'} ]
-                    
- 
+
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'  CrtankoCom.tv', 'cookie':'crtankocom.cookie'})
+        
+        self.MAIN_URL      = 'http://www.crtanko.com/'
+        self.SEARCH_URL    = self.MAIN_URL
+        self.DEFAULT_ICON_URL  = "http://www.crtanko.com/wp-content/uploads/2015/04/logo5.png"
+        
+        self.MAIN_CAT_TAB = [{'category':'search',          'title': _('Search'), 'search_item':True,},
+                             {'category':'search_history',  'title': _('Search history'),            } ]
+                        
+        self.BY_LETTER_TAB = [{'title':_('All')},
+                              {'title':'#', 'letter':'numeric'}, {'title':'', 'letter':'A'},
+                              {'title':'', 'letter':'B'},        {'title':'', 'letter':'C'},
+                              {'title':'', 'letter':'Č'},        {'title':'', 'letter':'D'},
+                              {'title':'', 'letter':'E'},        {'title':'', 'letter':'F'},
+                              {'title':'', 'letter':'G'},        {'title':'', 'letter':'H'},
+                              {'title':'', 'letter':'I'},        {'title':'', 'letter':'J'},
+                              {'title':'', 'letter':'K'},        {'title':'', 'letter':'L'},
+                              {'title':'', 'letter':'LJ'},       {'title':'', 'letter':'M'},
+                              {'title':'', 'letter':'N'},        {'title':'', 'letter':'O'},
+                              {'title':'', 'letter':'P'},        {'title':'', 'letter':'R'},
+                              {'title':'', 'letter':'S'},        {'title':'', 'letter':'Š'},
+                              {'title':'', 'letter':'T'},        {'title':'', 'letter':'U'},
+                              {'title':'', 'letter':'V'},        {'title':'', 'letter':'W'},
+                              {'title':'', 'letter':'Y'},        {'title':'', 'letter':'Z'},
+                              {'title':'', 'letter':'Ž'} ]
+        
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheSubCategory = []
         self.cacheLinks = {}
@@ -103,16 +100,6 @@ class CrtankoCom(CBaseHostClass):
     def replacewhitespace(self, data):
         data = data.replace(' ', '%20')
         return CBaseHostClass.cleanHtmlStr(data)
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("CrtankoCom.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
             
     def listsMainMenu(self, cItem, category1, category2):
         printDBG("CrtankoCom.listsMainMenu")
@@ -122,8 +109,7 @@ class CrtankoCom(CBaseHostClass):
         
         subCatMarker = '<ul class="dropdown-menu">'
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="menu-meni-container">', subCatMarker)[1]
-        data = data.split('<a href="#">')
-        
+        data = re.split('<a[^>]+?href="#"[^>]*?>', data)
         
         for part in data:
             subCatDataIdx = part.find(subCatMarker)
@@ -200,21 +186,16 @@ class CrtankoCom(CBaseHostClass):
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article ', '</article>')
         for item in data:
             title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''')[0]
-            icon  =  self.cm.ph.getSearchGroups(item, '''data-src=['"]([^"^']+?)['"]''')[0]
-            icon = self._getFullUrl( icon )
+            icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''data-src=['"]([^"^']+?)['"]''')[0])
             url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
-            if url.startswith('http'):
+            if self.cm.isValidUrl(url):
                 params = dict(cItem)
-                params.update({'title':self.cleanHtmlStr(title), 'url':url, 'icon':icon, 'desc':self.cleanHtmlStr(item.split('</noscript>')[-1])})
-                if nextCategory != 'video':
-                    params['category'] = nextCategory
-                    self.addDir(params)
-                else:
-                    self.addVideo(params)
+                params.update({'good_for_fav': True, 'category':nextCategory, 'title':self.cleanHtmlStr(title), 'url':url, 'icon':icon, 'desc':self.cleanHtmlStr(item.split('</noscript>')[-1])})
+                self.addDir(params)
         
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':page+1})
+            params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
             
     def exploreItem(self, cItem, category):
@@ -254,7 +235,7 @@ class CrtankoCom(CBaseHostClass):
                     title = '{0} - {1}'.format(cItem['title'], title)
                 if title == '': title = cItem['title']
                 params = dict(cItem)
-                params.update({'title':title, 'url_data':linkData})
+                params.update({'good_for_fav': False, 'title':title, 'url_data':linkData})
                 self.addVideo(params)
                 searchMore = False
             if not searchMore:
@@ -262,7 +243,7 @@ class CrtankoCom(CBaseHostClass):
             
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':page+1})
+            params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
     
     def getLinksForVideo(self, cItem):
@@ -329,7 +310,7 @@ class CrtankoCom(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            self.listsMainMenu({'url':self.MAIN_URL, 'icon':self.DEFAULT_ICON}, 'categories', 'list_letters')
+            self.listsMainMenu({'url':self.MAIN_URL}, 'categories', 'list_letters')
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif category == 'categories':
             self.listCategories(self.currItem, 'list_letters')
@@ -352,99 +333,9 @@ class CrtankoCom(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
+
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        # for now we must disable favourites due to problem with links extraction for types other than movie
-        CHostBase.__init__(self, CrtankoCom(), True, favouriteTypes=[]) #, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
+        CHostBase.__init__(self, CrtankoCom(), True, favouriteTypes=[])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('crtankocomlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

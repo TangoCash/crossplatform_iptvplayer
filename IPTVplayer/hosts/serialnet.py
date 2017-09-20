@@ -172,7 +172,7 @@ class SerialeNet(CBaseHostClass):
         icon = self.getFullUrl(self.cm.ph.getSearchGroups(desc, 'src="([^"]+?)"')[0])
         desc = self.cleanHtmlStr(desc)
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="wrp1"><br/>', '<script>', False)[1]
+        data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<div[^>]+?id="wrp1"[^>]*?></?br[^>]*?>'), re.compile('<script>'), False)[1]
         data = data.split('<div')
         if len(data): del data[0]
         for item in data:

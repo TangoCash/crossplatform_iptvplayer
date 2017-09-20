@@ -92,6 +92,7 @@ class ZDFmediathek(CBaseHostClass):
                     {'category':'list_cluster',    'title':_('Program A-Z'), 'simplify':False, 'url': BRANDS_ALPHABETICAL_API_URL},
                     {'category':'list_cluster',    'title':_('Categories'), 'url': CATEGORIES_PAGE_API_URL},
                     #{'category':'themen',         'title':_('Topics'), 'url': NEWS_API_URL},
+                    {'category':'kinder',          'title':_('Children') },
                     {'category':'search',          'title':_('Search'), 'search_item':True},
                     {'category':'search_history',  'title':_('Search history')} ]
                        
@@ -101,6 +102,10 @@ class ZDFmediathek(CBaseHostClass):
         printDBG("ZDFmediathek.__init__")
         CBaseHostClass.__init__(self, {'history':'ZDFmediathek.tv', 'cookie':'zdfde.cookie'})
         self.DEFAULT_ICON_URL = 'https://axinomcdn.blob.core.windows.net/wwwaxinomcom/2016/10/ZDF_Logo.jpg'
+        
+        self.KINDER_TAB = [{'category':'explore_item',         'title':_('Home page'),        'url': self.getFullUrl('/kinder'),                 'icon':self.getIconUrl('/assets/zdftivi-home-100~384x216')},
+                           {'category':'kinder_list_abc',      'title':_('Program A-Z'),      'url': self.getFullUrl('/kinder/sendungen-a-z'),   'icon':self.getIconUrl('/assets/a-z-teaser-100~384x216')},
+                           {'category':'explore_item',         'title':_('Missed the show?'), 'url': self.getFullUrl('/kinder/sendung-verpasst'),'icon':self.getIconUrl('/assets/buehne-tivi-sendung-verpasst-100~384x216')}]
     
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= dict(self.HEADER)
@@ -166,6 +171,106 @@ class ZDFmediathek(CBaseHostClass):
             elif 'small' == iconssize:  idx = 0
             return iconsTab[idx]['url']
         return ''
+        
+    def kinderListABC(self, cItem, nextCategory):
+        printDBG('kinderListABC')
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="letter-list"', '</ul>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            if not self.cm.isValidUrl(url): continue
+            title = self.cleanHtmlStr(item)
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'category':nextCategory, 'url':url, 'title':title})
+            self.addDir(params)
+        
+    def exploreItem(self, cItem, nextCategory):
+        printDBG('exploreItem')
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<main id="skip-main"', '<article class="b-cluster x-web-only"', False)[1]
+        
+        # split data per sections
+        sections = re.split('''<section[^>]+?class=['"]b-content-teaser-list['"][^>]*?>|<article[^>]+?itemtype=['"]http://schema.org/ItemList['"][^>]*?>|<article[^>]+?class=['"]b-content-module['"][^>]*?>''', data)
+        for section in sections:
+            sectionTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(section, '<h2', '</h2>')[1])
+            
+            items = []
+            data = self.cm.ph.rgetAllItemsBeetwenNodes(section, ('<span', '>', 'circle icon'), ('<picture', '>', '"artdirect"')) #('<article', '>')) 
+            tmp = self.cm.ph.rgetAllItemsBeetwenNodes(section, ('<span', '>', 'circle icon'), ('<', '>', '"artdirect"'))
+            if len(tmp) > len(data): data = tmp
+            for subData in data:
+                subData = re.split('<span[^>]+?circle icon[^>]+?>', subData)
+                for item in subData:
+                    tmp = self.cm.ph.getSearchGroups(item, '''(<a[^>]+?\stitle=[^>]*?>)''')[0]
+                    if tmp == '': continue
+                    
+                    title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(tmp, '''title=['"]([^'^"]+?)['"]''')[0])
+                    
+                    if title.startswith('Folge'):
+                        seriesTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<span[^>]+?teaser\-cat\-brand[^>]+?>'), re.compile('</span>'), False)[1])
+                        title = '%s, %s' % (seriesTitle, title)
+                    
+                    url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''href=['"]([^'^"]+?)['"]''')[0])
+                    
+                    icon = self.getIconUrl(self.cm.ph.getSearchGroups(item, '''data-srcset=['"]([^'^"~]+?)['"~]''')[0])
+                    
+                    if icon == '': icon = self.getIconUrl(self.cm.ph.getSearchGroups(item, '''<meta[^>]+?itemprop=['"]image['"][^>]+?content=['"]([^'^"~]+?)['"~]''')[0])
+                    if icon == '': 
+                        tmp = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''teaser-image=['"]([^'^"]+?)['"]''')[0])
+                        try:
+                            tmp = byteify(json.loads(tmp))['original']
+                            if tmp != '': icon = self.getIconUrl(tmp.split('~', 1)[0])
+                        except Exception:
+                            printExc()
+                    if icon != '': icon += '~314x314'
+                    
+                    desc = [self.cleanHtmlStr(item.split('<span class="visuallyhidden">', 1)[0])]
+                    tmp = self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<[^>]+?desc[^>]+?>'), re.compile('</p>'))[1]
+                    desc.append(self.cleanHtmlStr(tmp))
+                    desc.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<dl', '</dl>')[1].replace('</dd>', ' | ')))
+                    desc = '[/br]'.join(desc)
+                    
+                    params = {'url':url, 'title':title, 'icon':icon, 'desc':desc}
+                    if '_play' in item:
+                        params.update({'type':'video', 'good_for_fav':False})
+                        items.append(params)
+                    elif 'class="media-content"' not in item and ' min<' not in item:
+                        params.update({'type':'category', 'good_for_fav':False})
+                        items.append(params)
+            if sectionTitle != '' and len(items) > 1:
+                params = dict(cItem)
+                params.update({'good_for_fav':False, 'category':nextCategory, 'title':sectionTitle, 'icon':items[0]['icon'], 'sub_items':items})
+                self.addDir(params)
+            else:
+                for it in items:
+                    params = dict(cItem)
+                    params.update(it)
+                    self.currList.append(params)
+        
+        if len(self.currList) == 1 and 'sub_items' in self.currList[0]:
+            cItem = self.currList[0]
+            self.currList = []
+            self.listSubItems(cItem, 'explore_item')
+        return
+        
+    def listSubItems(self, cItem, nextCategory):
+        printDBG('listSubItems')
+        
+        cItem = dict(cItem)
+        items = cItem.pop('sub_items', '')
+        
+        for item in items:
+            params = dict(cItem)
+            params.update(item)
+            if item['type'] == 'category':
+                params.update({'category':nextCategory})
+            self.currList.append(params)
         
     def listStart(self, cItem):
         printDBG('listStart')
@@ -277,9 +382,16 @@ class ZDFmediathek(CBaseHostClass):
             printExc()
     
     def getLinksForVideo(self, cItem):
-        printDBG("ZDFmediathek.getLinksForVideo id[%s]" % cItem['id'])
+        printDBG("ZDFmediathek.getLinksForVideo [%s]" % cItem)
         
-        sts, data = self.getPage(self.DOCUMENT_API_URL % cItem['id'])
+        if 'id' not in cItem and 'url' in cItem:
+            sts, data = self.getPage(cItem['url'])
+            if not sts: return []
+            id = self.cm.ph.getSearchGroups(data, '''['"]?docId['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
+        else:
+            id = cItem['id']
+        
+        sts, data = self.getPage(self.DOCUMENT_API_URL % id)
         if not sts: return []
         
         preferedQuality = int(config.plugins.iptvplayer.zdfmediathek_prefquality.value)
@@ -407,7 +519,15 @@ class ZDFmediathek(CBaseHostClass):
         self.currList = [] 
 
         if None == name:
-            self.listsTab(ZDFmediathek.MAIN_CAT_TAB, {'name':'category'})
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif 'kinder' == category:
+            self.listsTab(self.KINDER_TAB, self.currItem)
+        elif 'kinder_list_abc' == category:
+            self.kinderListABC(self.currItem, 'explore_item')
+        elif 'explore_item' == category:
+            self.exploreItem(self.currItem, 'list_sub_items')
+        elif 'list_sub_items' == category:
+            self.listSubItems(self.currItem, 'explore_item')
         elif 'list_start' == category:
             self.listStart(self.currItem)
         elif 'missed_date' == category:
@@ -434,69 +554,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, ZDFmediathek(), True)
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        if icon == '': icon = self.host.DEFAULT_ICON_URL
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem

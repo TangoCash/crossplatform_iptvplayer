@@ -460,7 +460,7 @@ class TvpVod(CBaseHostClass):
         sectionsData = sectionsData.split('<section')
         if len(sectionsData): del sectionsData[0]
         
-        subFiltersData = self.cm.ph.getAllItemsBeetwenMarkers(data, '"dropdown-menu"', '</ul>')
+        subFiltersData = self.cm.ph.getAllItemsBeetwenMarkers(data.split('</header>', 1)[-1], '"dropdown-menu"', '</ul>')
         #subFiltersData.reverse()
         allSubFiltersTab = []
         for idx in range(len(subFiltersData)):

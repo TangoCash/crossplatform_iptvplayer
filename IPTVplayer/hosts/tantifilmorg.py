@@ -12,6 +12,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################
+import urlparse
 import re
 import urllib
 import string
@@ -43,20 +44,23 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://www.tantifilm.me/'
+    return 'http://www.tantifilm.top/'
+    
+    
 
 class TantiFilmOrg(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'TantiFilmOrg.tv', 'cookie':'tantifilmorg.cookie'})
-        self.HEADER = {'User-Agent':'Mozilla/5.0', 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}
+        self.USER_AGENT = 'Mozilla/5.0'
+        self.HEADER = {'User-Agent':self.USER_AGENT, 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://www.tantifilm.me/'
-        self.DEFAULT_ICON_URL = self.getFullUrl('wp-content/themes/smashingMultiMediaBrown/images/logo.png')
+        self.MAIN_URL = 'http://www.tantifilm.top/'
+        self.DEFAULT_ICON_URL = 'https://raw.githubusercontent.com/Zanzibar82/images/master/posters/tantifilm.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_categories',    'title': _('Categories'),                           'url':self.MAIN_URL  },
                              {'category':'search',             'title': _('Search'), 'search_item':True,         },
@@ -64,15 +68,37 @@ class TantiFilmOrg(CBaseHostClass):
                             ]
         
         self.cacheCollections = {}
-        
+        self.cookieHeader = ''
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.cacheSeries = {}
+        
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}: addParams = dict(self.defaultParams)
+        
+        origBaseUrl = baseUrl
+        baseUrl = self.cm.iriToUri(baseUrl)
+        
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url): return url
+            else: return urlparse.urljoin(baseUrl, url)
+        
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        
+    def refreshCookieHeader(self):
+        self.cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        
+    def getFullIconUrl(self, url, refreshCookieHeader=True):
+        url = CBaseHostClass.getFullIconUrl(self, url)
+        if url == '': return ''
+        if refreshCookieHeader: self.refreshCookieHeader()
+        return strwithmeta(url, {'Cookie':self.cookieHeader, 'User-Agent':self.USER_AGENT})
 
     def listMainMenu(self, cItem, nextCategory):
         printDBG("TantiFilmOrg.listMainMenu")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         data = self.cm.ph.getDataBeetwenMarkers(data, '<nav id="ddmenu">', '</ul>', withMarkers=False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
@@ -92,7 +118,7 @@ class TantiFilmOrg(CBaseHostClass):
     def listCategories(self, cItem, nextCategory):
         printDBG("TantiFilmOrg.listCategories")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="table-list">', '</ul>', withMarkers=False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
@@ -107,7 +133,7 @@ class TantiFilmOrg(CBaseHostClass):
         printDBG("TantiFilmOrg.listCollections")
         self.cacheCollections = {}
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         sp = '<img class="alignnone'
         data = self.cm.ph.getDataBeetwenMarkers(data, sp, '<div id="footer"', withMarkers=False)[1]
@@ -147,7 +173,7 @@ class TantiFilmOrg(CBaseHostClass):
             url += 'page/%s/' % (page)
             if len(tmp) == 2: url += '?' + tmp[1]
         
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return
         
         if 'page/{0}/'.format(page+1) in data:
@@ -188,7 +214,7 @@ class TantiFilmOrg(CBaseHostClass):
     def listContent(self, cItem, nextCategory):
         printDBG("TantiFilmOrg.listContent")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         # trailer
@@ -200,7 +226,7 @@ class TantiFilmOrg(CBaseHostClass):
                 params = dict(cItem)
                 params.pop('category', None)
                 trailerUrls.append(url)
-                title = self.cleanHtmlStr(item)
+                title = cItem['title'] + ' - ' + self.cleanHtmlStr(item)
                 self.addVideo({'good_for_fav': True, 'title':title, 'url':url, 'video_type':'trailer', 'icon':cItem.get('icon', '')})
         
         # desc
@@ -231,7 +257,7 @@ class TantiFilmOrg(CBaseHostClass):
     def listSeasons(self, cItem, nextCategory):
         printDBG("TantiFilmOrg.listSeasons")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<nav class="', '</select>')
@@ -259,7 +285,7 @@ class TantiFilmOrg(CBaseHostClass):
         try: seasonNum = str(int(cItem['season_id']))
         except Exception: seasonNum = ''
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<nav class="', '</select>')
@@ -307,18 +333,22 @@ class TantiFilmOrg(CBaseHostClass):
         if type == 'trailer':
             return self.up.getVideoLinkExt(cItem['url'])
         else:
-            sts, data = self.cm.getPage(cItem['url'])
+            sts, data = self.getPage(cItem['url'])
             if not sts: return []
         
         urlTab = []
         if type == 'movie':
             tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div id="wpwm-movie-links">', '<div class="film-left">', False)[1]
-            printDBG(tmp)
-            tmp = re.compile('''<iframe[^>]+?src=['"]([^'^"]+?)['"]''', re.IGNORECASE).findall(tmp)
+            tmp = tmp.split('</ul>')
             printDBG(tmp)
             for item in tmp:
-                if not self.cm.isValidUrl(item): continue
-                urlTab.append({'name':self.up.getDomain(item), 'url':strwithmeta(item, {'url':cItem['url']}), 'need_resolve':1})
+                url = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
+                if not self.cm.isValidUrl(url): continue
+                id = self.cm.ph.getSearchGroups(item, '''id=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
+                title = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<a[^>]+?href=['"]\#%s['"][^>]*?>''' % re.escape(id)), re.compile('</a>'))[1]
+                title = self.cleanHtmlStr(title)
+                if title == '': title = self.up.getDomain(url)
+                urlTab.append({'name':title, 'url':strwithmeta(url, {'url':cItem['url']}), 'need_resolve':1})
         elif type == 'episode':
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<nav class="', '</select>')
             if len(data) < 3: 
@@ -353,7 +383,7 @@ class TantiFilmOrg(CBaseHostClass):
                     break
                     
         if 'hostvid.xyz' == self.up.getDomain(videoUrl):
-            sts, data = self.cm.getPage(videoUrl)
+            sts, data = self.getPage(videoUrl)
             if not sts: return []
             videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
         

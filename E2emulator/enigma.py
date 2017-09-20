@@ -70,12 +70,18 @@ class eConsoleAppContainer():
                     isWget = True
                     
         if isWget == True: #for wget separate process and logs
+            TempPath = None
             try:
-                TempPath = os.path.join(config.misc.sysTempPath.value,'.IPTVdaemon')
+                TmpPath = os.path.join(Components.config.config.misc.sysTempPath.value,'.IPTVdaemon')
             except:
-                TempPath = '/tmp'
-            if not os.path.exists(TempPath):
-                os.makedirs(TempPath)
+                from tempfile import gettempdir
+                TmpPath = gettempdir()
+
+            for TP in [TmpPath, '/storage/sdcard1', '/tmp' ]:
+                if os.path.exists(TP) and os.access(TP, os.W_OK):
+                    TempPath = os.path.join(TP)
+                    break
+                
             iindex = 1
             from subprocess import Popen
             if cmdline.find(' -O ') >= 0: #each wget contains own log
