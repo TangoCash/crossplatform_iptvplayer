@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addons>
-<addon id="plugin.video.IPTVplayer" version="180.00.11.00" name="IPTVplayer" provider-name="j00zek">
+<addon id="plugin.video.IPTVplayer" version="180.00.12.00" name="IPTVplayer" provider-name="j00zek">
 	<requires>
 		<import addon="xbmc.python" version="2.24.0"/>
         <import addon="script.module.simplejson"    version="3.3.0"/>

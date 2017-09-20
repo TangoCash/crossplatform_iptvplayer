@@ -5185,7 +5185,7 @@ class pageParser:
                     tmpUrl = 'http://www.flashx.tv' + tmpUrl
                 if self.cm.isValidUrl(tmpUrl) and ('flashx' in tmpUrl and 'jquery' not in tmpUrl): 
                     printDBG('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-                    sts, tmp = self.cm.getPage(tmpUrl, params)
+                    sts, tmp = self.cm.getPage(tmpUrl.replace('\n', ''), params)
             
             sts, tmp = self.cm.getPage('https://www.flashx.tv/js/code.js', params)
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'function', ';');

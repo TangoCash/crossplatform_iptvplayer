@@ -153,7 +153,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.1.4.5"
+    XXXversion = "21.1.4.7"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -662,7 +662,7 @@ class Host:
            return valTab
         if 'tube8-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.tube8.com/searches.html?q='+url, 'tube8-clips')
+           valTab = self.listsItems(-1, 'http://www.tube8.com/searches.html?q='+url.replace(' ','+'), 'tube8-clips')
            return valTab              
         if 'tube8-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -714,7 +714,7 @@ class Host:
            return valTab
         if 'xnxx-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.xnxx.com/?k='+url, 'xnxx-clips')
+           valTab = self.listsItems(-1, 'http://www.xnxx.com/?k='+url.replace(' ','+'), 'xnxx-clips')
            return valTab              
         if 'xnxx-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -826,7 +826,7 @@ class Host:
            return valTab
         if 'xvideos-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.xvideos.com/?k='+url, 'xvideos-clips')
+           valTab = self.listsItems(-1, 'http://www.xvideos.com/?k='+url.replace(' ','+'), 'xvideos-clips')
            return valTab              
         if 'xvideos-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -1058,7 +1058,7 @@ class Host:
            return valTab
         if 'xhamster-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.xhamster.com/search.php?from=suggestion&q=%s&qcat=video' % url, 'xhamster-clips')
+           valTab = self.listsItems(-1, 'http://www.xhamster.com/search.php?from=suggestion&q=%s&qcat=video' % url.replace(' ','+'), 'xhamster-clips')
            return valTab              
         if 'xhamster-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -1143,7 +1143,7 @@ class Host:
            return valTab
         if 'eporner-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.eporner.com/search/%s/' % url, 'eporner-clips')
+           valTab = self.listsItems(-1, 'https://www.eporner.com/search/%s/' % url.replace(' ','+'), 'eporner-clips')
             
            return valTab    
         if 'eporner-clips' == name:
@@ -1205,7 +1205,7 @@ class Host:
            return valTab
         if 'pornhub-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.pornhub.com/video/search?search=%s' % url, 'pornhub-clips')
+           valTab = self.listsItems(-1, 'http://www.pornhub.com/video/search?search=%s' % url.replace(' ','+'), 'pornhub-clips')
             
            return valTab    
         if 'pornhub-clips' == name:
@@ -1409,7 +1409,7 @@ class Host:
            return valTab
         if 'pornhd-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.pornhd.com/search?search=%s' % url, 'pornhd-clips')
+           valTab = self.listsItems(-1, 'https://www.pornhd.com/search?search=%s' % url.replace(' ','+'), 'pornhd-clips')
             
            return valTab
         if 'pornhd-clips' == name:
@@ -1513,7 +1513,7 @@ class Host:
            return valTab
         if 'ahme-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.ah-me.com/search/%s/' % url, 'AH-ME-clips')
+           valTab = self.listsItems(-1, 'https://www.ah-me.com/search/%s/' % url.replace(' ','+'), 'AH-ME-clips')
             
            return valTab
         if 'AH-ME-clips' == name:
@@ -1772,7 +1772,7 @@ class Host:
            return valTab
         if 'YOUJIZZ-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.youjizz.com/search/%s-1.html' % url, 'YOUJIZZ-clips')
+           valTab = self.listsItems(-1, 'https://www.youjizz.com/search/%s-1.html' % url.replace(' ','+'), 'YOUJIZZ-clips')
             
            return valTab
         if 'YOUJIZZ-clips' == name:
@@ -1833,7 +1833,7 @@ class Host:
            return valTab
         if 'DACHIX-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.dachix.com/s/%s' % url, 'DACHIX-clips')
+           valTab = self.listsItems(-1, 'http://www.dachix.com/s/%s' % url.replace(' ','+'), 'DACHIX-clips')
            return valTab
         if 'DACHIX-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -1883,7 +1883,7 @@ class Host:
            return valTab
         if 'DRTUBER-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.drtuber.com/search/videos/%s' % url, 'DRTUBER-clips')
+           valTab = self.listsItems(-1, 'http://www.drtuber.com/search/videos/%s' % url.replace(' ','+'), 'DRTUBER-clips')
            return valTab
         if 'DRTUBER-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -2289,7 +2289,7 @@ class Host:
            return valTab
         if 'RUSPORN-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://rus.porn/search/%s/' % url, 'RUSPORN-clips')
+           valTab = self.listsItems(-1, 'http://rus.porn/search/%s/' % url.replace(' ','+'), 'RUSPORN-clips')
            return valTab
         if 'RUSPORN-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -2418,7 +2418,7 @@ class Host:
            return valTab
         if 'porndoe-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://porndoe.com/search?keywords=%s' % url, 'PORNDOE-clips')
+           valTab = self.listsItems(-1, 'http://porndoe.com/search?keywords=%s' % url.replace(' ','+'), 'PORNDOE-clips')
            return valTab
         if 'PORNDOE-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -2470,7 +2470,7 @@ class Host:
            return valTab
         if 'PORNFROMCZECH-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://pornfromczech.com/?s=%s&x=0&y=0' % url, 'PORNFROMCZECH-clips')
+           valTab = self.listsItems(-1, 'http://pornfromczech.com/?s=%s&x=0&y=0' % url.replace(' ','+'), 'PORNFROMCZECH-clips')
             
            return valTab              
         if 'PORNFROMCZECH-clips' == name:
@@ -2590,7 +2590,7 @@ class Host:
            return valTab
         if 'CLIPHUNTER-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.cliphunter.com/search/%s' % url, 'CLIPHUNTER-clips')
+           valTab = self.listsItems(-1, 'http://www.cliphunter.com/search/%s' % url.replace(' ','+'), 'CLIPHUNTER-clips')
            return valTab
         if 'CLIPHUNTER-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -2683,7 +2683,7 @@ class Host:
            return valTab
         if 'PORNOHUB-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://pornohub.su/?s=%s' % url, 'PORNOHUB-clips')
+           valTab = self.listsItems(-1, 'https://pornohub.su/?s=%s' % url.replace(' ','+'), 'PORNOHUB-clips')
             
            return valTab
         if 'PORNOHUB-clips' == name:
@@ -2795,7 +2795,7 @@ class Host:
            return valTab
         if 'THUMBZILLA-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.thumbzilla.com/tags/%s' % url, 'THUMBZILLA-clips')
+           valTab = self.listsItems(-1, 'http://www.thumbzilla.com/tags/%s' % url.replace(' ','+'), 'THUMBZILLA-clips')
             
            return valTab          
         if 'THUMBZILLA-clips' == name:
@@ -2909,12 +2909,10 @@ class Host:
            self.SEARCH_proc='BEFUCK-search'
            valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
            valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
-            
            return valTab
         if 'BEFUCK-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://befuck.com/search/%s' % url, 'BEFUCK-clips')
-            
+           valTab = self.listsItems(-1, 'http://befuck.com/search/%s' % url.replace(' ','+'), 'BEFUCK-clips')
            return valTab
         if 'BEFUCK-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -2939,10 +2937,9 @@ class Host:
               Time = self.cm.ph.getSearchGroups(item, '''<span>([^"^']+?)<''', 1, True)[0] 
               if phUrl.startswith('//'): phUrl = 'http:' + phUrl
               if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
-              valTab.append(CDisplayListItem(phTitle,'['+Time+']   '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+              valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+Time+']   '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            if next_page:
               valTab.append(CDisplayListItem('Next', next_page, CDisplayListItem.TYPE_CATEGORY, [next_page], name, '', None))
-            
            return valTab
 
         if 'PORNICOM' == name:
@@ -2971,7 +2968,7 @@ class Host:
            return valTab
         if 'pornicom-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.pornicom.com/search/?q=%s' % url, 'PORNICOM-clips')
+           valTab = self.listsItems(-1, 'http://www.pornicom.com/search/?q=%s' % url.replace(' ','+'), 'PORNICOM-clips')
             
            return valTab
         if 'PORNICOM-clips' == name:
@@ -3025,7 +3022,7 @@ class Host:
            return valTab
         if 'hdzog-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.hdzog.com/search/?q=%s' % url, 'HDZOG-clips')
+           valTab = self.listsItems(-1, 'http://www.hdzog.com/search/?q=%s' % url.replace(' ','+'), 'HDZOG-clips')
            return valTab
         if 'HDZOG-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -3329,7 +3326,7 @@ class Host:
            return valTab
         if 'KOLOPORNO-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.koloporno.com/search/?q=%s' % url, 'KOLOPORNO-clips')
+           valTab = self.listsItems(-1, 'https://www.koloporno.com/search/?q=%s' % url.replace(' ','+'), 'KOLOPORNO-clips')
             
            return valTab
         if 'KOLOPORNO-clips' == name:
@@ -3436,7 +3433,7 @@ class Host:
            return valTab
         if 'REALGFPORN-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.realgfporn.com/search/%s/page1.html' % url, 'REALGFPORN-clips')
+           valTab = self.listsItems(-1, 'https://www.realgfporn.com/search/%s/page1.html' % url.replace(' ','+'), 'REALGFPORN-clips')
             
            return valTab
         if 'REALGFPORN-clips' == name:
@@ -3496,7 +3493,7 @@ class Host:
            return valTab
         if 'FAAPY-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://faapy.com/search/?q=%s' % url, 'FAAPY-clips')
+           valTab = self.listsItems(-1, 'https://faapy.com/search/?q=%s' % url.replace(' ','+'), 'FAAPY-clips')
             
            return valTab
         if 'FAAPY-clips' == name:
@@ -3576,12 +3573,10 @@ class Host:
            self.SEARCH_proc='4TUBE-search'
            valTab.insert(0,CDisplayListItem('Historia wyszukiwania', 'Historia wyszukiwania', CDisplayListItem.TYPE_CATEGORY, [''], 'HISTORY', '', None)) 
            valTab.insert(0,CDisplayListItem('Szukaj',  'Szukaj filmów',                       CDisplayListItem.TYPE_SEARCH,   [''], '',        '', None)) 
-            
            return valTab
         if '4TUBE-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, self.MAIN_URL+'/search?q=%s' % url, 'FUX-clips')
-            
+           valTab = self.listsItems(-1, self.MAIN_URL+'/search?q=%s' % url.replace(' ','+'), 'FUX-clips')
            return valTab              
         if 'FUX-channels' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -3603,7 +3598,6 @@ class Host:
               valTab.append(CDisplayListItem(phTitle,'[Video: '+phVid+']   '+phTitle,CDisplayListItem.TYPE_CATEGORY, [phUrl], 'FUX-clips', phImage, None)) 
            if next_page:
               valTab.append(CDisplayListItem('Next', next_page, CDisplayListItem.TYPE_CATEGORY, [next_page], name, '', None))                
-            
            return valTab
         if 'FUX-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -3623,10 +3617,9 @@ class Host:
               phImage = self.cm.ph.getSearchGroups(item, '''img data-master=['"]([^"^']+?)['"]''', 1, True)[0] 
               phRuntime = self.cm.ph.getSearchGroups(item, '''"duration-top">([^"^']+?)<''', 1, True)[0] 
               if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
-              valTab.append(CDisplayListItem(phTitle,'['+phRuntime+']  '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+              valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+phRuntime+']  '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            if next_page:
               valTab.append(CDisplayListItem('Next', next_page, CDisplayListItem.TYPE_CATEGORY, [next_page], name, '', None))                
-            
            return valTab
 
         if 'HomeMoviesTube' == name:
@@ -3659,7 +3652,7 @@ class Host:
            return valTab
         if 'HomeMoviesTube-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, self.MAIN_URL+'/search/%s/page1.html' % url, 'HomeMoviesTube-clips')
+           valTab = self.listsItems(-1, self.MAIN_URL+'/search/%s/page1.html' % url.replace(' ','+'), 'HomeMoviesTube-clips')
             
            return valTab              
         if 'HomeMoviesTube-clips' == name:
@@ -3718,7 +3711,7 @@ class Host:
            return valTab
         if 'UpdateTube-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, self.MAIN_URL+'/search/?q=%s' % url, 'UpdateTube-clips')
+           valTab = self.listsItems(-1, self.MAIN_URL+'/search/?q=%s' % url.replace(' ','+'), 'UpdateTube-clips')
            return valTab              
         if 'UpdateTube-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -3775,7 +3768,7 @@ class Host:
            return valTab
         if 'MOVIEFAP-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, self.MAIN_URL+'/search/%s' % url, 'MOVIEFAP-clips')
+           valTab = self.listsItems(-1, self.MAIN_URL+'/search/%s' % url.replace(' ','+'), 'MOVIEFAP-clips')
             
            return valTab              
         if 'MOVIEFAP-clips' == name:
@@ -3834,7 +3827,7 @@ class Host:
            return valTab
         if 'yourporn-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://yourporn.sexy/%s.html?mode=videos' % url, 'yourporn-clips')
+           valTab = self.listsItems(-1, 'https://yourporn.sexy/%s.html?mode=videos' % url.replace(' ','+'), 'yourporn-clips')
             
            return valTab              
         if 'yourporn-clips' == name:
@@ -3895,7 +3888,7 @@ class Host:
            return valTab
         if 'freeomovie-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://www.freeomovie.com/?s=%s' % url, 'freeomovie-clips')
+           valTab = self.listsItems(-1, 'http://www.freeomovie.com/?s=%s' % url.replace(' ','+'), 'freeomovie-clips')
             
            return valTab              
         if 'freeomovie-clips' == name:
@@ -3972,7 +3965,7 @@ class Host:
            return valTab
         if 'KATESTUBE-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.katestube.com/search/?q=%s' % url, 'KATESTUBE-clips')
+           valTab = self.listsItems(-1, 'https://www.katestube.com/search/?q=%s' % url.replace(' ','+'), 'KATESTUBE-clips')
            return valTab              
         if 'KATESTUBE-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -4095,7 +4088,7 @@ class Host:
            return valTab
         if 'vporn-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.vporn.com/search?q=%s' % url, 'vporn-clips')
+           valTab = self.listsItems(-1, 'https://www.vporn.com/search?q=%s' % url.replace(' ','+'), 'vporn-clips')
            return valTab              
         if 'vporn-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -4153,7 +4146,7 @@ class Host:
            return valTab
         if 'hotmovs-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://hotmovs.com/search/?q=%s' % url, 'hotmovs-clips')
+           valTab = self.listsItems(-1, 'http://hotmovs.com/search/?q=%s' % url.replace(' ','+'), 'hotmovs-clips')
            return valTab              
         if 'hotmovs-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -4216,7 +4209,7 @@ class Host:
            return valTab
         if 'pornoxo-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'https://www.pornoxo.com/search/%s/?sort=mw&so=y' % url, 'pornoxo-clips')
+           valTab = self.listsItems(-1, 'https://www.pornoxo.com/search/%s/?sort=mw&so=y' % url.replace(' ','+'), 'pornoxo-clips')
            return valTab              
         if 'pornoxo-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -4253,7 +4246,7 @@ class Host:
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
            printDBG( 'Host listsItems data: '+data )
-           #data = self.cm.ph.getDataBeetwenMarkers(data, 'Categories</h3>', '</div>', False)[1]
+           data = self.cm.ph.getDataBeetwenMarkers(data, 'text">Categories', 'fa fa-times', False)[1]
            data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'id="menu-item', '</li>')
            for item in data:
               phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
@@ -4272,7 +4265,7 @@ class Host:
            return valTab
         if 'pornfree-search' == name:
            printDBG( 'Host listsItems begin name='+name )
-           valTab = self.listsItems(-1, 'http://pornfree.tv/?s=%s' % url, 'pornfree-clips')
+           valTab = self.listsItems(-1, 'http://pornfree.tv/?s=%s' % url.replace(' ','+'), 'pornfree-clips')
            return valTab              
         if 'pornfree-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
