@@ -32,7 +32,7 @@
 	</extension>
 </addon>
 
-    <addon id="j00zeksKodi.repo" name="j00zeks addons collection" version="0.1.0" provider-name="j00zek">
+    <addon id="repository.j00zka" name="j00zeks addons collection" version="0.4.0" provider-name="j00zek">
         <requires>
             <import addon="xbmc.addon" version="12.0.0"/>
         </requires>
@@ -43,9 +43,15 @@
             <hashes>false</hashes>
         </extension>
         <extension point="xbmc.addon.metadata">
-            <summary>Port of well known openPLi plugin</summary>
-            <description>just description</description>
+            <summary>j00zek Kodi Repository</summary>
+            <summary lang="en">Addons collected/modified/created by j00zek repository</summary>
+            <summary lang="pl">Repozytorium wtyczek zebranych/zmodyfikowanych przez j00zka</summary>
+            <description>Unofficial Addons repository.</description>
+            <disclaimer>Repository has non-comercial nature, I do it for fun</disclaimer>
+            <disclaimer lang="pl">Zawartość repozytorium ma charakter niekomercyjny i jest tworzone dla nauki i zabawy.</disclaimer>
             <platform>all</platform>
+            <website>https://github.com/j00zek/crossplatform_iptvplayer</website>
+            <email></email>
     </extension>
 </addon>
 </addons>
