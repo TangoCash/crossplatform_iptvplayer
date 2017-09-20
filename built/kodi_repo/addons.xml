@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addons>
+<addon id="plugin.video.IPTVplayer" version="180.00.11.00" name="IPTVplayer" provider-name="j00zek">
+	<requires>
+		<import addon="xbmc.python" version="2.24.0"/>
+        <import addon="script.module.simplejson"    version="3.3.0"/>
+        <import addon="script.module.twisted" version="13.2.1"/>
+    </requires>
+	<extension point="xbmc.python.pluginsource" library="addon.py">
+		<provides>video</provides>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="en">IPTVplayer for Kodi</summary>
+		<summary lang="pl">Odtwarzacz IPTV dla Kodi</summary>
+		<description lang="en">Watching and recording of video materials from web[CR]Uses hosts and components from IPTVplayer for E2\nAll credtis go to @sss, who manages this great IPTVplayer plugin!!!</description>
+		<description lang="pl">Oglądanie i nagrywanie materiałów video z sieci[CR]Używa hostów i komponentów ogólnie znanej wtyczki IPTVplayer do E2 autorstwa kolegi @sss</description>
+		<disclaimer lang="en">IPTVplayer plugin is  some kind of specialized web browser. Plugin authors do NOT take any responsibilities for materials watched/downloaded using it. All you do on your own and your responsibility!!!</disclaimer>
+		<disclaimer lang="pl">Plugin IPTVPlayer należy traktować jako przeglądarkę treści dostępnych w sieci Internet dlatego Twórcy pluginu IPTVPlayer nie mogą i nie ponoszą odpowiedzialności za treści do których użytkownik uzyskuje dostęp z jego wykorzystaniem.\nWszystko robisz na własną odpowiedzialność!!!</disclaimer>
+		<language></language>
+		<platform>all</platform>
+		<license></license>
+		<forum></forum>
+		<website></website>
+		<email></email>
+		<source></source>
+		<news></news>
+		<assets>
+			<icon></icon>
+			<fanart></fanart>
+			<screenshot></screenshot>
+		</assets>
+	</extension>
+</addon>
+
+    <addon id="j00zeksKodi.repo" name="j00zeks addons collection" version="0.1.0" provider-name="j00zek">
+        <requires>
+            <import addon="xbmc.addon" version="12.0.0"/>
+        </requires>
+        <extension point="xbmc.addon.repository" name="j00zeks addons collection">
+            <info compressed="false">https://raw.githubusercontent.com/j00zek/crossplatform_iptvplayer/master/built/kodi_repo/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/j00zek/crossplatform_iptvplayer/master/built/kodi_repo/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/j00zek/crossplatform_iptvplayer/master/built/kodi_repo/</datadir>
+            <hashes>false</hashes>
+        </extension>
+        <extension point="xbmc.addon.metadata">
+            <summary>Port of well known openPLi plugin</summary>
+            <description>just description</description>
+            <platform>all</platform>
+    </extension>
+</addon>
+</addons>
