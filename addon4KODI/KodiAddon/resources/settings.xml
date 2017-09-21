@@ -1,0 +1,42 @@
+<!--http://kodi.wiki/view/Add-on_settings-->
+<settings>
+  <category label="30100">
+    <setting id="PlayerMode" label="30110" type="enum" lvalues="30111|30112|30113" default="0" enable="true" />
+    <setting id="config.plugins.iptvplayer.ZablokujWMV" label="30197" type="bool" default="false" />
+    <setting id="config.plugins.iptvplayer.SciezkaCache" label="30120" type="folder" value="/hdd/IPTVCache" />
+    <setting id="config.plugins.iptvplayer.NaszaSciezka" label="30130" type="folder" value="/hdd/movie/" />
+    <setting id="config.plugins.iptvplayer.NaszaTMP" label="30150" type="folder" value="/tmp/" />
+    <setting id="config.plugins.iptvplayer.wgetpath" label="30160" type="file" value="wget" />
+    
+    <setting id="config.plugins.iptvplayer.rtmpdumppath" label="30170" type="file" value="rtmpdump" enable="false" />
+    <setting id="config.plugins.iptvplayer.f4mdumppath" label="30180" type="file" value="f4mdump" enable="false" />
+    <setting id="config.plugins.iptvplayer.uchardetpath" label="30190" type="file" value="" enable="false" />
+    <setting id="config.plugins.iptvplayer.requestedBuffSize" label="30196" type="slider" default="5" range="1,120" option="int" enable="false" />
+    <setting id="config.plugins.iptvplayer.buforowanie" label="30193" type="bool" default="false" enable="false" />
+    <setting id="config.plugins.iptvplayer.buforowanie_m3u8" label="30194" type="bool" default="true" enable="false" />
+    <setting id="config.plugins.iptvplayer.buforowanie_rtmp" label="30195" type="bool" default="false" enable="false" />
+    <setting id="config.plugins.iptvplayer.plarform" label="30192" type="enum" default = "auto" values="auto|mipsel|sh4|i686|armv7|armv5t|unknown" enable="false" />
+  </category>
+  <category label="30400">
+    <!--On/Off host settings-->
+  </category>
+  <!-- ustawienia specyficzne dla hostow -->
+  <category label="30300">
+    <setting label="ipla" type="lsep"/>
+    <setting id="ipla.config.plugins.iptvplayer.iplaUseDF" label="30301" type="bool" default="false" enable="true" />
+    <setting id="ipla.config.plugins.iptvplayer.iplaDefaultformat" type="enum" label="30302" values="200|400|900|1900" default="400" enable="true" />
+    <setting id="ipla.config.plugins.iptvplayer.iplacachexml" type="enum" label="30303" values="0|6|12|24" default="12" enable="true" />
+  </category>
+  <category label="30200">
+    <setting id="daemonType" label="30140" type="enum" lvalues="30141|30142" default="1" />
+    <setting id="LogOptions" label="30280" type="enum" lvalues="30281|30282|30283" default="1" />
+    <setting id="config.plugins.iptvplayer.debugprint" label="30191" type="enum" default = "" values=" |console|debugfile" enable="false" />
+    <setting id="currenLevel" label="30250" type="number" enable="false" />
+    <setting id="selectedHost" label="30210" type="text" enable="false" />
+    <setting id="selectedID" label="30220" type="number" enable="false" />
+    <setting id="daemonPID" label="30230" type="number" enable="false" />
+    <setting id="updateE2settings" label="30260" type="number" enable="false" />
+    <setting id="kodiIPTVpath" label="30240" type="folder" value="-" enable="false" />
+    <setting id="addonTempFolder" label="30270" type="folder" value="-" enable="true"/>
+  </category>
+</settings>

@@ -1,0 +1,170 @@
+# Kodi Media Center language file
+# Addon Name: Version Check
+# Addon id: service.xbmc.versioncheck
+# Addon Provider: Team Kodi
+msgid ""
+msgstr ""
+"Project-Id-Version: kodiIPTV addon\n"
+"Report-Msgid-Bugs-To: j00zek\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: j00zek\n"
+"Language-Team: j00zek\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pl\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgctxt "#30100"
+msgid "General settings"
+msgstr "Ust. wtyczki"
+
+msgctxt "#30110"
+msgid "Mode"
+msgstr "Tryb"
+
+msgctxt "#30111"
+msgid "player"
+msgstr "odtwarzacz"
+
+msgctxt "#30112"
+msgid "player with buffering"
+msgstr "odtwarzacz z buforowaniem"
+
+msgctxt "#30113"
+msgid "recorder"
+msgstr "nagrywarka"
+
+msgctxt "#30120"
+msgid "Cache path"
+msgstr "Ścieżka pamięci podręcznej"
+
+msgctxt "#30130"
+msgid "Download path"
+msgstr "Ścieżka pobierania"
+
+msgctxt "#30140"
+msgid "Daemon type"
+msgstr "Typ demona"
+
+msgctxt "#30141"
+msgid "Linux test deamon"
+msgstr "Testowy demon Linux-a"
+
+msgctxt "#30142"
+msgid "Kodi service"
+msgstr "serwis Kodi"
+
+msgctxt "#30150"
+msgid "Temp path"
+msgstr "Ścieżka plików tymczasowych"
+
+msgctxt "#30160"
+msgid "wget path"
+msgstr "Lokalizacja programu wget"
+
+msgctxt "#30170"
+msgid "rtmpdump path"
+msgstr "Lokalizacja programu rtmpdump"
+
+msgctxt "#30180"
+msgid "f4mdump path"
+msgstr "Lokalizacja programu f4mdump"
+
+msgctxt "#30190"
+msgid "uchardet path"
+msgstr "Lokalizacja programu uchardet"
+
+msgctxt "#30191"
+msgid "IPTVplayer debug"
+msgstr "Debugowanie"
+
+msgctxt "#30192"
+msgid "IPTVplayer platform"
+msgstr "Platforma"
+
+msgctxt "#30193"
+msgid "Buffering"
+msgstr "Buforowanie"
+
+msgctxt "#30194"
+msgid "Buffering m3u8"
+msgstr "Buforowanie m3u8"
+
+msgctxt "#30195"
+msgid "Buffering rtmp"
+msgstr "Buforowanie rtmp"
+
+msgctxt "#30196"
+msgid "Buffering for X seconds"
+msgstr "Buforowanie X sekund"
+
+msgctxt "#30197"
+msgid "Block WMV"
+msgstr "Blokowanie WMV"
+
+msgctxt "#30200"
+msgid "Dev"
+msgstr "Stan dodatku"
+
+msgctxt "#30210"
+msgid "selected Host"
+msgstr "Wybrany serwis"
+
+msgctxt "#30220"
+msgid "selected ID"
+msgstr "Wybrane ID"
+
+msgctxt "#30230"
+msgid "IPTVdaemon PID"
+msgstr "PID demona"
+
+msgctxt "#30240"
+msgid "addon path"
+msgstr "Ścieżka dodatku"
+
+msgctxt "#30250"
+msgid "current level"
+msgstr "Poziom drzewa"
+
+msgctxt "#30260"
+msgid "Update E2 settings"
+msgstr "Aktualizacja ustawień E2"
+
+msgctxt "#30270"
+msgid "addon temp path"
+msgstr " Ścieżka plików tymczasowych dodatku"
+
+msgctxt "#30280"
+msgid "Logging"
+msgstr "Logowanie"
+
+msgctxt "#30281"
+msgid "disabled"
+msgstr "wyłączone"
+
+msgctxt "#30282"
+msgid "KODI service only"
+msgstr "Tylko serwis KODI"
+
+msgctxt "#30283"
+msgid "everything"
+msgstr "wszystko"
+
+msgctxt "#30300"
+msgid "Hosts"
+msgstr "Ust. serwisów"
+
+msgctxt "#30301"
+msgid "- Use default video format"
+msgstr "- Używaj domyślnego format video"
+
+msgctxt "#30302"
+msgid "- Default video bitrate"
+msgstr "- Domyślny bitrate video"
+
+msgctxt "#30303"
+msgid "- cache data X hours"
+msgstr "- Używaj danych z pamięci podręcznej przez godzin"
+

@@ -153,7 +153,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.1.4.7"
+    XXXversion = "21.1.4.9"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -312,7 +312,7 @@ class Host:
            valTab.append(CDisplayListItem('CAMSODA',       'http://www.camsoda.com',       CDisplayListItem.TYPE_CATEGORY, ['http://www.camsoda.com/api/v1/browse/online'],            'CAMSODA','https://www.sodacdn.com/assets/img/camsoda-logo-160x50.png', None)) 
            valTab.append(CDisplayListItem('ADULT-CHANNELS',     'http://adult-channels.com', CDisplayListItem.TYPE_CATEGORY, ['http://adult-channels.com/'],'ADULT', 'http://adult-channels.com/wp-content/uploads/2015/09/adult-channels-logo.png', None)) 
            valTab.append(CDisplayListItem('ADULT-STREAMS',     'http://civeci.com/ADULT.txt', CDisplayListItem.TYPE_CATEGORY, ['http://civeci.com/ADULT.txt'],'ADULT-STREAMS', 'https://previews.123rf.com/images/sarahdesign/sarahdesign1403/sarahdesign140302179/26994295-live-stream-icon-Stock-Vector.jpg', None)) 
-           valTab.append(CDisplayListItem('+++ XXXLIST +++',     'xxxlist.txt', CDisplayListItem.TYPE_CATEGORY, [''],'XXXLIST', '', None)) 
+           valTab.append(CDisplayListItem('+++ XXXLIST +++   XXXversion = '+str(self.XXXversion), '+++ XXXLIST +++   XXXversion = '+str(self.XXXversion), CDisplayListItem.TYPE_CATEGORY, [''],'XXXLIST', '', None)) 
            return valTab
 
         # ########## #
@@ -1289,9 +1289,13 @@ class Host:
               printDBG( 'Host listsItems query error url:'+url )
               return valTab
            #printDBG( 'Host listsItems data: '+data )
-           version = re.search('src="//static\.beeg\.com/cpl/(.*?)\.js' , data, re.S)
+           #phTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0].replace('&amp;','&') 
+
+           version = re.search('src="/static/cpl/(.*?)\.js' , data, re.S)
            if version:
               self.beeg_version = str(version.group(1))
+           else:
+              return valTab
            url = 'http://api2.beeg.com/api/v6/%s/index/main/0/mobile' % self.beeg_version
            query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
            try:
@@ -1736,9 +1740,13 @@ class Host:
                      camhouse = ''
                      videourl = "https://www.camsoda.com/api/v1/video/vtoken/" + item['username'] + "?username=guest_" + str(random.randrange(100, 55555))
                      if Image.startswith('//'): Image = 'http:' + Image 
-                     if config.plugins.iptvplayer.camsoda.value == '1': videourl = 'rtmp'+videourl
+                     if config.plugins.iptvplayer.camsoda.value == '1':
+                        videourl = 'rtmp'+videourl
+                        stream = 'rtmp'
+                     else:
+                        stream = 'm3u8'
                      if status=='online':
-                        valTab.append(CDisplayListItem(Name+'   '+camhouse, Name, CDisplayListItem.TYPE_VIDEO, [CUrlItem('', videourl, 1)], 0, Image, None)) 
+                        valTab.append(CDisplayListItem(Name, Name+'   '+stream, CDisplayListItem.TYPE_VIDEO, [CUrlItem('', videourl, 1)], 0, Image, None)) 
             
            return valTab 
 
@@ -2218,17 +2226,17 @@ class Host:
               self.bongastream = 'm3u8'
            else:
               self.bongastream = 'rtmp'
-           valTab.insert(0,CDisplayListItem("--- Couples ---",       "Pary",       CDisplayListItem.TYPE_CATEGORY,["couples"], 'BONGACAMS-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Male ---",       "Mężczyźni",       CDisplayListItem.TYPE_CATEGORY,["male"], 'BONGACAMS-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Transsexual ---",       "Transseksualiści",       CDisplayListItem.TYPE_CATEGORY,["transsexual"], 'BONGACAMS-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- New ---",       "Nowe",       CDisplayListItem.TYPE_CATEGORY,["new"], 'BONGACAMS-clips', '',None))
-           valTab.insert(0,CDisplayListItem("--- Female ---",       "Kobiety",       CDisplayListItem.TYPE_CATEGORY,["females"], 'BONGACAMS-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Couples ---   stream:"+self.bongastream,       "Pary",       CDisplayListItem.TYPE_CATEGORY,["couples"], 'BONGACAMS-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Male ---   stream:"+self.bongastream,       "Mężczyźni",       CDisplayListItem.TYPE_CATEGORY,["male"], 'BONGACAMS-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Transsexual ---   stream:"+self.bongastream,       "Transseksualiści",       CDisplayListItem.TYPE_CATEGORY,["transsexual"], 'BONGACAMS-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- New ---   stream:"+self.bongastream,       "Nowe",       CDisplayListItem.TYPE_CATEGORY,["new"], 'BONGACAMS-clips', '',None))
+           valTab.insert(0,CDisplayListItem("--- Female ---   stream:"+self.bongastream,       "Kobiety",       CDisplayListItem.TYPE_CATEGORY,["females"], 'BONGACAMS-clips', '',None))
             
            return valTab 
         if 'BONGACAMS-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
            COOKIEFILE = os_path.join(GetCookieDir(), 'bongacams.cookie')
-           Url = 'https://pl.bongacams.com/tools/listing_v3.php?tag=&page=1&lang=&countryId=&countryLangs=&online_only=1&category={0}&livetab={0}&pageCount=&mls_width=&_save=1&model_search%5Bper_page%5D=200&model_search%5Bdisplay%5D=auto&model_search%5Bth_type%5D=live&mls_th_per_row=5&model_search%5Bbase_sort%5D=camscore'.format(urllib.quote(url, ''))
+           Url = 'https://pl.bongacams.com/tools/listing_v3.php?tag=&page=1&lang=&countryId=&countryLangs=&online_only=1&category={0}&livetab={0}&pageCount=&mls_width=&_save=1&model_search%5Bper_page%5D=999&model_search%5Bdisplay%5D=auto&model_search%5Bth_type%5D=live&mls_th_per_row=5&model_search%5Bbase_sort%5D=camscore'.format(urllib.quote(url, ''))
            host = 'Mozilla/5.0 (iPad; CPU OS 8_1_3 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B466 Safari/600.1.4'
            header = {'User-Agent': host, 'Accept':'application/json','Accept-Language':'en,en-US;q=0.7,en;q=0.3','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'} 
            query_data = { 'url': Url, 'header': header, 'Referer':'https://pl.bongacams.com/', 'Origin':'https://pl.bongacams.com', 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
@@ -2248,7 +2256,7 @@ class Host:
            data = re.sub('"about_me":"(.*?),"vq', '"vq', data)
 
            printDBG( 'Host data2: '+data )
-
+           x = 0
            try:
               result = simplejson.loads(data)
            except:
@@ -2256,14 +2264,21 @@ class Host:
               return valTab
            if result:
               for item in result:
-                 vsid = str(item["vsid"])  
+                 online = str(item["online"])  
+                 room = str(item["room"])  
                  phTitle = str(item["username"]) 
                  phTitle2 = str(item["display_name"]) 
                  phImage = str(item["live_image"]) 
                  if phImage.startswith('//'): phImage = 'http:' + phImage
+                 printDBG( 'Host phTitle: '+phTitle )
+                 printDBG( 'Host online: '+online )
+                 printDBG( 'Host room: '+room )
+
                  phUrl = 'rtmp://dedNUMER_SERWERA-bongacams.com:1935/bongacams playpath=stream_%s?uid=SKROT_MD5 swfUrl=%s pageUrl=https://pl.bongacams.com/ ' % (phTitle, swfUrl)
-                 valTab.append(CDisplayListItem(phTitle2,phTitle2+'  ('+phTitle+')',CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
-            
+                 if room != 'vip' and online == 'True':
+                    x += 1
+                    valTab.append(CDisplayListItem(phTitle2,phTitle2+'  ('+phTitle+')',CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+              printDBG( 'Host ile: '+str(x) )
            return valTab 
 
         if 'RUSPORN' == name:
@@ -4620,7 +4635,7 @@ class Host:
 
         if parser == 'http://beeg.com':
            printDBG( 'self.beeg_version: '+self.beeg_version)
-           urljs = 'http://static.beeg.com/cpl/%s.js' % self.beeg_version
+           urljs = 'https://beeg.com/static/cpl/%s.js' % self.beeg_version
            query_data = {'url': urljs, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
            try:
               data = self.cm.getURLRequestData(query_data)
