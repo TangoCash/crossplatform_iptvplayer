@@ -74,13 +74,10 @@ class eConsoleAppContainer():
             try:
                 TmpPath = os.path.join(Components.config.config.misc.sysTempPath.value,'.IPTVdaemon')
             except:
-                from tempfile import gettempdir
-                TmpPath = gettempdir()
-
-            for TP in [TmpPath, '/storage/sdcard1', '/tmp' ]:
-                if os.path.exists(TP) and os.access(TP, os.W_OK):
-                    TempPath = os.path.join(TP)
-                    break
+                for TP in ['/storage/sdcard1', '/storage/sda1/', '/data/local/tmp/', '/tmp' ]:
+                    if os.path.exists(TP) and os.access(TP, os.W_OK):
+                        TempPath = os.path.join(TP)
+                        break
                 
             iindex = 1
             from subprocess import Popen

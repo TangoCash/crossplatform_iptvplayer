@@ -16,7 +16,7 @@ import glob
 import datetime
 from ConfigParser import SafeConfigParser
 
-addonid='repository.j00zek'
+addonid='repository.j00zka'
 
 class Generator:
     

@@ -29,7 +29,14 @@ import os
 #except: import simplejson as json
 from tempfile import gettempdir
 
-config.misc.sysTempPath = ConfigText(default = gettempdir() , fixed_size = False)
+try:
+    config.misc.sysTempPath = ConfigText(default = gettempdir() , fixed_size = False)
+except Exception, e:
+    print "Exception getting tempdir occured is it sheety Android?... (%s)" % str(e)
+    for TP in ['/storage/sdcard1', '/storage/sda1/', '/data/local/tmp/', '/tmp' ]:
+        if os.path.exists(TP) and os.access(TP, os.W_OK):
+            config.misc.sysTempPath = ConfigText(default = TP , fixed_size = False)
+            break
     
 #############################################################
 # e2 support functions
