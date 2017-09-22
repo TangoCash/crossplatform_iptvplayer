@@ -49,7 +49,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://skstream.co/'
+    return 'http://skstream.cc/'
 
 class SKStream(CBaseHostClass):
  
@@ -87,8 +87,18 @@ class SKStream(CBaseHostClass):
         url = url.replace(' ', '%20')
         return url
         
-    def selectDomain(self):                
-        self.MAIN_URL = 'http://www.skstream.co/'
+    def selectDomain(self):
+        self.MAIN_URL = 'http://www.skstream.cc/'
+        params = dict(self.defaultParams)
+        params['return_data'] = False
+        try:
+            sts, response = self.getPage(self.MAIN_URL, params)
+            self.MAIN_URL = response.geturl()
+            response.close()
+        except Exception:
+            printExc()
+        printDBG("selectDomain [%s]" % self.MAIN_URL)
+        
         self.MAIN_CAT_TAB = [{'category':'list_categories',         'title': 'Films',                    'url':self.getFullUrl('/films')},
                              {'category':'list_categories',         'title': 'Séries',                   'url':self.getFullUrl('/series')},
                              {'category':'list_categories',         'title': 'Mangas',                   'url':self.getFullUrl('/mangas')},

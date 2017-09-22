@@ -85,7 +85,7 @@ HostsList=[
 	("serienstreamto", "serienstream.to"),
 	("seriesenstreamingcom", "series-en-streaming.com"),
 	("seriesonline", "theseriesonline.net"),
-	("skstream", "skstream.co"),
+	("skstream", "skstream.cc"),
 	("solarmovie", "solarmovie.st"),
 	("sovdub", "sovdub.ru"),
 	("sportdeutschland", "SportDeutschland.TV"),

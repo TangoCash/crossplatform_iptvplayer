@@ -121,7 +121,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2017.09.17"
+    infoversion = "2017.09.21"
     inforemote  = "0.0.0"
     currList = []
 
@@ -1330,6 +1330,7 @@ class Host:
                 name = self.cm.ph.getSearchGroups(item, '''<div class="program_name">([^>]+?)</div>''', 1, True)[0]
                 desc = self.cm.ph.getSearchGroups(item, '''<div class="program_description">([^>]+?)</div>''', 1, True)[0]
                 programTV = programTV + time+'   '+name+'   '+desc+'\n'
+            if url.startswith('//'): url = 'http:' + url
             query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
             try:
                 data = self.cm.getURLRequestData(query_data)

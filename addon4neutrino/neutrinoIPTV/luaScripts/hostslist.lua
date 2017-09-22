@@ -84,7 +84,7 @@ HostsList={
       {id="serienstreamto", title="serienstream.to", type="py"},
       {id="seriesenstreamingcom", title="series-en-streaming.com", type="py"},
       {id="seriesonline", title="theseriesonline.net", type="py"},
-      {id="skstream", title="skstream.co", type="py"},
+      {id="skstream", title="skstream.cc", type="py"},
       {id="solarmovie", title="solarmovie.st", type="py"},
       {id="sovdub", title="sovdub.ru", type="py"},
       {id="sportdeutschland", title="SportDeutschland.TV", type="py"},

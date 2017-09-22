@@ -7,11 +7,13 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 ###################################################
 # FOREIGN import
 ###################################################
 import urllib
 import urllib2
+import base64
 try: import ssl
 except Exception: pass
 import re
@@ -530,29 +532,11 @@ class common:
                     f.close()
             except Exception:
                 printExc()
-            
         
         if not data['sts'] or 0 != data['code']: 
             return False, None
         else:
             return True, data['data']
-        
-        
-    def calcAnswer(self, data):
-        sourceCode = data
-        try:
-            code = compile(sourceCode, '', 'exec')
-        except Exception:
-            printExc()
-            return 0
-        vGlobals = {"__builtins__": None, 'string': string, 'int':int, 'str':str}
-        vLocals = { 'paramsTouple': None }
-        try:
-            exec( code, vGlobals, vLocals )
-        except Exception:
-            printExc()
-            return 0
-        return vLocals['a']
         
     def getPageCFProtection(self, baseUrl, params={}, post_data=None):
         cfParams = params.get('cloudflare_params', {})
@@ -579,6 +563,7 @@ class common:
                     #try: verData = data.fp.read()
                     #except Exception: verData = data
                     verData = data.fp.read()
+                    domain = data.fp.geturl()
                     printDBG("===============================================================")
                     printDBG(verData)
                     printDBG("===============================================================")
@@ -617,28 +602,19 @@ class common:
                             post_data2 = None
                         sts, data = self.getPage(url, params2)
                     else:
-                        dat = self.ph.getDataBeetwenMarkers(verData, 'setTimeout', 'submit()', False)[1]
-                        tmp = self.ph.getSearchGroups(dat, '={"([^"]+?)"\:([^}]+?)};', 2)
-                        varName = tmp[0]
-                        expresion= ['a=%s' % tmp[1]]
-                        e = re.compile('%s([-+*])=([^;]+?);' % varName).findall(dat)
-                        for item in e:
-                            expresion.append('a%s=%s' % (item[0], item[1]) )
-                        
-                        for idx in range(len(expresion)):
-                            e = expresion[idx]
-                            e = e.replace('!+[]', '1')
-                            e = e.replace('!![]', '1')
-                            e = e.replace('=+(', '=int(')
-                            if '+[]' in e:
-                                e = e.replace(')+(', ')+str(')
-                                e = e.replace('int((', 'int(str(')
-                                e = e.replace('(+[])', '(0)')
-                                e = e.replace('+[]', '')
-                            expresion[idx] = e
-                        
-                        answer = self.calcAnswer('\n'.join(expresion)) + len(cfParams['domain'])
-                        refreshData = data.fp.info().get('Refresh', '')
+                        dat = self.ph.getAllItemsBeetwenNodes(verData, ('<script', '>'), ('</script', '>'), False)
+                        for item in dat:
+                            if 'setTimeout' in item and 'submit()' in item:
+                                dat = item
+                                break
+                        decoded = ''
+                        jscode = base64.b64decode('''ZnVuY3Rpb24gc2V0VGltZW91dCh0LGUpe2lwdHZfcmV0LnRpbWVvdXQ9ZSx0KCl9dmFyIGlwdHZfcmV0PXt9LGlwdHZfZnVuPW51bGwsZG9jdW1lbnQ9e30sd2luZG93PXRoaXMsZWxlbWVudD1mdW5jdGlvbih0KXt0aGlzLl9uYW1lPXQsdGhpcy5fc3JjPSIiLHRoaXMuX2lubmVySFRNTD0iIix0aGlzLl9wYXJlbnRFbGVtZW50PSIiLHRoaXMuc2hvdz1mdW5jdGlvbigpe30sdGhpcy5hdHRyPWZ1bmN0aW9uKHQsZSl7cmV0dXJuInNyYyI9PXQmJiIjdmlkZW8iPT10aGlzLl9uYW1lJiZpcHR2X3NyY2VzLnB1c2goZSksdGhpc30sdGhpcy5maXJzdENoaWxkPXtocmVmOmlwdHZfZG9tYWlufSx0aGlzLnN0eWxlPXtkaXNwbGF5OiIifSx0aGlzLnN1Ym1pdD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfcmV0KSl9LE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh0aGlzLCJzcmMiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4gdGhpcy5fc3JjfSxzZXQ6ZnVuY3Rpb24odCl7dGhpcy5fc3JjPXR9fSksT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsImlubmVySFRNTCIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9pbm5lckhUTUx9LHNldDpmdW5jdGlvbih0KXt0aGlzLl9pbm5lckhUTUw9dH19KSxPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywidmFsdWUiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4iIn0sc2V0OmZ1bmN0aW9uKHQpe2lwdHZfcmV0LmFuc3dlcj10fX0pfSwkPWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX07ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQ9ZnVuY3Rpb24odCl7cmV0dXJuIG5ldyBlbGVtZW50KHQpfSxkb2N1bWVudC5jcmVhdGVFbGVtZW50PWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX0sZG9jdW1lbnQuYXR0YWNoRXZlbnQ9ZnVuY3Rpb24oKXtpcHR2X2Z1bj1hcmd1bWVudHNbMV19Ow==''')
+                        jscode = "var iptv_domain='%s';\n%s\n%s\niptv_fun();" % (domain, jscode, dat) #cfParams['domain']
+                        printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                        printDBG(jscode)
+                        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        ret = iptv_js_execute( jscode )
+                        decoded = byteify(json.loads(ret['data'].strip()))
                         
                         verData = self.ph.getDataBeetwenReMarkers(verData, re.compile('<form[^>]+?id="challenge-form"'), re.compile('</form>'), False)[1]
                         printDBG("===============================================================")
@@ -646,7 +622,7 @@ class common:
                         printDBG("===============================================================")
                         verUrl =  _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0] )
                         get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
-                        get_data['jschl_answer'] = answer
+                        get_data['jschl_answer'] = decoded['answer']
                         verUrl += '?'
                         for key in get_data:
                             verUrl += '%s=%s&' % (key, get_data[key])
@@ -658,11 +634,13 @@ class common:
                         params2['header'] = dict(params.get('header', {}))
                         params2['header'].update({'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'})
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
-                        time.sleep(5-(time.time() - start_time))
+                        time.sleep((decoded['timeout'] / 1000.0)-(time.time() - start_time))
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
+                        printDBG("Timeout: [%s]" % decoded['timeout'])
                         sts, data = self.getPage(verUrl, params2, post_data)
                 except Exception:
                     printExc()
+                    break
             else:
                 break
         return sts, data
