@@ -22,6 +22,20 @@ import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
+# assure we have correct paths defined
+ADDON = xbmcaddon.Addon(id='plugin.video.IPTVplayer')
+# Get the plugin handle as an integer number.
+ADDON_handle = int(sys.argv[1])
+# Get the plugin url in plugin:// notation.
+ADDON_url = sys.argv[0]
+sys.path.insert(0, buildPath(ADDON.getAddonInfo("path"), 'resources', 'E2emulator'))
+
+def _(data):
+    if isinstance(data, (int, long)):
+        return ADDON.getLocalizedString(data)
+    else:
+        return data
+      
 def myLog( text = '' , clearFile = False):
     myLogFile = buildPath(ADDON.getSetting("config.misc.sysTempPath"),'IPTVplayerGUI.log')
     if int(ADDON.getSetting("LogOptions")) > 1: #0-none, 1-only KODIservice:
@@ -41,25 +55,17 @@ def myLog( text = '' , clearFile = False):
 
 class StatusLine(xbmcgui.WindowDialog):
     def __init__(self, line=''):
-        self.addControl(xbmcgui.ControlLabel(x=590, y=5, width=500, height=25, label=line, textColor='0xFFFFFF00'))
+        self.addControl(xbmcgui.ControlLabel(x=490, y=5, width=500, height=25, label=line, textColor='0xFFFFFF00'))
 
 def showDialog(HeaderText, Message):
     d = xbmcgui.Dialog()
-    d.ok(str(HeaderText), str(Message))
+    d.ok(HeaderText, Message)
     return
 
 def selectionDialog(HeaderText, listOfOptions):
     d = xbmcgui.Dialog()
-    ret = d.select(str(HeaderText), listOfOptions)
+    ret = d.select(HeaderText, listOfOptions)
     return ret
-
-# assure we have correct paths defined
-ADDON = xbmcaddon.Addon(id='plugin.video.IPTVplayer')
-# Get the plugin handle as an integer number.
-ADDON_handle = int(sys.argv[1])
-# Get the plugin url in plugin:// notation.
-ADDON_url = sys.argv[0]
-sys.path.insert(0, buildPath(ADDON.getAddonInfo("path"), 'resources', 'E2emulator'))
 
 try:
     from Plugins.Extensions.IPTVPlayer.dToolsSet.hostslist import HostsList
@@ -159,10 +165,10 @@ def doCMD( myCommand , commandDescr = ''):
     if myCommand == None or myCommand == '':
         return ''
     elif not isDeamonWorking():
-        showDialog('Error', 'IPTVdaemon is not working :(')
+        showDialog('Error', _(30428))
         return ''
     if commandDescr == '':
-        SL = StatusLine("Downloading data...")
+        SL = StatusLine(_(30429))
     else:
         SL = StatusLine(commandDescr)
     SL.show()
@@ -194,24 +200,45 @@ def doCMD( myCommand , commandDescr = ''):
 
 def isERROR(myAnswer):
     if myAnswer.lower().startswith('timeout'):
-        showDialog("Error", myAnswer)
+        showDialog(_(30403), myAnswer)
         return True
     elif myAnswer.lower().startswith('ERROR'):
-        showDialog("Error", myAnswer)
+        showDialog(_(30403), myAnswer)
         return True
     elif myAnswer == 'wrongindex':
-        showDialog("Error", 'Wrong index!')
+        showDialog(_(30403), 'Wrong index!')
         return True
     elif myAnswer == 'novalidurls':
-        showDialog("Error", 'No valid urls')
+        showDialog(_(30403), 'No valid urls')
         return True
     return False
 #################################################################################################################################################
+def showTopOptions():
+    #EXIT
+    list_item = xbmcgui.ListItem(label = _(30425))
+    url = get_url(action='exitPlugin')
+    is_folder = False
+    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
+    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    #HOSTS LIST
+    list_item = xbmcgui.ListItem(label = _(30426))
+    url = get_url(action='reloadHostsList')
+    is_folder = False
+    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
+    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    #INITIAL LIST
+    list_item = xbmcgui.ListItem(label = _(30427))
+    url = get_url(action='InitialList')
+    is_folder = False
+    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
+    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    return
+    
 def showDownloaderItem():
     for filename in os.listdir(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka")):
         if filename.endswith('.wget'):
             myLog('Found at least one wget status file, displaying menut then ;)')
-            list_item = xbmcgui.ListItem(label = '--- Downloads status ---')
+            list_item = xbmcgui.ListItem(label = _(30424))
             url = get_url(action='wgetStatus')
             is_folder = True
             list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
@@ -254,6 +281,7 @@ def SelectHost():
                 list_item.setArt({'thumb': hostImage,})
                 list_item.setInfo('video', {'title': hostName, 'genre': hostName})
                 url = get_url(action='startHost', host=host[0])
+                myLog(url)
                 is_folder = True
                 # Add our item to the Kodi virtual folder listing.
                 xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
@@ -262,7 +290,21 @@ def SelectHost():
     # Finish creating a virtual folder.
     xbmcplugin.endOfDirectory(ADDON_handle)
     return
-        
+
+def ContextMenu():
+    liz=xbmcgui.ListItem('You directory label', iconImage="DefaultFolder.png", thumbnailImage='your icon')
+    contextMenuItems = []
+    contextMenuItems.append(('This is a context menu entry', 'XBMC.RunPlugin(Your_path_goes_here)',))
+    liz.addContextMenuItems(contextMenuItems, replaceItems=True)
+    myUrl = get_url(action='wgetStatus')
+    xbmcplugin.addDirectoryItem(handle=ADDON_handle,url=myUrl,listitem=liz,isFolder=False)
+#    commands = []
+#    #commands.append(( 'Jump to page', 'XBMC.Container.Update(%s/%s/jump)' % (plugin.root, obj['board']), ))
+#    commands.append(( 'Exit plugin', 'XBMC.ActivateWindow(Home)', ))
+#    list_item = xbmcgui.ListItem(label = 'aqq', iconImage="DefaultFolder.png", thumbnailImage="DefaultFolder.png")
+#    list_item.addContextMenuItems(commands)
+#    xbmcplugin.addDirectoryItem(ADDON_handle, get_url(action='exitPlugin'), list_item, True)
+    
 def playVideo(path, videoName):
     """
     Play a video by the provided path.
@@ -297,7 +339,7 @@ def prepareKODIitemsList(itemsList):
             list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/SearchItem.png')})
         if myAction != 'NOACTION':
             url = get_url(action = myAction, id = myID, level = myLevel, name = item['name'])
-            xbmcplugin.addDirectoryItem(int(sys.argv[1]), url, list_item, is_folder)
+            xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
             myLog('action=%s id=%s level=%s' % (myAction,myID,myLevel))
     return
 
@@ -346,36 +388,37 @@ def router(paramstring):
     if params:
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### uruchomienie hosta i pobieranie listy inicjalnej ###
         if params['action'] == 'startHost':
-            SL = StatusLine("Initiating IPTVdaemon for %s" % params['host'])
+            SL = StatusLine(_(30401) % params['host'])
             SL.show()
             restartDaemon(params['host'])
             SL.close()
             if not isDeamonWorking():
                 myLog('Error starting daemon for host %s' % (params['host']))
-                showDialog("Error", 'Error initiating IPTVdaemon for host %s' % (params['host']))
+                showDialog(_(30403), _(30404) % (params['host']))
             else:
                 myLog('>startHost %s, pid:%s' % (params['host'],ADDON.getSetting("daemonPID")))
-                ADDON.setSetting("selectedHost", doCMD("Title", "Getting host name..."))
-                ANSWER = doCMD("InitList", "Getting initial categories...")
+                ADDON.setSetting("selectedHost", doCMD("Title", _(30402)))
+                ANSWER = doCMD("InitList", _(30405))
                 if not isERROR(ANSWER) and ANSWER.startswith( 'ItemsList=' ):
                     ADDON.setSetting("currenLevel", "1")
                     prepareKODIitemsList(ANSWER)
                 elif isinstance(ANSWER, (str, unicode)):
-                    showDialog("Error", ANSWER)
+                    showDialog(_(30403), ANSWER)
             xbmcplugin.endOfDirectory(ADDON_handle)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### pobieranie kategorii
         elif params['action'] == 'getList':
+            showTopOptions()
             while int(params['level']) < int(ADDON.getSetting("currenLevel")):
                 ANSWER = doCMD("PreviousList", "..")
                 ADDON.setSetting("currenLevel", "%d" % (int(ADDON.getSetting("currenLevel")) - 1) )
-            ANSWER = doCMD("ListForItem=%s" % params['id'], "Getting items for %s" % params['name'])
+            ANSWER = doCMD("ListForItem=%s" % params['id'], _(30406) % params['name'].decode('utf-8'))
             if not isERROR(ANSWER) and ANSWER.startswith( 'ItemsList=' ):
                 ADDON.setSetting("currenLevel", "%d" % (int(ADDON.getSetting("currenLevel")) + 1) )
                 prepareKODIitemsList(ANSWER)
             xbmcplugin.endOfDirectory(ADDON_handle)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### pobieranie linkow do filmu
         elif params['action'] == 'playMovie':
-            ANSWER = doCMD("getVideoLinks=%s" % params['id'], "Getting urls for %s" % params['name'])
+            ANSWER = doCMD("getVideoLinks=%s" % params['id'], _(30407) % params['name'])
             if not isERROR(ANSWER) and ANSWER.startswith( 'UrlsList=' ):
                 prepareKODIurlsList(ANSWER,params['name'])
             xbmcplugin.endOfDirectory(ADDON_handle)
@@ -385,9 +428,9 @@ def router(paramstring):
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### read status
         elif params['action'] == 'wgetRead':
             if not fileExists(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'])):
-                showDialog("Info", 'File does not exist, probably already deleted')
+                showDialog("Info", _(30408))
                 return
-            selRet=selectionDialog('What to do?', ['Display file','Delete status file','Delete status file and video'])
+            selRet=selectionDialog(_(30409), [_(30410),_(30411),_(30412)])
             if selRet < 0: #user pressed cancel
                 return
             elif selRet == 0:
@@ -410,12 +453,12 @@ def router(paramstring):
                 showDialog("Status", DocFile)
             elif selRet == 1:
                 os.remove(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName']))
-                showDialog("Status", 'Status file has been deleted')
+                showDialog("Status", _(30413))
             elif selRet == 2:
                 os.remove(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName']))
                 if fileExists(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'][:-5])):
                     os.remove(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'][:-5]))
-                showDialog("Status", 'Status file and video has been deleted' + os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'][:-5]))
+                showDialog("Status", _(30414) + os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'][:-5]))
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### read status
         elif params['action'] == 'wgetDelete':
             iindex=0
@@ -424,11 +467,11 @@ def router(paramstring):
                     os.remove(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),filename))
                     iindex += 1
             if iindex ==1:
-                showDialog("Info", 'File has been deleted' % iindex)
+                showDialog("Info", _(30415))
             elif iindex >1:
-                showDialog("Info", '%d files have been deleted' % iindex)
+                showDialog("Info", _(30416) % iindex)
             else:
-                showDialog("Info", 'No files to delete')
+                showDialog("Info", _(30417))
             return
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### odtwarzanie filmu
         elif params['action'] == 'playUrl':
@@ -443,23 +486,23 @@ def router(paramstring):
             if myUrl != '':
                 if ADDON.getSetting("PlayerMode") == "1": # 1-player with buffering
                     pDialog = xbmcgui.DialogProgress()
-                    pDialog.create('Info', 'Initializing...')
-                    ANSWER = doCMD("DownloadURL=%s" % myUrl, "Start buffering")
+                    pDialog.create('Info', _(30418))
+                    ANSWER = doCMD("DownloadURL=%s" % myUrl, _(30419))
                     waitTime=10
                     ScaleMultiplier=100/waitTime
                     while waitTime >0:
-                        pDialog.update(100 - waitTime * ScaleMultiplier, 'Buffering...')
+                        pDialog.update(100 - waitTime * ScaleMultiplier, _(30420))
                         time.sleep(1)
                         waitTime = waitTime -1
                     pDialog.close()
                     if fileExists(ANSWER):
                         playVideo(ANSWER, params['name'])
                     else:
-                        showDialog("Error", 'Something wrong happened with buffering :(')
+                        showDialog(_(30403), _(30421))
                 elif ADDON.getSetting("PlayerMode") == "2": #2-recorder
-                    ANSWER = doCMD("DownloadURL=%s" % myUrl, "Start downloading")
+                    ANSWER = doCMD("DownloadURL=%s" % myUrl, _(30422))
                     if os.path.exists(ANSWER):
-                        showDialog("Info", 'Download of %s started' % ANSWER)
+                        showDialog("Info", _(30423) % ANSWER)
                 else: #  0-player 
                     playVideo(myUrl, params['name'])
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### SZUKANIE
@@ -474,18 +517,28 @@ def router(paramstring):
                     ADDON.setSetting("currenLevel", "%d" % (int(ADDON.getSetting("currenLevel")) + 1) )
                     prepareKODIitemsList(ANSWER)
             xbmcplugin.endOfDirectory(ADDON_handle)
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### NA POCZATEK
+        elif params['action'] == 'InitialList':
+            xbmc.executebuiltin('XBMC.Container.Update("%s", "replace")' % 'plugin://plugin.video.IPTVplayer/?action=startHost&host=cdapl')
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### DO LISTY SERWISOW
+        elif params['action'] == 'reloadHostsList':
+            stopDaemon()
+            xbmc.executebuiltin('XBMC.Container.Update("%s", "replace")' % ADDON_url)
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### KONIEC
+        elif params['action'] == 'exitPlugin':
+            EXIT()
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### 
     else:
         # If the plugin is called from Kodi UI without any parameters,
         # display the list of hosts
         if not fileExists(ADDON.getSetting("config.plugins.iptvplayer.SciezkaCache")):
-            showDialog("Error", 'Cache folder does not exists\nConfigure plugin first!')
+            showDialog(_(30403), _(30430))
             ADDON.openSettings()
         elif not os.access(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"), os.W_OK):
-            showDialog("Error", 'Recording folder is not writable\nConfigure plugin first!')
+            showDialog(_(30403), _(30431))
             ADDON.openSettings()
         elif not os.access(ADDON.getSetting("config.plugins.iptvplayer.NaszaTMP"), os.W_OK):
-            showDialog("Error", 'Temp folder is not writable\nConfigure plugin first!')
+            showDialog(_(30403), _(30432))
             ADDON.openSettings()
         else:
             #ustawienie krytycznych Ĺ›cieĹĽek
@@ -517,11 +570,14 @@ def router(paramstring):
             #jesli sa pliki downloadera, wyswietlamy link do niego w glownym menu
             showDownloaderItem()
             #wyswietlamy liste hostow
+            ContextMenu()
             SelectHost()
 
 def EXIT():
-        myLog('exit')
-        
+    myLog('exit')
+    xbmc.executebuiltin("XBMC.Container.Update(addons://sources/video,replace)")
+    xbmc.executebuiltin("XBMC.ActivateWindow(Home)")
+
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring

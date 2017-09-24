@@ -14,6 +14,7 @@ from Components.Language import language
 import gettext
 import os, sys
 import threading
+import time
 ###################################################
 
 ###################################################
@@ -84,10 +85,9 @@ class IPTVPlayerNotificationList(object):
         self.empty = True
         
     def clearQueue(self):
-        self.mainLock.acquire()
-        self.notificationsList = []
-        self.empty = True
-        self.mainLock.release()
+        with self.mainLock:
+            self.notificationsList = []
+            self.empty = True
         
     def isEmpty(self):
         try:
@@ -99,40 +99,66 @@ class IPTVPlayerNotificationList(object):
     
     def push(self, message, type="message", timeout=5): #, allowDuplicates=True
         ret = False
-        self.mainLock.acquire()
-        try:
-            notification = IPTVPlayerNotification('IPTVPlayer', message, type, timeout)
-            self.notificationsList.append(notification)
-            self.empty = False
-            ret = True
-        except Exception:
-            print(str(e))
-
-        self.mainLock.release()
+        with self.mainLock:
+            try:
+                notification = IPTVPlayerNotification('IPTVPlayer', message, type, timeout)
+                self.notificationsList.append(notification)
+                self.empty = False
+                ret = True
+            except Exception:
+                print(str(e))
         return ret
 
     def pop(self, popAllSameNotificationsAtOnce=True):
         notification = None
-        self.mainLock.acquire()
-        try:
-            notification = self.notificationsList.pop()
-            if popAllSameNotificationsAtOnce:
-                newList = []
-                for item in self.notificationsList:
-                    if item != notification:
-                        newList.append(item)
-                self.notificationsList = newList
-        except Exception as e:
-            print(str(e))
-            
-        if 0 == len(self.notificationsList):
-            self.empty = True
-        
-        self.mainLock.release()
+        with self.mainLock:
+            try:
+                notification = self.notificationsList.pop()
+                if popAllSameNotificationsAtOnce:
+                    newList = []
+                    for item in self.notificationsList:
+                        if item != notification:
+                            newList.append(item)
+                    self.notificationsList = newList
+            except Exception as e:
+                print(str(e))
+                
+            if 0 == len(self.notificationsList):
+                self.empty = True
         return notification
 
 gIPTVPlayerNotificationList = IPTVPlayerNotificationList()
-
 def GetIPTVNotify():
     global gIPTVPlayerNotificationList
     return gIPTVPlayerNotificationList
+    
+class IPTVPlayerSleep(object):
+    
+    def __init__(self):
+        self.mainLock = threading.Lock()
+        self.timeout = 0
+        self.startTimestamp = 0
+        
+    def Sleep(self, timeout):
+        tmp = float(timeout)
+        with self.mainLock:
+            self.timeout = timeout
+            self.startTimestamp = time.time()
+        time.sleep(self.timeout)
+        
+    def getTimeout(self):
+        ret = 0
+        with self.mainLock:
+            if self.timeout != 0:
+                ret = int(self.timeout - (time.time() - self.startTimestamp))
+                if ret <= 0:
+                    self.timeout = 0
+                    ret = 0
+        return ret
+    
+gIPTVPlayerSleep = IPTVPlayerSleep()
+def GetIPTVSleep():
+    global gIPTVPlayerSleep
+    return gIPTVPlayerSleep
+        
+        

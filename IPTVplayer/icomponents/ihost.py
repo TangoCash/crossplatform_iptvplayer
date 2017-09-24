@@ -39,6 +39,7 @@ class CDisplayListItem:
     TYPE_ARTICLE   = "ARTICLE"
     TYPE_PICTURE   = "PICTURE"
     TYPE_MORE      = "MORE"
+    TYPE_MARKER    = "MARKER"
     
     TYPE_SUBTITLE      = "SUBTITLE"
     TYPE_SUB_PROVIDER  = "SUB_PROVIDER"
@@ -53,7 +54,8 @@ class CDisplayListItem:
                 possibleTypesOfSearch = None, \
                 pinLocked = False, \
                 isGoodForFavourites = False, \
-                isWatched = False):
+                isWatched = False, \
+                textColor = ''):
                 
         if isinstance(name, basestring): self.name = name
         else: self.name = str(name)
@@ -76,6 +78,8 @@ class CDisplayListItem:
         if isWatched: self.isWatched = True
         else: self.isWatched = False
         
+        self.textColor = str(textColor)
+        
         # used only for TYPE_VIDEO item
         self.urlItems = urlItems # url to VIDEO
         # links are not available the separate request is needed to get links
@@ -93,6 +97,8 @@ class CDisplayListItem:
         
     def getTextColor(self):
         try:
+            if self.textColor != '':
+                return parseColor(self.textColor).argb()
             if self.isWatched:
                 return parseColor(config.plugins.iptvplayer.watched_item_color.value).argb()
         except Exception:
@@ -530,7 +536,9 @@ class CHostBase(IHost):
             type = CDisplayListItem.TYPE_ARTICLE
         elif 'more' == cItem['type']:
             type = CDisplayListItem.TYPE_MORE
-            
+        elif 'marker' == cItem['type']:
+            type = CDisplayListItem.TYPE_MARKER
+        
         if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO, \
                     CDisplayListItem.TYPE_PICTURE, CDisplayListItem.TYPE_ARTICLE]:
             url = cItem.get('url', '')
@@ -542,6 +550,7 @@ class CHostBase(IHost):
         if icon == '': icon = self.getDefaulIcon(cItem)
         isGoodForFavourites = cItem.get('good_for_fav', False)
         pinLocked = cItem.get('pin_locked', False)
+        textColor = cItem.get('text_color', '')
         
         return CDisplayListItem(name = title,
                                     description = description,
@@ -551,7 +560,8 @@ class CHostBase(IHost):
                                     iconimage = icon,
                                     possibleTypesOfSearch = possibleTypesOfSearch,
                                     pinLocked = pinLocked,
-                                    isGoodForFavourites = isGoodForFavourites)
+                                    isGoodForFavourites = isGoodForFavourites,
+                                    textColor = textColor)
     # end converItem
 
     def getSearchResults(self, searchpattern, searchType = None):
@@ -703,6 +713,11 @@ class CBaseHostClass:
   
     def addArticle(self, params):
         params['type'] = 'article'
+        self.currList.append(params)
+        return
+    
+    def addMarker(self, params):
+        params['type'] = 'marker'
         self.currList.append(params)
         return
     

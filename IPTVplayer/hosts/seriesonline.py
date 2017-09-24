@@ -51,7 +51,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://theseriesonline.net/'
+    return 'https://series9.io/'
 
 class SeriesOnlineIO(CBaseHostClass):
  
@@ -59,7 +59,7 @@ class SeriesOnlineIO(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://static.www.real.com/resources/wp-content/uploads/2013/01/stream-live-tv2.jpg'
+        self.DEFAULT_ICON_URL = 'https://series9.io/images/gomovies-logo-light.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language':'pl,en-US;q=0.7,en;q=0.3', 'Accept-Encoding':'gzip, deflate'}
         
@@ -201,9 +201,18 @@ class SeriesOnlineIO(CBaseHostClass):
         
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
+    def getDefaulIcon(self, cItem):
+        return self.getFullIconUrl(self.DEFAULT_ICON_URL)
+    
+    def getFullUrl(self, url):
+        if url.startswith('//'): return 'https:' + url
+        return CBaseHostClass.getFullUrl(self, url)
+    
     def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
+        
         proxy = config.plugins.iptvplayer.seriesonlineio_proxy.value
+        
         if proxy != 'None':
             if proxy == 'proxy_1':
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
@@ -213,10 +222,9 @@ class SeriesOnlineIO(CBaseHostClass):
             
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
-        return url
         
     def selectDomain(self):
-        domains = ['http://theseriesonline.net/'] #'http://123movieshd.us/'
+        domains = ['https://series9.io/'] #'http://123movieshd.us/'
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -239,7 +247,7 @@ class SeriesOnlineIO(CBaseHostClass):
                 break
         
         if confirmedDomain == None:
-            self.MAIN_URL = 'http://theseriesonline.net/'
+            self.MAIN_URL = 'https://series9.io/'
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
@@ -427,6 +435,19 @@ class SeriesOnlineIO(CBaseHostClass):
         urlTab = []
         
         if not self.cm.isValidUrl(videoUrl):
+            return []
+        
+        params = dict(self.defaultParams)
+        params['return_data'] = False
+        try:
+            sts, response = self.getPage(videoUrl, params)
+            maintype = response.info().maintype.lower()
+            response.close()
+            if maintype != 'text':
+                if maintype != 'video': return [{'name':self.up.getDomain(videoUrl), 'url':videoUrl}]
+                else: return []
+        except Exception:
+            printExc()
             return []
         
         tab = self.up.getVideoLinkExt(videoUrl)

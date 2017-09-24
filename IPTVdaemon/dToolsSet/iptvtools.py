@@ -1136,6 +1136,11 @@ def GetIPTVPlayerVerstion():
     except Exception: IPTV_VERSION="XX.YY.ZZ"
     return IPTV_VERSION
 
+def GetIPTVPlayerComitStamp():
+    try: from Plugins.Extensions.IPTVPlayer.version import COMMIT_STAMP
+    except Exception: COMMIT_STAMP=""
+    return COMMIT_STAMP
+
 def GetShortPythonVersion():
     return "%d.%d" % (sys.version_info[0], sys.version_info[1])
     

@@ -539,7 +539,7 @@ class KinomanCO(CBaseHostClass):
         try:
             url = self.getFullUrl('/api/link?media_slug=%s' % cItem['url'], 'api')
             sts, data = self.getPage(url)
-            if not sts: return
+            if not sts: return []
             data = byteify(json.loads(data), '', True)
             printDBG(data)
             
@@ -620,7 +620,7 @@ class KinomanCO(CBaseHostClass):
                             ret = self.cm.saveWebFile(filePath, imgUrl, params)
                             if not ret.get('sts'):
                                 SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
-                                return False
+                                return []
 
                             params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
                             params['accep_label'] = _('Send')

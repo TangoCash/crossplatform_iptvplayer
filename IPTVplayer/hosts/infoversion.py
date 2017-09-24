@@ -121,7 +121,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2017.09.21"
+    infoversion = "2017.09.24"
     inforemote  = "0.0.0"
     currList = []
 
@@ -233,7 +233,7 @@ class Host:
            valTab.append(CDisplayListItem('Zabrze TV', 'Zabrze TV', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCyQL0IjtptnQ9PxmAfH3fKQ/live'], 'zabrze', 'http://tvzabrze.pl/assets/images/logo.png', None))
            valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/kamerki/'], 'lookcam', 'https://r.cdn.cloudbitly.com/lookcam/static/images/logo_lookcam_oognet.png', None)) 
            valTab.append(CDisplayListItem('Fokus TV', 'http://www.fokus.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.fokus.tv'], 'fokus', 'http://www.fokus.tv/assets/gfx/logo-new.png', None)) 
-           valTab.append(CDisplayListItem('News12 Long Island', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
+           valTab.append(CDisplayListItem('News12 Long Island   (exteplayer3)', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
 
            valTab.sort(key=lambda poz: poz.name)
            valTab.insert(0,CDisplayListItem('Pobierz info o IPTV Player', 'Wersja hostinfoversion: '+self.infoversion, CDisplayListItem.TYPE_CATEGORY, ['https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/commits/master'], 'info', 'http://www.cam-sats.com/images/forumicons/ip.png', None)) 
@@ -245,8 +245,8 @@ class Host:
               valTab.append(CDisplayListItem('Piotr Natanek Kazanie', 'http://christusvincit-tv.pl', CDisplayListItem.TYPE_CATEGORY, ['http://christusvincit-tv.pl/viewpage.php?page_id=1'], 'religia', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
               valTab.append(CDisplayListItem('Sanktuarium Kraków-Łagiewniki', 'https://www.faustyna.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.faustyna.pl/zmbm/transmisja-on-line/'], 'faustyna', 'http://milosierdzie.pl/images/menu-obrazki/obraz.png', None)) 
               valTab.append(CDisplayListItem('Jasna Góra', 'http://www.jasnagora.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.jasnagora.pl/612,372,artykul,Kaplica_Matki_Bozej.aspx'], 'jasna', 'http://cdn19.se.smcloud.net/t/photos/280918/cudowny-wizerunek-matki-boskiej-czestochowskiej.jpg', None)) 
-              valTab.append(CDisplayListItem('Parafia Skoczów', 'http://www.kamera.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video1'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
-              valTab.append(CDisplayListItem('Parafia Skoczów 2', 'http://www.kamera2.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video2'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
+              valTab.append(CDisplayListItem('Parafia Skoczów   (exteplayer3)', 'http://www.kamera.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video1'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
+              valTab.append(CDisplayListItem('Parafia Skoczów 2   (exteplayer3)', 'http://www.kamera2.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video2'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
               valTab.append(CDisplayListItem('Kaplicówka - Sanktuarium Św. Jana Sarkandra', 'http://kamera.pompejanska.pl/', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://80.51.121.254:5119/live/kaplicowka', 0)], 'kaplicowka', 'http://www.polskaniezwykla.pl/pictures/original/278033.jpg', None))               #valTab.append(CDisplayListItem('Parafia Górny Bor', 'http://parafiagornybor.pl/kamera-online', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://parafiagornybor.pl/kamera-online', 1)], 'gornybor', 'http://www.parafiagornybor.ox.pl/images/slider/slide_02.jpg', None)) 
               valTab.append(CDisplayListItem('Cieszyn - Parafia Św. Marii Magdaleny', 'http://parafiamagdaleny.pl', CDisplayListItem.TYPE_CATEGORY, ['http://parafiamagdaleny.pl/parafia/transmisja-wideo'], 'magdalena', 'http://www.polskiekrajobrazy.pl/images/stories/big/50261.jpg', None)) 
               valTab.append(CDisplayListItem('Parafia pw Narodzenia Najświętszej Maryi Panny w Piwnicznej - Zdrój', 'http://www.parafia.piwniczna.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.parafia.piwniczna.com/s48-tv---online.html'], 'piwniczna', 'http://www.parafia.piwniczna.com/images/panel_boczny.jpg', None)) 
@@ -254,11 +254,11 @@ class Host:
               valTab.append(CDisplayListItem('Dąbrowa Tarnowska Adoracja', 'Parafia Najświętszej Maryi Panny Szkaplerznej', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://149.202.72.222:1936/live playpath=c3 swfUrl=http://alarmserwis.eu/components/com_hdflvplayer/hdflvplayer/hdplayer.swf pageUrl=http://alarmserwis.eu/dt/adoracja.html', 0)], '', 'http://www.dt.diecezja.tarnow.pl/wp-content/gallery/kosciol/dsc_0305.jpg', None)) 
               valTab.append(CDisplayListItem('Dąbrowa Tarnowska Nawa', 'Parafia Najświętszej Maryi Panny Szkaplerznej', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://149.202.72.222:1936/live playpath=c4 swfUrl=http://alarmserwis.eu/components/com_hdflvplayer/hdflvplayer/hdplayer.swf pageUrl=http://alarmserwis.eu/dt/nawa.html', 0)], '', 'http://www.dt.diecezja.tarnow.pl/wp-content/gallery/kosciol/dsc_0305.jpg', None)) 
               valTab.append(CDisplayListItem('Dąbrowa Tarnowska Chór', 'Parafia Najświętszej Maryi Panny Szkaplerznej', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://149.202.72.222:1936/live playpath=c5 swfUrl=http://alarmserwis.eu/components/com_hdflvplayer/hdflvplayer/hdplayer.swf pageUrl=http://alarmserwis.eu/dt/chor.htm', 0)], '', 'http://www.dt.diecezja.tarnow.pl/wp-content/gallery/kosciol/dsc_0305.jpg', None)) 
-              valTab.append(CDisplayListItem('Maków Podhalański Ołtarz', 'Maków Podhalański Ołtarz', CDisplayListItem.TYPE_CATEGORY, ['http://hls11.webcamera.pl/profer_cam_00f9ab/profer_cam_00f9ab.stream/playlist.m3u8'], 'makow', 'http://www.parafia.pixpro.pl/img/obraz_top.png', None)) 
-              valTab.append(CDisplayListItem('Maków Podhalański Kaplica', 'Maków Podhalański Kaplica', CDisplayListItem.TYPE_CATEGORY, ['http://hls1.webcamera.pl/profer_cam_c93498/profer_cam_c93498.stream/playlist.m3u8'], 'makow', 'http://www.parafia.pixpro.pl/img/obraz_top.png', None)) 
+              valTab.append(CDisplayListItem('Maków Podhalański Ołtarz', 'Maków Podhalański Ołtarz', CDisplayListItem.TYPE_CATEGORY, ['http://www.parafiamakowska.pl/kamera-online/kamera-na-oltarz/'], 'makow', 'http://www.parafia.pixpro.pl/img/obraz_top.png', None)) 
+              valTab.append(CDisplayListItem('Maków Podhalański Kaplica', 'Maków Podhalański Kaplica', CDisplayListItem.TYPE_CATEGORY, ['http://www.parafiamakowska.pl/kamera-online/kamera-w-kaplicy/'], 'makow', 'http://www.parafia.pixpro.pl/img/obraz_top.png', None)) 
               valTab.append(CDisplayListItem('Pogórze - Parafia NMP Królowej Polski', 'http://www.pogorze.katolik.bielsko.pl', CDisplayListItem.TYPE_CATEGORY, ['http://80.51.121.254/pogorze.m3u8'], 'pogorze', 'http://www.pogorze.info.pl/files/kosciol1.jpg', None)) 
               valTab.append(CDisplayListItem('Fatima', 'http://www.fatima.pt', CDisplayListItem.TYPE_CATEGORY, ['http://www.fatima.pt/pt/pages/transmissoes-online'], 'fatima', 'http://usti.reckokat.cz/images/fatima-2017.jpg', None)) 
-              valTab.append(CDisplayListItem('TV Lourdes', 'https://en.lourdes-france.org/tv-lourdes/', CDisplayListItem.TYPE_CATEGORY, ['https://en.lourdes-france.org/tv-lourdes/'], 'lourdes', 'http://www.fronda.pl/site_media/media/uploads/maryja_lourdes.jpg', None)) 
+              valTab.append(CDisplayListItem('TV Lourdes', 'https://www.lourdes-france.org', CDisplayListItem.TYPE_CATEGORY, ['https://www.lourdes-france.org/en/tv-lourdes'], 'lourdes', 'http://www.fronda.pl/site_media/media/uploads/maryja_lourdes.jpg', None)) 
               valTab.append(CDisplayListItem('CTV Watykan', 'http://www.ctv.va', CDisplayListItem.TYPE_CATEGORY, ['http://www.ctv.va/content/ctv/it/livetv.html'], 'ctv', 'http://www.ctv.va/content/ctv/it/_jcr_content/logo.img.png/1383824514179.png', None)) 
               valTab.append(CDisplayListItem('Basilica of St. Francis in Assisi', 'Basilica of St. Francis in Assisi', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.skylinewebcams.com/en/webcam/italia/umbria/perugia/basilica-san-francesco-assisi.html', 1)], '', 'https://ladybudd.files.wordpress.com/2012/08/basilica-of-st-francis-of-assisi.jpg', None)) 
               #valTab.append(CDisplayListItem('Chicago - Parafia św. Brunona', 'http://mass-online.org', CDisplayListItem.TYPE_CATEGORY, ['http://mass-online.org/st-brunos-church-chicago-il-usa/'], 'brunon', 'http://www.mszaswieta.com/UserContent/Church-Full-Size/parafia-swietego-brunona-chicago.jpg', None)) 
@@ -284,14 +284,6 @@ class Host:
                 for item in tmp:
                     #printDBG( 'Host listsItems valtab: '  +str(item) )
                     valTab.append(CDisplayListItem(item['name'], item['url'],  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', item['url'], 0)], 0, 'http://www.tv-trwam.pl/Content/images/trwam-2/logo.png', None))
-            return valTab
-        if 'makow' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            if self.cm.isValidUrl(url): 
-                tmp = getDirectM3U8Playlist(url)
-                for item in tmp:
-                    #printDBG( 'Host listsItems valtab: '  +str(item) )
-                    valTab.append(CDisplayListItem(item['name'], item['url'],  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', item['url'], 0)], 0, '', None))
             return valTab
         if 'wp1' == name:
             printDBG( 'Host listsItems begin name='+name )
@@ -471,6 +463,19 @@ class Host:
             data2 = None
             Url = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''', 1, True)[0]
             if Url and Title=='': valTab.append(CDisplayListItem('Link', '',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url, 1)], 0, '', None))
+            if not Url: 
+                data2 = self.cm.ph.getDataBeetwenMarkers(data, '<div class="hiper-descript">', '</div>', False)[1]
+                nazwa = self.cm.ph.getSearchGroups(data2, '''alt=['"]([^"^']+?)['"]''', 1, True)[0]
+                image = self.cm.ph.getSearchGroups(data2, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                desc = self.cm.ph.getSearchGroups(data2, '''"p-descript">([^>]+?)<''', 1, True)[0]
+                if nazwa:
+                    valTab.append(CDisplayListItem(nazwa, desc,  CDisplayListItem.TYPE_ARTICLE, [CUrlItem('', url, 0)], 0, image, None))
+                if data2=='': 
+                    data2 = self.cm.ph.getDataBeetwenMarkers(data, '<div class="box_art_news">', '</div>', False)[1]
+                    nazwa = self.cm.ph.getSearchGroups(data2, '''alt=['"]([^"^']+?)['"]''', 1, True)[0]
+                    image = self.cm.ph.getSearchGroups(data2, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                    desc = self.cm.ph.getSearchGroups(data2, '''<p>([^>]+?)<''', 1, True)[0]
+                    valTab.append(CDisplayListItem(nazwa, desc,  CDisplayListItem.TYPE_ARTICLE, [CUrlItem('', url, 0)], 0, image, None))
             return valTab  
 #############################################
         if len(url)>8:
@@ -832,6 +837,13 @@ class Host:
                 stream = 'rtmp://213.13.26.13/live/ playpath=santuario.stream swfUrl=http://js.sapo.pt/Projects/SAPOPlayer/20170410R1/jwplayer.flash.swf pageUrl=http://videos.sapo.pt/v6Lza88afnReWzVdAQap'
                 valTab.append(CDisplayListItem('Fatima  '+'sapo', 'Fatima  '+'sapo',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream, 0)], 0, '', None))
             return valTab 
+
+        if 'makow' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            stream = self.cm.ph.getSearchGroups(data, '''<iframe src=['"]([^"^']+?)['"]''')[0] 
+            if stream.startswith('//'): stream = 'http:' + stream
+            valTab.append(CDisplayListItem('Maków', stream,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream, 1)], 0, '', None))
+            return valTab
 
         if 'magdalena' == name:
             printDBG( 'Host listsItems begin name='+name )
@@ -1499,7 +1511,7 @@ class Host:
                if Url.startswith('//'): Url = 'http:' + Url 
                valTab.append(CDisplayListItem('Kamera na bocianim gnieździe Przygodzice (Dolina Baryczy)', 'Kamera na bocianim gnieździe Przygodzice (Dolina Baryczy)',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, '', None))
 
-            valTab.append(CDisplayListItem('Czarny bocian Łódź (m3u8)', 'Czarny bocian dąb',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://91.225.157.3/mstream2/lp_bocian2/bocianczarny2.stream/index.m3u8', 0)], 0, '', None))
+            #valTab.append(CDisplayListItem('Czarny bocian Łódź (m3u8)', 'Czarny bocian dąb',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://91.225.157.3/mstream2/lp_bocian2/bocianczarny2.stream/index.m3u8', 0)], 0, '', None))
 
 
             return valTab 
@@ -1683,7 +1695,7 @@ class Host:
                         return ''
                     #printDBG( 'Host listsItems data4: '+data )
                     Url = self.cm.ph.getSearchGroups(data, '''file>([^"^']+?)<''', 1, True)[0].replace('&amp;','&')
-                    return Url
+                    return urlparser.decorateUrl(Url, {'User-Agent': host})
             return ''
 
         videoUrls = self.getLinksForVideo(url)

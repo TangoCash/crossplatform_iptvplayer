@@ -1,10 +1,3 @@
 # -*- coding: utf-8 -*-
-#QQ.XX.YY.ZZ
-#QQ-dodanie nowego hosta
-#XX-dodanie nowej funkcjonalnosci
-#YY-poprawka dzialania
-#ZZ-poprawki kosmetyczne 
-#zmiana YY powoduje wyzerowanie ZZ
-#zmiana XX powoduje wyzerowanie YY i ZZ
-#usunięcie/zablokowanie hosta nie powoduje zmiany QQ
-IPTV_VERSION="180.00.14.00"
+#YYYY.MM.DD.DAY_RELEASE
+IPTV_VERSION="2017.09.24.06"

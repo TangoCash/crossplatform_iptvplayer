@@ -434,7 +434,7 @@ class Video4K(CBaseHostClass):
             
         try:
             sts, data = self.getPage(self.getFullUrl('/request'), post_data=post_data)
-            if not sts: return
+            if not sts: return []
             
             data = byteify(json.loads(data))
             printDBG(data)

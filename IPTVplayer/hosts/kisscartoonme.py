@@ -50,7 +50,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://kisscartoon.io/'
+    return 'https://kisscartoon.es/'
 
 class KissCartoonMe(CBaseHostClass):
     USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36'
@@ -58,7 +58,7 @@ class KissCartoonMe(CBaseHostClass):
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'} )
     
-    MAIN_URL = 'https://kisscartoon.io/'
+    MAIN_URL = 'https://kisscartoon.es/'
     DEFAULT_ICON_URL = "http://kisscartoon.so/image/logo.png"
     
     MAIN_CAT_TAB = [{'category':'home',            'title': _('Home'),              'url':MAIN_URL,               },
@@ -107,7 +107,7 @@ class KissCartoonMe(CBaseHostClass):
         return newUrl #.replace('¡', '%C2%A1')
         
     def getPage(self, baseUrl, params={}, post_data=None):
-        params['cloudflare_params'] = {'domain':'kisscartoon.io', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self._getFullUrl}
+        params['cloudflare_params'] = {'domain':'kisscartoon.es', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self._getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
     def getPageProxy(self, baseUrl, params={}, post_data=None):
@@ -120,12 +120,12 @@ class KissCartoonMe(CBaseHostClass):
         baseUrl = proxy
         
         def _getFullUrl(url):
-            return 'http://kisscartoon.io/cdn-cgi/l/chk_jschl'
+            return 'https://kisscartoon.es/cdn-cgi/l/chk_jschl'
             
         def _getFullUrl2(url):
             return 'http://www.proxy-german.de/index.php?q={0}&hl=81'.format(urllib.quote(url, ''))
         
-        params['cloudflare_params'] = {'domain':'kisscartoon.io', 'cookie_file':GetCookieDir('cf.kisscartoonme.cookie'), 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl, 'full_url_handle2':_getFullUrl2}
+        params['cloudflare_params'] = {'domain':'kisscartoon.es', 'cookie_file':GetCookieDir('cf.kisscartoonme.cookie'), 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl, 'full_url_handle2':_getFullUrl2}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
     def _urlWithCookie(self, url):

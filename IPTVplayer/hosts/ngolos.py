@@ -162,11 +162,23 @@ class NGolosCOM(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
+        data = re.sub('''unescape\(["']([^"^']+?)['"]\)''', lambda m: urllib.unquote(m.group(1)), data)
+        
         titles = []
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, ' <div id="tab-1"', '</strong>')[1].split('</div>')
+        titles2 = []
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div id="tab-1"', '</strong>')[1]
+        tmp2 = tmp.split('</div>')
+        tmp = tmp.split('</iframe>')
+
         for title in tmp:
             title = self.cleanHtmlStr(title) 
             if title != '': titles.append(title)
+        
+        for title in tmp2:
+            title = self.cleanHtmlStr(title) 
+            if title != '': titles2.append(title)
+        
+        if len(titles2) > len(titles): titles = titles2
         
         tmp = re.compile('''['"]([^'^"]*?//config\.playwire\.com[^'^"]+?\.json)['"]''').findall(data)
         tmp.extend(re.compile('<iframe[^>]+?src="([^"]+?)"').findall(data))

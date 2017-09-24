@@ -31,7 +31,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
 ###################################################
 
 ###################################################
@@ -45,7 +45,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://arconaitv.me/'
+    return 'http://arconai.tv/'
 
 class ArconaitvME(CBaseHostClass):
  
@@ -57,8 +57,8 @@ class ArconaitvME(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL      = 'http://www.arconaitv.me/'
-        self.DEFAULT_ICON_URL  = "https://pbs.twimg.com/profile_images/590745210000433152/2u_nu2TM.png"
+        self.MAIN_URL      = 'http://www.arconai.tv/'
+        self.DEFAULT_ICON_URL  = "https://raw.githubusercontent.com/piplongrun/arconaitv.bundle/master/Contents/Resources/icon-default.jpg"
 
         self.MAIN_CAT_TAB = [{'category':'list_main',      'title': _('Main'),      'url':self.MAIN_URL},
                              {'category':'list_shows',     'title': _('Shows'),     'url':self.MAIN_URL},
@@ -70,7 +70,7 @@ class ArconaitvME(CBaseHostClass):
                             ]
     
     def isProxyNeeded(self, url):
-        return 'arconaitv.me' in url
+        return 'arconai.tv' in url
         
     def getDefaulIcon(self, cItem=None):
         return self.getFullIconUrl(self.DEFAULT_ICON_URL)
@@ -164,6 +164,21 @@ class ArconaitvME(CBaseHostClass):
         try: playerUrl = byteify(json.loads('"%s"' % playerUrl))
         except Exception: printExc()
         
+        if not self.cm.isValidUrl(playerUrl):
+            scripts = []
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)
+            for item in tmp:
+                if 'eval(' not in item: continue
+                scripts.append(item.strip())
+            try:
+                jscode = base64.b64decode('''dmFyIGRvY3VtZW50PXt9LHdpbmRvdz10aGlzLGVsZW1lbnQ9ZnVuY3Rpb24oZSl7dGhpcy5fbmFtZT1lLHRoaXMuc2V0QXR0cmlidXRlPWZ1bmN0aW9uKGUsdCl7InNyYyI9PWUmJih0aGlzLnNyYz10KX0sT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsInNyYyIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9zcmN9LHNldDpmdW5jdGlvbihlKXt0aGlzLl9zcmM9ZSxwcmludChlKX19KX0sJD1mdW5jdGlvbihlKXtyZXR1cm4gbmV3IGVsZW1lbnQoZSl9O2RvY3VtZW50LmdldEVsZW1lbnRCeUlkPWZ1bmN0aW9uKGUpe3JldHVybiBuZXcgZWxlbWVudChlKX0sZG9jdW1lbnQuZ2V0RWxlbWVudHNCeVRhZ05hbWU9ZnVuY3Rpb24oZSl7cmV0dXJuW25ldyBlbGVtZW50KGUpXX07''')
+                ret = iptv_js_execute( jscode + '\n'.join(scripts))
+                if ret['sts'] and 0 == ret['code']:
+                    decoded = ret['data'].strip()
+                    if decoded.split('?', 1)[0].endswith('.m3u8'):
+                        playerUrl = decoded
+            except Exception:
+                printExc()
         playerUrl = strwithmeta(playerUrl, {'Referer':cItem['url'], 'Origin':self.getMainUrl()})
         
         if self.cm.isValidUrl(playerUrl):

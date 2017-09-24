@@ -56,7 +56,7 @@ class CartoonHD(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
-        self.DEFAULT_ICON_URL = 'http://cartoonhd.online/templates/FliXanity/assets/images/logochd.png'
+        self.DEFAULT_ICON_URL = 'http://cartoonhd.tech/templates/cartoonhd/assets/images/logochd.png'
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

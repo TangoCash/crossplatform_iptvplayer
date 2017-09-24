@@ -87,7 +87,7 @@ class IPTVListComponentBase(GUIComponent, object):
     currentSelection = property(getCurrent)
 
 class IPTVMainNavigatorList(IPTVListComponentBase):
-    ICONS_FILESNAMES = {CDisplayListItem.TYPE_SUB_PROVIDER : 'CategoryItem.png', CDisplayListItem.TYPE_SUBTITLE : 'ArticleItem.png', CDisplayListItem.TYPE_CATEGORY : 'CategoryItem.png', CDisplayListItem.TYPE_MORE : 'MoreItem.png', CDisplayListItem.TYPE_VIDEO : 'VideoItem.png', CDisplayListItem.TYPE_AUDIO : 'AudioItem.png', CDisplayListItem.TYPE_SEARCH : 'SearchItem.png', CDisplayListItem.TYPE_ARTICLE : 'ArticleItem.png', CDisplayListItem.TYPE_PICTURE : 'PictureItem.png'}
+    ICONS_FILESNAMES = {CDisplayListItem.TYPE_MARKER : 'MarkerItem.png', CDisplayListItem.TYPE_SUB_PROVIDER : 'CategoryItem.png', CDisplayListItem.TYPE_SUBTITLE : 'ArticleItem.png', CDisplayListItem.TYPE_CATEGORY : 'CategoryItem.png', CDisplayListItem.TYPE_MORE : 'MoreItem.png', CDisplayListItem.TYPE_VIDEO : 'VideoItem.png', CDisplayListItem.TYPE_AUDIO : 'AudioItem.png', CDisplayListItem.TYPE_SEARCH : 'SearchItem.png', CDisplayListItem.TYPE_ARTICLE : 'ArticleItem.png', CDisplayListItem.TYPE_PICTURE : 'PictureItem.png'}
     def __init__(self):
         IPTVListComponentBase.__init__(self)
         

@@ -43,7 +43,7 @@ def gettytul():
     return 'http://alltube.tv/'
 
 class AlltubeTV(CBaseHostClass):
-    USER_AGENT = 'curl/7'
+    USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
     MAIN_URL    = 'http://alltube.tv/'
     SRCH_URL    = MAIN_URL + 'szukaj'
     DEFAULT_ICON_URL = 'http://alltube.tv/static/main/newlogoall.png'

@@ -52,13 +52,13 @@ class HoofootCom(CBaseHostClass):
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
     MAIN_URL   = 'http://hoofoot.com/'
-    DEFAULT_ICON  = "http://th.hoofoot.com/pics/default.jpg"
+    DEFAULT_ICON_URL  = "http://th.hoofoot.com/pics/default.jpg"
     
-    MAIN_CAT_TAB = [{'category':'list_cats',       'title': _('Main'),              'url':MAIN_URL,                     'icon':DEFAULT_ICON},
-                    {'category':'list_cats2',      'title': _('Popular'),           'url':MAIN_URL,                     'icon':DEFAULT_ICON},
-                    {'category':'list_cats3',      'title': _('Promoted'),          'url':MAIN_URL,                     'icon':DEFAULT_ICON},
-                    {'category':'search',          'title': _('Search'), 'search_item':True,                            'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),                                        'icon':DEFAULT_ICON} ]
+    MAIN_CAT_TAB = [{'category':'list_cats',       'title': _('Main'),              'url':MAIN_URL,},
+                    {'category':'list_cats2',      'title': _('Popular'),           'url':MAIN_URL,},
+                    {'category':'list_cats3',      'title': _('Promoted'),          'url':MAIN_URL,},
+                    {'category':'search',          'title': _('Search'), 'search_item':True,       },
+                    {'category':'search_history',  'title': _('Search history'),                   } ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'hoofoot.com', 'cookie':'hoofootcom.cookie'})
@@ -111,9 +111,9 @@ class HoofootCom(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        sp = '''<li class="has-sub'''
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, sp, 'Community', False)[1]
-        tmp = tmp.split(sp)
+        sp = re.compile('''<li[^>]+?class=['"]has-sub[^>]+?>''')
+        tmp = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('Community'), False)[1]
+        tmp = sp.split(tmp)
         for item in tmp:
             item = item.split('<ul')
             catTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item[0], '<a ', '</a>')[1])
@@ -157,12 +157,19 @@ class HoofootCom(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
+        titlesMap = {}
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div id="star"', '<div id="club">')[1]
+        tmp = re.compile('''<div[^>]+?id=['"]([^'^"]+?)['"][^>]*?>([^<]+?)<''').findall(tmp)
+        for item in tmp:
+            titlesMap[item[0]] = self.cleanHtmlStr(item[1])
+        
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="club">', '</div>', False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
         for catItem in data:
-            ff = self.cm.ph.getSearchGroups(catItem, "mostrar\('([^']+?)'\)")[0]
+            ff = self.cm.ph.getSearchGroups(catItem, '''mostrar\(['"]([^'^"]+?)['"]\)''')[0]
             if '' == ff: continue
-            title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(catItem, '''alt=['"]([^'^"]+?)['"]''')[0])
+            title = titlesMap.get(ff, '')
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(catItem, '''alt=['"]([^'^"]+?)['"]''')[0])
             icon  = self.cm.ph.getSearchGroups(catItem, '''src=['"]([^'^"]+?)['"]''')[0]
             params = dict(cItem)
             params.update({'category':category, 'title':title, 'ff':ff, 'url':self._getFullUrl('/pagerg.php'), 'icon':self._getFullUrl(icon)})
@@ -202,7 +209,7 @@ class HoofootCom(CBaseHostClass):
         if not sts: return
         
         hasItems = False
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<table>', '<div id="port">')
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<table>', '<tr>'), ('<div id="port"', '>'))
         for item in data:
             url  = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             if '' == url: continue
@@ -220,7 +227,7 @@ class HoofootCom(CBaseHostClass):
             post_data, url = self._urlAppendPage(cItem['url'], page+1, ff)
             sts, data = self.cm.getPage(url, {}, post_data)
             if not sts: return
-            if '<div id="port">' in data:
+            if '<div id="port"' in data:
                 params = dict(cItem)
                 params.update({'title':_('Next page'), 'page':page+1})
                 self.addDir(params)
@@ -313,100 +320,11 @@ class HoofootCom(CBaseHostClass):
             self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
             printExc()
-        
         CBaseHostClass.endHandleService(self, index, refresh)
+        
 class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, HoofootCom(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('hoofootcomlogo.png')])
     
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

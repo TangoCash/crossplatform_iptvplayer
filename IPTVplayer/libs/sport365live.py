@@ -274,26 +274,26 @@ class Sport365LiveApi:
         
         jsData2 = ''
         aes = ''
-        data = re.compile('''src=['"](http[^"^']*?/js/[0-9a-fA-F]{32}\.js[^'^"]*?)["']''').findall(data)
+        data = re.compile('''src=['"](http[^"^']*?/js/[0-9a-fA-F]{32}\.js[^'^"]*?)["']''').findall(data)[::-1]
         for commonUrl in data:
             sts, tmpData = self.cm.getPage(commonUrl, self.http_params)
-            if not sts: return []
+            if not sts: continue
             if tmpData.startswith(';eval('):
-                jsData2 = jsData2 + '\n' + tmpData
-        
-        try:
-            jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCmRvY3VtZW50LndyaXRlID0gZnVuY3Rpb24oKXt9Ow0Kd2luZG93LmF0b2IgPSBmdW5jdGlvbigpe3JldHVybiAiIjt9Ow0KDQpmdW5jdGlvbiBkZWNyeXB0KCl7DQogICAgdmFyIHRleHQgPSBKU09OLnN0cmluZ2lmeSh7YWVzOmFyZ3VtZW50c1sxXX0pOw0KICAgIHByaW50KHRleHQpOw0KICAgIHJldHVybiAiIjsNCn0NCg0KdmFyIENyeXB0b0pTID0ge307DQpDcnlwdG9KUy5BRVMgPSB7fTsNCkNyeXB0b0pTLkFFUy5kZWNyeXB0ID0gZGVjcnlwdDsNCkNyeXB0b0pTLmVuYyA9IHt9Ow0KQ3J5cHRvSlMuZW5jLlV0ZjggPSAidXRmLTgiOw0K''')                   
-            jscode = '%s %s %s' % (jscode, jsData2, jsData)
-            
-            printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
-            printDBG(jscode)
-            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            ret = iptv_js_execute( jscode )
-            if ret['sts'] and 0 == ret['code']:
-                decoded = ret['data'].strip()
-                aes = byteify(json.loads(decoded))['aes']
-        except Exception:
-            printExc()
+                try:
+                    jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCmRvY3VtZW50LndyaXRlID0gZnVuY3Rpb24oKXt9Ow0Kd2luZG93LmF0b2IgPSBmdW5jdGlvbigpe3JldHVybiAiIjt9Ow0KDQpmdW5jdGlvbiBkZWNyeXB0KCl7DQogICAgdmFyIHRleHQgPSBKU09OLnN0cmluZ2lmeSh7YWVzOmFyZ3VtZW50c1sxXX0pOw0KICAgIHByaW50KHRleHQpOw0KICAgIHJldHVybiAiIjsNCn0NCg0KdmFyIENyeXB0b0pTID0ge307DQpDcnlwdG9KUy5BRVMgPSB7fTsNCkNyeXB0b0pTLkFFUy5kZWNyeXB0ID0gZGVjcnlwdDsNCkNyeXB0b0pTLmVuYyA9IHt9Ow0KQ3J5cHRvSlMuZW5jLlV0ZjggPSAidXRmLTgiOw0K''')                   
+                    jscode = '%s %s %s' % (jscode, tmpData, jsData)
+                    
+                    printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                    printDBG(jscode)
+                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    ret = iptv_js_execute( jscode )
+                    if ret['sts'] and 0 == ret['code']:
+                        decoded = ret['data'].strip()
+                        aes = byteify(json.loads(decoded))['aes']
+                except Exception:
+                    printExc()
+                if aes != '':
+                    break
         
         if aes != '':
             Sport365LiveApi.CACHE_AES_PASSWORD = aes
@@ -307,9 +307,11 @@ class Sport365LiveApi:
         if not sts: return []
         
         aes = ''
-        data = re.compile('''src=['"](http[^"^']*?/js/[0-9a-fA-F]{32}\.js[^'^"]*?)["']''').findall(data)
+        data = re.compile('''src=['"](http[^"^']*?/js/[0-9a-fA-F]{32}\.js[^'^"]*?)["']''').findall(data)[::-1]
+        num = 0
         deObfuscatedData = ''
         for commonUrl in data:
+            num += 1
             sts, tmpData = self.cm.getPage(commonUrl, self.http_params)
             if not sts: return []
             aes = ''
@@ -323,35 +325,30 @@ class Sport365LiveApi:
                             tmpData = unpackJSPlayerParams('eval('+item, decFun, 0)
                             if '' != tmpData:   
                                 break
-                        deObfuscatedData += tmpData
+                        
                         aes = self.cm.ph.getSearchGroups(tmpData, 'aes_key="([^"]+?)"')[0]
                         if '' == aes: 
                             aes = self.cm.ph.getSearchGroups(tmpData, 'aes\(\)\{return "([^"]+?)"')[0]
+                            
+                        if aes == '':
+                            funname = self.cm.ph.getSearchGroups(tmpData, 'CryptoJS\.AES\.decrypt\([^\,]+?\,([^\,]+?)\,')[0].strip()
+                            if funname != '':
+                                printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
+                                printDBG("FUN NAME: [%s]" % funname)
+                                printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
+                                tmp = self.cm.ph.getDataBeetwenMarkers(tmpData, 'function %s' % funname, '}')[1]
+                                try: aes = self.cm.ph.getSearchGroups(tmp, '"([^"]+?)"')[0].encode('utf-8')
+                                except Exception: printExc()
+                            
                         if aes != '':
                             break
                 aes = aes.encode('utf-8')
             except Exception:
                 printExc()
                 aes = ''
+                
             if aes != '':
                 break;
-        
-        printDBG("--------------------------------------------------------")
-        printDBG(deObfuscatedData)
-        printDBG("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-        printDBG("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-        printDBG("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-        printDBG("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-        
-        if aes == '':
-            funname = self.cm.ph.getSearchGroups(deObfuscatedData, 'CryptoJS\.AES\.decrypt\([^\,]+?\,([^\,]+?)\,')[0].strip()
-            printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
-            printDBG("FUN NAME: [%s]" % funname)
-            printDBG("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")
-            tmp = self.cm.ph.getDataBeetwenMarkers(deObfuscatedData, 'function %s' % funname, '}')[1]
-            try: aes = self.cm.ph.getSearchGroups(tmp, '"([^"]+?)"')[0].encode('utf-8')
-            except Exception: printExc()
-            #aes = self.cm.ph.getSearchGroups(deObfuscatedData, '%s\s*\{\s*return\s*"([^"]+?)"' % funname)[0]
         
         if aes != '':
             Sport365LiveApi.CACHE_AES_PASSWORD = aes

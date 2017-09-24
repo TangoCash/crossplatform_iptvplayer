@@ -4,7 +4,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
@@ -563,7 +563,7 @@ class common:
                     #try: verData = data.fp.read()
                     #except Exception: verData = data
                     verData = data.fp.read()
-                    domain = data.fp.geturl()
+                    domain = self.getBaseUrl(data.fp.geturl())
                     printDBG("===============================================================")
                     printDBG(verData)
                     printDBG("===============================================================")
@@ -634,7 +634,10 @@ class common:
                         params2['header'] = dict(params.get('header', {}))
                         params2['header'].update({'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'})
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
-                        time.sleep((decoded['timeout'] / 1000.0)-(time.time() - start_time))
+                        if current == 1:
+                            GetIPTVSleep().Sleep(1 + (decoded['timeout'] / 1000.0)-(time.time() - start_time))
+                        else:
+                            GetIPTVSleep().Sleep((decoded['timeout'] / 1000.0))
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
                         printDBG("Timeout: [%s]" % decoded['timeout'])
                         sts, data = self.getPage(verUrl, params2, post_data)
