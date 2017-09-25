@@ -1,6 +1,9 @@
 <!--http://kodi.wiki/view/Add-on_settings-->
 <settings>
   <category label="30100">
+    <setting id="showExitOption" label="30101" type="bool" default="true" />
+    <setting id="showHostListOption" label="30102" type="bool" default="true" />
+    <setting id="showInitialListOption" label="30103" type="bool" default="true" />
     <setting id="PlayerMode" label="30110" type="enum" lvalues="30111|30112|30113" default="0" enable="true" />
     <setting id="config.plugins.iptvplayer.ZablokujWMV" label="30197" type="bool" default="false" />
     <setting id="config.plugins.iptvplayer.SciezkaCache" label="30120" type="folder" value="/hdd/IPTVCache" />

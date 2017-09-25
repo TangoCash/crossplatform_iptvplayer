@@ -215,23 +215,26 @@ def isERROR(myAnswer):
 #################################################################################################################################################
 def showTopOptions():
     #EXIT
-    list_item = xbmcgui.ListItem(label = _(30425))
-    url = get_url(action='exitPlugin')
-    is_folder = False
-    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
-    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    if ADDON.getSetting("showExitOption") == "true":
+        list_item = xbmcgui.ListItem(label = _(30425))
+        url = get_url(action='exitPlugin')
+        is_folder = False
+        list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/exit.png')})
+        xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
     #HOSTS LIST
-    list_item = xbmcgui.ListItem(label = _(30426))
-    url = get_url(action='reloadHostsList')
-    is_folder = False
-    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
-    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    if ADDON.getSetting("showHostListOption") == "true":
+        list_item = xbmcgui.ListItem(label = _(30426))
+        url = get_url(action='reloadHostsList')
+        is_folder = False
+        list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/home.png')})
+        xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
     #INITIAL LIST
-    list_item = xbmcgui.ListItem(label = _(30427))
-    url = get_url(action='InitialList')
-    is_folder = False
-    list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/download.png')})
-    xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
+    if ADDON.getSetting("showInitialListOption") == "true":
+        list_item = xbmcgui.ListItem(label = _(30427))
+        url = get_url(action='InitialList')
+        is_folder = False
+        list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/initlist.png')})
+        xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
     return
     
 def showDownloaderItem():
@@ -541,7 +544,7 @@ def router(paramstring):
             showDialog(_(30403), _(30432))
             ADDON.openSettings()
         else:
-            #ustawienie krytycznych Ĺ›cieĹĽek
+            #ustawienie krytycznych ścieżek
             if ADDON.getSetting("kodiIPTVpath") == '-' or not os.access(ADDON.getSetting("kodiIPTVpath"), os.W_OK):
                 ADDON.setSetting("kodiIPTVpath", xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/E2emulator/Plugins/Extensions/IPTVPlayer'))
             if ADDON.getSetting("config.misc.sysTempPath") == '-' or not os.access(ADDON.getSetting("config.misc.sysTempPath"), os.W_OK):
@@ -575,6 +578,7 @@ def router(paramstring):
 
 def EXIT():
     myLog('exit')
+    stopDaemon()
     xbmc.executebuiltin("XBMC.Container.Update(addons://sources/video,replace)")
     xbmc.executebuiltin("XBMC.ActivateWindow(Home)")
 

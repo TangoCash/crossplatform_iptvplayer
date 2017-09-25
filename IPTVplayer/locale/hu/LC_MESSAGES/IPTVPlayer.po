@@ -182,7 +182,7 @@ msgid "Access status: "
 msgstr "Hozzáférés állapota:"
 
 msgid "Access status: [%r]"
-msgstr "Hozzáférési állapot: [% r]"
+msgstr "Hozzáférési állapot: [%r]"
 
 msgid "Add item to favourites"
 msgstr "Hozzáadás a kedvencekhez"
@@ -237,7 +237,7 @@ msgstr ""
 "Ellenőrizd az adatokat, és próbáld újra később...\""
 
 msgid "An error occurred while loading a subtitle from [%s]."
-msgstr "Hiba a felirat letöltése közben: "
+msgstr "Hiba a felirat letöltése közben itt  [%s]."
 
 msgid "An unknown error has occurred."
 msgstr "Ismeretlen hiba lépett fel."
@@ -252,7 +252,7 @@ msgid "Archive"
 msgstr "Archív"
 
 msgid "Are you sure you want to remove file \"%s\"?"
-msgstr "Biztosan törlöd?   (\"%s\"?)"
+msgstr "Biztosan törlöd?   \"%s\"?"
 
 msgid "Aspect"
 msgstr "Képarány"
@@ -376,7 +376,7 @@ msgid ""
 "code: %s"
 msgstr ""
 "Forrás olvashatatlan.\n"
-"Hibakód: %r"
+"Hibakód: %s"
 
 msgid "Countries"
 msgstr "Országok"
@@ -781,7 +781,7 @@ msgid "Group \"%s\" already exists."
 msgstr "A \"%s\" csoport már létezik."
 
 msgid "Group %d"
-msgstr "Csoport"
+msgstr "%d csoport"
 
 msgid "Group links into categories: "
 msgstr "Csoportok linkje ebbe a kategóriába"
@@ -904,14 +904,13 @@ msgid "It improves playing of streams hls/m3u8.\n"
 msgstr "Ez javítja a hls/m3u8 streamek lejátszását.\n"
 
 msgid "It seems that the host \"%s\" has crashed."
-msgstr "Úgy tűnik, a  \"%S\" kiszolgáló összeomlott."
+msgstr "Úgy tűnik, a  \"%s\" kiszolgáló összeomlott."
 
 msgid ""
 "It seems that the host \"%s\" has crashed. Do you want to report this "
 "problem?"
 msgstr ""
-"Úgy tűnik, a  \"%S\" kiszolgáló összeomlott.\n"
-"Szeretnéd jelenteni a problémát?"
+"Úgy tűnik, a  \"%s\" kiszolgáló összeomlott.Szeretnéd jelenteni a problémát?"
 
 msgid ""
 "It seems that the video player \"%s\" does not work properly.\n"
@@ -1449,7 +1448,7 @@ msgid "Request token from \"%s\""
 msgstr "Token kérése innen: \"%s\""
 
 msgid "Request token from %s"
-msgstr "Jel kérése innen: \"%s\""
+msgstr "Jel kérése innen: %s"
 
 msgid ""
 "Restart GUI failed. \n"
@@ -1480,13 +1479,13 @@ msgid "Search"
 msgstr "Keresés"
 
 msgid "Search for movie \"%s\""
-msgstr " \"%s\" című film nem keresése."
+msgstr " \"%s\" című film keresése."
 
 msgid "Search for subitile for \"%s\""
 msgstr "\"%s\" feliratainak keresése"
 
 msgid "Search for subitile for %s"
-msgstr "\"%s\" feliratainak keresése"
+msgstr "%s feliratainak keresése"
 
 msgid "Search history"
 msgstr "Keresés az előzmények közt"
@@ -1786,31 +1785,31 @@ msgid "Text files ytlist and urllist are in:"
 msgstr "ytlist és urllist fájlok helye:"
 
 msgid "The \"%s\" utility is used by IPTVPlayer."
-msgstr "A %s  kiegészítőt az IPTVPlayer fogja használni."
+msgstr "A \"%s\"  kiegészítőt az IPTVPlayer fogja használni."
 
 msgid ""
 "The \"%s\" utility is used by the IPTVPlayer as external movie player based "
 "on the ffmpeg and libeplayer."
 msgstr ""
-"A %s  kiegészítőt az IPTVPlayer fogja használni a külső médialejátszónál, "
-"amely ffmpeg és libeplayer alapú."
+"A \"%s\"  kiegészítőt az IPTVPlayer fogja használni a külső "
+"médialejátszónál, amely ffmpeg és libeplayer alapú."
 
 msgid "The \"%s\" utility is used by the IPTVPlayer as external movie player."
 msgstr ""
-"A %s  kiegészítőt az IPTVPlayer fogja használni a külső médialejátszónál."
+"A \"%s\"  kiegészítőt az IPTVPlayer fogja használni a külső médialejátszónál."
 
 msgid ""
 "The \"%s\" utility is used by the IPTVPlayer to buffering and downloading "
 "[%s] links."
 msgstr ""
-"A %s  kiegészítőt az IPTVPlayer fogja használni pufferelésnél és [%s] linkek "
-"letöltésénél."
+"A \"%s\"  kiegészítőt az IPTVPlayer fogja használni pufferelésnél és [%s] "
+"linkek letöltésénél."
 
 msgid ""
 "The \"%s\" utility is used by the IPTVPlayer to determine the encoding of "
 "the text."
 msgstr ""
-"A %s  kiegészítőt az IPTVPlayer fogja használni szöveges tartalmak "
+"A \"%s\"  kiegészítőt az IPTVPlayer fogja használni szöveges tartalmak "
 "meghatározásánál és kódolásánál."
 
 msgid "The current host crashed"
@@ -1841,7 +1840,7 @@ msgstr ""
 msgid ""
 "The problem with the user's logon \"%s\". Check your login details in the "
 "host configuration."
-msgstr "A [%s] bejelentkezése sikertelen. Ellenőrizd a megadott adatokat."
+msgstr "A \"%s\" bejelentkezése sikertelen. Ellenőrizd a megadott adatokat."
 
 msgid "The same item already exists in this group."
 msgstr "Ugyanez az  elem már megtalálható ebben a csoportban."
@@ -2095,7 +2094,7 @@ msgid "Watch video materials from IPTV services"
 msgstr "IPTV szolgáltatók videóinak megtekintése"
 
 msgid "Web streams player"
-msgstr "\"Web\" streamek lejátszása"
+msgstr "Web streamek lejátszása"
 
 msgid "Webpages: "
 msgstr "Weboldalak:"
@@ -2631,7 +2630,7 @@ msgid "Update Now & Restart Enigma2"
 msgstr "Frissítés és újraindítás"
 
 msgid "ERROR - Error unpacking %s' % source"
-msgstr "HIBA - Kicsomagolás hiba a  %s' % forrásból"
+msgstr "ERROR - Error unpacking %s' % source"
 
 msgid "Require pin:"
 msgstr "Pin szükséges:"
@@ -3581,7 +3580,7 @@ msgid "Icon type"
 msgstr "Ikon típusa"
 
 msgid "The problem with user logon \"%s\".\n"
-msgstr "A [%s] bejelentkezése sikertelen.\n"
+msgstr "A \"%s\" bejelentkezése sikertelen.\n"
 
 msgid "Randomize a playlist"
 msgstr "Véletlenszerű lejátszás"
@@ -3874,7 +3873,7 @@ msgid "Ukrainian proxy server url"
 msgstr "Ukrán proxy szerver címe"
 
 msgid "file://"
-msgstr "fájl://"
+msgstr "file://"
 
 msgid "An error occurred while writing into: %s"
 msgstr "Hiba a %s írása közben"
@@ -3904,11 +3903,11 @@ msgid ""
 "It seems that the subtitle's provider \"%s\" has crashed. Do you want to "
 "report this problem?"
 msgstr ""
-"Úgy tűnik, a  \"%S\" felirat kiszolgáló összeomlott. Szeretnéd jelenteni a "
+"Úgy tűnik, a  \"%s\" felirat kiszolgáló összeomlott. Szeretnéd jelenteni a "
 "problémát?"
 
 msgid "Subtitles \"%s\" downloaded correctly."
-msgstr "A [%s] felirata sikeresen letöltve."
+msgstr "A \"%s\" felirata sikeresen letöltve."
 
 msgid "Do you want to finish?"
 msgstr "Befejezed?"
@@ -3917,7 +3916,7 @@ msgid "Season %s"
 msgstr "%s Évad"
 
 msgid "Failed to create directory \"%s\"."
-msgstr "Hiba a [%s] könyvtár létrehozása közben"
+msgstr "Hiba a \"%s\" könyvtár létrehozásakor"
 
 msgid "Unzip error code[%s]."
 msgstr "Kicsomagolási hibakód [%s]."
@@ -3938,13 +3937,13 @@ msgid "Wrong format of rar archive."
 msgstr "Hibás a RAR archívum formátuma."
 
 msgid "Failed to write the file \"%s\"."
-msgstr "Hiba a [%s] fájl írása közben!"
+msgstr "Hiba a \"%s\" fájl írása közben!"
 
 msgid "Failed to convert the file \"%s\" to UTF-8."
-msgstr "Hiba a [%s] fájl UTF-8 formátumba alakítása közben."
+msgstr "Hiba a \"%s\" fájl UTF-8 formátumba alakítása közben."
 
 msgid "Failed to open the file \"%s\"."
-msgstr "Hiba a [%s] fájl megnyitása közben!"
+msgstr "Hiba a \"%s\" fájl megnyitása közben!"
 
 msgid "Login failed!"
 msgstr "Belépés sikertelen!"
@@ -3969,7 +3968,7 @@ msgid "Failed to decode to UTF-8."
 msgstr "Átalakítás UTF-8 formátumba sikertelen."
 
 msgid "Failed to write file \"%s\"."
-msgstr "Hiba a [%s] fájl írása közben!"
+msgstr "Hiba a \"%s\" fájl írása közben!"
 
 msgid "json load error 2"
 msgstr "json betöltési hiba 2"
@@ -4003,7 +4002,7 @@ msgid "Confirm the title of the movie"
 msgstr "Filmcím jóváhagyása"
 
 msgid "Searching subtitles for \"%s\""
-msgstr "A [%s] feliratának keresése"
+msgstr "A\" %s\" feliratának keresése"
 
 msgid "Select subtitles provider:"
 msgstr "Válassz felirat tárhelyet:"
@@ -4168,7 +4167,7 @@ msgstr ""
 "Kérlek, ellenőrizd az adataidat a Konfigurációs menüben."
 
 msgid "The problem with user logon \"%s\"."
-msgstr "A [%s] bejelentkezése sikertelen."
+msgstr "A \"%s\" bejelentkezése sikertelen."
 
 msgid "http://sovdub.ru/"
 msgstr "http://sovdub.ru/"

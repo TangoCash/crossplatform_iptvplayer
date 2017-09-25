@@ -143,7 +143,7 @@ msgid "%s [watch]"
 msgstr "%s Смотреть"
 
 msgid "%s items in category"
-msgstr "Пункты по категориям% сек"
+msgstr "Пункты по категориям %s сек"
 
 msgid "%s viewers, %s channels"
 msgstr "%s зрителей, %s каналы"
@@ -700,7 +700,7 @@ msgid "Featured"
 msgstr "Рекомендуемые"
 
 msgid "File [%s] reading failed."
-msgstr "Проблема чтения файла [% s]."
+msgstr "Проблема чтения файла [%s]."
 
 msgid "File [%s] was added to downloading queue."
 msgstr "Файл [%s] был добавлен в загрузку."
@@ -1252,7 +1252,7 @@ msgid "Play file"
 msgstr "Воспроизведение видео"
 
 msgid "Play with [%s] player"
-msgstr "Воспроизведение записи в [% s]"
+msgstr "Воспроизведение записи в [%s]"
 
 msgid "PlayPuls"
 msgstr "ИгратьPuls"
@@ -1345,7 +1345,8 @@ msgstr "Проблема с загрузкой списка серверов."
 msgid ""
 "Problem with downloading the update packet:\n"
 "[%s]."
-msgstr "Проблема с загрузкой пакета обновления:"
+msgstr "Проблема с загрузкой пакета обновления:\n"
+"[%s]."
 
 msgid ""
 "Problem with extracting the archive. Return code [%d]\n"
@@ -1362,7 +1363,7 @@ msgstr ""
 "Статус[%d], OutData[%s]"
 
 msgid "Problem with the directory [%s]."
-msgstr "Проблема с каталогом [% S]."
+msgstr "Проблема с каталогом [%s]."
 
 msgid ""
 "Problem with the removal of the previous version.\n"

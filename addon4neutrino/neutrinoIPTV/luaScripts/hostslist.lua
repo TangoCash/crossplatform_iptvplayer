@@ -11,6 +11,7 @@ HostsList={
       {id="cartoonhd", title="cartoonhd.global", type="py"},
       {id="cdapl", title="cda.pl", type="py"},
       {id="cinemay", title="cinemay.com", type="py"},
+      {id="cineto", title="cine.to", type="py"},
       {id="crtankocom", title="crtanko.com", type="py"},
       {id="dailymotion", title="dailymotion.com", type="py"},
       {id="dancetrippin", title="dancetrippin.tv", type="py"},

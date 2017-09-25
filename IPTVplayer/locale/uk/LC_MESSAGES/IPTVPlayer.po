@@ -164,7 +164,7 @@ msgid "%s [watch]"
 msgstr "%s Дивитись"
 
 msgid "%s items in category"
-msgstr "Пункти по категоріям % сек"
+msgstr "Пункти по категоріям %s сек"
 
 msgid "%s viewers, %s channels"
 msgstr "%s глядачів, %s канали"
@@ -1045,7 +1045,7 @@ msgid "File Location xxxlist.txt :"
 msgstr "Розміщення файлу xxxlist.txt :"
 
 msgid "File [%s] reading failed."
-msgstr "Проблема читання файлу [% s]."
+msgstr "Проблема читання файлу [%s]."
 
 msgid "File [%s] was added to downloading queue."
 msgstr "Файл [%s] файл додано до завантаження."
@@ -1896,7 +1896,7 @@ msgid "Play file"
 msgstr "Відтворення відео"
 
 msgid "Play with [%s] player"
-msgstr "Відтворення запису в [% s]"
+msgstr "Відтворення запису в [%s]"
 
 msgid "PlayPuls"
 msgstr "PlayPuls"
@@ -2019,7 +2019,8 @@ msgstr "Проблема з завантаженням списку сервер
 msgid ""
 "Problem with downloading the update packet:\n"
 "[%s]."
-msgstr "Проблема з завантаженням пакета оновлення:"
+msgstr "Проблема з завантаженням пакета оновлення:\n"
+"[%s]."
 
 msgid ""
 "Problem with extracting the archive. Return code [%d]\n"
@@ -2036,7 +2037,7 @@ msgstr ""
 "Статус[%d], OutData[%s]"
 
 msgid "Problem with the directory [%s]."
-msgstr "Проблема з каталогом [% S]."
+msgstr "Проблема з каталогом [%s]."
 
 msgid ""
 "Problem with the removal of the previous version.\n"

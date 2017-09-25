@@ -1,7 +1,10 @@
 #to simplify changes for all languages
 #schema (messageID):messageid:msgPL:....
 
-msgctxt "#30100":msgid "General settings":msgstrPL "Ust. wtyczki"
+msgctxt "#30100":msgid "Display Exit addon option":msgstrPL "Ust. wtyczki"
+msgctxt "#30101":msgid "Display hosts list option":msgstrPL "Wyświetl opcję 'Wyjście z dodatku'"
+msgctxt "#30102":msgid "Display InitialList option"":msgstrPL "Wyświetl opcję 'Lista serwisów'"
+msgctxt "#30103":msgid "General settings":msgstrPL "Wyświetl opcję 'Lista początkowa serwisu'"
 msgctxt "#30110":msgid "Mode":msgstrPL "Tryb"
 msgctxt "#30111":msgid "player":msgstrPL "odtwarzacz"
 msgctxt "#30112":msgid "player with buffering":msgstrPL "odtwarzacz z buforowaniem"
@@ -66,7 +69,7 @@ msgctxt "#30423":msgid "Download of %s started":msgstrPL "Pobieranie %s uruchomi
 msgctxt "#30424":msgid "--- Downloads status ---":msgstrPL "--- Status pobierania materiałów ---"
 msgctxt "#30425":msgid ">>> Exit plugin <<<":msgstrPL ">>> Wyjście z dodatku <<<"
 msgctxt "#30426":msgid "-->> Hosts list <<--":msgstrPL "-->> Lista serwisów <<--"
-msgctxt "#30427":msgid "----> Initial list <----":msgstrPL "----> Lista początkowa serwisu<<----"
+msgctxt "#30427":msgid "----> Initial list <----":msgstrPL "----> Lista początkowa serwisu <<----"
 msgctxt "#30428":msgid "IPTVdaemon is not working":msgstrPL "Demon IPTV nie działa"
 msgctxt "#30429":msgid "Downloading data...":msgstrPL "Pobieranie danych..."
 msgctxt "#30430":msgid "Cache folder does not exists. Configure plugin first!":msgstrPL "Katalog podręczny nie istnieje. Najpierw musisz dodatek skonfigurować!"

@@ -181,7 +181,7 @@ msgid "Access status: "
 msgstr "Status dostępu:"
 
 msgid "Access status: [%r]"
-msgstr "Status dostępu: [%]"
+msgstr "Status dostępu: [%r]"
 
 msgid "Add item to favourites"
 msgstr "Dodaj do ulubionych"
@@ -652,7 +652,7 @@ msgid "Error reading file \"%s\" .\n"
 msgstr "Wystąpił błąd podczas odczytywania pliku \"%s\".\n"
 
 msgid "Error writing file \"%s\" .\n"
-msgstr "Wystąpił błąd podczas zapisywania pliku \"% s\".\n"
+msgstr "Wystąpił błąd podczas zapisywania pliku \"%s\".\n"
 
 msgid "Executing user scripts."
 msgstr "Wykonywanie skryptów użytkownika."
@@ -805,7 +805,7 @@ msgid "Home page"
 msgstr "Strona główna"
 
 msgid "Hosting: %s, %s"
-msgstr ""
+msgstr "Hosting: %s, %s"
 
 msgid "IPTV - Player mode"
 msgstr "IPTV - Tryb odtwarzania"
@@ -876,7 +876,7 @@ msgid "Input"
 msgstr "Dane wejściowe"
 
 msgid "Install into the \"%s\" ."
-msgstr "Zainstaluj w \"% s\"."
+msgstr "Zainstaluj w \"%s\"."
 
 msgid "Installation binary failed. Retry?"
 msgstr "Instalacja binarna nie powiodła się.Ponowić próbę?"
@@ -1201,7 +1201,7 @@ msgid "Password:"
 msgstr "Hasło:"
 
 msgid "Paste \"%s\""
-msgstr ""
+msgstr "Wklej \"%s\""
 
 msgid "Path to ytlist.txt, urllist.txt"
 msgstr "Pliki tekstowe ytlist i urllist znajdują się w:"
@@ -1432,7 +1432,7 @@ msgid "Rename"
 msgstr "Zmień nazwę"
 
 msgid "Request token from \"%s\""
-msgstr ""
+msgstr "Pobieranie tokenu z \"%s\""
 
 msgid "Request token from %s"
 msgstr "Pobieranie tokenu z %s"
@@ -2172,14 +2172,11 @@ msgstr "malejąco"
 msgid "average"
 msgstr "średnia"
 
-msgid "back_pressed prev sel index %s"
-msgstr ""
-
 msgid "based on IP"
 msgstr "na podstawie IP"
 
 msgid "blue"
-msgstr ""
+msgstr "niebieski"
 
 msgid "bottom"
 msgstr "w dół"
@@ -2188,10 +2185,10 @@ msgid "buffer-duration"
 msgstr "czas trwania buforowania"
 
 msgid "buffer-size"
-msgstr "Rozmiar buforowania"
+msgstr "rozmiar buforowania"
 
 msgid "center"
-msgstr ""
+msgstr "wyśrodkuj"
 
 msgid "channel"
 msgstr "kanał"
@@ -3535,40 +3532,38 @@ msgid "Icon type"
 msgstr "Typ ikon"
 
 msgid "The problem with user logon \"%s\".\n"
-msgstr ""
+msgstr "Problem z zalogowaniem użytkownika \"%s\".\n"
 
 msgid "Randomize a playlist"
 msgstr "Sortuj losowo listę odtwarzania"
 
 msgid "New Releases"
-msgstr ""
+msgstr "Nowe wydania"
 
 msgid "Categorization:"
-msgstr ""
+msgstr "Kategoryzacja:"
 
 msgid "http://online-kinopokaz.ru/"
 msgstr "http://online-kinopokaz.ru/"
 
-msgid "Labels"
-msgstr ""
 
 msgid "Latest Update"
-msgstr ""
+msgstr "Ostatnio zaktualizowane"
 
 msgid "Anime List"
-msgstr ""
+msgstr "Lista anime"
 
 msgid "Create Date"
-msgstr ""
+msgstr "Data stworzenia"
 
 msgid "Top Movies"
-msgstr ""
+msgstr "Ulubione filmy"
 
 msgid "New HD Videos"
-msgstr ""
+msgstr "Nowe wideo HD"
 
 msgid "Use proxy gateway"
-msgstr ""
+msgstr "Użyj bramki proxy"
 
 msgid "show iframe for audio item"
 msgstr "Wyświetlić ramkę iFrame podczas odtwarzania plików audio"
@@ -3580,37 +3575,37 @@ msgid "Clear iframe file"
 msgstr "Wyczyść plik ramki iFrame"
 
 msgid "Total size: "
-msgstr ""
+msgstr "Całkowity rozmiar: "
 
 msgid "Show file size"
 msgstr "Pokazać rozmiar pliku"
 
 msgid "All Leagues"
-msgstr ""
+msgstr "Wszystkie ligi"
 
 msgid "Previous Seasons"
-msgstr ""
+msgstr "Poprzednie sezony"
 
 msgid "Goal Of The Month"
-msgstr ""
+msgstr "Gol miesiąca"
 
 msgid "Promoted"
-msgstr ""
+msgstr "Promowane"
 
 msgid "Catrtoon list"
-msgstr ""
+msgstr "Lista kreskówek"
 
 msgid "New cartoon"
-msgstr ""
+msgstr "Nowe kreskówki"
 
 msgid "Sort by alphabet"
-msgstr ""
+msgstr "Sortuj alfabetycznie"
 
 msgid "Sort by popularity"
-msgstr ""
+msgstr "Sortuj według popularności"
 
 msgid "Latest update"
-msgstr ""
+msgstr "Ostatnio aktualizowane"
 
 msgid "Remove disabled services"
 msgstr "Usunąć nieużywane serwisy"
@@ -3624,73 +3619,73 @@ msgstr ""
 "Czy chcesz teraz wykonać aktualizację ?"
 
 msgid "Make directory [%s]"
-msgstr ""
+msgstr "Utwórz folder [%s]"
 
 msgid ""
 "Can not get mount points - cmd mount failed.\n"
 "Return code[%s].\n"
 "Return data[%s]."
 msgstr ""
+"Niemożna pobrać punktów montowania - polecenie mount nie powiodło się.\n"
+"Kod błędu [%s].\n"
+"Wiadomość błędu [%s]."
 
 msgid ""
 "Mount ISO file [%s] on [%s] failed.\n"
 "Return code[%s].\n"
 "Return data[%s]."
 msgstr ""
+"Wystąpił problem z zamontowaniem obrazu ISO [%s] na [%s].\n"
+"Kod błędu [%s].\n"
+"Wiadomość błędu [%s]."
 
 msgid "Mounted on %s"
-msgstr ""
+msgstr "Zamontowany na %s"
 
 msgid "Umount iso file"
-msgstr ""
+msgstr "Odmontowany plik iso"
 
 msgid "Set file name"
-msgstr ""
+msgstr "Wprowadź nazwę pliku"
 
 msgid "File \"%s\" already exists!"
-msgstr ""
+msgstr "Plik \"%s\" już istnieje!"
 
 msgid "Mangas"
-msgstr ""
+msgstr "Manga"
 
 msgid "By Year"
-msgstr ""
+msgstr "Według roku"
 
 msgid "Recently Added"
-msgstr ""
+msgstr "Niedawno dodane"
 
 msgid "New"
-msgstr ""
+msgstr "Nowe"
 
 msgid "Home"
-msgstr ""
+msgstr "Głowna strona"
 
 msgid "Season"
-msgstr ""
+msgstr "Sezon"
 
 msgid "Plugin can be run on one of the following platforms: sh4, mipsel, i686, armv7, armv5t."
-msgstr ""
-
-msgid "SovDub"
-msgstr ""
+msgstr "Plugin może być uruchomiony na jednej z następujących platform: sh4, mipsel, i686, armv7, armv5t."
 
 msgid "Foreign films"
-msgstr ""
-
-msgid "Major rankings"
-msgstr ""
+msgstr "Filmy zagraniczne"
 
 msgid "By year"
-msgstr ""
+msgstr "Według roku"
 
 msgid "Watch Trailer"
-msgstr ""
+msgstr "Oglądaj trailer"
 
 msgid "[Trailer]"
-msgstr ""
+msgstr "[Trailer]"
 
 msgid "Detection of the OpenSSL 1.0.0 version."
-msgstr ""
+msgstr "Wykrywanie wersji OpenSSL 1.0.0"
 
 msgid ""
 "Fatal Error!\n"
@@ -3785,7 +3780,7 @@ msgid "Sort alphabetically"
 msgstr "Sortuj"
 
 msgid "Fail to get captcha data."
-msgstr ""
+msgstr "Problem z pobraniem danych captcha."
 
 msgid "Send"
 msgstr ""
@@ -3800,7 +3795,7 @@ msgid "Get free credits"
 msgstr ""
 
 msgid "Fail to get \"%s\""
-msgstr ""
+msgstr "Wystąpił problem z pobraniem \"%s\""
 
 msgid "Subtitles conversion to UTF-8 failed."
 msgstr "Konwersja do UTF-8 nie powiodła się."
@@ -3815,7 +3810,7 @@ msgid "file://"
 msgstr "plik://"
 
 msgid "An error occurred while writing into: %s"
-msgstr ""
+msgstr "Wystąpił problem podczas zapisu do %s"
 
 msgid "Top Cartoons"
 msgstr ""
@@ -3839,7 +3834,7 @@ msgid "Preview"
 msgstr "Podgląd"
 
 msgid "It seems that the subtitle's provider \"%s\" has crashed. Do you want to report this problem?"
-msgstr ""
+msgstr "Wygląda na to, że dostawca napisów \"%s\" uldegł awarii. Czy chcesz zgłosić ten problem?"
 
 msgid "Subtitles \"%s\" downloaded correctly."
 msgstr "Napisy \"%s\" pobrane prawidłowo."
@@ -3851,7 +3846,7 @@ msgid "Season %s"
 msgstr "Sezon %s"
 
 msgid "Failed to create directory \"%s\"."
-msgstr ""
+msgstr "Wystąpił problem z utworzeniem katalogu \"%s\"."
 
 msgid "Unzip error code[%s]."
 msgstr "Uznip kod błędu [%s]."
@@ -3903,7 +3898,7 @@ msgid "Failed to decode to UTF-8."
 msgstr ""
 
 msgid "Failed to write file \"%s\"."
-msgstr ""
+msgstr "Wystąpił problem przy próbie zapisu pliku \"%s\"."
 
 msgid "json load error 2"
 msgstr ""
@@ -3912,9 +3907,11 @@ msgid ""
 "Download subtitles error.\n"
 "wget error code[%d]."
 msgstr ""
+"Problem z pobraniem napisów.\n"
+"Kod błedu wget [%d]."
 
 msgid "unzip error - please check if utitlity unzip is available"
-msgstr ""
+msgstr "bład unzip - proszę sprawdzić, czy narzędzie unzip jest dostępne"
 
 msgid "write error"
 msgstr "zapisz błąd"
@@ -3927,9 +3924,6 @@ msgstr "wczytaj błąd"
 
 msgid "gzip error"
 msgstr "spakuj błąd do gzip"
-
-msgid "_checkStatus except error"
-msgstr ""
 
 msgid "Confirm the title of the movie"
 msgstr "Potwierdź tytuł filmu"
@@ -4093,9 +4087,11 @@ msgid ""
 "Login user \"%s\" to http://vk.com/ failed!\n"
 "Please check your login data in the IPTVPlayer configuration."
 msgstr ""
+"Problem z zalogowanie użytwkonika \"%s\" do http://vk.com/!\n"
+"Proszę sprawdzić login i hasło wprowadzone w konfiguracji IPTVPlayera."
 
 msgid "Trailers"
-msgstr ""
+msgstr "Trailery"
 
 # add by kosmacz
 msgid "By media title"

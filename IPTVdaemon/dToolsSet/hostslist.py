@@ -12,6 +12,7 @@ HostsList=[
 	("cartoonhd", "cartoonhd.global"),
 	("cdapl", "cda.pl"),
 	("cinemay", "cinemay.com"),
+	("cineto", "cine.to"),
 	("crtankocom", "crtanko.com"),
 	("dailymotion", "dailymotion.com"),
 	("dancetrippin", "dancetrippin.tv"),

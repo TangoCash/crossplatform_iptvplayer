@@ -3100,21 +3100,6 @@ msgstr ""
 msgid "Make directory [%s]"
 msgstr "Erstelle Verzeichnis [%s]"
 
-msgid ""
-"Can not get mount points - cmd mount failed.\n"
-"Return code[%s].\n"
-"Return data[%s]."
-msgstr ""
-
-msgid ""
-"Mount ISO file [%s] on [%s] failed.\n"
-"Return code[%s].\n"
-"Return data[%s]."
-msgstr ""
-
-msgid "Mounted on %s"
-msgstr ""
-
 msgid "Umount iso file"
 msgstr ""
 
@@ -3332,7 +3317,7 @@ msgid "Failed to write the file \"%s\"."
 msgstr "Schreiben von der Datei \"%s\" gescheitert."
 
 msgid "Failed to convert the file \"%s\" to UTF-8."
-msgstr "Konvertieren der Datei in UTF-8 gescheitert."
+msgstr "Konvertieren der Datei \"%s\" in UTF-8 gescheitert."
 
 msgid "Failed to open the file \"%s\"."
 msgstr "Öffnen der Datei \"%s\" gescheitert."

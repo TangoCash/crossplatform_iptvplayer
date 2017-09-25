@@ -43,6 +43,7 @@ config.plugins.iptvplayer.delay = ConfigInteger(2, (0, 5))
 config.plugins.iptvplayer.xhamstertag = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xhamsterchannel = ConfigYesNo(default = False)
 config.plugins.iptvplayer.bonga = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
+config.plugins.iptvplayer.cam4 = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
 
 def GetConfigList():
     optionList = []
@@ -53,6 +54,7 @@ def GetConfigList():
     optionList.append( getConfigListEntry( "Globalne wyszukiwanie :", config.plugins.iptvplayer.xxxsearch) )
     optionList.append( getConfigListEntry( "Globalne sortowanie :", config.plugins.iptvplayer.xxxsortall) )
     optionList.append( getConfigListEntry( "Bongacams stream :", config.plugins.iptvplayer.bonga) )
+    optionList.append( getConfigListEntry( "Cam4 stream :", config.plugins.iptvplayer.cam4) )
     optionList.append( getConfigListEntry( "Camsoda stream :", config.plugins.iptvplayer.camsoda) )
     optionList.append( getConfigListEntry( "UPDATE delay :", config.plugins.iptvplayer.delay) )
     optionList.append( getConfigListEntry( "Dodaj tagi do XHAMSTER :", config.plugins.iptvplayer.xhamstertag) )
@@ -153,7 +155,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "21.1.4.9"
+    XXXversion = "2017.09.24.1"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -1694,6 +1696,7 @@ class Host:
               printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
            #printDBG( 'Host getResolvedURL data: '+data )
+           next = self.cm.ph.getSearchGroups(data, '''<link rel="next" href=['"]([^"^']+?)['"]''', 1, True)[0]
            vr=''
            phCats = re.findall('class="profileDataBox.*?<a href="(.*?)".*?data-src="(.*?)"(.*?)class="flag flag-(.*?)"', data, re.S) 
            if phCats:
@@ -1708,13 +1711,13 @@ class Host:
                       vr=' (VR)'
                   else:
                       vr=''
-                  valTab.append(CDisplayListItem(phTitle+vr,phTitle+vr+'   [Country: '+phCountry+']   ',CDisplayListItem.TYPE_VIDEO, [CUrlItem('', self.MAIN_URL+phUrl, 1)], 0, phImage, None)) 
-           match = re.findall('directoryPager.*?> Next <', data, re.S)
-           if match:
-              match = re.findall('href="(.*?)".*?data-page="(.*?)"', match[0], re.S)
-           if match:
-              for (phUrl, phTitle) in match:
-                 valTab.append(CDisplayListItem('Next '+phTitle, 'Page: '+phUrl, CDisplayListItem.TYPE_CATEGORY, [phUrl], name, '', None))                
+                  if config.plugins.iptvplayer.cam4.value == '1':
+                      stream = '-rtmp-'
+                  else:
+                      stream = '-m3u8-'
+                  valTab.append(CDisplayListItem(phTitle+vr,phTitle+vr+'   [Country: '+phCountry+']   '+stream,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream+'http://www.cam4.pl'+phUrl, 1)], 0, phImage, None)) 
+           if next:
+              valTab.append(CDisplayListItem('Next ', 'Page: '+next, CDisplayListItem.TYPE_CATEGORY, [next], name, '', None))                
             
            return valTab 
 
@@ -4867,12 +4870,21 @@ class Host:
            return ''
 
         if parser == 'http://www.cam4.pl':
-           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-           try: data = self.cm.getURLRequestData(query_data)
+           if '-rtmp-' in url:
+              url = url.replace('-rtmp-','')
+              stream = 'rtmp'
+           if '-m3u8-' in url:
+              url = url.replace('-m3u8-','')
+              stream = 'm3u8'
+           COOKIEFILE = os_path.join(GetCookieDir(), 'cam4.cookie')
+           host = "Mozilla/5.0 (iPhone; CPU iPhone OS 8_0_2 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12A366 Safari/600.1.4"
+           header = {'User-Agent': host, 'Accept':'text/html,application/json','Accept-Language':'en,en-US;q=0.7,en;q=0.3'} 
+           query_data = { 'url': url, 'header': header, 'Referer':url, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
            except:
-              printDBG( 'Host getResolvedURL query error url: '+url )
               return ''
-           #printDBG( 'Host getResolvedURL data: '+data )
+           printDBG( 'Host getResolvedURL data: '+data )
            parse = re.search('"playerUrl":"(.*?)"', data, re.S) 
            if parse:
               swfUrl = parse.group(1)
@@ -4887,8 +4899,18 @@ class Host:
                     printDBG( 'Host videoAppUrl: '  +videoAppUrl )
                     if len(videoPlayUrl)<20: return ''
                     if len(videoAppUrl)<20: return ''
-                    Url = '%s playpath=%s?playToken=null swfUrl=%s conn=S:OK live=1 pageUrl=%s' % (videoAppUrl, videoPlayUrl, swfUrl, url)
-                    return Url
+                    if stream == 'rtmp':
+                       Url = '%s playpath=%s?playToken=null swfUrl=%s conn=S:OK live=1 pageUrl=%s' % (videoAppUrl, videoPlayUrl, swfUrl, url)
+                       return Url+ ' flashVer=WIN 2024,0,0,186 '
+           if stream == 'm3u8':
+              Url = self.cm.ph.getSearchGroups(data, '''hlsUrl: ['"]([^"^']+?)['"]''')[0]+'?referer=cam4.com&timestamp='+str(int(time_time()*1000))
+              #Url = videoAppUrl.replace('rtmp','https').replace('cam4.com/','cam4.com:443/')+'/'+videoPlayUrl+'_aac/playlist.m3u8?referer=cam4.com&timestamp='+str(int(time_time()*1000))
+              Url = urlparser.decorateUrl(Url, {'User-Agent': host})
+              if self.cm.isValidUrl(Url): 
+                 tmp = getDirectM3U8Playlist(Url)
+                 for item in tmp:
+                    printDBG( 'Host listsItems valtab: '  +str(item))
+                 return urlparser.decorateUrl(item['url'], {'User-Agent': host})
            return ''
 
         if parser == 'https://www.camsoda.com/':
