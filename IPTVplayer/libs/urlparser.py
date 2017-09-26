@@ -93,19 +93,21 @@ class urlparser:
     def decorateParamsFromUrl(baseUrl, overwrite=False):
         printDBG("urlparser.decorateParamsFromUrl >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + baseUrl)
         tmp        = baseUrl.split('|')
-        baseUrl    = urlparser.decorateUrl(tmp[0].strip(), strwithmeta(baseUrl).meta)
+        baseUrl    = strwithmeta(tmp[0].strip(), strwithmeta(baseUrl).meta)
         KEYS_TAB = list(DMHelper.HANDLED_HTTP_HEADER_PARAMS)
-        KEYS_TAB.extend(["iptv_audio_url", "Host", "Accept", "MPEGTS-Live", "PROGRAM-ID"])
+        KEYS_TAB.extend(["iptv_audio_url", "iptv_proto", "Host", "Accept", "MPEGTS-Live", "PROGRAM-ID"])
         if 2 == len(tmp):
             baseParams = tmp[1].strip()
             try:
                 params  = parse_qs(baseParams)
+                printDBG("PARAMS FROM URL [%s]" % params)
                 for key in params.keys():
                     if key not in KEYS_TAB: continue
                     if not overwrite and key in baseUrl.meta: continue
                     try: baseUrl.meta[key] = params[key][0]
                     except Exception: printExc()
             except Exception: printExc()
+        baseUrl= urlparser.decorateUrl(baseUrl)
         return baseUrl
 
     def preparHostForSelect(self, v, resolveLink = False):

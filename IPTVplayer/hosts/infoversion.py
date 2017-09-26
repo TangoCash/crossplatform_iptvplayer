@@ -121,7 +121,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2017.09.24"
+    infoversion = "2017.09.253"
     inforemote  = "0.0.0"
     currList = []
 
@@ -214,7 +214,7 @@ class Host:
            valTab.append(CDisplayListItem('Opoka TV', 'http://opoka.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.popler.tv/embed/player.php?user=Opokatv&popler=1&kody_code='], 'opoka', 'http://opoka.tv/wp-content/uploads/2016/10/OPTV2016weblgtp1bc.png', None)) 
            valTab.append(CDisplayListItem('Sfera TV', 'http://www.sferatv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.sferatv.pl/sferalive/_definst_/mp4:live3', 0)], 'sfera', 'http://www.sferatv.pl/images/logo_www.png', None)) 
            valTab.append(CDisplayListItem('EO TV', 'http://eotv.de/', CDisplayListItem.TYPE_CATEGORY, ['http://eotv.de/'], 'eotv', 'http://eotv.de/wp-content/uploads/2015/12/Cranberry-Logo.png', None))
-           valTab.append(CDisplayListItem('Kamery Ptaki w gniazdach na żywo', 'Ptaki w gniazdach na żywo', CDisplayListItem.TYPE_CATEGORY, [''], 'ptaki', 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
+           #valTab.append(CDisplayListItem('Kamery Ptaki w gniazdach na żywo', 'Ptaki w gniazdach na żywo', CDisplayListItem.TYPE_CATEGORY, [''], 'ptaki', 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
            valTab.append(CDisplayListItem('Kamery Toya GO', 'https://go.toya.net.pl/25', CDisplayListItem.TYPE_CATEGORY, ['https://go.toya.net.pl/25'], 'toyago', 'https://go.toya.net.pl/public/images/top_menu/logo-4.png?t=1494325022', None)) 
            valTab.append(CDisplayListItem('Podkarpacie TV', 'http://podkarpacielive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://podkarpacielive.tv'], 'podkarpacie', 'http://podkarpacielive.tv/wp-content/themes/podkarpackielivetv/images/logo.png', None)) 
            valTab.append(CDisplayListItem('Żary TV', 'http://www.telewizjazary.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC29dc_mBUWW4mz5h754v88w/live'], 'zary', 'http://www.telewizjazary.pl/assets/wysiwig/images/logo/TVR_logo.png', None))
@@ -233,7 +233,7 @@ class Host:
            valTab.append(CDisplayListItem('Zabrze TV', 'Zabrze TV', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCyQL0IjtptnQ9PxmAfH3fKQ/live'], 'zabrze', 'http://tvzabrze.pl/assets/images/logo.png', None))
            valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/kamerki/'], 'lookcam', 'https://r.cdn.cloudbitly.com/lookcam/static/images/logo_lookcam_oognet.png', None)) 
            valTab.append(CDisplayListItem('Fokus TV', 'http://www.fokus.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.fokus.tv'], 'fokus', 'http://www.fokus.tv/assets/gfx/logo-new.png', None)) 
-           valTab.append(CDisplayListItem('News12 Long Island   (exteplayer3)', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
+           valTab.append(CDisplayListItem('News12 Long Island', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
 
            valTab.sort(key=lambda poz: poz.name)
            valTab.insert(0,CDisplayListItem('Pobierz info o IPTV Player', 'Wersja hostinfoversion: '+self.infoversion, CDisplayListItem.TYPE_CATEGORY, ['https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/commits/master'], 'info', 'http://www.cam-sats.com/images/forumicons/ip.png', None)) 
@@ -360,6 +360,7 @@ class Host:
                 Title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
                 if Url.startswith('/'): Url = 'https://lookcam.com' + Url 
                 valTab.append(CDisplayListItem(Title,Title,CDisplayListItem.TYPE_CATEGORY, [Url],'lookcam-clips', '', None)) 
+            valTab.insert(0,CDisplayListItem("--- Live TV ---",     "Live TV",     CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://lookcam.com/livetv/player/', 1)], 0, '',None))
             return valTab  
         if 'lookcam-clips' == name:
             printDBG( 'Host listsItems begin name='+name )
@@ -840,9 +841,20 @@ class Host:
 
         if 'makow' == name:
             printDBG( 'Host listsItems begin name='+name )
-            stream = self.cm.ph.getSearchGroups(data, '''<iframe src=['"]([^"^']+?)['"]''')[0] 
-            if stream.startswith('//'): stream = 'http:' + stream
-            valTab.append(CDisplayListItem('Maków', stream,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream, 1)], 0, '', None))
+            Url = self.cm.ph.getSearchGroups(data, '''<iframe src=['"]([^"^']+?)['"]''')[0] 
+            if Url.startswith('//'): Url = 'http:' + Url
+            if Url:
+                try: data = self.cm.getURLRequestData({'url': Url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
+                except:
+                    printDBG( 'Host listsItems ERROR' )
+                    return valTab
+                printDBG( 'Host data '+data )
+                Url = self.cm.ph.getSearchGroups(data, '''<video id="video" src=['"]([^"^']+?)['"]''', 1, True)[0]
+                if Url.startswith('//'): Url = 'http:' + Url
+                if self.cm.isValidUrl(Url): 
+                    tmp = getDirectM3U8Playlist(Url)
+                    for item in tmp:
+                        valTab.append(CDisplayListItem('Maków', 'Maków',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', str(item['url']), 0)], 0, '', None))
             return valTab
 
         if 'magdalena' == name:
@@ -1450,9 +1462,11 @@ class Host:
                 tmp = getDirectM3U8Playlist(url_m3u8)
                 for item in tmp:
                     printDBG( 'Host listsItems valtab: '  +str(item) )
-                Vurl = item['url']
-                mergeurl = decorateUrl("merge://audio_url|video_url", {'audio_url':Aurl, 'video_url':Vurl, 'prefered_merger':'MP4box'}) 
-                valTab.append(CDisplayListItem('News12 ', Vurl+'|'+Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', mergeurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
+                    Vurl = item['url']
+                    mergeurl = decorateUrl("merge://audio_url|video_url", {'audio_url':Aurl, 'video_url':Vurl, 'prefered_merger':'MP4box'}) 
+                    valTab.append(CDisplayListItem('News12    (exteplayer3)   '+str(item['name']), 'News12   '+str(item['name']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', mergeurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
+                valTab.append(CDisplayListItem('News12 only video', Vurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Vurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
+                valTab.append(CDisplayListItem('News12 only audio', Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Aurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
             return valTab 
 
         #http://www.peregrinus.pl/pl/podglad-gniazd-na-zywo

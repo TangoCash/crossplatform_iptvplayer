@@ -175,23 +175,23 @@ class Urllist(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("Urllist.getLinksForVideo url[%s]" % cItem['url'])
         videoUrls = []
-        uri, params   = DMHelper.getDownloaderParamFromUrl(cItem['url'])
-        printDBG(params)
-        uri = urlparser.decorateUrl(uri, params)
-        uri = urlparser.decorateParamsFromUrl(uri)
+        uri = urlparser.decorateParamsFromUrl(cItem['url'])
+        protocol = uri.meta.get('iptv_proto', '')
+        
+        printDBG("PROTOCOL [%s] " % protocol)
         
         urlSupport = self.up.checkHostSupport( uri )
         if 1 == urlSupport:
             retTab = self.up.getVideoLinkExt( uri )
             videoUrls.extend(retTab)
         elif 0 == urlSupport and self._uriIsValid(uri):
-            if uri.split('?')[0].endswith('.m3u8'):
-                retTab = getDirectM3U8Playlist(uri)
+            if protocol == 'm3u8':
+                retTab = getDirectM3U8Playlist(uri, checkExt=False, checkContent=True)
                 videoUrls.extend(retTab)
-            elif uri.split('?')[0].endswith('.f4m'):
+            elif protocol == 'f4m':
                 retTab = getF4MLinksWithMeta(uri)
                 videoUrls.extend(retTab)
-            elif uri.split('?')[0].endswith('.mpd'):
+            elif protocol == 'mpd':
                 retTab = getMPDLinksWithMeta(uri, False)
                 videoUrls.extend(retTab)
             else:

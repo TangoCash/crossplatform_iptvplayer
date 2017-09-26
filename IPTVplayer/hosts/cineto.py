@@ -90,7 +90,7 @@ class CineTO(CBaseHostClass):
     def _getSearchParams(self, cItem, count=1):
         post_data = {}
         post_data['kind']   = cItem.get('f_kind', 'all')
-        post_data['genre']  = cItem.get('f_genre', '0')
+        post_data['genre']  = cItem.get('f_genres', '0')
         post_data['rating'] = cItem.get('f_rating', '1')
         
         sYear = cItem.get('f_year', self.cacheFilters['year'][-1]['f_year'])

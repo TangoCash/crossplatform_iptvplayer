@@ -582,7 +582,24 @@ def EXIT():
     xbmc.executebuiltin("XBMC.Container.Update(addons://sources/video,replace)")
     xbmc.executebuiltin("XBMC.ActivateWindow(Home)")
 
+def patchZope4Android():
+    if os.path.exists('/storage/external_storage/'): #patch for Android only
+        zopePath=xbmc.translatePath('special://home/addons/script.module.zope.interface/lib/zope/')
+        if not os.path.exists(zopePath + "__init__.py.org") and os.path.exists(zopePath + "__init__.py"):
+            os.rename(zopePath + "__init__.py", zopePath + "__init__.py.org")
+            with open(zopePath + "__init__.py", 'w') as f:
+                f.write("""# this is a namespace package patched by j00zek
+try:
+    from pkg_resources import declare_namespace
+    declare_namespace(__name__)
+except ImportError:
+    import pkgutil
+    __path__ = pkgutil.extend_path(__path__, __name__)
+""")
+                f.close()
+
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring
+    patchZope4Android()
     router(sys.argv[2][1:])

@@ -2,7 +2,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
@@ -190,6 +190,9 @@ class GoMovies(CBaseHostClass):
         if page > 1: url = url + '/{0}'.format(page)
         sts, data = self.getPage(url)
         if not sts: return
+        
+        if '/search' in url and 'recaptcha-search' in data:
+            SetIPTVPlayerLastHostError(_('Functionality protected by Google reCAPTCHA!'))
         
         nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="pagination">', '</ul>', False)[1]
         if '>Next &rarr;<' in nextPage:
@@ -409,12 +412,14 @@ class GoMovies(CBaseHostClass):
                 try:
                     tmp = byteify(json.loads(data))
                     printDBG("------------------------------------------------\n%s+++++++++++++++++++++++++++++++++++++++++++++\n" % tmp)
+                    if isinstance(tmp['playlist'][0]['sources'], dict): tmp['playlist'][0]['sources'] = [tmp['playlist'][0]['sources']]
                     for item in tmp['playlist'][0]['sources']:
                         if "mp4" == item['type']:
                             urlTab.append({'name':str(item.get('label', 'default')), 'url':item['file']})
                         elif "m3u8" == item['type']:
                             url = strwithmeta(item['file'], {'Referer':referer, 'User-Agent':params['header']['User-Agent']})
                             urlTab.extend(getDirectM3U8Playlist(url, checkContent=True))
+                    if isinstance(tmp['playlist'][0]['tracks'], dict): tmp['playlist'][0]['tracks'] = [tmp['playlist'][0]['tracks']]
                     for item in tmp['playlist'][0]['tracks']:
                         format = item['file'][-3:]
                         if format in ['srt', 'vtt'] and "captions" == item['kind']:
