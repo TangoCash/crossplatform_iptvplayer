@@ -471,7 +471,7 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'mms'
         elif urlLower.startswith('mmsh'):
             retUrl.meta['iptv_proto'] = 'mmsh'
-        elif 'protocol=hls' in iptv_proto:
+        elif 'protocol=hls' in urlLower:
             retUrl.meta['iptv_proto'] = 'm3u8'
         elif urlLower.split('?')[0].endswith('.mpd'):
             retUrl.meta['iptv_proto'] = 'mpd'

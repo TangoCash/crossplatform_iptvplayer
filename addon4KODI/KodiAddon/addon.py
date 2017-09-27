@@ -586,9 +586,10 @@ def EXIT():
     xbmc.executebuiltin("XBMC.Container.Update(addons://sources/video,replace)")
     xbmc.executebuiltin("XBMC.ActivateWindow(Home)")
 
-def patchZope4Android():
-    if os.path.exists('/storage/external_storage/'): #patch for Android only
+def patchAndroid():
+    if os.path.exists('/storage/external_storage/') or os.path.exists('/storage/emulated/'): #patch for Android only
         zopePath=xbmc.translatePath('special://home/addons/script.module.zope.interface/lib/zope/')
+        myLog('patchAndroid > found common Android paths, patching %s' % zopePath)
         if not os.path.exists(zopePath + "__init__.py.org") and os.path.exists(zopePath + "__init__.py"):
             os.rename(zopePath + "__init__.py", zopePath + "__init__.py.org")
             with open(zopePath + "__init__.py", 'w') as f:
@@ -603,9 +604,11 @@ except ImportError:
                 f.close()
                 if os.path.exists(zopePath + "__init__.pyo"):
                     os.remove(zopePath + "__init__.pyo")
+    else:
+        myLog('patchAndroid > common Android paths not found, is it Android?')
 
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     # We use string slicing to trim the leading '?' from the plugin call paramstring
-    patchZope4Android()
+    patchAndroid()
     router(sys.argv[2][1:])
