@@ -55,7 +55,7 @@ def myLog( text = '' , clearFile = False):
 
 class StatusLine(xbmcgui.WindowDialog):
     def __init__(self, line=''):
-        self.addControl(xbmcgui.ControlLabel(x=490, y=5, width=500, height=25, label=line, textColor='0xFFFFFF00'))
+        self.addControl(xbmcgui.ControlLabel(x=390, y=5, width=500, height=25, label=line, textColor='0xFFFFFF00'))
 
 def showDialog(HeaderText, Message):
     d = xbmcgui.Dialog()
@@ -159,7 +159,11 @@ def isDeamonWorking():
     return False
 ###################################################################################################################  DAEMON SUBS <<<
 
-def doCMD( myCommand , commandDescr = ''):
+def doCMD( myCommand , commandPart1 = '' , commandPart2 = ''):
+    try:
+        commandDescr= commandPart1.decode('utf-8', errors='ignore') + commandPart2.decode('utf-8', errors='ignore')
+    except Exception:
+        commandDescr=''
     myLog("doCMD('%s')" % myCommand)
     IPTVdaemonRET = buildPath(ADDON.getSetting("config.misc.sysTempPath"),'.IPTVdaemon','ret')
     if myCommand == None or myCommand == '':
@@ -414,14 +418,14 @@ def router(paramstring):
             while int(params['level']) < int(ADDON.getSetting("currenLevel")):
                 ANSWER = doCMD("PreviousList", "..")
                 ADDON.setSetting("currenLevel", "%d" % (int(ADDON.getSetting("currenLevel")) - 1) )
-            ANSWER = doCMD("ListForItem=%s" % params['id'], _(30406) % params['name'].decode('utf-8'))
+            ANSWER = doCMD("ListForItem=%s" % params['id'], _(30406), params['name'])
             if not isERROR(ANSWER) and ANSWER.startswith( 'ItemsList=' ):
                 ADDON.setSetting("currenLevel", "%d" % (int(ADDON.getSetting("currenLevel")) + 1) )
                 prepareKODIitemsList(ANSWER)
             xbmcplugin.endOfDirectory(ADDON_handle)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### pobieranie linkow do filmu
         elif params['action'] == 'playMovie':
-            ANSWER = doCMD("getVideoLinks=%s" % params['id'], _(30407) % params['name'])
+            ANSWER = doCMD("getVideoLinks=%s" % params['id'], _(30407) , params['name'])
             if not isERROR(ANSWER) and ANSWER.startswith( 'UrlsList=' ):
                 prepareKODIurlsList(ANSWER,params['name'])
             xbmcplugin.endOfDirectory(ADDON_handle)
@@ -597,6 +601,8 @@ except ImportError:
     __path__ = pkgutil.extend_path(__path__, __name__)
 """)
                 f.close()
+                if os.path.exists(zopePath + "__init__.pyo"):
+                    os.remove(zopePath + "__init__.pyo")
 
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.

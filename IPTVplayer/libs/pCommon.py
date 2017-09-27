@@ -482,6 +482,18 @@ class common:
             printExc()
             response = e
             status = False
+        except urllib2.URLError, e:
+            if 'TLSV1_ALERT_PROTOCOL_VERSION' in str(e) and 'ssl_protocol' not in addParams:
+                try:
+                    newParams = dict(addParams)
+                    newParams['ssl_protocol'] = ssl.PROTOCOL_TLSv1_2
+                    return self.getPage(url, newParams, post_data)
+                except Exception: 
+                    pass
+            printExc()
+            response = None
+            status = False
+                
         except Exception:
             printExc()
             response = None
@@ -791,10 +803,17 @@ class common:
         #customOpeners.append(urllib2.HTTPSHandler(debuglevel=1))
         #customOpeners.append(urllib2.HTTPHandler(debuglevel=1))
         if not IsHttpsCertValidationEnabled():
-            #try: customOpeners.append(urllib2_ssl.HTTPSHandler(ssl_version=ssl.PROTOCOL_SSLv3)) # #PROTOCOL_TLSv1 PROTOCOL_SSLv3
-            #except Exception:printExc()
-            try: customOpeners.append(urllib2.HTTPSHandler(context=ssl._create_unverified_context()))
+            try:
+                if params.get('ssl_protocol', None) != None:
+                    ctx = ssl._create_unverified_context(params['ssl_protocol'])
+                else:
+                    ctx = ssl._create_unverified_context()
+                customOpeners.append(urllib2.HTTPSHandler(context=ctx))
             except Exception: pass
+        elif params.get('ssl_protocol', None) != None:
+            ctx = ssl.SSLContext(params['ssl_protocol'])
+            customOpeners.append(urllib2.HTTPSHandler(context=ctx))
+        
         #proxy support
         if self.useProxy:
             http_proxy = self.proxyURL

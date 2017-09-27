@@ -18,7 +18,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from enigma import gRGB
 from Screens.MessageBox import MessageBox
 from Screens.ChoiceBox import ChoiceBox
-from Components.config import config, getConfigListEntry
+from Components.config import config, getConfigListEntry, NumericalTextInput
 from Tools.BoundFunction import boundFunction
 ###################################################
 
@@ -48,8 +48,11 @@ class ConfigHostMenu(ConfigBaseWidget):
         ConfigBaseWidget.runSetup(self)
 
     def changeSubOptions(self):
-        self.runSetup()
-        
+        try:
+            if not isinstance(self["config"].getCurrent()[1], NumericalTextInput):
+                self.runSetup()
+        except Exception:
+            pass
         
 class ConfigHostsMenu(ConfigBaseWidget):
    
@@ -81,8 +84,8 @@ class ConfigHostsMenu(ConfigBaseWidget):
     def runSetup(self):
         ConfigBaseWidget.runSetup(self)
 
-    def changeSubOptions(self):
-        self.runSetup()
+    #def changeSubOptions(self):
+    #    self.runSetup()
         
     def isChanged(self):
         if self.orgListOfHostsNames != self.listOfHostsNames:

@@ -188,7 +188,14 @@ class NGolosCOM(CBaseHostClass):
             if 'facebook' in tmp[idx]: continue
             url = self.getFullUrl(tmp[idx])
             if not self.cm.isValidUrl(url): continue
-            if 'playwire.com' not in url and  self.up.checkHostSupport(url) != 1: continue
+            if 'playwire.com' not in url and  self.up.checkHostSupport(url) != 1:
+                try:
+                    url = self.getFullUrl(base64.b64decode(url.split('link=', 1)[-1]))
+                    if self.up.checkHostSupport(url) != 1: continue
+                except Exception:
+                    printExc()
+                    continue
+            
             urlsTab.append(url)
         
         for idx in range(len(urlsTab)):
