@@ -20,7 +20,6 @@ from enigma import eConsoleAppContainer
 from Components.Language import language
 from time import sleep as time_sleep, time
 from urllib2 import Request, urlopen, URLError, HTTPError
-from datetime import datetime
 import urllib
 import urllib2
 import traceback
@@ -846,8 +845,8 @@ def GetCreateIconsDirDeltaDateInDays(fullPath):
     createTime = GetCreationIconsDirTime(fullPath)
     if None != createTime:
         try:
-            currTime   = datetime.now()
-            modTime    = datetime.fromtimestamp(createTime)
+            currTime   = datetime.datetime.now()
+            modTime    = datetime.datetime.fromtimestamp(createTime)
             deltaTime  = currTime - modTime
             ret = deltaTime.days
         except Exception:
