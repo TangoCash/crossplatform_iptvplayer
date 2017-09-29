@@ -33,7 +33,7 @@ class DMItem(DMItemBase):
 
 class IPTVDMApi():
     
-    def __init__(self, refreshDelay = 2, parallelDownloadNum = 1):
+    def __init__(self, refreshDelay = 2, parallelDownloadNum = 1, finishNotifyCallback=None):
         self.running = False
         self.downloadIdx = 0
         self.downloading = False
@@ -55,6 +55,8 @@ class IPTVDMApi():
         #main Queue
         self.mainTimer = eTimer()
         self.mainTimer_conn = eConnectCallback(self.mainTimer.timeout, self.processDQ)
+        
+        self.finishNotifyCallback = finishNotifyCallback
         return
 
     def __del__(self):
@@ -324,14 +326,27 @@ class IPTVDMApi():
         self.updateItemSTS(listUDIdx)
         # dItem - copy only for reading filed
         dItem = self.queueUD[listUDIdx]
-                
+        status = 'UNKNOWN'
         if dItem.downloadedProcent > 99:
             self.queueUD[listUDIdx].status = DMHelper.STS.DOWNLOADED
+            status = 'DOWNLOADED'
         else:           
             if dItem.downloadedSize > 0:
                 self.queueUD[listUDIdx].status = DMHelper.STS.INTERRUPTED
+                status = 'INTERRUPTED'
             else:
                 self.queueUD[listUDIdx].status = DMHelper.STS.ERROR
+                status = 'FAILED'
+        
+        try:
+            fileName = self.queueUD[listUDIdx].fileName.split('/')[-1]
+            shortName = fileName[:17]
+            if len(fileName) > len(shortName): shortName += '...'
+            shortName += ' '
+            self.finishNotifyCallback().showNotify(shortName + _(status))
+        except Exception:
+            printExc()
+        
         #dItem = self.queueUD[listUDIdx] 
         #print( dItem.fileName + ": "+ " status: " + dItem.status + dItem.downloadedSize + " " + dItem.downloadedProcent + " " + dItem.downloadedSpeed + " " + dItem.timeToFinish )
     # end updateEndItemStatus

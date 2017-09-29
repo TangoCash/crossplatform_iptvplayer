@@ -131,11 +131,13 @@ class ShowsportTVApi(CBaseHostClass):
         if not sts: return []
         #data = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^'^"]*?/embedplayer\.php[^'^"]+?)['"]''', 1, True)[0]
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'setURL(', '<')
+        checkedLinksTab = []
         for item in tmp:
             serverName = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '>', '<', False)[1] )
             playerUrl  = self.cm.ph.getSearchGroups(item, '''['"]([^'^"]*?/embedplayer\.php[^'^"]+?)['"]''', 1, True)[0]
             playerUrl = self.getFullUrl(playerUrl)
-            if playerUrl.startswith('http'):
+            if self.cm.isValidUrl(playerUrl) and playerUrl not in checkedLinksTab:
+                checkedLinksTab.append(playerUrl)
                 sts,item = self.cm.getPage(playerUrl)
                 if not sts: continue
                 links = self.up.getAutoDetectedStreamLink(playerUrl, item)

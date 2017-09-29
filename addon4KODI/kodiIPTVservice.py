@@ -13,6 +13,9 @@ except: import simplejson as json
 #get paths
 myAddon=xbmcaddon.Addon('plugin.video.IPTVplayer')
 addonTempFolder = myAddon.getSetting('config.misc.sysTempPath')
+if not os.path.exists(addonTempFolder) or not os.access(addonTempFolder, os.W_OK):
+    addonTempFolder = xbmc.translatePath( "special://temp" )
+os.environ['KODI_TEMP'] = addonTempFolder
 kodiIPTVpath = myAddon.getSetting('kodiIPTVpath')
 E2root = kodiIPTVpath
 if os.path.basename(E2root) == 'IPTVPlayer':

@@ -337,48 +337,42 @@ class Cinemay(CBaseHostClass):
         
         otherInfo = {}
         
+        url = cItem['url']
+        
         sts, data = self.getPage(url)
         if not sts: return []
         
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="extradsbottom', '</div>')
-        
-        try:
-            data = byteify(json.loads(data), noneReplacement='', baseTypesAsString=True)['entry']
-            icon = self.getFullIconUrl(data.get('cover', cItem.get('icon', '')))
-            title = self.cleanHtmlStr(data['title'])
+        if '/episodes/' in url:
+            icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(data, '''[\s:]url\(\s*['"]([^'^"]+?\.jpe?g[^'^"]*?)['"]''')[0])
+            data  = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div[^>]+?id=['"]info['"]'''), re.compile('''<div[^>]+?class=['"]box_links['"]'''))[1]
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<h1'''), re.compile('</h1>'))[1])
+            otherInfo['alternate_title'] = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<h3'''), re.compile('</h3>'))[1])
+            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p', '</p>')[1])
+        else:
+            tmp  = ' '.join(self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="extradsbottom', '</div>'))
+            data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div[^>]+?class=['"]content['"][^>]*?>'''), re.compile('''<div[^>]+?class=['"]extradsbottom'''), False)[1]
+            desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p', '</p>')[1])
+            icon = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<h1'''), re.compile('</h1>'))[1])
             
-            lang = cItem.get('f_lang', '')
-            if lang == '': 
-                # move better language at top
-                langKeys = list(data['lang'].keys())
-                defLang = GetDefaultLang()
-                if defLang not in langKeys: defLang = 'en'
-                if defLang in langKeys: lang = defLang
-                else: lang = langKeys[0]
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<p', '</p>')
+            for item in tmp:
+                item = item.split('</span>', 1)
+                key = self.cleanHtmlStr(item[0]).lower()
+                value = self.cleanHtmlStr(item[1].replace('</a>', ', '))
+                if 'e original' in key: otherInfo['alternate_title'] = value
+                elif 'statut' in key: otherInfo['status'] = value
+                elif 'saisons' in key: otherInfo['seasons'] = value
+                elif 'episodes' in key: otherInfo['episodes'] = value
+                elif 'genre' in key: otherInfo['genres'] = value.replace(' , ', ', ')
+                elif 'acteurs' in key: otherInfo['actors'] = value.replace(' , ', ', ')
+                elif ' date' in key: otherInfo['released'] = value
+                elif 'tmdb' in key: otherInfo['tmdb_rating'] = value
+                elif 'année de production' in key: otherInfo['year'] = value
             
-            desc = self.cleanHtmlStr(data.get('plot_'+lang, ''))
-            
-            tmp = data.get('year', '')
-            if tmp != '': otherInfo['year'] = tmp
-            
-            tmp = data.get('date', '')
-            if tmp != '': otherInfo['released'] = tmp
-            
-            tmp = data.get('duration', '')
-            if tmp != '': otherInfo['duration'] = tmp + ' min.'
-            
-            for item in [('genres', 'genres'), ('producer', 'producers'), ('director', 'directors'), ('actor', 'actors')]:
-                tmp = ', '.join(data.get(item[0], []))
-                if tmp != '': otherInfo[item[1]] = tmp
-            
-            tmp = data['rating']
-            if tmp != '': otherInfo['imdb_rating'] = '%s/10' % (data['rating'])
-            
-            if title == '': title = cItem['title']
-            if desc == '':  desc = cItem.get('desc', '')
-            if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
-        except Exception:
-            printExc()
+        if title == '': title = cItem['title']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
     
@@ -424,7 +418,6 @@ class IPTVHost(CHostBase):
         CHostBase.__init__(self, Cinemay(), True, [])
         
     def withArticleContent(self, cItem):
-        return False
         url = cItem.get('url', '')
         if '/episodes/' in url or '/films/' in url or '/series/' in url:
             return True

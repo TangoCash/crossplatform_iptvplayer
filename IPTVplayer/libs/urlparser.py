@@ -386,6 +386,7 @@ class urlparser:
                        'flashcast.pw':         self.pp.parseCASTFLASHPW    ,
                        'dotstream.tv':         self.pp.parserDOTSTREAMTV   ,
                        'leton.tv':             self.pp.parserDOTSTREAMTV   ,
+                       'allcast.is':           self.pp.parserALLCASTIS     ,
                        'tvope.com':            self.pp.parserTVOPECOM      ,
                        'fileone.tv':           self.pp.parserFILEONETV     ,
                        'userscloud.com':       self.pp.parserUSERSCLOUDCOM ,
@@ -562,6 +563,11 @@ class urlparser:
             elif 'dotstream.tv' in data:
                 streampage = self.cm.ph.getSearchGroups(data, """streampage=([^&]+?)&""")[0]
                 videoUrl = 'http://dotstream.tv/player.php?streampage={0}&height=490&width=730'.format(streampage)
+                videoUrl = strwithmeta(videoUrl, {'Referer':strwithmeta(baseUrl).meta.get('Referer', baseUrl)})
+                return self.getVideoLinkExt(videoUrl)
+            elif 'allcast.is' in data:
+                id = self.cm.ph.getSearchGroups(data, """id=['"]?([0-9]+?)[^0-9]""")[0]
+                videoUrl = 'http://www.allcast.is/stream.php?id={0}&width=100%&height=100%&stretching=uniform'.format(id)
                 videoUrl = strwithmeta(videoUrl, {'Referer':strwithmeta(baseUrl).meta.get('Referer', baseUrl)})
                 return self.getVideoLinkExt(videoUrl)
             elif 'ucaster.js' in data:
@@ -4627,6 +4633,27 @@ class pageParser:
             streamsTab.append({'name':'[rtmp] ucaster', 'url':streamUrl})
         except:
             printExc()
+        return streamsTab
+        
+    def parserALLCASTIS(self, baseUrl):
+        printDBG("parserALLCASTIS baseUrl[%s]" % baseUrl)
+        HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+        videoUrl = strwithmeta(baseUrl)
+        if 'Referer' in videoUrl.meta: HTTP_HEADER['Referer'] = videoUrl.meta['Referer']
+        
+        sts, data = self.cm.getPage(videoUrl, {'header': HTTP_HEADER})
+        if not sts: return False
+        
+        url = self.cm.ph.getSearchGroups(data, 'curl[^"]*?=[^"]*?"([^"]+?)"')[0]
+        if '' == url: url = self.cm.ph.getSearchGroups(data, 'murl[^"]*?=[^"]*?"([^"]+?)"')[0]
+        streamUrl = base64.b64decode(url)
+        if streamUrl.startswith('//'): streamUrl = 'http:' + streamUrl
+        streamUrl = strwithmeta(streamUrl, {'Referer':videoUrl, 'User-Agent':HTTP_HEADER['User-Agent']})
+        
+        streamsTab = []
+        # m3u8 link
+        if streamUrl.split('?', 1)[0].endswith('.m3u8'):
+            streamsTab.extend(getDirectM3U8Playlist(streamUrl, checkContent=False))
         return streamsTab
         
     def parserDOTSTREAMTV(self, baseUrl):

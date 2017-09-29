@@ -72,12 +72,17 @@ class eConsoleAppContainer():
         if isWget == True: #for wget separate process and logs
             TempPath = None
             try:
-                TmpPath = os.path.join(Components.config.config.misc.sysTempPath.value,'.IPTVdaemon')
+                TempPath = os.path.join(Components.config.config.misc.sysTempPath.value,'.IPTVdaemon')
             except:
-                for TP in ['/storage/sdcard1', '/storage/sda1/', '/data/local/tmp/', '/tmp' ]:
-                    if os.path.exists(TP) and os.access(TP, os.W_OK):
-                        TempPath = os.path.join(TP)
-                        break
+                from initSysPaths import getSysTempFolder
+                TempPath = getSysTempFolder()
+                
+            if TempPath is None:
+                raise ValueError('EXCEPTION!!! System temp path NOT found!!!')
+            elif not os.path.exists(TempPath):
+                raise ValueError('EXCEPTION!!! System temp path (%s) does NOT exist!!!' % TempPath)
+            elif not os.access(TempPath, os.W_OK):
+                raise ValueError('EXCEPTION!!! System temp path (%s) is NOT writable!!!' % TempPath)
                 
             iindex = 1
             from subprocess import Popen
@@ -101,8 +106,11 @@ class eConsoleAppContainer():
             return
         else:
             myConsole = eConsoleImpl()
-            reactor.spawnProcess(myConsole, cmdParameters[0], cmdParameters, path = self.m_cwd, usePTY = True)
-            reactor.run()
+            try:
+                reactor.spawnProcess(myConsole, cmdParameters[0], cmdParameters, path = self.m_cwd, usePTY = True)
+                reactor.run()
+            except Exception, e:
+                print 'Exception (%s) starting reactor' % str(e)
 
 # fake-enigma from openpli github
 

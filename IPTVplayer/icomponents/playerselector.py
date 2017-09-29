@@ -448,6 +448,7 @@ class PlayerSelectorWidget(Screen):
             else:
                 options.append((_("Disable reordering mode"), "CHANGE_REORDERING_MODE"))
         options.append((_("IPTV download manager"), "IPTVDM"))
+        options.append((_("Disable/Enable services"), "config_hosts"))
         if len(options):
             self.session.openWithCallback(self.selectMenuCallback, ChoiceBox, title=_("Select option"), list=options)
     
@@ -458,6 +459,8 @@ class PlayerSelectorWidget(Screen):
                 self.changeReorderingMode()
             elif ret == "IPTVDM":
                 self.keyBlue()
+            elif ret == "config_hosts":
+                self.close((_("Disable not used services"), ret))
         
     def changeReorderingMode(self):
         selIdx = self.currLine * self.numOfCol +  self.dispX

@@ -207,5 +207,31 @@ for hostName in gListOfHostsNames:
     except Exception:
         printExc(hostName)
 
+def GetListOfHostsNames():
+    global gListOfHostsNames
+    return gListOfHostsNames
+
+def IsUpdateNeededForHostsChangesCommit(enabledHostsListOld, enabledHostsList=None, hostsFromFolder=None):
+    if enabledHostsList == None: 
+        enabledHostsList = GetEnabledHostsList()
+    if hostsFromFolder == None: 
+        hostsFromFolder = GetHostsList(fromList=False, fromHostFolder=True)
+
+    if config.plugins.iptvplayer.remove_diabled_hosts.value and enabledHostsList != enabledHostsListOld:
+        hostsFromList = GetHostsList(fromList=True, fromHostFolder=False)
+        diffDisabledHostsList = set(enabledHostsListOld).difference(set(enabledHostsList))
+        diffList = set(enabledHostsList).symmetric_difference(set(enabledHostsListOld))
+        for hostItem in diffList:
+            if hostItem in hostsFromList:
+                if hostItem in diffDisabledHostsList:
+                    if hostItem in hostsFromFolder:
+                        # standard host has been disabled but it is still in folder
+                        return True
+                else:
+                    if hostItem not in hostsFromFolder:
+                        # standard host has been enabled but it is not in folder
+                        return True
+    return False
+
 ###################################################
 

@@ -200,7 +200,7 @@ def doCMD( myCommand , commandPart1 = '' , commandPart2 = ''):
             fp.close()
     myLog("doCMD returned: %s" % retVal)
     SL.close()
-    return retVal
+    return retVal.decode('utf-8', errors='ignore')
 
 def isERROR(myAnswer):
     if myAnswer.lower().startswith('timeout'):
@@ -402,6 +402,7 @@ def router(paramstring):
             if not isDeamonWorking():
                 myLog('Error starting daemon for host %s' % (params['host']))
                 showDialog(_(30403), _(30404) % (params['host']))
+                xbmc.executebuiltin('XBMC.Container.Update("%s", "replace")' % ADDON_url)
             else:
                 myLog('>startHost %s, pid:%s' % (params['host'],ADDON.getSetting("daemonPID")))
                 ADDON.setSetting("selectedHost", doCMD("Title", _(30402)))
@@ -546,6 +547,9 @@ def router(paramstring):
             ADDON.openSettings()
         elif not os.access(ADDON.getSetting("config.plugins.iptvplayer.NaszaTMP"), os.W_OK):
             showDialog(_(30403), _(30432))
+            ADDON.openSettings()
+        elif ADDON.getSetting("PlayerMode") != "0" and not os.access(ADDON.getSetting("config.plugins.iptvplayer.wgetpath"), os.X_OK):
+            showDialog(_(30403), _(30433))
             ADDON.openSettings()
         else:
             #ustawienie krytycznych ścieżek

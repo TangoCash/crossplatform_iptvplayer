@@ -406,3 +406,49 @@ class IPTVDMWidget(Screen):
     def __event(self, ev):
         pass
 #class IPTVPlayerWidget
+
+class IPTVDMNotificationWidget(Screen):
+    d_w = 1980 - 20
+    #d_h = getDesktop(0).size().height()
+    
+    skin = """<screen name="IPTVDMNotificationWidget" position="%d,%d" zPosition="10" size="350,60" title="IPTVPlayer downloader" backgroundColor="#31000000" >
+            <widget name="message_label" font="Regular;24" position="0,0" zPosition="2" valign="center" halign="center" size="350,60" backgroundColor="#31000000" transparent="1" />
+        </screen>""" % (d_w-350, 60)
+    
+    def __init__(self, session):
+        Screen.__init__(self, session)
+        self.skin = IPTVDMNotificationWidget.skin
+        self['message_label'] = Label(_(" "))
+
+    def setText(self, text):
+        self['message_label'].setText(text)
+
+class IPTVDMNotification():
+    def __init__(self):
+        self.dialog = None
+        self.mainTimer = eTimer()
+        self.mainTimer_conn = eConnectCallback(self.mainTimer.timeout, self.notifyHide)
+
+    def dialogInit(self, session):
+        printDBG("> IPTVDMNotification.dialogInit")
+        self.dialog = session.instantiateDialog(IPTVDMNotificationWidget)
+        
+    def notifyHide(self):
+        if self.dialog:
+            self.dialog.setText("")
+            self.dialog.hide()
+
+    def showNotify(self, text):
+        if self.dialog:
+            printDBG("> IPTVDMNotification.showNotify[%s]" % text)
+            self.dialog.setText(text)
+            self.dialog.show()
+            self.mainTimer.start(5000, 1)
+
+gIPTVDMNotification = IPTVDMNotification()
+
+def GetIPTVDMNotification():
+    global gIPTVDMNotification
+    return gIPTVDMNotification
+
+    

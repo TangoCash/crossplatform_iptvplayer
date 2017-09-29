@@ -155,7 +155,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "2017.09.24.1"
+    XXXversion = "2017.09.28.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -5240,12 +5240,13 @@ class Host:
         if parser == 'https://chaturbate.com':
            videoPage = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''')[0] 
            if videoPage:
+              item = []
               videoUrl = urllib2.unquote(videoPage.replace('&amp;','&'))
               if self.cm.isValidUrl(videoUrl): 
                  tmp = getDirectM3U8Playlist(videoUrl)
                  for item in tmp:
                     printDBG( 'Host listsItems valtab: '  +str(item))
-                 return item['url']
+                 if item: return item['url']
            return ''
 
         if parser == 'http://www.amateurporn.net':
@@ -5312,6 +5313,18 @@ class Host:
            return ''
    
         if parser == 'http://www.xnxx.com':
+           videoUrl = self.cm.ph.getSearchGroups(data, '''VideoUrlHigh\(['"]([^"^']+?)['"]''')[0].replace('&amp;','&')
+           if videoUrl:
+              if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+              return urllib2.unquote(videoUrl)
+           videoUrl = self.cm.ph.getSearchGroups(data, '''VideoUrlLow\(['"]([^"^']+?)['"]''')[0].replace('&amp;','&')
+           if videoUrl:
+              if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+              return urllib2.unquote(videoUrl)
+           videoUrl = self.cm.ph.getSearchGroups(data, '''VideoHLS\(['"]([^"^']+?)['"]''')[0].replace('&amp;','&')
+           if videoUrl:
+              if videoUrl.startswith('//'): videoUrl = 'http:' + videoUrl
+              return urllib2.unquote(videoUrl)
            videoUrl = re.search('flv_url=(.*?)&', data, re.S)
            if videoUrl: return decodeUrl(videoUrl.group(1))
            return ''

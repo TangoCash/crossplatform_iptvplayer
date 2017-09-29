@@ -367,6 +367,10 @@ class CineTO(CBaseHostClass):
         sts, data = self.getPage(url, post_data=post_data)
         if not sts: return []
         
+        title = ''
+        desc = ''
+        icon = ''
+        
         try:
             data = byteify(json.loads(data), noneReplacement='', baseTypesAsString=True)['entry']
             icon = self.getFullIconUrl(data.get('cover', cItem.get('icon', '')))
@@ -399,11 +403,12 @@ class CineTO(CBaseHostClass):
             tmp = data['rating']
             if tmp != '': otherInfo['imdb_rating'] = '%s/10' % (data['rating'])
             
-            if title == '': title = cItem['title']
-            if desc == '':  desc = cItem.get('desc', '')
-            if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         except Exception:
             printExc()
+            
+        if title == '': title = cItem['title']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
     

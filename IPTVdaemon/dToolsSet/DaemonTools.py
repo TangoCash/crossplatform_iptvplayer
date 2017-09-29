@@ -27,16 +27,9 @@ import os
 #import codecs
 #try:    import json
 #except: import simplejson as json
-from tempfile import gettempdir
+from initSysPaths import getSysTempFolder
 
-try:
-    config.misc.sysTempPath = ConfigText(default = gettempdir() , fixed_size = False)
-except Exception, e:
-    print "Exception getting tempdir occured. Is it shitty Android? :P (%s)" % str(e)
-    for TP in ['/storage/sdcard1', '/storage/sda1/', '/data/local/tmp/', '/storage/emulated/0/tmp/', '/tmp' ]:
-        if os.path.exists(TP) and os.access(TP, os.W_OK):
-            config.misc.sysTempPath = ConfigText(default = TP , fixed_size = False)
-            break
+config.misc.sysTempPath = ConfigText(default = getSysTempFolder() , fixed_size = False)
     
 #############################################################
 # e2 support functions

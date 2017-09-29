@@ -32,8 +32,8 @@ from enigma import getDesktop, eTimer
 ####################################################
 #                   IPTV components
 ####################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer
-from Plugins.Extensions.IPTVPlayer.icomponents.confighost import ConfigHostMenu
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvconfigmenu import ConfigMenu, GetMoviePlayer, GetListOfHostsNames, IsUpdateNeededForHostsChangesCommit
+from Plugins.Extensions.IPTVPlayer.icomponents.confighost import ConfigHostMenu, ConfigHostsMenu
 
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvfavouriteswidgets import IPTVFavouritesAddItemWidget, IPTVFavouritesMainWidget
  
@@ -47,7 +47,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           eConnectCallback, GetSkinsDir, GetIconDir, GetPluginDir,\
                                                           SortHostsList, GetHostsOrderList, CSearchHistoryHelper, IsExecutable, \
                                                           CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
-                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, ClearTmpCookieDir
+                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, ClearTmpCookieDir, \
+                                                          GetEnabledHostsList
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import IPTVPlayerBufferingWidget
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdmapi import IPTVDMApi, DMItem
@@ -285,8 +286,10 @@ class IPTVPlayerWidget(Screen):
         #################################################################
         global gDownloadManager
         if None == gDownloadManager:
+            from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdmui import GetIPTVDMNotification
+            GetIPTVDMNotification().dialogInit(session)
             printDBG('============Initialize Download Menager============')
-            gDownloadManager = IPTVDMApi(2, int(config.plugins.iptvplayer.IPTVDMMaxDownloadItem.value))
+            gDownloadManager = IPTVDMApi(2, int(config.plugins.iptvplayer.IPTVDMMaxDownloadItem.value), GetIPTVDMNotification)
             if config.plugins.iptvplayer.IPTVDMRunAtStart.value:
                 gDownloadManager.runWorkThread() 
         #################################################################
@@ -310,6 +313,7 @@ class IPTVPlayerWidget(Screen):
         ClearTmpCookieDir()
         
         self.statusTextValue = ""
+        self.enabledHostsListOld = []
     
     #end def __init__(self, session):
     
@@ -1028,7 +1032,7 @@ class IPTVPlayerWidget(Screen):
             else: NoUpdateCallback()
         except Exception: printExc()
         
-    def selectHost(self):
+    def selectHost(self, arg1=None):
         self.host = None
         self.hostName = ''
         self.nextSelIndex = 0
@@ -1105,6 +1109,9 @@ class IPTVPlayerWidget(Screen):
             if ret[1] == "config":
                 nextFunction = self.runConfig
                 protectedByPin = config.plugins.iptvplayer.configProtectedByPin.value
+            elif ret[1] == "config_hosts":
+                nextFunction = self.runConfigHosts
+                protectedByPin = config.plugins.iptvplayer.configProtectedByPin.value
             elif ret[1] == "noupdate":
                 self.close()
                 return
@@ -1132,6 +1139,23 @@ class IPTVPlayerWidget(Screen):
                 self.session.openWithCallback(boundFunction(self.checkPin, nextFunction, self.selectHost), IPTVPinWidget, title=_("Enter pin"))
             else:
                 nextFunction()
+                
+    def runConfigHosts(self):
+        self.enabledHostsListOld = GetEnabledHostsList()
+        self.session.openWithCallback(self.configHostsCallback, ConfigHostsMenu, GetListOfHostsNames())
+        
+    def configHostsCallback(self, arg1=None):
+        if IsUpdateNeededForHostsChangesCommit(self.enabledHostsListOld):
+            message = _('Some changes will be applied only after plugin update.\nDo you want to perform update now?')
+            self.session.openWithCallback(self.askForUpdateCallback, MessageBox, text = message, type = MessageBox.TYPE_YESNO)
+        else:
+            self.selectHost()
+        
+    def askForUpdateCallback(self, arg1=None):
+        if arg1:
+            self.session.openWithCallback(self.selectHost, IPTVUpdateWindow,UpdateMainAppImpl(self.session, allowTheSameVersion=True))
+        else:
+            self.selectHost()
 
     def runConfig(self):
         self.session.openWithCallback(self.configCallback, ConfigMenu)

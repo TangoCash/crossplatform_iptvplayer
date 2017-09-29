@@ -623,6 +623,11 @@ class HasBahCa(CBaseHostClass):
             if not sts: return []
             videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?embed[^"^']+?)['"]''', 1, True)[0]
         
+        if 'youtube' in videoUrl and 'v=' not in videoUrl:
+            sts, data = self.cm.getPage(videoUrl)
+            if not sts: return []
+            videoUrl = self.cm.ph.getSearchGroups(data, '''<link[^>]+?rel=['"]canonical['"][^>]+?href=['"]([^'^"]+?)['"]''')[0]
+        
         return self.up.getVideoLinkExt(videoUrl)
     
     def getVideostarList(self):
