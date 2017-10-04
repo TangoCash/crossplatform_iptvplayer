@@ -58,7 +58,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'tv.jw.org'
+    return 'https://tv.jw.org/'
 
 class TVJWORG(CBaseHostClass):
     HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}

@@ -52,7 +52,7 @@ msgctxt "#30406":msgid "Getting data for item ":msgstrPL "Pobieram dane dla elem
 msgctxt "#30407":msgid "Getting urls for ":msgstrPL "Pobieram linki dla "
 msgctxt "#30408":msgid "File does not exist, probably already deleted":msgstrPL "Plik nie istnieje, prawdopodobnie został już skasowany"
 msgctxt "#30409":msgid "What to do?":msgstrPL "Co zrobić?"
-msgctxt "#30410":msgid "Display file":msgstrPL "Wyświetl wideo"
+msgctxt "#30410":msgid "Display status file":msgstrPL "Wyświetl plik statusu"
 msgctxt "#30411":msgid "Delete status file":msgstrPL "Skasuj plik statusu"
 msgctxt "#30412":msgid "Delete status file and video":msgstrPL "Skasuj plik statusu i wideo"
 msgctxt "#30413":msgid "Status file has been deleted":msgstrPL "Plik statusu został skasowany"
@@ -76,5 +76,7 @@ msgctxt "#30430":msgid "Cache folder does not exists. Configure plugin first!":m
 msgctxt "#30431":msgid "Recording folder is not writable. Configure plugin first!":msgstrPL "Nie można zapisywać do katalogu na nagrania. Najpierw musisz dodatek skonfigurować!"
 msgctxt "#30432":msgid "Temp folder is not writable. Configure plugin first!":msgstrPL "Nie można zapisywać do katalogu na dane tymczasowe. Najpierw musisz dodatek skonfigurować!"
 msgctxt "#30433":msgid "Addon set to recorder mode, but no proper path to full version of wget defined":msgstrPL "Dodatek ustawiony w tryb nagrywania, ale nie ustawiono poprawnej ścieżki do pełnej wersji wget-a"
+msgctxt "#30434":msgid "> Delete all status files <":msgstrPL "> Skasuj wszystkie pliki statusu <"
+msgctxt "#30435":msgid "Play video":msgstrPL "Wyświetl wideo"
 #msgctxt "#XXX":msgid "":msgstrPL ""
 #END

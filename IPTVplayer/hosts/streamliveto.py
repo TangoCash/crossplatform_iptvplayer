@@ -47,7 +47,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'StreamLiveTo.tv'
+    return 'http://streamlive.to/'
 
 class StreamLiveTo(CBaseHostClass):
     HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0', 'Accept': 'text/html'}

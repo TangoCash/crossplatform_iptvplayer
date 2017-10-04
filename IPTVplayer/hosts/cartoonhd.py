@@ -47,7 +47,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://cartoonhd.global/'
+    return 'https://cartoonhd.in/'
 
 class CartoonHD(CBaseHostClass):
  
@@ -56,7 +56,7 @@ class CartoonHD(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
-        self.DEFAULT_ICON_URL = 'http://cartoonhd.tech/templates/cartoonhd/assets/images/logochd.png'
+        self.DEFAULT_ICON_URL = 'https://cartoonhd.in/templates/cartoonhd/assets/images/logochd.png'
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
@@ -64,19 +64,16 @@ class CartoonHD(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'https://cartoonhd.global/'
+        self.MAIN_URL = None
         self.SEARCH_URL = None
         
-        self.MAIN_CAT_TAB = [{'category':'new',            'mode':'',            'title': 'New',       'url':'search.php'},
-                             {'category':'movies',         'mode':'movies',      'title': 'Movies',    'url':'search.php'},
-                             {'category':'tv_shows',       'mode':'tv_shows',    'title': 'TV shows',  'url':'search.php'},
-                             {'category':'search',          'title': _('Search'), 'search_item':True},
-                             {'category':'search_history',  'title': _('Search history')} ]
+
     def selectDomain(self):
+        domain = 'https://cartoonhd.in/'
         try:
             params = dict(self.defaultParams)
             params['return_data'] = False
-            sts, response = self.cm.getPage('https://cartoonhd.global/', params)
+            sts, response = self.cm.getPage(domain, params)
             url = response.geturl()
             domain = self.up.getDomain(url, False)
             self.MAIN_URL  = domain
@@ -84,20 +81,19 @@ class CartoonHD(CBaseHostClass):
             if not sts: return
         except Exception:
             printExc()
+        if self.MAIN_URL == None:
+            self.MAIN_URL = domain
+            
+        self.MAIN_CAT_TAB = [{'category':'new',             'title': 'New',       'url':self.getMainUrl()},
+                             {'category':'list_genres',     'title': 'Movies',    'url':self.getFullUrl('/full-movies')},
+                             {'category':'list_genres',     'title': 'TV shows',  'url':self.getFullUrl('/tv-shows')},
+                             {'category':'search',          'title': _('Search'), 'search_item':True},
+                             {'category':'search_history',  'title': _('Search history')} ]
     
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()
         return self.cm.ph.getSearchGroups(data, '''var[\s]*{0}[\s]*=[\s]*['"]([^'^"]+?)['"]'''.format(torName))[0]
-            
-    def fillSortNav(self, type):
-        self.cacheSortNav[type] = []
-        sts, data = self.cm.getPage(self.MAIN_URL + type, self.defaultParams)
-        if not sts: return
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<select name="sortnav"', '</select>', False)[1]
-        data = re.compile('<option value="http[^"]+?/([^"^/]+?)">([^<]+?)<').findall(data)
-        for item in data:
-            self.cacheSortNav[type].append({'sort_by':item[0], 'title':item[1]})
-            
+        
     def listSortNav(self, cItem, nextCategory):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
@@ -109,63 +105,39 @@ class CartoonHD(CBaseHostClass):
         cItem = dict(cItem)
         cItem['category'] = nextCategory
         self.listsTab(tab, cItem)
-            
-    def fillCategories(self):
-        printDBG("CartoonHD.fillCategories")
-        self.cacheFilters = {}
-        sts, data = self.cm.getPage(self.MAIN_URL, self.defaultParams)
+        
+    def listGenres(self, cItem, nextCategory):
+        printDBG("CartoonHD.listGenres")
+        
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        moviesTab = [{'title':'All', 'url':self.getFullUrl('movies')}]
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '>Movies</a>', '</ul>', False)[1]
-        tmp = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)<').findall(tmp)
-        for item in tmp:
-            moviesTab.append({'title':item[1], 'url':self.getFullUrl(item[0])})
-            
-        tvshowsTab = [{'title':'All', 'url':self.getFullUrl('tv-shows')}]
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'TV Shows</a>', '</ul>', False)[1]
-        tmp = re.compile('<a[^>]*?href="([^"]+?)"[^>]*?>([^<]+?)<').findall(tmp)
-        for item in tmp:
-            if 'latest-episodes' in item[0]: continue
-            tvshowsTab.append({'title':item[1], 'url':self.getFullUrl(item[0])})
-            
-        newsTab = [{'title':'New Episodes',           'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('latest-episodes')}]
-        newsTab.append( {'title':'New Movies',        'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('new-movies')} )
-        newsTab.append( {'title':'Box Office Movies', 'mode':'movies',   'category':'list_items',   'url':self.getFullUrl('box-office-movies')} )
-            
-        self.cacheFilters['new']      = newsTab
-        self.cacheFilters['movies']   = moviesTab
-        self.cacheFilters['tv_shows'] = tvshowsTab
+        data = self.cm.ph.getDataBeetwenMarkers(data, '"categories"', '</select>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<option', '</option>')
+        for item in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(item)
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'url':url, 'title':title})
+            self.addDir(params)
         
-    def listMoviesCategory(self, cItem, nextCategory):
-        printDBG("CartoonHD.listMoviesCategory")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
-        cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('movies', []), cItem)
-        
-    def listTVShowsCategory(self, cItem, nextCategory):
-        printDBG("CartoonHD.listTVShowsCategory")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
-        cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('tv_shows', []), cItem)
-        
-    def listNewCategory(self, cItem):
+    def listNewCategory(self, cItem, nextCategory):
         printDBG("CartoonHD.listNewCategory")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
-        cItem = dict(cItem)
-        cItem.pop("category", None)
-        #cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('new', []), cItem)
-            
-    def listItems(self, cItem, nextCategory=None):
+        
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<a>New</a>', '</ul>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            if 'tv-calendar' in url: continue
+            title = self.cleanHtmlStr(item)
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'url':url, 'title':title})
+            self.addDir(params)
+        
+    def listItems(self, cItem, nextCategory):
         printDBG("CartoonHD.listItems")
         page = cItem.get('page', 1)
         
@@ -196,13 +168,14 @@ class CartoonHD(CBaseHostClass):
                 if title != '': break
             if url.startswith('http'):
                 params = {'title':title, 'url':url, 'desc':desc, 'icon':icon}
-                if nextCategory == None:
-                    self.addVideo(params)
-                else:
+                if '/show/' in url and '/episode/' not in url:
                     params['category'] = nextCategory
                     params2 = dict(cItem)
                     params2.update(params)
                     self.addDir(params2)
+                else:
+                    self.addVideo(params)
+        
         if nextPage:
             params = dict(cItem)
             params.update({'title':_("Next page"), 'page':page+1})
@@ -505,7 +478,6 @@ class CartoonHD(CBaseHostClass):
 
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
-        mode     = self.currItem.get("mode", '')
         
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
@@ -515,21 +487,15 @@ class CartoonHD(CBaseHostClass):
             self.selectDomain()
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif category == 'new':
-            self.listNewCategory(self.currItem)
-        elif category == 'movies':
-            self.listMoviesCategory(self.currItem, 'list_sortnav')
-        elif category == 'tv_shows':
-            self.listTVShowsCategory(self.currItem, 'list_sortnav')
-            
+            self.listNewCategory(self.currItem, 'list_items')
+        elif category == 'list_genres':
+            self.listGenres(self.currItem, 'list_sortnav')
         elif category == 'list_sortnav':
             self.listSortNav(self.currItem, 'list_items')
             if len(self.currList) == 0:
                 category = 'list_items'
         if category == 'list_items':
-            if mode == 'movies':
-                self.listItems(self.currItem)
-            else:
-                self.listItems(self.currItem, 'list_seasons')
+             self.listItems(self.currItem, 'list_seasons')
         elif category == 'list_seasons':
             self.listSeasons(self.currItem, 'list_episodes')
         elif category == 'list_episodes':

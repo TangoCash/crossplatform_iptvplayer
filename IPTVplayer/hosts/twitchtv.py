@@ -45,7 +45,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'twitch.tv'
+    return 'https://twitch.tv/'
 
 class Twitch(CBaseHostClass):
     NUM_OF_ITEMS = '20'

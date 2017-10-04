@@ -31,7 +31,7 @@ def GetConfigList():
 # Title of HOST
 ###################################################
 def gettytul():
-    return 'Apple Trailers'
+    return 'http://trailers.apple.com/'
 
 class IPTVHost(IHost):
     LOGO_NAME = 'appletrailerslogo.png'

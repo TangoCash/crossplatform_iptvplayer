@@ -45,7 +45,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'dr.dk'
+    return 'http://dr.dk/'
 
 class DRDK(CBaseHostClass):
     MAIN_URL    = 'http://dr.dk/'

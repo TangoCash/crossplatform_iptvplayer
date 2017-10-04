@@ -44,7 +44,7 @@ class strwithmeta(str):
         obj = str.__new__(cls, value)
         obj.meta = {}
         if isinstance(value, strwithmeta):
-            obj.meta = value.meta
+            obj.meta = dict(value.meta)
         else:
             obj.meta = {}
         obj.meta.update(meta)

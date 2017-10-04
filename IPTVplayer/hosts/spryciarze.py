@@ -19,10 +19,10 @@ except Exception: import simplejson as json
 
 ###################################################
 def gettytul():
-    return 'Spryciarze'
+    return 'https://spryciarze.pl/'
     
 class Spryciarze():
-    MAIN_URL = 'http://www.spryciarze.pl/'
+    MAIN_URL = 'https://www.spryciarze.pl/'
     MAIN_CATEGORIES_URL = MAIN_URL + 'kategorie/'
     VIDEO_URL = MAIN_URL + 'player/player/xml_connect.php?code='
     

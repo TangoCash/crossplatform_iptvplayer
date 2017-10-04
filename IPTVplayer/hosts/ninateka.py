@@ -32,7 +32,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'Ninateka'
+    return 'http://ninateka.pl/'
 
 class Ninateka(CBaseHostClass):
     def __init__(self):

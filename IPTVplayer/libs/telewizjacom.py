@@ -157,7 +157,9 @@ class TeleWizjaComApi(CBaseHostClass):
             printDBG(frameUrl)
             
             sts, data = self.getPage(frameUrl, self.http_params)
-            if not sts: continue
+            if not sts:
+                data = ''
+                continue
             
             tmp = re.compile('''(['"]http[^'^"]+?proxy\-german\.de[^'^"]+?['"])''').findall(data)
             for url in tmp:

@@ -42,7 +42,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'hitbox.tv'
+    return 'http://hitbox.tv/'
 
 class Hitbox(CBaseHostClass):
     NUM_OF_ITEMS = 20

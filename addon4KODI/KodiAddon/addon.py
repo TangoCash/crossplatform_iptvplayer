@@ -200,7 +200,7 @@ def doCMD( myCommand , commandPart1 = '' , commandPart2 = ''):
             fp.close()
     myLog("doCMD returned: %s" % retVal)
     SL.close()
-    return retVal.decode('utf-8', errors='ignore')
+    return retVal
 
 def isERROR(myAnswer):
     if myAnswer.lower().startswith('timeout'):
@@ -270,7 +270,7 @@ def getDownloaderStatus():
                 list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/progress.png')})
             xbmcplugin.addDirectoryItem(ADDON_handle, url, list_item, is_folder)
     #last but not least delete all status files        
-    list_item = xbmcgui.ListItem(label = '> Delete all status files <')
+    list_item = xbmcgui.ListItem(label = _(30434))
     url = get_url(action='wgetDelete')
     is_folder = False
     list_item.setArt({'thumb': xbmc.translatePath('special://home/addons/plugin.video.IPTVplayer/resources/icons/delete.png')})
@@ -411,7 +411,7 @@ def router(paramstring):
                     ADDON.setSetting("currenLevel", "1")
                     prepareKODIitemsList(ANSWER)
                 elif isinstance(ANSWER, (str, unicode)):
-                    showDialog(_(30403), ANSWER)
+                    showDialog(_(30403), ANSWER.decode('utf-8', errors='ignore'))
             xbmcplugin.endOfDirectory(ADDON_handle)
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### pobieranie kategorii
         elif params['action'] == 'getList':
@@ -438,7 +438,7 @@ def router(paramstring):
             if not fileExists(os.path.join(ADDON.getSetting("config.plugins.iptvplayer.NaszaSciezka"),params['fileName'])):
                 showDialog("Info", _(30408))
                 return
-            selRet=selectionDialog(_(30409), [_(30410),_(30411),_(30412)])
+            selRet=selectionDialog( _(30409), [_(30410),_(30411),_(30412)])
             if selRet < 0: #user pressed cancel
                 return
             elif selRet == 0:
@@ -510,7 +510,7 @@ def router(paramstring):
                 elif ADDON.getSetting("PlayerMode") == "2": #2-recorder
                     ANSWER = doCMD("DownloadURL=%s" % myUrl, _(30422))
                     if os.path.exists(ANSWER):
-                        showDialog("Info", _(30423) % ANSWER)
+                        showDialog("Info", _(30423) % ANSWER.decode('utf-8', errors='ignore'))
                 else: #  0-player 
                     playVideo(myUrl, params['name'])
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ### SZUKANIE

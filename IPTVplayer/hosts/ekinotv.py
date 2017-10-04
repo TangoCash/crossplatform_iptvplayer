@@ -43,7 +43,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'ekino.tv'
+    return 'http://ekino-tv.pl/'
 
 class EkinoTv(CBaseHostClass):
     MAIN_URL = 'http://ekino-tv.pl/'

@@ -121,7 +121,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2017.09.253"
+    infoversion = "2017.10.01"
     inforemote  = "0.0.0"
     currList = []
 
@@ -208,7 +208,7 @@ class Host:
            valTab.append(CDisplayListItem('Gorlice TV', 'http://gorlice.tv', CDisplayListItem.TYPE_CATEGORY, ['http://gorlice.tv/%C2%A0'], 'gorlice', 'http://gorlice.tv/static/gfx/service/gorlicetv/logo.png?96eb5', None)) 
            valTab.append(CDisplayListItem('Stella TVK', 'http://www.tvkstella.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvkstella.pl/live_tv', 1)], 'stella', 'http://www.tvkstella.pl/img/logo.png', None)) 
            valTab.append(CDisplayListItem('Narew TV', 'http://www.narew.info', CDisplayListItem.TYPE_CATEGORY, ['http://www.narew.info/streams/single/1'], 'narew', 'https://pbs.twimg.com/profile_images/684831832307810306/M9KmKBse_400x400.jpg', None)) 
-           valTab.append(CDisplayListItem('Pomorska TV', 'http://www.pomorska.tv/livestream', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.pomorska.tv/livestream', 1)], 'pomorska', 'http://www.pomorska.tv/templates/pomorskatv/img/pomorska-tv-logo.png', None)) 
+           #valTab.append(CDisplayListItem('Pomorska TV', 'http://www.pomorska.tv/livestream', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.pomorska.tv/livestream', 1)], 'pomorska', 'http://www.pomorska.tv/templates/pomorskatv/img/pomorska-tv-logo.png', None)) 
            valTab.append(CDisplayListItem('WP1 TV', 'WP1 TV', CDisplayListItem.TYPE_CATEGORY, ['https://av-cdn-2.wpimg.pl/tv24/ngrp:wp1/chunklist_.m3u8'], 'wp1', 'http://telewizja-cyfrowa.com/wp-content/uploads/2016/09/wp1-logo.png', None)) 
            valTab.append(CDisplayListItem('Master TV', 'http://www.tv.master.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tv.master.pl/tv_online.php'], 'master', 'http://www.tv.master.pl/grafika/TV_Master2.png', None))
            valTab.append(CDisplayListItem('Opoka TV', 'http://opoka.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.popler.tv/embed/player.php?user=Opokatv&popler=1&kody_code='], 'opoka', 'http://opoka.tv/wp-content/uploads/2016/10/OPTV2016weblgtp1bc.png', None)) 
@@ -529,26 +529,14 @@ class Host:
 
         if 'jasna' == name:
             printDBG( 'Host listsItems begin name='+name )
-            link = re.search('src="(https://www.youtube.com/embed/live_stream.*?)"', data, re.S|re.I)
-            if link:
-                Url = link.group(1)
-                query_data = {'url': Url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-                try:
-                   data = self.cm.getURLRequestData(query_data)
-                except:
-                   printDBG( 'Host listsItems ERROR' )
-                   return valTab
-                #printDBG( 'Host listsItems data youtube '+data )
-                link = re.search('="(http://www.youtube.com/watch.*?)"', data, re.S|re.I)
-                if link:
-                   Url = link.group(1)
-                   videoUrls = self.getLinksForVideo(Url)
-                   if videoUrls:
-                      for item in videoUrls:
-                         Url = item['url']
-                         Name = item['name']
-                         printDBG( 'Host name:  '+Name )
-                         valTab.append(CDisplayListItem('Jasna Góra    '+Name, 'Jasna Góra    '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.jasnagora.com/zdjecia/galerie_nowe/1755.jpg', None))
+            Url = self.cm.ph.getSearchGroups(data, '''href=['"](https://www.youtube.com/channel/[^"^']+?)['"]''')[0]+'/live'
+            videoUrls = self.getLinksForVideo(Url)
+            if videoUrls:
+                for item in videoUrls:
+                    Url = item['url']
+                    Name = item['name']
+                    printDBG( 'Host name:  '+Name )
+                    valTab.append(CDisplayListItem('Jasna Góra    '+Name, 'Jasna Góra    '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.jasnagora.com/zdjecia/galerie_nowe/1755.jpg', None))
             return valTab 
 
         if 'echo' == name:
@@ -1013,16 +1001,14 @@ class Host:
 
         if 'piwniczna' == name:
             printDBG( 'Host listsItems begin name='+name )
-            link = re.search('(https://www.youtube.com/embed/.*?)"', data, re.S|re.I)
-            if link:
-                videoUrls = self.getLinksForVideo(link.group(1))
-                if videoUrls:
-                    for item in videoUrls:
-                        Url = item['url']
-                        Name = item['name']
-                        printDBG( 'Host Url:  '+Url )
-                        printDBG( 'Host name:  '+Name )
-                        valTab.append(CDisplayListItem('Piwniczna - Zdrój  '+Name, 'Piwniczna - Zdrój  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.parafia.piwniczna.com/images/panel_boczny.jpg', None))
+            videoUrls = self.getLinksForVideo('https://www.youtube.com/channel/UCLdNRt-R-qnTTd6zSWXHZVQ/live')
+            if videoUrls:
+                for item in videoUrls:
+                    Url = item['url']
+                    Name = item['name']
+                    printDBG( 'Host Url:  '+Url )
+                    printDBG( 'Host name:  '+Name )
+                    valTab.append(CDisplayListItem('Piwniczna - Zdrój  '+Name, 'Piwniczna - Zdrój  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.parafia.piwniczna.com/images/panel_boczny.jpg', None))
             return valTab 
 
         if 'opoka' == name:
@@ -1750,11 +1736,10 @@ class Host:
 
         if url.startswith('https://go.toya.net.pl'):
            printDBG( 'Host getResolvedURL mainurl: '+url )
-           link = re.search('data-stream="(.*?)"', data, re.S|re.I)
-           if link: 
-              videoUrl = link.group(1).replace("index","03")
+           videoUrl = self.cm.ph.getSearchGroups(data, '''data-stream=['"]([^"^']+?)['"]''', 1, True)[0]
+           if videoUrl: 
               printDBG( 'Host link: '+videoUrl )
-              return videoUrl
+              return urlparser.decorateUrl(videoUrl, {'User-Agent': 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36'})
 
         if url.startswith('http://www.christusvincit-tv.pl'):
            printDBG( 'Host getResolvedURL mainurl: '+url )

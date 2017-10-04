@@ -71,7 +71,9 @@ class YifyTV(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'YifyTV', 'cookie':'alltubetv.cookie'})
         self.filterCache = {}
-    
+        
+        self.VIDEO_HOSTINGS_MAP = {"rpd":"https://www.rapidvideo.com/embed/{0}", "vza":"https://vidoza.net/embed-{0}.html", "akv":"https://akvideo.stream/embed-{0}.html", "rpt":"https://www.raptu.com/e/{0}", "lox":"https://vidlox.tv/embed-{0}.html", "vsh":"http://vshare.eu/embed-{0}.html"}
+        
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0'}
         params.update({'header':HTTP_HEADER})
@@ -165,7 +167,11 @@ class YifyTV(CBaseHostClass):
         # orderby
         if '' != cItem.get('orderby', ''):
             getArgs.append(cItem['orderby'])
-        url = baseUrl + '?' + '&'.join(getArgs)
+            
+        if len(getArgs):
+            url = baseUrl + '?' + '&'.join(getArgs)
+        else:
+            url = baseUrl
         
         sts, data = self.cm.getPage(url)
         if not sts: return 
@@ -213,119 +219,14 @@ class YifyTV(CBaseHostClass):
         currItem['url'] = self.SRCH_URL + urllib.quote_plus(searchPattern)
         self.listItems(currItem)
         
-    def __saveGet(self, b, a):
-        try:
-            return b[a]
-        except Exception:
-            return 'pic'
-            
-    def unpackJS(self, data, name):
-        data = data.replace('Math.min', 'min').replace(' + (', ' + str(').replace('String.fromCharCode', 'chr').replace('return b[a]', 'return saveGet(b, a)')
-        printDBG(data)
-        
-        def justRet(data):
-            return data
-        
-        try:
-            paramsAlgoObj = compile(data, '', 'exec')
-        except Exception:
-            printExc('unpackJS compile algo code EXCEPTION')
-            return ''
-
-        try:
-            vGlobals = {"__builtins__": None, 'string': string, 'str':str, 'chr':chr, 'decodeURIComponent':urllib.unquote, 'unescape':urllib.unquote, 'min':min, 'saveGet':self.__saveGet, 'justRet':justRet}
-            vLocals = { name: None }
-            exec( data, vGlobals, vLocals )
-        except Exception:
-            printExc('unpackJS exec code EXCEPTION')
-            return ''
-        try:
-            return vLocals[name]
-        except Exception:
-            printExc('decryptPlayerParams EXCEPTION')
-        return ''
-        
-    def getPyCode(self, data):
-        printDBG('getPyCode')
-        self.pyCode = ''
-        globalTabCode = []
-        data = data.replace('"]"', '"--zz--"')
-        tmp = re.compile('var([^;]+?)=[^;]*?(\[[^\]]+?\]);').findall(data)
-        for item in tmp:
-            var = item[0].strip()
-            val = item[1].strip()
-            if var == '': continue
-            if val == '': continue
-            globalTabCode.append('%s = %s' % (var, val))
-        globalTabCode = '\n'.join( globalTabCode )
-        globalTabCode = globalTabCode.replace('"--zz--"', '"]"')
-        data = data.replace('"--zz--"', '"]"')
-        
-        self.evalNum = 0
-        def evalSimple(data):
-            dat = data.group(0)
-            funName = 'eval%d()' % self.evalNum
-            funData = 'def %s:' % funName
-            self.evalNum += 1
-            #printDBG("----------------------\n%s\n------------------" % dat)
-            cond   = self.cm.ph.getDataBeetwenMarkers(dat, 'if', '{', False)[1]
-            body   = self.cm.ph.getAllItemsBeetwenMarkers(dat, 'return', ';', False)
-            funData += '\n\tif %s:' % cond.strip()
-            funData += '\n\t\treturn str(%s)' % body[0]
-            funData += '\n\telse:'
-            funData += '\n\t\treturn str(%s)' % body[1]          
-            funData += '\n'
-            
-            self.pyCode += funData
-            #printDBG("====================\n%s\n====================" % funData)
-            return funName
-        
-        data = re.sub('\(eval\("[^"]+?"\)\)', evalSimple, data)
-        
-        sts, tmp = self.cm.ph.getDataBeetwenMarkers(data, 'eval(', ");", False)
-        if sts:
-            funName = 'eval%d()' % self.evalNum
-            funData = 'def justRet%s:' % funName
-            self.evalNum += 1
-            funData += '\n\treturn ' + tmp.strip()
-            funData += '\n'
-            self.pyCode += funData
-            args = funName
-        else:
-            args = self.cm.ph.getDataBeetwenMarkers(data, 'parseRes2', ";})", False)[1]
-        
-        data2 = data.split('\n')
-        data = []
-        for item in data2:
-            if 'try{' in item: continue
-            if '}catch' in item: continue
-            data.append(item)
-        data = '\n'.join(data)
-        funData = re.compile('function ([^\(]*?\([^\)]*?\))[^\{]*?\{([^\{]*?)\}').findall(data)
-        
-        pyCode = self.pyCode
-        for item in funData:
-            funHeader = item[0]
-            
-            funBody = item[1]
-            funIns = funBody.split(';')
-            funBody = ''
-            for ins in funIns:
-                ins = ins.replace('var', ' ').strip()
-                if len(ins) and ins[-1] not in [')', ']', '"']:
-                    ins += '()'
-                funBody += '\t%s\n' % ins
-            if '' == funBody.replace('\t', '').replace('\n', '').strip():
-                continue
-            pyCode += 'def %s:' % funHeader.strip() + '\n' + funBody
-        return globalTabCode, pyCode, args
-    
     def getLinksForVideo(self, cItem):
         printDBG("YifyTV.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return urlTab
+        
+        imdbid = self.cm.ph.getSearchGroups(data, '''var\s+imdbid\s*=\s*['"]([^'^"]+?)['"]''')[0]
         
         jscode = self.cm.ph.getDataBeetwenMarkers(data, 'jQuery.noConflict();', '</script>', False)[1]
         try:
@@ -368,120 +269,131 @@ class YifyTV(CBaseHostClass):
             tmp = item.split('=')
             if len(tmp)!= 2: continue
             if tmp[1].endswith('enc'):
-                url = strwithmeta(tmp[1], {'external_sub_tracks':sub_tracks})
-                url.meta['Referer'] = cItem['url']
-                url.meta['sou'] = tmp[0]
+                url = strwithmeta(tmp[1], {'Referer': cItem['url'], 'sou':tmp[0], 'imdbid':imdbid, 'external_sub_tracks':sub_tracks})
                 urlTab.append({'name':_('Mirror') + ' %s' % idx, 'url':url, 'need_resolve':1})
-                idx += 1
+            elif '' != self.VIDEO_HOSTINGS_MAP.get(tmp[0], ''):
+                url = self.VIDEO_HOSTINGS_MAP[tmp[0]].format(tmp[1])
+                url = strwithmeta(url, {'Referer': cItem['url'], 'imdbid':imdbid, 'external_sub_tracks':sub_tracks})
+                urlTab.append({'name':_('Mirror') + ' %s [%s]' % (idx, self.up.getHostName(url)), 'url':url, 'need_resolve':1})
+            idx += 1
         return urlTab
-        
-    def _evalJscode(self, data):
-        try:
-            data = byteify(json.loads(data))
-            code = data[0]['jscode']
-            tmpData = ''
-            for decFun in [VIDEOWEED_decryptPlayerParams, VIDEOWEED_decryptPlayerParams2, SAWLIVETV_decryptPlayerParams]:
-                tmpData = unpackJSPlayerParams(code, decFun, 0)
-                if '' != tmpData:
-                    printDBG(tmpData)
-                    return tmpData
-            m1 = '(function (){'
-            code = code[len(m1):]
-            globalTabCode, pyCode, args = self.getPyCode(code)
-            pyCode = 'def retA():\n\t' + globalTabCode.replace('\n', '\n\t') + '\n\t' + pyCode.replace('\n', '\n\t') + ('\n\treturn justRet%s\n' % args) + 'param = retA()'
-            printDBG(pyCode)
-            data = self.unpackJS(pyCode, 'param')
-            printDBG(data)
-        except Exception:
-            printExc()
-        return data
         
     def getVideoLinks(self, baseUrl):
         printDBG("YifyTV.getVideoLinks [%s]" % baseUrl)
         
         urlTab = []
-        sub_tracks = strwithmeta(baseUrl).meta.get('external_sub_tracks', [])
+        
+        baseUrl = strwithmeta(baseUrl)
+        imdbid  = baseUrl.meta.get('imdbid', '')
+        sub_tracks = baseUrl.meta.get('external_sub_tracks', [])
         
         header = dict(self.AJAX_HEADER)
-        header['Referer'] = baseUrl.meta['Referer']
+        #header['Referer'] = baseUrl.meta['Referer']
         
-        souTab = [baseUrl.meta.get('sou', '')]
-        if souTab[0] == 'pic':
-            souTab.append('adr')
-        if souTab[0] == 'adr':
-            souTab.append('pic')
-        for sou in souTab:
-            post_data = {'fv':'18', 'url':baseUrl, 'sou':sou}
-            url = 'http://yify.bz/playerlite/pk/pk/plugins/player_p2.php'
-            sts, data = self.cm.getPage(url, {'header':header}, post_data)
-            if not sts: return []
-            #printDBG('>>>>>>>>>>>>>>>>>>>>>>>\n%s\n<<<<<<<<<<<<<<<' % data)
-            try:
-                printDBG(data)
-                if 'jscode' in data:
-                    #printDBG("+++++++++++++++++++++++++++++++++++++++++")
-                    #printDBG(data)
-                    #printDBG("+++++++++++++++++++++++++++++++++++++++++")
-                    #return []
-                    data = self._evalJscode(data)
-                    if 'showiFrame(' in data:
-                        url = urllib.unquote(self.cm.ph.getDataBeetwenMarkers(data, "emb='+'", "'", False)[1])
-                        tmp = url.split('sub.file')
-                        url = tmp[0]
-                        subTrack = urllib.unquote(tmp[1])
-                        if url.startswith('//'):
-                            url = 'http:' + url
-                        if subTrack.startswith('//'):
-                            subTrack = 'http:' + subTrack
-                        tmpUrlTab = self.up.getVideoLinkExt(url)
-                        if self.cm.isValidUrl(subTrack):
-                            format = subTrack[-3:]
-                            for idx in range(len(tmpUrlTab)):
-                                tmpUrlTab[idx]['url'] = strwithmeta(tmpUrlTab[idx]['url'], {'external_sub_tracks':[{'title':'', 'url':subTrack, 'lang':'en', 'format':format}]})
-                        urlTab.extend(tmpUrlTab)
-                        printDBG(urlTab)
-                        break
+        if 'sou' in baseUrl.meta:
+            souTab = [baseUrl.meta['sou']]
+            if souTab[0] == 'pic':
+                souTab.append('adr')
+            if souTab[0] == 'adr':
+                souTab.append('pic')
+            
+            for sou in souTab:
+                post_data = {'fv':'27', 'url':baseUrl, 'sou':sou}
+                url = 'https://yify.bz/playerlite/pk/pk/plugins/player_p2.php'
+                sts, data = self.cm.getPage(url, {'header':header}, post_data)
+                if not sts: return []
+                
+                try:
+                    printDBG(data)
+                    if 'jscode' in data:
+                        try:
+                            data = byteify(json.loads(data))[0]['jscode'][1:-1]#.replace('eval(', 'print(')
+                            jscode = '''var iptv_href="%s"; var iptv_domain="%s"; var iptv_video_id="%s"; var iptv_jwpath="%s";\n''' % (self.getMainUrl(), self.up.getDomain(self.getMainUrl()), imdbid, url)
+                            jscode += base64.b64decode('''ZnVuY3Rpb24gU2hvd0Rpdigpe31mdW5jdGlvbiBzaG93aUZyYW1lKCl7cHJpbnQoYXJndW1lbnRzWzBdKX1mdW5jdGlvbiBnZXRKd1BhdGgoKXtyZXR1cm4gaXB0dl9qd3BhdGh9ZnVuY3Rpb24gZ2V0X3BhcmFtc19ub19zb3JjZXMoKXtyZXR1cm4gaXB0dl92aWRlb19pZH1mdW5jdGlvbiBzZXRUaW1lb3V0KHQsbil7dGhpcy50cnl1cCgpfXZhciBkb2N1bWVudD17fSx3aW5kb3c9dGhpcyxsb2NhdGlvbj17fTtsb2NhdGlvbi5ocmVmPWlwdHZfaHJlZixsb2NhdGlvbi5ob3N0bmFtZT1pcHR2X2RvbWFpbixsb2NhdGlvbi50b1N0cmluZz1mdW5jdGlvbigpe3JldHVybiBpcHR2X2hyZWZ9LGRvY3VtZW50LmxvY2F0aW9uPWxvY2F0aW9uO3ZhciBlbGVtZW50PWZ1bmN0aW9uKHQpe3RoaXMudGV4dD1mdW5jdGlvbigpe3JldHVybiJub25lIn0sdGhpcy5maXJzdD1mdW5jdGlvbigpe3JldHVybiBuZXcgZWxlbWVudH19LCQ9ZnVuY3Rpb24odCl7cmV0dXJuIG5ldyBlbGVtZW50KHQpfSxwbGF5ZXJtb2RlPSIiLHNvdXJjZVNlbGVjdGVkPTAsc291cmNlcz1be3N1Yl9kZWxheTowLHN1Yl9mYWN0b3I6MX1dOyQuZ2V0PWZ1bmN0aW9uKCl7cmV0dXJuIHByaW50KGFyZ3VtZW50c1swXSkse2RvbmU6U2hvd0RpdixlcnJvcjpTaG93RGl2fX07''')               
+                            jscode += 'var iptv_fun = %s; iptv_fun();' % data
+                            printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                            printDBG(jscode)
+                            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                            ret = iptv_js_execute( jscode )
+                            if not ret['sts'] or  0 != ret['code']:
+                                ret = iptv_js_execute( jscode.replace('eval(', 'print(') )
+                            if ret['sts'] and 0 == ret['code']:
+                                decoded = ret['data'].strip()
+                                printDBG('DECODED DATA -> [%s]' % decoded)
+                            data = decoded
+                        except Exception:
+                            printExc()
                         
-                    if 'sources[sourceSelected]["paramId"]' in data:
-                        data = data.replace('"+"', '').replace(' ', '')
-                        paramSite = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramSite"\]="([^"]+?)"')[0]
-                        data = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramId"\]="([^"]+?)"')[0]
-                        printDBG('data ------------------------- [%s]' % data)
-                        if data.startswith('enc'):
-                            encrypted = base64.b64decode(data[3:])
-                            key = unhexlify(base64.b64decode('MzAzOTM4NzMzOTM3MzU0MTMxMzIzMzczMzEzMzM1NjQ2NDY2Njc3NzQ4MzczODM0MzczNTMzMzQzNjcyNjQ3Nw=='))
-                            iv = unhexlify(base64.b64decode('NWE0MTRlMzEzNjMzNjk2NDZhNGM1MzUxMzU0YzY0MzU='))
-                            cipher = AES_CBC(key=key, padding=noPadding(), keySize=32)
-                            data = cipher.decrypt(encrypted, iv).split('\x00')[0]
-                            if 'ucl' == paramSite:
-                                urlTab.extend( self.up.getVideoLinkExt("https://userscloud.com/embed-" + data + "-1280x534.html") )
-                            elif 'tus' == paramSite:
-                                urlTab.extend( self.up.getVideoLinkExt("https://tusfiles.net/embed-" + data + "-1280x534.html?v=34") )
-                            elif 'up' == paramSite:
-                                urlTab.extend( self.up.getVideoLinkExt("http://uptobox.com/" + data) )
-                            break
-                    
-                data = byteify(json.loads(data))
-                for item in data:
-                    #printDBG('++++++++++++++++++++++\n%s\n++++++++++++++++++++++' % item)
-                    if (item.get('type', '').startswith('video/') or item.get('type', '').startswith('application/x-shockwave-flash')) and self.cm.isValidUrl(item.get('url', '')):
-                        urlTab.append({'name':'{0}x{1}'.format(item.get('height', ''), item.get('width', '')), 'url':item['url'], 'need_resolve':0})
-            except Exception:
-                SetIPTVPlayerLastHostError('The Mirror is broken.\nIf available you can choose other source.')
-                printExc()
-            if len(urlTab): break;
-        
-        if False: 
-            videoUrl = url
-            if url.startswith('//'):
-                videoUrl = 'http:' + videoUrl
-            urlTab = self.up.getVideoLinkExt(videoUrl)
+                        g3 = self.cm.ph.getSearchGroups(data+'&', '''[&\?]g3=([^&]+?)&''')[0]
+                        emb = self.cm.ph.getSearchGroups(data+'&', '''[&\?]emb=([^&^\*]+?)[&\*]''')[0]
+                        if emb != '': data = urllib.unquote(emb)
+                        if g3 != '':
+                            post_data = {'fv':'0', 'g3':urllib.unquote(g3)}
+                            url = 'https://yify.bz/playerlite/pk/pk/plugins/player_g3.php'
+                            sts, data = self.cm.getPage(url, {'header':header}, post_data)
+                            if not sts: return []
+                            printDBG(data)
+                        elif self.cm.isValidUrl(data) and 1 == self.up.checkHostSupport(data):
+                            urlTab = self.up.getVideoLinkExt(data)
+                            break                            
+                        else:
+                            if 'showiFrame(' in data:
+                                url = urllib.unquote(self.cm.ph.getDataBeetwenMarkers(data, "emb='+'", "'", False)[1])
+                                tmp = url.split('sub.file')
+                                url = tmp[0]
+                                subTrack = urllib.unquote(tmp[1])
+                                if url.startswith('//'):
+                                    url = 'http:' + url
+                                if subTrack.startswith('//'):
+                                    subTrack = 'http:' + subTrack
+                                tmpUrlTab = self.up.getVideoLinkExt(url)
+                                if self.cm.isValidUrl(subTrack):
+                                    format = subTrack[-3:]
+                                    for idx in range(len(tmpUrlTab)):
+                                        tmpUrlTab[idx]['url'] = strwithmeta(tmpUrlTab[idx]['url'], {'external_sub_tracks':[{'title':'', 'url':subTrack, 'lang':'en', 'format':format}]})
+                                urlTab.extend(tmpUrlTab)
+                                printDBG(urlTab)
+                                break
+                                
+                            if 'sources[sourceSelected]["paramId"]' in data:
+                                data = data.replace('"+"', '').replace(' ', '')
+                                paramSite = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramSite"\]="([^"]+?)"')[0]
+                                data = self.cm.ph.getSearchGroups(data, 'sources\[sourceSelected\]\["paramId"\]="([^"]+?)"')[0]
+                                printDBG('data ------------------------- [%s]' % data)
+                                if data.startswith('enc'):
+                                    encrypted = base64.b64decode(data[3:])
+                                    key = unhexlify(base64.b64decode('MzAzOTM4NzMzOTM3MzU0MTMxMzIzMzczMzEzMzM1NjQ2NDY2Njc3NzQ4MzczODM0MzczNTMzMzQzNjcyNjQ3Nw=='))
+                                    iv = unhexlify(base64.b64decode('NWE0MTRlMzEzNjMzNjk2NDZhNGM1MzUxMzU0YzY0MzU='))
+                                    cipher = AES_CBC(key=key, padding=noPadding(), keySize=32)
+                                    data = cipher.decrypt(encrypted, iv).split('\x00')[0]
+                                    if 'ucl' == paramSite:
+                                        urlTab.extend( self.up.getVideoLinkExt("https://userscloud.com/embed-" + data + "-1280x534.html") )
+                                    elif 'tus' == paramSite:
+                                        urlTab.extend( self.up.getVideoLinkExt("https://tusfiles.net/embed-" + data + "-1280x534.html?v=34") )
+                                    elif 'up' == paramSite:
+                                        urlTab.extend( self.up.getVideoLinkExt("http://uptobox.com/" + data) )
+                                    break
+                        
+                    data = byteify(json.loads(data))
+                    for item in data:
+                        #printDBG('++++++++++++++++++++++\n%s\n++++++++++++++++++++++' % item)
+                        if (item.get('type', '').startswith('video/') or item.get('type', '').startswith('application/x-shockwave-flash')) and self.cm.isValidUrl(item.get('url', '')):
+                            urlTab.append({'name':'{0}x{1}'.format(item.get('height', ''), item.get('width', '')), 'url':item['url'], 'need_resolve':0})
+                except Exception:
+                    SetIPTVPlayerLastHostError('The Mirror is broken.\nIf available you can choose other source.')
+                    printExc()
+                    return []
+                
+                if len(urlTab): break;
+            
+        elif self.cm.isValidUrl(baseUrl):
+            urlTab = self.up.getVideoLinkExt(baseUrl)
         
         printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         printDBG(urlTab)
         
         for idx in range(len(urlTab)):
-            subs = strwithmeta(urlTab[idx]['url']).meta.get('external_sub_tracks', [])
+            subs = list(strwithmeta(urlTab[idx]['url']).meta.get('external_sub_tracks', []))
             subs.extend(sub_tracks)
             urlTab[idx]['url'] = strwithmeta(urlTab[idx]['url'], {'external_sub_tracks':subs})
         
@@ -558,84 +470,4 @@ class IPTVHost(CHostBase):
 
     def getLogoPath(self):
         return RetHost(RetHost.OK, value = [GetLogoDir('yifytvlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
 
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): 
-            return RetHost(retCode, value=retlist)
-
-        cItem = self.host.currList[Index]
-        if cItem.get('type') == 'video':
-            hList = self.host.getArticleContent(cItem)
-            for item in hList:
-                title      = item.get('title', '')
-                text       = item.get('text', '')
-                images     = item.get("images", [])
-                othersInfo = item.get('other_info', '')
-                retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-                retCode = RetHost.OK
-        return RetHost(retCode, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"), "movies"))
-        #searchTypesOptions.append((_("Series"), "series"))
-    
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem

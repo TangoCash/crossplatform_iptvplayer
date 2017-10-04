@@ -42,7 +42,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return (_("Youtube player"))
+    return 'https://youtube.com/'
 
 class Youtube(CBaseHostClass):
     

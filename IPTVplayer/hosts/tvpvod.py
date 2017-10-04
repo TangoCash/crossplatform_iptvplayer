@@ -68,7 +68,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'vod.tvp.pl'
+    return 'https://vod.tvp.pl/'
 
 class TvpVod(CBaseHostClass):
     DEFAULT_ICON_URL = 'https://s.tvp.pl/files/vod.tvp.pl/img/menu/logo_vod.png' #'http://sd-xbmc.org/repository/xbmc-addons/tvpvod.png'

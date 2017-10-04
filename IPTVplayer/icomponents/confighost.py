@@ -7,7 +7,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetHostsList, IsHostEnabled, SaveHostsOrderList, SortHostsList
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetHostsList, IsHostEnabled, SaveHostsOrderList, SortHostsList, GetHostsAliases
 from Plugins.Extensions.IPTVPlayer.icomponents.configbase import ConfigBaseWidget
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 ###################################################
@@ -219,11 +219,12 @@ class ConfigHostsMenu(ConfigBaseWidget):
         self.hostsConfigsAvailableList = []
         self.listOfHostsNames = []
         sortedList = list(listOfHostsNames)
+        hostsAliases = GetHostsAliases()
         for hostName in sortedList:
             try:    
                 optionEntry = None
                 exec( 'optionEntry = config.plugins.iptvplayer.host' + hostName )
-                self.list.append(getConfigListEntry("Player %s" % hostName, optionEntry))
+                self.list.append(getConfigListEntry("%s" % hostsAliases.get('host' + hostName, hostName), optionEntry))
                 if hostName in ['ipla']:
                     self.privacePoliceWorningList.append( optionEntry )
                 self.hostsConfigsAvailableList.append(True)

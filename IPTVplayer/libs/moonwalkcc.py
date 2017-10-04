@@ -42,141 +42,58 @@ class MoonwalkParser():
     def _setBaseUrl(self, url):
         self.baseUrl = 'http://' + self.cm.ph.getDataBeetwenMarkers(url, '://', '/', False)[1]
         
-    def _getSecurityData(self, data, url):
+    def _getSecurityData(self, data, params):
         printDBG('MoonwalkParser._getSecurityData')
+        baseUrl = '/manifests/video/%s/all' % self.cm.ph.getSearchGroups(data, '''video_token['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
         sec_header = {}
         post_data = {}
         
-        def _repl(m):
-            m = m.group(1).replace("'", "").replace('"', '').replace('+', '').replace(' ', '')
-            return '["%s"]' % m
-        data = re.sub(r'''\[(\s*['"][^\]]+?['"]\s*)\]''', _repl, data)
+        scriptUrl = self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]+?)['"]''')[0]
+        if scriptUrl.startswith('/'):
+            scriptUrl = self.baseUrl + scriptUrl
+            
+        sts, data2 = self.cm.getPage(scriptUrl, params)
+        if not sts: data2 = ''
         
-        #printDBG(data)
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'headers:', '}')
-        for item in tmp:
+        tmp = self.cm.ph.getDataBeetwenReMarkers(data2, re.compile('getVideoManifests\s*:'), re.compile('onGetManifestSuccess'), False)[1]
+        
+        tmp2 = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'headers:', '}')
+        for item in tmp2:
             printDBG("---------------------------------------------")
             printDBG(item)
             printDBG("---------------------------------------------")
-            item = re.compile("'([^']+?)'\s*:\s*'([^']+?)'").findall(item)
+            item = re.compile('''['"]([^'^"]+?)['"]\s*:([^\,^\}^\s}]+?)[\,\}\s]''').findall(item)
             for header in item:
-                sec_header[header[0]] = header[1]
-
-        contentData = self.cm.ph.getDataBeetwenMarkers(data, 'setRequestHeader|', '|beforeSend', False)[1]
-        csrfToken = self.cm.ph.getSearchGroups(data, '<meta name="csrf-token" content="([^"]+?)"')[0] 
-        xDataPool = self.cm.ph.getSearchGroups(data, '''['"]X-Data-Pool['"]\s*:\s*['"]([^'^"]+?)['"]''')[0] 
+                value = header[1].strip()
+                if value[0] not in ['"', "'"]:
+                    value = self.cm.ph.getSearchGroups(data, '''%s\s*:\s*['"]([^'^"]+?)['"]''' % value.split('.')[-1])[0]
+                sec_header[header[0]] = value
         
-        cd = self.cm.ph.getSearchGroups(data, 'var condition_detected = ([^;]+?);')[0]
-        if 'true' == cd: cd = 1
-        else: cd = 0
+        printDBG("---------------------------------------------------------")
+        printDBG("SECURITY HEADER")
+        printDBG("---------------------------------------------------------")
+        printDBG(sec_header)
+        printDBG("---------------------------------------------------------")
         
-        version_control = self.cm.ph.getSearchGroups(data, 'var version_control = ([^;]+?);')[0].strip()
-        if len(version_control) > 2 and version_control[0] in ['"', "'"]:
-            version_control = version_control[1:-1]
-            
-        detect_true = self.cm.ph.getSearchGroups(data, 'var\s+?detect_true\s+?=([^;]+?);')[0].strip()
-        if len(detect_true) > 2 and detect_true[0] in ['"', "'"]:
-            detect_true = detect_true[1:-1]
+        tmp = self.cm.ph.getDataBeetwenReMarkers(tmp, re.compile('var\s[^\{]*?{'), re.compile('}'), False)[1]
+        tmp2 = re.compile('''[\{\}\s\,]*?['"]?([^\:]+?)['"]?:([^\{^\}^\s^\,]+?)[\{\}\s\,]''').findall(tmp + ',')
+        printDBG("---------------------------------------------------------")
+        printDBG("PARAMS")
+        printDBG("---------------------------------------------------------")
+        printDBG(tmp)
+        printDBG("---------------------------------------------------------")
+        for item in tmp2:
+            var = item[0].strip()
+            val = item[1].strip()
+            if val[0] in ['"', "'"]:
+                val = val[1:-1]
+            elif '.' in val:
+                val = self.cm.ph.getSearchGroups(data, '''%s\s*:\s*['"]?([^'^"^\,]+?)['"\,]''' % val.split('.')[-1])[0].strip()
+            if var[0] in ['"', "'"]:
+                var = var[1:-1]
+            post_data[var] = val
         
-        allData = data
-        data = self.cm.ph.getDataBeetwenMarkers(data, url, '.success', False)[1]
-        partner = self.cm.ph.getSearchGroups(data, 'partner: ([^,]+?),')[0]
-        if 'null' in partner: partner = ''
-        d_id = self.cm.ph.getSearchGroups(data, 'd_id: ([^,]+?),')[0]
-        video_token = self.cm.ph.getSearchGroups(data, "video_token: '([^,]+?)'")[0]
-        content_type = self.cm.ph.getSearchGroups(data, "content_type: '([^']+?)'")[0]
-        access_key = self.cm.ph.getSearchGroups(data, "access_key: '([^']+?)'")[0]
-        mw_key = self.cm.ph.getSearchGroups(data, "mw_key: '([^']+?)'")[0]
-        mw_pid = self.cm.ph.getSearchGroups(data, "mw_pid: ([0-9]+?)[^0-9]")[0]
-        mw_did = self.cm.ph.getSearchGroups(data, "mw_did: ([0-9]+?)[^0-9]")[0]
-        mw_domain_id = self.cm.ph.getSearchGroups(data, "mw_domain_id: ([0-9]+?)[^0-9]")[0]
-        uuid = self.cm.ph.getSearchGroups(data, "uuid:\s*'([^,^']+?)'")[0]
-        debug = self.cm.ph.getSearchGroups(data, "debug:\s*([^,^\s]+?)[,\s]")[0].strip()
-        async_method = self.cm.ph.getSearchGroups(allData, "var\s+async_method\s*=\s*'([^']+?)'")[0]
-        runner_go = self.cm.ph.getSearchGroups(allData, "post_method\.runner_go\s*=\s*'([^']+?)'")[0]
-        
-        printDBG(allData)
-        printDBG("=======================================================================")
-        printDBG(data)
-        printDBG("=======================================================================")
-        postParamName =  self.cm.ph.getSearchGroups(data, "\.post\([^\,]+?\,\s*([^\s^\)^\,]+?)[\s\)\,]")[0]
-        printDBG(">>>> postParamName[%s]" % postParamName)
-        
-        sec_header['Encoding-Pool'] = base64.b64encode(contentData.replace('|', ''))
-        sec_header['X-Data-Pool'] = xDataPool
-        sec_header['X-CSRF-Token'] = csrfToken
-        sec_header['X-Requested-With'] = 'XMLHttpRequest'
-        post_data = {}
-        
-        try: allVariables = re.compile("[,\s]([^:^,^\s]+?)\s*:\s*([^,^\s]+?)[,\s]").findall(data)
-        except Exception: printExc()
-        try: allVariables.extend( re.compile(re.escape(postParamName) + "\.([^=]+?)\s*=\s*([^;]+?);").findall(data) )
-        except Exception: printExc()
-        try: allVariables.extend( re.compile(re.escape(postParamName) + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^'^"]+?['"])\s*;''').findall(allData) )
-        except Exception: printExc()
-        try: allVariables.extend( re.compile(re.escape(postParamName) + '''\[['"]([^'^"]+?)['"]\]\s*=\s*(['"][^;]+?);''').findall(allData) )
-        except Exception: printExc()
-        
-        for item in allVariables:
-            varName  = item[0].strip()
-            varValue = item[1].strip()
-            printDBG('>>>>> [%s] [%s] ' % (varName, varValue) )
-            if varName not in ['cd', 'ad_attr', 'partner', 'd_id', 'video_token', 'content_type', 'access_key', 'mw_pid', 'mw_did', 'mw_key', 'mw_domain_id', 'uuid', 'debug', 'async_method']:
-                try:
-                    tmp = int(varName)
-                    continue
-                except Exception: pass
-                if varValue.startswith('"') or varValue.startswith("'"):
-                    post_data[varName] = varValue.replace("'", "").replace('"', '').replace('+', '').replace(' ', '')
-                elif varValue in ['true', 'false']:
-                    post_data[varName] = varValue
-                else:
-                    try: 
-                        post_data[varName] = int(varValue)
-                        continue
-                    except Exception:
-                        pass
-                    printDBG('+++++++ [%s] [%s] ' % (varName, varValue) )
-                    tmpVal = self.cm.ph.getSearchGroups(data, r'var\s+' + varValue + '\s*=\s*([^;]+?);')[0]
-                    if tmpVal == '': tmpVal = self.cm.ph.getSearchGroups(allData, r'var\s+' + varValue + '\s*=\s*([^;]+?);')[0]
-                        
-                    printDBG('+++++++ [%s] [%s] [%s]' % (varName, varValue, tmpVal) )
-                    if tmpVal.startswith('"') or tmpVal.startswith("'"):
-                        post_data[varName] = tmpVal[1:-1]
-                    elif tmpVal in ['true', 'false']:
-                        post_data[varName] = tmpVal
-                    else:
-                        try:post_data[varName] = int(tmpVal)
-                        except Exception: pass
-                        
-        
-        if mw_key  == '': mw_key = self.cm.ph.getSearchGroups(data, "var\s+mw_key\s*=\s*'([^']+?)'")[0]
-        
-        if 'cd:' in data: post_data['cd'] = cd
-        if 'ad_attr:' in data: post_data['ad_attr'] = cd
-        if 'partner:' in data: post_data['partner'] = partner
-        if 'd_id:' in data: post_data['d_id'] = d_id
-        if 'video_token:' in data: post_data['video_token'] = video_token
-        if 'content_type:' in data: post_data['content_type'] = content_type
-        if 'access_key:' in data: post_data['access_key'] = access_key
-        if 'mw_pid:' in data: post_data['mw_pid'] = mw_pid
-        if 'mw_did:' in data: post_data['mw_did'] = mw_did
-        if 'mw_key' in data: 
-            try: post_data['mw_key'] = mw_key#[0:4] + '\xd1\x81' + mw_key[5:]
-            except Exception: printExc()
-        if 'mw_domain_id:' in data: post_data['mw_domain_id'] = mw_domain_id
-        if 'uuid:' in data: post_data['uuid'] = uuid
-        if 'debug:' in data: post_data['debug'] = debug   
-        if 'version_control' in allData: post_data['version_control'] = version_control   
-        if 'detect_true' in allData: post_data['detect_true'] = detect_true
-        if 'async_method' in allData: post_data['async_method'] = async_method
-        if 'runner_go' in allData: post_data['runner_go'] = runner_go
-        
-        #post_data['ad_attr'] =0
-        
-        #printDBG(allData)
-        
-        return sec_header, post_data
+        return baseUrl, sec_header, post_data
 
     def getDirectLinks(self, url):
         printDBG('MoonwalkParser.getDirectLinks')
@@ -188,11 +105,9 @@ class MoonwalkParser():
             sts, data = self.cm.getPage( url, params)
             if not sts: return []
             
-            url = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?/manifests/[^'^"]*?)['"]''')[0]
-            
-            sec_header, post_data = self._getSecurityData(data, url)
+            url, sec_header, post_data = self._getSecurityData(data, params)
             params['header'].update(sec_header)
-            
+            params['header']['X-Requested-With'] = 'XMLHttpRequest'
             params['load_cookie'] = True
             sts, data = self.cm.getPage(self.baseUrl + url, params, post_data)
             printDBG("=======================================================")
@@ -270,16 +185,18 @@ class MoonwalkParser():
             sts, data = self.cm.getPage( url, params)
             if not sts: return []
             
-            seasonData = self.cm.ph.getDataBeetwenMarkers(data, 'id="season"', '</select>', False)[1]
-            printDBG(seasonData)
-            seasonData = re.compile('<option[^>]+?value="([0-9]+?)">([^<]+?)</option>').findall(seasonData)
-            seasonMainUrl = self.cm.ph.getDataBeetwenMarkers(data, "$('#season').val();", '});', False)[1]
-            seasonMainUrl = self.cm.ph.getSearchGroups(seasonMainUrl, "var url = '(http[^']+?)'")[0] + '?season='
-            if not seasonMainUrl.startswith('http'): 
-                return []
+            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG(data)
+            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             
+            seasonData = self.cm.ph.getSearchGroups(data, '''seasons\s*:\s*\[([^\]]+?)\]''')[0]
+            ref = self.cm.ph.getSearchGroups(data, '''ref\s*:[^'^"]*?['"]([^'^"]+?)['"]''')[0]
+            printDBG(seasonData)
+            
+            seasonData = seasonData.split(',')
             for item in seasonData:
-                seasonsTab.append({'title':item[1], 'id':int(item[0]), 'url': seasonMainUrl + item[0]})
+                item = item.strip()
+                seasonsTab.append({'title':_('Season') + ' ' + item, 'id':int(item), 'url': '%s?season=%s&ref=%s' % (url, item, urllib.quote(ref))})
         except Exception:
             printExc()
         return seasonsTab
@@ -294,16 +211,17 @@ class MoonwalkParser():
             sts, data = self.cm.getPage( url, params)
             if not sts: return []
             
-            episodeData = self.cm.ph.getDataBeetwenMarkers(data, 'id="episode"', '</select>', False)[1]
-            episodeData = re.compile('<option[^>]+?value="([0-9]+?)">([^<]+?)</option>').findall(episodeData)
-            ref = urllib.quote(self.cm.ph.getSearchGroups(data, '''var\s*referer\s*=[^"^']*['"]([^"^']+?)["']''')[0])
-            episodeMainUrl = self.cm.ph.getDataBeetwenMarkers(data, "$('#episode').val();", '});', False)[1]
-            episodeMainUrl = self.cm.ph.getSearchGroups(episodeMainUrl, "var url = '(http[^']+?)'")[0] + '?season=' + str(seasonIdx) + '&ref=' + ref + '&episode='
-            if not episodeMainUrl.startswith('http'): 
-                return []
+            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG(data)
+            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             
+            episodeData = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''episodes\s*:'''), re.compile(']]'))[1]
+            printDBG(episodeData)
+            
+            episodeData = re.compile('''\[\s*[0-9]+?\s*\,\s*([0-9]+?)[^0-9]''').findall(episodeData)
             for item in episodeData:
-                episodesTab.append({'title':item[1], 'id':int(item[0]), 'url': episodeMainUrl + item[0]})
+                item = item.strip()
+                episodesTab.append({'title':_('Episode') + ' ' + item, 'id':int(item), 'url': '%s&episode=%s' % (url, item)})
         except Exception:
             printExc()
         return episodesTab

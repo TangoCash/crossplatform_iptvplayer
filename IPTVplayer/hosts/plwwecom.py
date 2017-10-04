@@ -38,7 +38,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'pl.wwe.com'
+    return 'http://pl.wwe.com/'
 
 class PLWWECOM(CBaseHostClass):
     HTTP_HEADER= {  'User-Agent'  : 'Mozilla/5.0' }

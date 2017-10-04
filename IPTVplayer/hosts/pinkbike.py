@@ -42,7 +42,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'pinkbike.com'
+    return 'https://pinkbike.com/'
 
 class Pinkbike(CBaseHostClass):
 

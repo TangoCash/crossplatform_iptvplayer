@@ -123,7 +123,7 @@ class HDFilmeTV(CBaseHostClass):
         sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        for filter in [{'m':'name="cat"', 'key':'genre'}, {'m':'name="country"', 'key':'country'}, {'m':'name="order_f"', 'key':'sort'}]:
+        for filter in [{'m':'name="category"', 'key':'genre'}, {'m':'name="country"', 'key':'country'}, {'m':'name="sort"', 'key':'sort'}]:
             filterData = self.cm.ph.getDataBeetwenMarkers(data, filter['m'], '</select>', False)[1]
             filterData = self.cm.ph.getAllItemsBeetwenMarkers(filterData, '<option', '</option>')
             for item in filterData:
@@ -156,7 +156,7 @@ class HDFilmeTV(CBaseHostClass):
         if 'search_pattern' in cItem:
             url += '?key=%s&page=%s' % (cItem['search_pattern'], (page))
         else:
-            url += '?cat=%s&country=%s&order_f=%s&page=%s&order_d=desc' % (cItem['genre'], cItem['country'], cItem['sort'], (page))
+            url += '?category=%s&country=%s&sort=%s&page=%s&sort_type=desc' % (cItem['genre'], cItem['country'], cItem['sort'], (page))
         
         sts, data = self.getPage(url, self.defaultParams)
         if not sts: return
@@ -167,7 +167,7 @@ class HDFilmeTV(CBaseHostClass):
         else: 
             nextPage = False
         
-
+        numOfItems = 0
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="products row">', '</ul>')[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:   
@@ -186,8 +186,9 @@ class HDFilmeTV(CBaseHostClass):
             params = dict(cItem)
             params.update({'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':self.getFullUrl(url), 'icon':self.getIconUrl(icon), 'desc':desc})
             self.addDir(params)
+            numOfItems += 1
         
-        if nextPage:
+        if nextPage or numOfItems >= itemsPerPage:
             params = dict(cItem)
             params.update({'good_for_fav': False, 'title':_('Next page'), 'page':page+1})
             self.addDir(params)
@@ -198,10 +199,10 @@ class HDFilmeTV(CBaseHostClass):
         sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        trailerUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a[^>]*?class="btn btn-xemnow pull-right"[^>]*?href=['"]([^'^"]+?)['"][^>]*?>Trailer<''')[0])
+        trailerUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a[^>]*?class="btn btn-xemnow pull-right"[^>]*?href=['"]([^'^"]+?)['"][^>]*?>\s*Trailer\s*<''')[0])
         if trailerUrl.startswith('http'):
             params = dict(cItem)
-            params.update({'good_for_fav': False, 'title':_('Trailer'), 'urls':[{'name':'trailer', 'url':trailerUrl.replace('&amp;', '&'), 'need_resolve':1}]})
+            params.update({'good_for_fav': False, 'title':'%s [%s]' % (cItem['title'], _('Trailer')), 'urls':[{'name':'trailer', 'url':trailerUrl.replace('&amp;', '&'), 'need_resolve':1}]})
             self.addVideo(params)
         
         episodesTab = []
@@ -221,12 +222,17 @@ class HDFilmeTV(CBaseHostClass):
                     episodesLinks[episodeName] = []
                 episodesLinks[episodeName].append({'name':serverName, 'url':episodeUrl.replace('&amp;', '&'), 'need_resolve':1})
         
+        baseTitle = cItem['title']
         season = self.cm.ph.getSearchGroups(cItem['url'], '''staf[f]+?el-([0-9]+?)-''')[0]
+        if season == '':
+            season = self.cm.ph.getSearchGroups(baseTitle, '''staffel\s*([0-9]+?)$''', ignoreCase=True)[0]
+            if season != '': baseTitle = re.sub('''staffel\s*[0-9]+?$''', '', baseTitle, 1, re.IGNORECASE).strip()
+        
         try: episodesTab.sort(key=lambda item: int(item))
         except Exception:
             printExc()
         for episode in episodesTab:
-            title = cItem['title']
+            title = baseTitle
             if season != '': title += ': ' + 's%se%s'% (season.zfill(2), episode.zfill(2))
             elif len(episodesTab) > 1: title += ': ' + 'e%s'% (episode.zfill(2))
             params = dict(cItem)
@@ -244,47 +250,49 @@ class HDFilmeTV(CBaseHostClass):
         sts, data = self.getPage(videoUrl, self.defaultParams)
         if not sts: return []
         
-        movieid = self.cm.ph.getSearchGroups(data, '''var\s+?movieid\s*?=\s*?([0-9]+?)\s*?;''')[0].strip()
-        episode = self.cm.ph.getSearchGroups(data, '''var\s+?episode\s*?=\s*?([0-9]+?)\s*?;''')[0].strip()
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'initPlayer(', ')', False)[1].split(',')
+        if len(tmp) > 1: 
+            movieid = tmp[0].replace('"', '').strip()
+            episode = tmp[1].replace('"', '').strip()
 
-        sts, tmp = self.getPage(self.getFullUrl("/movie/getlink/"+movieid+"/"+episode), self.defaultParams)
-        if sts:
-            try:
-                tmp = base64.b64decode(tmp)
-                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                printDBG(tmp)
-                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                tmp = byteify( json.loads(tmp) )
-                for item in tmp['playinfo']:
-                    if 'mp4' not in item.get('type', item.get('mine_type')):
-                        continue
-                    url = self.getFullUrl(str(item['file'])) 
-                    url = strwithmeta(url, {'Referer':self.getMainUrl()})
-                    urlTab.append({'name':str(item['label']), 'url':url})
-            except Exception:
-                printExc()
-        if len(urlTab):
-            return urlTab
-        
-        googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
-        if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
-        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        printDBG(googleUrls)
-        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        
-        if googleUrls != '':
-            try:
-                googleUrls = byteify( json.loads(googleUrls) )
-                for item in googleUrls:
-                    if 'mp4' not in item['type']:
-                        continue
-                    url = self.getFullUrl(str(item['file'])) 
-                    url = strwithmeta(url, {'Referer':self.getMainUrl()})
-                    urlTab.append({'name':str(item['label']), 'url':url})
-            except Exception:
-                printExc()
-        if len(urlTab):
-            return urlTab
+            sts, tmp = self.getPage(self.getFullUrl("/movie/getlink/"+movieid+"/"+episode), self.defaultParams)
+            if sts:
+                try:
+                    tmp = base64.b64decode(tmp)
+                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    printDBG(tmp)
+                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    tmp = byteify( json.loads(tmp) )
+                    for item in tmp['playinfo']:
+                        if 'mp4' not in item.get('type', item.get('mine_type')):
+                            continue
+                        url = self.getFullUrl(str(item['file'])) 
+                        url = strwithmeta(url, {'Referer':self.getMainUrl()})
+                        urlTab.append({'name':str(item['label']), 'url':url})
+                except Exception:
+                    printExc()
+            if len(urlTab):
+                return urlTab
+            
+            googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
+            if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG(googleUrls)
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            
+            if googleUrls != '':
+                try:
+                    googleUrls = byteify( json.loads(googleUrls) )
+                    for item in googleUrls:
+                        if 'mp4' not in item['type']:
+                            continue
+                        url = self.getFullUrl(str(item['file'])) 
+                        url = strwithmeta(url, {'Referer':self.getMainUrl()})
+                        urlTab.append({'name':str(item['label']), 'url':url})
+                except Exception:
+                    printExc()
+            if len(urlTab):
+                return urlTab
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '</iframe>', caseSensitive=False)
         for item in data:

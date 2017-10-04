@@ -26,7 +26,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'Wgrane.pl'
+    return 'http://wgrane.pl/'
 
 class Wgrane:
     MAINURL = 'http://www.wgrane.pl'

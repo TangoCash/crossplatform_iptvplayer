@@ -230,6 +230,7 @@ class urlparser:
                        'video.tt':             self.pp.parserVIDEOTT       ,
                        'vodlocker.com':        self.pp.parserVODLOCKER     ,
                        'vshare.eu':            self.pp.parserVSHAREEU      ,
+                       'akvideo.stream':       self.pp.parserAKVIDEOSTREAM ,
                        'vidbull.com':          self.pp.parserVIDBULL       ,
                        'divxpress.com':        self.pp.parserDIVEXPRESS    ,
                        'promptfile.com':       self.pp.parserPROMPTFILE    ,
@@ -3802,7 +3803,7 @@ class pageParser:
         return self.__parseJWPLAYER_A(url, 'vodlocker.com')
         
     def parserSTREAMABLECOM(self, baseUrl):
-        printDBG("parserVSHAREEU baseUrl[%r]" % baseUrl)
+        printDBG("parserSTREAMABLECOM baseUrl[%r]" % baseUrl)
         sts, data = self.cm.getPage(baseUrl)
         if not sts: return False
         
@@ -3824,7 +3825,34 @@ class pageParser:
         if self.cm.isValidUrl(videoUrl):
             return videoUrl        
         return False
+        
+    def parserAKVIDEOSTREAM(self, baseUrl):
+        printDBG("parserAKVIDEOSTREAM baseUrl[%r]" % baseUrl)
+        urlTab = []
+        
+        sts, data = self.cm.getPage(baseUrl)
+        if not sts: return False
+        
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script', '</script>')
+        tmp = ''
+        for item in data:
+            if 'eval(' in item:
+                tmp += '\n %s' % self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<script[^>]*?>'), re.compile('</script>'), False)[1].strip()
+        
+        jscode = base64.b64decode('''ZnVuY3Rpb24gc3R1Yigpe31mdW5jdGlvbiBqd3BsYXllcigpe3JldHVybntzZXR1cDpmdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGFyZ3VtZW50c1swXSkpfSxvblRpbWU6c3R1YixvblBsYXk6c3R1YixvbkNvbXBsZXRlOnN0dWIsb25SZWFkeTpzdHViLGFkZEJ1dHRvbjpzdHVifX12YXIgZG9jdW1lbnQ9e30sd2luZG93PXRoaXM7''')
+        jscode += tmp
+        tmp = []
+        ret = iptv_js_execute( jscode )
+        if ret['sts'] and 0 == ret['code']:
+            tmp = ret['data'].strip()
+            tmp = byteify(json.loads(tmp))
             
+            for item in tmp['sources']:
+                url = item['file']
+                if self.cm.isValidUrl(url) and '.mp4' in url:
+                    urlTab.append({'name':item.get('label', 'unk'), 'url':url})
+        return urlTab
+        
     def parserVSHAREEU(self, baseUrl):
         printDBG("parserVSHAREEU baseUrl[%r]" % baseUrl)
         # example video: http://vshare.eu/mvqdaea0m4z0.htm
@@ -3860,15 +3888,29 @@ class pageParser:
             data = tmp + data
         
         linksTab = self._findLinks(data, urlparser.getDomain(baseUrl))
+        if 0 == len(linksTab):
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source ', '>', False, False)
+            for item in data:
+                url  = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0]
+                if url.startswith('//'):
+                    url = 'http:' + url
+                if not url.startswith('http'):
+                    continue
+                
+                if 'video/mp4' in item:
+                    type = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
+                    res  = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
+                    label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+                    if label == '': label = res
+                    url = urlparser.decorateUrl(url, {'Referer':baseUrl,  'User-Agent':HTTP_HEADER['User-Agent']})
+                    linksTab.append({'name':'{0}'.format(label), 'url':url})
+                elif 'mpegurl' in item:
+                    url = urlparser.decorateUrl(url, {'iptv_proto':'m3u8', 'Referer':baseUrl, 'Origin':urlparser.getDomain(baseUrl, False), 'User-Agent':HTTP_HEADER['User-Agent']})
+                    tmpTab = getDirectM3U8Playlist(url, checkExt=True, checkContent=True)
+                    linksTab.extend(tmpTab)
         for idx in range(len(linksTab)):
             linksTab[idx]['url'] = strwithmeta(linksTab[idx]['url'], {'Referer':baseUrl, 'User-Agent':HTTP_HEADER['User-Agent']})
         return linksTab
-        
-        #X-Requested-With:ShockwaveFlash/23.0.0.205
-        if 'embed' not in baseUrl:
-            tmp = baseUrl.split('.')
-            baseUrl = '.'.join(tmp[:-1])
-            baseUrl = baseUrl.replace('.eu/', '.eu/embed-') + '-729x400.html'
         
     def parserVIDSPOT(self, url):
         printDBG("parserVIDSPOT url[%r]" % url)

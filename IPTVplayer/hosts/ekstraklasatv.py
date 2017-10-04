@@ -46,7 +46,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'Ekstraklasa'
+    return 'http://ekstraklasa.tv/'
 
 class Ekstraklasa(CBaseHostClass):
 

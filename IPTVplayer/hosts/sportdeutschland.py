@@ -45,7 +45,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'SportDeutschland.TV'
+    return 'http://sportdeutschland.tv/'
 
 class SportDeutschland(CBaseHostClass):
     MAINURL      = 'http://sportdeutschland.tv/'

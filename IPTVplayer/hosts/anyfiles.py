@@ -39,7 +39,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'AnyFiles'
+    return 'http://anyfiles.pl/'
 
 class AnyFiles(CBaseHostClass):
     MAIN_URL = 'https://anyfiles.pl'

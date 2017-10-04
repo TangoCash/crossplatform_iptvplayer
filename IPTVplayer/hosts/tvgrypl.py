@@ -47,7 +47,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'tvgry.pl'
+    return 'https://tvgry.pl/'
 
 class TvGryPL(CBaseHostClass):
 

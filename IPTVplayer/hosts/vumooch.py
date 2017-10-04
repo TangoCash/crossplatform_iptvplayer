@@ -9,6 +9,7 @@ from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 ###################################################
 
 ###################################################
@@ -44,9 +45,9 @@ def gettytul():
     return 'http://vumoo.li/'
 
 class Vumoo(CBaseHostClass):
-    USER_AGENT = 'curl/7'
+    USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
     MAIN_URL    = 'http://vumoo.li/'
-    SRCH_URL    = MAIN_URL + 'videos/search/?search='
+    SRCH_URL    = MAIN_URL + 'videos/vsearch/?search='
     DEFAULT_ICON_URL = 'http://www.matrixable.org/wp-content/uploads/2016/02/vumoo.jpg'
     
     MAIN_CAT_TAB = [{'category':'movies',         'title': _('Movies'),       'url':MAIN_URL                                          },
@@ -123,7 +124,7 @@ class Vumoo(CBaseHostClass):
             tab.extend(self.tvshowGenresCache)
             self.listsTab(tab, cItem)
             
-    def listItems(self, cItem, category='explore_item'):
+    def listItems(self, cItem, category='explore_item', post_data=None):
         printDBG("Vumoo.listItems")
         url = cItem['url']
         if '?' in url:
@@ -139,13 +140,10 @@ class Vumoo(CBaseHostClass):
         if post != '': 
             url += post
         
-        sts, data = self.getPage(url)
+        sts, data = self.getPage(url, post_data=post_data)
         if not sts: return
         
         nextPage = False
-        #nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<div class="navigation"', '</div>', False)[1]
-        #if '>{0}<'.format(page+1) in nextPage: nextPage = True
-        #else: nextPage = False
         
         num = 0
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article', '</article>')       
@@ -171,31 +169,45 @@ class Vumoo(CBaseHostClass):
     def exploreItem(self, cItem, category):
         printDBG("Vumoo.exploreItem")
         self.linksCache = {}
-        type = None
-        #try:
-        #    sts, response = self.cm.getPage(cItem['url'], {'return_data':False})
-        #    url = response.geturl()
-        #    response.close()
-        #    if '/tv/' in url: type = 'tv'
-        #    elif '/play/' in url: type = 'movie'
-        #except Exception:
-        #    printExc()
         
-        if type == None:
-            sts, data = self.getPage(cItem['url'])
-            if not sts: return
-            if 'tv-details-seasons' in data: type = 'tv'
-            else: type = 'movie'
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        if 'tv-details-seasons' in data: type = 'tv'
+        else: type = 'movie'
             
         if type == 'movie':
             printDBG('Vumoo.exploreItem - MOVIE')
             mov_id = self.cm.ph.getSearchGroups(data, '''mov_id[\s]*=[\s]*["']([0-9]+?)["']''')[0]
             t_id   = self.cm.ph.getSearchGroups(data, '''t_id[\s]*=[\s]*["']([0-9]+?)["']''')[0]
-            googleLink    = self.cm.ph.getSearchGroups(data, 'googleLink[\s]*=[\s]*"(http[^"]+?)"')[0].replace('\\/', '/')
             openloadLink  = self.cm.ph.getSearchGroups(data, 'openloadLink[\s]*=[\s]*"(http[^"]+?)"')[0].replace('\\/', '/')
             self.linksCache[mov_id] = []
-            #if googleLink.startswith('http'): self.linksCache[mov_id].append({'type':'google', 'url':googleLink})
-            if openloadLink.startswith('http'): self.linksCache[mov_id].append({'type':'openload', 'url':openloadLink})
+            if self.cm.isValidUrl(openloadLink):
+                self.linksCache[mov_id].append({'type':'openload', 'url':openloadLink})
+            
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'var fileId', '$.get')[1]
+            try:
+                jscode = data[:data.rfind(';')+1]
+                try:
+                    jscode = 'function setInterval() {};\nvar APP_PATH="%s";\n%s\nprint(url);' % (self.getMainUrl(), jscode)
+                    printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                    printDBG(jscode)
+                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    ret = iptv_js_execute( jscode )
+                    if ret['sts'] and 0 == ret['code']:
+                        decoded = ret['data'].strip()
+                        printDBG('DECODED DATA -> [%s]' % decoded)
+                    sts, data = self.getPage(decoded)
+                    data = byteify(json.loads(data))
+                    for item in data:
+                        printDBG(item)
+                        if 'mp4' not in item.get('type', ''): continue
+                        self.linksCache[mov_id].append({'type':item.get('label', str(item.get('res'))), 'url':self.getFullUrl(item['src'])})
+                except Exception:
+                    printExc()
+            except Exception:
+                printExc()
+            
             params = dict(cItem)
             params.update({'links_id':mov_id, 't_id':t_id})
             self.addVideo(params)
@@ -215,16 +227,22 @@ class Vumoo(CBaseHostClass):
                 title = ''
                 if '' != eNum and '' != sNum: title = 's%se%s ' % (sNum.zfill(2), eNum.zfill(2))
                 title += self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h2', '</h2>')[1] )
-                #icon   = self.cm.ph.getSearchGroups(item, 'data-poster="([^"]+?)"')[0]
-                #if not icon.endswith('.jpg'): icon = cItem.get('icon', '')
                 
                 links_id = title + str(num)
                 self.linksCache[links_id] = []
                 tmp = re.compile('<[^>]+?id="([^"]+?)"[^>]+?data-click="([^"]+?)"').findall(item)
                 for tmpItem in tmp:
                     link = tmpItem[1].strip()
+                    name = tmpItem[0].strip()
+                    if 'main-' in name: name = 'Main ' + name.split('main-', 1)[-1]
+                    else: name = self.up.getHostName(link)
+                    
                     if link.startswith('http') and '://' in link and 'ubershared.co' not in link:
-                        self.linksCache[links_id].append({'type':tmpItem[0].strip(), 'url':link})
+                        self.linksCache[links_id].append({'type':name, 'url':link})
+                    elif '/plink' in link:
+                        link = self.getFullUrl(link)
+                        self.linksCache[links_id].append({'type':name, 'url':link})
+                        
                 if len(self.linksCache[links_id]):
                     params = dict(cItem)
                     params.update({'title':'{0}: {1}'.format(cItem['title'], title), 'links_id':links_id, 'desc': self.cleanHtmlStr( item ) }) #, 'icon':self.getFullUrl(icon)})
@@ -233,8 +251,32 @@ class Vumoo(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         searchPattern = urllib.quote_plus(searchPattern)
         cItem = dict(cItem)
-        cItem['url']  = self.SRCH_URL + urllib.quote_plus(searchPattern)
-        self.listItems(cItem, 'explore_item')
+        post_data = None
+        
+        params = dict(self.defaultParams)
+        params['header'] = {'User-Agent':self.USER_AGENT, 'Referer':self.getMainUrl()}
+        
+        url  = self.SRCH_URL + urllib.quote_plus(searchPattern)
+        sts, data = self.getPage(url, params)
+        if not sts: return 
+        
+        printDBG(data)
+        
+        if 'window.location' in data: 
+            url = self.cm.ph.getSearchGroups(data, '''window\.location[^'^"]+?['"]([^'^"]+?)['"]''')[0]
+            params['header']['Referer'] = url
+            
+            sts, data = self.getPage(url, params)
+            if not sts: return 
+            
+            printDBG(data)
+            
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>', False, False)[1]
+            post_data = dict(re.findall('''<input[^>]*name=['"]([^"^']*)['"][^>]*value=['"]([^"^']*)['"][^>]*>''', tmp))
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p', '</p>', False, False)[1])
+            post_data['action'] = self.cm.ph.getSearchGroups(tmp, '[^0-9]([0-9]+?)[^0-9]')[0]
+        cItem['url'] = url
+        self.listItems(cItem, 'explore_item', post_data)
         
     def getLinksForVideo(self, cItem):
         printDBG("Vumoo.getLinksForVideo [%s]" % cItem)
@@ -242,15 +284,15 @@ class Vumoo(CBaseHostClass):
         linksID = cItem.get('links_id', 'none')
         if linksID in self.linksCache:
             for item in self.linksCache[linksID]:
-                urlTab.append({'name':item['type'], 'url':item['url'], 'need_resolve':1})
+                params = {'name':item['type'], 'url':strwithmeta(item['url'], {'Referer':cItem['url']}), 'need_resolve':1}
+                if '/plink' in item['url']: params['need_resolve'] = 0
+                urlTab.append(params)
         return urlTab
         
     def getVideoLinks(self, baseUrl):
         printDBG("Vumoo.getVideoLinks [%s]" % baseUrl)
         urlTab = []
-        
-        videoUrl = baseUrl
-        urlTab = self.up.getVideoLinkExt(videoUrl)
+        urlTab = self.up.getVideoLinkExt(baseUrl)
         return urlTab
         
     def getFavouriteData(self, cItem):

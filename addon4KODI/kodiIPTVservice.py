@@ -97,6 +97,16 @@ def configureHOST(hostname):
     SaveE2ConfFile(os.path.join(E2root, 'config', 'E2settings.conf'))
     return
 
+def getValidFileName(filename):
+    #removing illegal chars from filename
+    filename = filename.replace('/','-').replace(':','-').replace('*','-').replace('?','-').replace('"','-').replace('<','-').replace('>','-').replace('|','-')
+    #removing polish characters in case default encoding set to something different thant utf-8 (Windows, Android)
+    if str(sys.stdin.encoding).lower() != 'utf-8':
+        filename = filename.replace('ą','a').replace('ę','e').replace('ś','s').replace('ć','c').replace('ż','z').replace('ź','z').replace('ł','l').replace('ń','n')
+        filename = filename.replace('Ą','A').replace('Ę','E').replace('Ś','S').replace('Ć','C').replace('Ż','Z').replace('Ź','Z').replace('Ł','L').replace('Ń','N')
+        filename = filename.decode('utf-8', 'ignore').encode('ascii', 'ignore')
+    return filename
+  
 class MyDaemon():
     def __init__(self, pidfile='/dev/null', stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', hostName='', clientType='PYTHON'):
         self.stdin = stdin
@@ -247,7 +257,7 @@ class MyDaemon():
                     from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
                     url, downloaderParams = DMHelper.getDownloaderParamFromUrl(url)
                     currentDownloader = DownloaderCreator(url) #correct downloader is assigned e.g. wget
-                    MovieRecordFileName = os.path.join(config.plugins.iptvplayer.NaszaSciezka.value , self.movieTitle.replace('/','-').replace(':','-').replace('*','-').replace('?','-').replace('"','-').replace('<','-').replace('>','-').replace('|','-'))
+                    MovieRecordFileName = os.path.join(config.plugins.iptvplayer.NaszaSciezka.value , getValidFileName(self.movieTitle))
                     MovieRecordFileNameExt = MovieRecordFileName[-4:]
                     if not MovieRecordFileNameExt in ('.mpg', '.flv', '.mp4'):
                         MovieRecordFileName += ".mp4"

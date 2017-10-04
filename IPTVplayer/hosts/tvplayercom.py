@@ -185,7 +185,7 @@ class TVPlayer(CBaseHostClass):
         retTab = []
         
         sts, data = self.getPage(cItem['url'])
-        if not sts: return
+        if not sts: return []
         
         checkUrl = self.cm.ph.getSearchGroups(data, '''<[^>]+?id="check"[^>]+?src=['"]([^'^"]+?)['"]''')[0]
         

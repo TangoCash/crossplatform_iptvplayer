@@ -42,7 +42,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'LiveLeak.com'
+    return 'http://liveleak.com/'
 
 class LiveLeak(CBaseHostClass):
     MAINURL  = 'http://www.liveleak.com/'

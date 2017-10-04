@@ -44,7 +44,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'wrzuta.pl'
+    return 'http://wrzuta.pl/'
 
 class Wrzuta(CBaseHostClass):
     MAIN_URL    = 'http://www.wrzuta.pl/'

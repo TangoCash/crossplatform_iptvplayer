@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
+#
 # This is fake enigma file
 # do whatever you need with it.
+#
 
 import os
 from eConsoleImpl import eConsoleImpl
@@ -85,24 +88,34 @@ class eConsoleAppContainer():
                 raise ValueError('EXCEPTION!!! System temp path (%s) is NOT writable!!!' % TempPath)
                 
             iindex = 1
-            from subprocess import Popen
+            FNULLfileName = '/dev/null'
             if cmdline.find(' -O ') >= 0: #each wget contains own log
                 fileName = cmdline[cmdline.find(' -O ')+len(' -O '):].replace('"','').strip()
                 try:
-                    FNULL = open('%s.wget' % fileName, 'w') #each wget contains own log
+                    FNULLfileName = '%s.wget' % fileName
+                    FNULL = open(FNULLfileName, 'w') #try to open it to check if it's blocked or not e.g. another process is downloading the file atm
+                    if FNULL:
+                        FNULL.close()
                 except:
                     while True:
                         if not os.path.exists(os.path.join(TempPath,'wget%d.log' % iindex)):
                             break
                         iindex += 1
-                    FNULL = open(os.path.join(TempPath,'wget%d.log') % iindex, 'w') #each wget contains own log
+                    FNULLfileName = os.path.join(TempPath,'wget%d.log') % iindex
             else:
-                FNULL = open(os.path.join(TempPath,'eConsole.log'), 'w')
+                FNULLfileName = os.path.join(TempPath,'eConsole.log')
                 
-            with open(os.path.join(TempPath,'eConsole.Popen'), 'a') as f:
-                f.write(cmdline)
-                f.close()
-            Popen(cmdline, stdout=FNULL, stderr=FNULL, shell=True)
+            try:
+                from subprocess import Popen
+                FNULL = open(FNULLfileName, 'w')
+                Popen(cmdline, stdout=FNULL, stderr=FNULL, shell=True)
+            except Exception: #another workarround for Android :P
+                if FNULL:
+                    FNULL.close()
+                if os.path.exists(FNULLfileName) and FNULLfileName != '/dev/null':
+                    os.remove(FNULLfileName)
+                os.system('( %s >"%s" 2>&1 ) &' % (cmdline,FNULLfileName) )
+                
             return
         else:
             myConsole = eConsoleImpl()

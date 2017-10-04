@@ -47,7 +47,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'PlayPuls'
+    return 'http://playpuls.pl/'
 
 class Playpuls(CBaseHostClass):
     def __init__(self):

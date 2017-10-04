@@ -132,7 +132,7 @@ def GetConfigList():
 ###################################################
 # "HasBahCa"
 def gettytul():
-    return (_('"Web" streams player'))
+    return _('"Web" streams player')
 
 class HasBahCa(CBaseHostClass):
     HTTP_HEADER= { 'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3 Gecko/2008092417 Firefox/3.0.3' }

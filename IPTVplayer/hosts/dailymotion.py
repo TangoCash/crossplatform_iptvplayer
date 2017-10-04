@@ -42,7 +42,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'dailymotion.com'
+    return 'http://dailymotion.com/'
 
 class Dailymotion(CBaseHostClass):
     MAIN_URL         = 'https://api.dailymotion.com/'

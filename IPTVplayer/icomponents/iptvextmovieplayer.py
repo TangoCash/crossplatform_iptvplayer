@@ -968,13 +968,15 @@ class IPTVExtMoviePlayer(Screen):
         for idx in range(self.subLinesNum):
             self['subLabel%d'%(idx+1)].hide()
     
-    def setSubtitlesText(self, text, stripLine = True):
+    def setSubtitlesText(self, text, stripLine = True, breakToLongLine=True):
         back = True
         desktopW = 1980
         desktopH = getDesktop(0).size().height()
         
         dW = desktopW - 20
         dH = self.subConfig['box_height']
+        
+        if stripLine: text = text.strip()
         
         if self.subLinesNum == 1 and 'transparent' == self.subConfig['background']:
             self['subLabel1'].setText(text)
@@ -1013,6 +1015,15 @@ class IPTVExtMoviePlayer(Screen):
                     
                     self[subLabel].setText(lnText)
                     textSize = self[subLabel].getSize()
+                    
+                    printDBG("lines [%d] width[%d] worlds[%d]" % (len(text), textSize[0], lnText.count(' ')))
+                    if breakToLongLine and len(text) == 1 and textSize[0] >= dW and lnText.count(' ') > 4:
+                        lnText = lnText.split(' ')
+                        splitWord = len(lnText) / 2 + 1
+                        lnText = '%s\n%s' % (' '.join(lnText[:splitWord]), ' '.join(lnText[splitWord:]))
+                        self.setSubtitlesText(lnText, False, False)
+                        return
+                    
                     lW = textSize[0] + self.subConfig['font_size'] / 2
                     lH = lineHeight #textSize[1] + self.subConfig['font_size'] / 2
                     self[subLabel].instance.resize(eSize(lW, lH))

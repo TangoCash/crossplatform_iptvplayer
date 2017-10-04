@@ -155,7 +155,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "2017.09.28.0"
+    XXXversion = "2017.10.03.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -243,7 +243,7 @@ class Host:
            valTab.append(CDisplayListItem('HENTAIGASM',     'hentaigasm.com',     CDisplayListItem.TYPE_CATEGORY, ['http://hentaigasm.com'],                'hentaigasm','http://hentaigasm.com/wp-content/themes/detube/images/logo.png', None)) 
            valTab.append(CDisplayListItem('XVIDEOS',        'www.xvideos.com',    CDisplayListItem.TYPE_CATEGORY, ['http://www.xvideos.com'],               'xvideos', 'http://www.savido.net/img/xvideos_logo.png', None)) 
            valTab.append(CDisplayListItem('XNXX',           'www.xnxx.com',       CDisplayListItem.TYPE_CATEGORY, ['http://www.xnxx.com'],                  'xnxx',    'http://www.naughtyalysha.com/tgp/xnxx/xnxx-porn-recip.jpg', None)) 
-           valTab.append(CDisplayListItem('BEEG',           'beeg.com',           CDisplayListItem.TYPE_CATEGORY, ['http://api2.beeg.com/api/v6/1738/index/main/0/mobile'],                      'beeg',    'http://staticloads.com/img/logo/logo.png', None)) 
+           valTab.append(CDisplayListItem('BEEG',           'beeg.com',           CDisplayListItem.TYPE_CATEGORY, ['https://beeg.com'],                      'beeg',    'http://staticloads.com/img/logo/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNRABBIT',     'www.pornrabbit.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornrabbit.com/page/categories/'],'pornrabbit','http://cdn1.static.pornrabbit.com/pornrabbit/img/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNHD',     'www.pornhd.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornhd.com/category'],'pornhd','http://f90f5c1c633346624330effd22345bfc.lswcdn.net/image/logo.png', None)) 
            valTab.append(CDisplayListItem('AH-ME',     'www.ah-me.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.ah-me.com/channels.php'],'AH-ME','http://ahmestatic.fuckandcdn.com/ah-me/ahmestatic/v20/common/ah-me/img/logo.jpg', None)) 
@@ -1284,28 +1284,26 @@ class Host:
         if 'beeg' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://beeg.com' 
-           query_data = { 'url': self.MAIN_URL, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           COOKIEFILE = os_path.join(GetCookieDir(), 'beeg.cookie')
+           host = 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_0 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9A334 Safari/7534.48.3'
+           header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'} 
+           query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
            try:
               data = self.cm.getURLRequestData(query_data)
            except:
-              printDBG( 'Host listsItems query error url:'+url )
+              printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
-           #phTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0].replace('&amp;','&') 
-
-           version = re.search('src="/static/cpl/(.*?)\.js' , data, re.S)
-           if version:
-              self.beeg_version = str(version.group(1))
-           else:
-              return valTab
-           url = 'http://api2.beeg.com/api/v6/%s/index/main/0/mobile' % self.beeg_version
-           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
+           printDBG( 'Host listsItems data: '+data )
+           self.beeg_version = self.cm.ph.getSearchGroups(data, '''cpl/(\d+)\.js''', 1, True)[0] 
+           printDBG( 'Host beeg_version: '+str(self.beeg_version) )
+           url = 'http://beeg.com/api/v6/%s/index/main/0/mobile' % self.beeg_version
+           query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
            try:
               data = self.cm.getURLRequestData(query_data)
            except:
-              printDBG( 'Host listsItems query error url:'+url )
+              printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
+           printDBG( 'Host listsItems data2: '+data )
            self.tags = 'popular'
            self.page = -1
            parse = re.search('"%s":\[(.*?)\]' % self.tags, data, re.S)
@@ -1313,10 +1311,9 @@ class Host:
               phCats = re.findall('"(.*?)"', parse.group(1), re.S)
               if phCats:
                  for Title in phCats:
-                     phUrl = 'http://api2.beeg.com/api/v6/%s/index/tag/$PAGE$/mobile?tag=%s' % (self.beeg_version, Title)
+                     phUrl = 'http://beeg.com/api/v6/%s/index/tag/$PAGE$/mobile?tag=%s' % (self.beeg_version, Title)
                      valTab.append(CDisplayListItem(Title,phUrl,CDisplayListItem.TYPE_CATEGORY, [phUrl],'beeg-clips', '', None)) 
            valTab.sort(key=lambda poz: poz.name)
-            
            return valTab
         if 'beeg-clips' == name:
            printDBG( 'Host listsItems begin name='+name )
@@ -1336,7 +1333,7 @@ class Host:
            phVideos = re.findall('\{"title":"(.*?)","id":"(.*?)",.*?,"ps_name"', data, re.S)
            if phVideos:
               for (phTitle, phVideoId) in phVideos:
-                 phUrl = 'http://api2.beeg.com/api/v6/%s/video/%s' % (self.beeg_version, phVideoId)
+                 phUrl = 'http://beeg.com/api/v6/%s/video/%s' % (self.beeg_version, phVideoId)
                  phImage = 'http://img.beeg.com/236x177/%s.jpg' % phVideoId
                  printDBG( 'Host listsItems phUrl: '  +phUrl )
                  printDBG( 'Host listsItems phTitle: '+phTitle )

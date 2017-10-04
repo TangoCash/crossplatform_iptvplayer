@@ -47,7 +47,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return (_('Urllists player'))
+    return _('Urllists player')
 
 class Urllist(CBaseHostClass):
     RAFALCOOL1_FILE  = 'urllist.rafalcool1'

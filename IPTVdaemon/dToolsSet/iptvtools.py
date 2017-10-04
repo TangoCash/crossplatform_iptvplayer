@@ -547,6 +547,18 @@ def GetHostsList(fromList=True, fromHostFolder=True):
         printDBG('GetHostsList EXCEPTION')
     return lhosts
     
+def GetHostsAliases():
+    ret = {}
+    try:
+        HOST_PATH = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/')
+        sts, data = ReadTextFile(HOST_PATH + '/aliases.txt')
+        if sts:
+            data = byteify(json.loads(data), '', True)
+            ret = dict(data)
+    except Exception:
+        printExc()
+    return ret
+
 def GetEnabledHostsList():
     hostsList = GetHostsList(fromList=True, fromHostFolder=True)
     enabledHostsList = []
