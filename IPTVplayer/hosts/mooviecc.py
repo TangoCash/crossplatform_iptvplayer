@@ -271,7 +271,7 @@ class MoovieCC(CBaseHostClass):
             for item in tmp:
                 printDBG(item)
                 url = self.cm.ph.getSearchGroups(item, '''href=['"](https?://[^'^"]+?)['"]''')[0]
-                tmpUrl = self.cm.ph.getSearchGroups(url, '''[^'^"]*/(https?://[^'^"]+?)['"]''')[0]
+                tmpUrl = self.cm.ph.getSearchGroups(url, '''/(https?://[^'^"]+?)$''')[0]
                 if self.cm.isValidUrl(tmpUrl): url = tmpUrl
                 printDBG(">>> " + url)
                 if not self.cm.isValidUrl(url): continue

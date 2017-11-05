@@ -108,13 +108,15 @@ class CDisplayListItem:
 class ArticleContent:
     VISUALIZER_DEFAULT = 'DEFAULT'
     # Posible args and values for richDescParams:
-    RICH_DESC_PARAMS        = ["alternate_title", "age_limit", "views", "status", "first_air_date", "last_air_date", "seasons", "episodes", "country", "language", "duration", "quality", "subtitles", "year", "imdb_rating", "tmdb_rating",\
-                               "released", "broadcast", "remaining", "rating", "rated", "genre", "genres", "production", "director", "directors", "writer", "writers", \
-                               "creator", "creators", "cast", "actors", "stars", "awards", "budget", ]
+    RICH_DESC_PARAMS        = ["alternate_title", "station", "age_limit", "views", "status", "type", "first_air_date", "last_air_date", "seasons", "episodes", "country", "language", "duration", "quality", "subtitles", "year", "imdb_rating", "tmdb_rating",\
+                               "released", "broadcast", "remaining", "rating", "rated", "genre", "genres", "category", "categories", "production", "director", "directors", "writer", "writers", \
+                               "creator", "creators", "cast", "actors", "stars", "awards", "budget", "translation",]
     # labels here must be in english language 
     # translation should be done before presentation using "locals" mechanism
     RICH_DESC_LABELS = {"alternate_title":   "Alternate Title:",
+                        "station":           "Station:",
                         "status":            "Status:",
+                        "type":              "Type:",
                         "age_limit":         "Age limit:",
                         "first_air_date":    "First air date:",  
                         "last_air_date":     "Last air date:", 
@@ -135,6 +137,8 @@ class ArticleContent:
                         "duration":          "Duration:", 
                         "genre":             "Genre:", 
                         "genres":            "Genres:", 
+                        "category":          "Category:",
+                        "categories":        "Categories:",
                         "production":        "Production:",
                         "director":          "Director:",
                         "directors":         "Directors:",
@@ -148,6 +152,7 @@ class ArticleContent:
                         "awards":            "Awards:",
                         "views":             "Views:",
                         "budget":            "Budget:",
+                        "translation":       "Translation:"
                         }
     def __init__(self, title = '', text = '', images = [], trailers = [], richDescParams = {}, visualizer=None):
         self.title    = title
@@ -358,9 +363,10 @@ class CHostBase(IHost):
         if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
         
         urlList = self.host.getLinksForItem(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = item.get("need_resolve", 0)
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
+        if urlList != None:
+            for item in urlList:
+                need_resolve = item.get("need_resolve", 0)
+                retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
 
         return RetHost(RetHost.OK, value = retlist)
     # end getLinksForVideo
@@ -369,9 +375,10 @@ class CHostBase(IHost):
         # resolve url to get direct url to video file
         retlist = []
         urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
+        if urlList != None:
+            for item in urlList:
+                need_resolve = 0
+                retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
 
         return RetHost(RetHost.OK, value = retlist)
     # end getResolvedURL

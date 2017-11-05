@@ -143,7 +143,8 @@ class HDStreams(CBaseHostClass):
             self.cacheFilters[key].insert(0, {'title':_('All')})
             self.cacheFiltersKeys.append(key)
         
-        sts, data = self.getPage(self.getFullUrl('/js/app.js'))
+        url = self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]*?/js/app\.[^'^"]*?js)['"]''')[0]
+        sts, data = self.getPage(self.getFullUrl(url))
         if not sts: return
         
         # order 
@@ -201,9 +202,8 @@ class HDStreams(CBaseHostClass):
         nextPage = self.cm.ph.getSearchGroups(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]
         if nextPage != '': nextPage = True
         else: nextPage = False
-
-        data = self.cm.ph.getDataBeetwenMarkers(data, '</v-layout>', '</v-layout>', False)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'movie-wrap'), ('</a' , '>'))
         for item in data:
             url = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
             icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''url\(\s*['"]([^'^"]+?)['"]''')[0])
@@ -289,12 +289,13 @@ class HDStreams(CBaseHostClass):
                 self.addVideo(params)
         else:
             sNum = self.cm.ph.getSearchGroups(cItem['url'] + '/', 'season/([0-9]+?)[^0-9]')[0]
-            sp = re.compile('''<v-avatar[^>]*?>''')
-            data = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('</v-layout>'), False)[1]
+            sp = re.compile('''<v\-avatar[^>]*?>''')
+            data = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('</v\-layout>'), False)[1]
             data = sp.split(data)
             for episodeItem in data:
-                eIcon = self.getFullIconUrl(self.cm.ph.getSearchGroups(episodeItem, '''src=['"]([^'^"]+?)['"]''')[0])
-                if eIcon == '': eIcon = icon
+                eIcon = self.cm.ph.getSearchGroups(episodeItem, '''src=['"]([^'^"]+?)['"]''')[0]
+                if eIcon == '' or eIcon.startswith('data:image'): eIcon = icon
+                eIcon = self.getFullIconUrl(eIcon)
                 eTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(episodeItem, re.compile('''<p[^>]+?episode\-name'''), re.compile('</p>'))[1])
                 eNum = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(episodeItem, re.compile('''<p[^>]+?episode\-number'''), re.compile('</p>'))[1])
                 eNum = self.cm.ph.getSearchGroups(eNum+'|', '[^0-9]([0-9]+?)[^0-9]')[0]
@@ -304,6 +305,7 @@ class HDStreams(CBaseHostClass):
                 episodeItem = self.cm.ph.getAllItemsBeetwenMarkers(episodeItem, '<v-list-tile ', '</v-list-tile>')
                 for linkItem in episodeItem:
                     tmp = self.cm.ph.getSearchGroups(linkItem, '''loadStream\(\s*['"]([^'^"]+?)['"]\s*,\s*['"]([^'^"]+?)['"]''', 2)
+                    if '' in tmp: tmp = self.cm.ph.getSearchGroups(linkItem, '''loadEpisodeStream\(\s*['"]([^'^"]+?)['"]\s*,\s*['"]([^'^"]+?)['"]''', 2)
                     if '' in tmp: continue
                     name = self.cleanHtmlStr(linkItem)
                     url = strwithmeta(cItem['url'], {'links_key':linksKey, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':'de'}}) #langId
@@ -330,8 +332,8 @@ class HDStreams(CBaseHostClass):
         urlParams['header']['x-requested-with'] = 'XMLHttpRequest'
         
         url = self.getFullUrl('/search')
-        query = {'q':searchPattern}
-        sts, data = self.getPage(url, urlParams, query)
+        query = urllib.urlencode({'q':searchPattern})
+        sts, data = self.getPage(url+'?'+query, urlParams)
         if not sts: return
         
         printDBG(data)
@@ -399,7 +401,7 @@ class HDStreams(CBaseHostClass):
             ciphertext = base64.b64decode(tmp['ct'][::-1])
             iv = unhexlify(tmp['iv'])
             salt = unhexlify(tmp['s'])
-            b = urlParams['header']['User-Agent']
+            b = urlParams['header']['x-csrf-token'] #urlParams['header']['User-Agent']
             tmp = self.cryptoJS_AES_decrypt(ciphertext, base64.b64encode(b), salt)
             printDBG(tmp)
             tmp = byteify(json.loads(tmp))

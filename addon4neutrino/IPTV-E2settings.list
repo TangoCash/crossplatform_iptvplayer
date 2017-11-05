@@ -3,7 +3,7 @@
 
 #Lista mozliwych opcji konfiguracyjnych IPTVplayer-a:
 config.plugins.iptvplayer.ytformat        = ConfigSelection(default = "mp4", choices = [("flv, mp4", "flv, mp4"),("flv", "flv"),("mp4", "mp4")]) 
-config.plugins.iptvplayer.ytDefaultformat = ConfigSelection(default = "360", choices = [("0", _("the worst")), ("144", "144p"), ("240", "240p"), ("360", "360p"),("720", "720"), ("9999", _("the best"))])
+config.plugins.iptvplayer.ytDefaultformat = ConfigSelection(default = "360", choices = [("0", _("the worst")), ("144", "144p"), ("240", "240p"), ("360", "360p"),("720", "720"), ("1080", "1080"),("9999", _("the best"))])
 config.plugins.iptvplayer.ytUseDF         = ConfigYesNo(default = True)
 config.plugins.iptvplayer.ytShowDash      = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ytSortBy        = ConfigSelection(default = "", choices = [("", _("Relevance")),("video_date_uploaded", _("Upload date")),("video_view_count", _("View count")),("video_avg_rating", _("Rating"))]) 
@@ -111,6 +111,8 @@ config.plugins.iptvplayer.serienstreamto_login    = ConfigText(default = "", fix
 config.plugins.iptvplayer.serienstreamto_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.seriesonlineio_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.seriesonlineio_alt_domain = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.fokustv_format = ConfigSelection(default = "1280", choices = [("0",  "najgorsza"),
+config.plugins.iptvplayer.fokustv_df  = ConfigYesNo(default = True)
 config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(default = "rtmp", choices = [("rtmp", "rtmp"),("hls", "HLS - m3u8")]) 
 config.plugins.iptvplayer.filmezzeu_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.filmezzeu_password = ConfigText(default = "", fixed_size = False)
@@ -135,7 +137,7 @@ config.plugins.iptvplayer.zalukajtv_filmssort    = ConfigSelection(default = "os
 config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
 config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_proxygateway = ConfigYesNo(default = False)
+config.plugins.iptvplayer.zalukajtv_proxy        = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.kinomanco_vip_only = ConfigYesNo(default=False)
 config.plugins.iptvplayer.kinomanco_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.kinomanco_password = ConfigText(default = "", fixed_size = False)
@@ -156,6 +158,8 @@ config.plugins.iptvplayer.cartoonhd_password = ConfigText(default = "", fixed_si
 config.plugins.iptvplayer.Sciezkaurllist = ConfigDirectory(default = "/hdd/")
 config.plugins.iptvplayer.kinox_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.kinox_alt_domain = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.egybest_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.egybest_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.liveleak_searchsort = ConfigSelection(default = "relevance", choices = [("relevance", _("Najtrafniejsze")), ("date", _("Najnowsze")), ("views", _("Popularność")), ("votes", _("Najlepiej oceniane"))])
 config.plugins.iptvplayer.tvpvod_premium  = ConfigYesNo(default = False)
 config.plugins.iptvplayer.tvpvod_login    = ConfigText(default = "", fixed_size = False)
@@ -167,12 +171,14 @@ config.plugins.iptvplayer.tvpVodNextPage = ConfigYesNo(default = True)
 config.plugins.iptvplayer.tvpVodPreferedformat = ConfigSelection(default = "mp4", choices = [("mp4",  "MP4"), ("m3u8",  "HLS/m3u8")])
 config.plugins.iptvplayer.gomovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
 config.plugins.iptvplayer.gomovies_alt_domain = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.itv_use_x_forwarded_for = ConfigYesNo(default = False)
 config.plugins.iptvplayer.dailymotion_localization = ConfigSelection(default = "auto", choices = [("auto", _("auto")), ("ar_AA", "\xd8\xa7\xd9\x84\xd8\xb9\xd8\xb1\xd8\xa8\xd9\x8a\xd8\xa9"), ("es_AR", "Argentina"), ("en_AU", "Australia"), ("de_AT", "\xc3\x96sterreich"), ("nl_BE", "Belgi\xc3\xab"), ("fr_BE", "Belgique"), ("pt_BR", "Brasil"), ("en_CA", "Canada"), ("fr_CA", "Canada"), ("zh_CN", "\xe4\xb8\xad\xe5\x9b\xbd"), ("fr_FR", "France"), ("de_DE", "Deutschland"), ("el_GR", "\xce\x95\xce\xbb\xce\xbb\xce\xac\xce\xb4\xce\xb1"), ("en_IN", "India"), ("id_ID", "Indonesia"), ("en_EN", "International"), ("en_IE", "Ireland"), ("it_IT", "Italia"), ("ja_JP", "\xe6\x97\xa5\xe6\x9c\xac"), ("ms_MY", "Malaysia"), ("es_MX", "M\xc3\xa9xico"), ("fr_MA", "Maroc"), ("nl_NL", "Nederland"), ("en_PK", "Pakistan"), ("en_PH", "Pilipinas"), ("pl_PL", "Polska"), ("pt_PT", "Portugal"), ("ro_RO", "Rom\xc3\xa2nia"), ("ru_RU", "\xd0\xa0\xd0\xbe\xd1\x81\xd1\x81\xd0\xb8\xd1\x8f"), ("en_SG", "Singapore"), ("ko_KR", "\xeb\x8c\x80\xed\x95\x9c\xeb\xaf\xbc\xea\xb5\xad"), ("es_ES", "Espa\xc3\xb1a"), ("fr_CH", "Suisse"), ("it_CH", "Svizzera"), ("de_CH", "Schweiz"), ("fr_TN", "Tunisie"), ("tr_TR", "T\xc3\xbcrkiye"), ("en_GB", "United Kingdom"), ("en_US", "United States"), ("vi_VN", "Vi\xe1\xbb\x87t Nam") ])
 config.plugins.iptvplayer.anyfilespl_login = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.anyfilespl_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.numerwersji = ConfigYesNo(default = True)
 config.plugins.iptvplayer.ilepozycji = ConfigInteger(8, (1, 99))  
 config.plugins.iptvplayer.religia = ConfigYesNo(default = True)  
+config.plugins.iptvplayer.natanek = ConfigInteger(8, (1, 999))  
 config.plugins.iptvplayer.tvjworg_language = ConfigSelection(default = "default", choices = [("default", _("Default")), ("P", _("Polish")), ("E", _("English"))]) 
 config.plugins.iptvplayer.tvjworg_icontype = ConfigSelection(default = "vertical", choices = [("vertical", _('vertical')), ("horizontal", _('horizontal'))]) 
 config.plugins.iptvplayer.tvjworg_default_format = ConfigSelection(default = "720", choices = [("0",  _("the worst")),

@@ -199,7 +199,7 @@ class KinomanCO(CBaseHostClass):
                 tab = []
                 tmp = "9876543210"
                 for idx in range(len(tmp)): #data['rates']:
-                    tab.append({key:','.join(tmp[idx:]), 'title':'%s.0 - 10.0' % tmp[idx]})
+                    tab.append({key:','.join(tmp[0:idx+1]), 'title':'%s.0 - 10.0' % tmp[idx]})
                 if len(tab):
                     tab.insert(0, {'title':self._('All')})
                     self.cacheFilters[key] = tab
@@ -383,7 +383,13 @@ class KinomanCO(CBaseHostClass):
         if tmp != '': descTab.append(tmp + ' min')
         
         tmp = item['media_rate']['rate']
-        if tmp != '': descTab.append(tmp)
+        if tmp != '': descTab.append(tmp+'/10')
+        
+        tmp = item.get('categories', '')
+        tmp2 = []
+        if tmp != '':
+            for t in tmp: tmp2.append(t['name'])
+        if len(tmp2): descTab.append(', '.join(tmp2))
         
         desc = [' | '.join(descTab), item['description']]
         desc = '[/br]'.join(desc)

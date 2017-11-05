@@ -7,7 +7,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute, IsMainThread
 ###################################################
 # FOREIGN import
 ###################################################
@@ -201,9 +201,15 @@ class CParsingHelper:
         else:
             idx1 = idx1 + len(marker1)
         return True, data[idx1:idx2]
+        
+    @staticmethod
+    def getDataBeetwenNodes(data, node1, node2, withNodes=True):
+        ret = CParsingHelper.getAllItemsBeetwenNodes(data, node1, node2, withNodes, 1)
+        if len(ret): return True, ret[0]
+        else: return False, ''
     
     @staticmethod
-    def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True):
+    def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1):
         if len(node1) < 2 or len(node2) < 2:
             return []
         itemsTab = []
@@ -249,10 +255,18 @@ class CParsingHelper:
                     idx2 = tIdx1
                 search = 1
                 itemsTab.append(sData[idx1:idx2])
+            if numNodes > 0 and len(itemsTab) == numNodes:
+                break
         return itemsTab
         
     @staticmethod
-    def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True):
+    def rgetDataBeetwenNodes(data, node1, node2, withNodes=True):
+        ret = CParsingHelper.rgetAllItemsBeetwenNodes(data, node1, node2, withNodes, 1)
+        if len(ret): return True, ret[0]
+        else: return False, ''
+        
+    @staticmethod
+    def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1):
         if len(node1) < 2 or len(node2) < 2:
             return []
         itemsTab = []
@@ -295,6 +309,8 @@ class CParsingHelper:
                     s2 = idx1
                 search = 1
                 itemsTab.insert(0, sData[s1:s2])
+            if numNodes > 0 and len(itemsTab) == numNodes:
+                break
         return itemsTab
         
     @staticmethod    
@@ -621,7 +637,7 @@ class common:
                                 break
                         decoded = ''
                         jscode = base64.b64decode('''ZnVuY3Rpb24gc2V0VGltZW91dCh0LGUpe2lwdHZfcmV0LnRpbWVvdXQ9ZSx0KCl9dmFyIGlwdHZfcmV0PXt9LGlwdHZfZnVuPW51bGwsZG9jdW1lbnQ9e30sd2luZG93PXRoaXMsZWxlbWVudD1mdW5jdGlvbih0KXt0aGlzLl9uYW1lPXQsdGhpcy5fc3JjPSIiLHRoaXMuX2lubmVySFRNTD0iIix0aGlzLl9wYXJlbnRFbGVtZW50PSIiLHRoaXMuc2hvdz1mdW5jdGlvbigpe30sdGhpcy5hdHRyPWZ1bmN0aW9uKHQsZSl7cmV0dXJuInNyYyI9PXQmJiIjdmlkZW8iPT10aGlzLl9uYW1lJiZpcHR2X3NyY2VzLnB1c2goZSksdGhpc30sdGhpcy5maXJzdENoaWxkPXtocmVmOmlwdHZfZG9tYWlufSx0aGlzLnN0eWxlPXtkaXNwbGF5OiIifSx0aGlzLnN1Ym1pdD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfcmV0KSl9LE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh0aGlzLCJzcmMiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4gdGhpcy5fc3JjfSxzZXQ6ZnVuY3Rpb24odCl7dGhpcy5fc3JjPXR9fSksT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsImlubmVySFRNTCIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9pbm5lckhUTUx9LHNldDpmdW5jdGlvbih0KXt0aGlzLl9pbm5lckhUTUw9dH19KSxPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywidmFsdWUiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4iIn0sc2V0OmZ1bmN0aW9uKHQpe2lwdHZfcmV0LmFuc3dlcj10fX0pfSwkPWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX07ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQ9ZnVuY3Rpb24odCl7cmV0dXJuIG5ldyBlbGVtZW50KHQpfSxkb2N1bWVudC5jcmVhdGVFbGVtZW50PWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX0sZG9jdW1lbnQuYXR0YWNoRXZlbnQ9ZnVuY3Rpb24oKXtpcHR2X2Z1bj1hcmd1bWVudHNbMV19Ow==''')
-                        jscode = "var iptv_domain='%s';\n%s\n%s\niptv_fun();" % (domain, jscode, dat) #cfParams['domain']
+                        jscode = "var location = {hash:''}; var iptv_domain='%s';\n%s\n%s\niptv_fun();" % (domain, jscode, dat) #cfParams['domain']
                         printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
                         printDBG(jscode)
                         printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -744,6 +760,12 @@ class common:
                 else:
                     response = urllib2.urlopen(req)
             return response
+        
+        if IsMainThread():
+            msg1 = _('It is not allowed to call getURLRequestData from main thread.')
+            msg2 = _('You should never perform block I/O operations in the __init__.')
+            msg3 = _('In next release exception will be thrown instead of this message!')
+            GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 40)
         
         if not self.useMozillaCookieJar:
             cj = cookielib.LWPCookieJar()

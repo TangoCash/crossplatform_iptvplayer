@@ -274,13 +274,26 @@ class VideoPenny(CBaseHostClass):
         urlTab = []
         data = self.cm.ph.getDataBeetwenMarkers(data, 'player-embed', '</div>')[1]
         printDBG(data)
-        data = re.compile('''['"](\s*https?://[^"^']+?)\s*['"]''').findall(data)
-        printDBG(data)
-        for item in data:
+        tmp = re.compile('''['"](\s*https?://[^"^']+?)\s*['"]''').findall(data)
+        printDBG(tmp)
+        for item in tmp:
             playerUrl = item.strip()
             if not self.cm.isValidUrl(playerUrl): continue
             if 1 != self.up.checkHostSupport(playerUrl): continue 
             urlTab.append({'name':self.up.getDomain(playerUrl, False), 'url':playerUrl, 'need_resolve':1})
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<source', '>')
+        for item in tmp:
+            if 'video/mp4' not in item and 'video/x-flv' not in item: continue
+            type  = self.cm.ph.getSearchGroups(item, '''type=['"]([^'^"]+?)['"]''')[0].replace('video/', '')
+            url   = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
+            label = self.cm.ph.getSearchGroups(item, '''label=['"]([^'^"]+?)['"]''')[0]
+            if label == '': label = self.cm.ph.getSearchGroups(item, '''res=\s*([^\s]+?)[\s>]''')[0]
+            printDBG(url)
+            if self.cm.isValidUrl(url):
+                urlTab.append({'name':'[%s] %s' % (type, label), 'url':strwithmeta(url)})
+        
         return urlTab
         
     def getVideoLinks(self, videoUrl):

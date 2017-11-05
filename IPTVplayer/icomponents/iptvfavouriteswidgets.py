@@ -39,8 +39,9 @@ class IPTVFavouritesAddNewGroupWidget(Screen):
         from copy import deepcopy
         params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
         params['title'] = _("Add new group of favourites")
+        params['with_accept_button'] = True
         params['list'] = []
-                
+        
         for input in [[self._validate, _("Name:"), _("Group %d") % (len(self.favourites.getGroups()) + 1), ], [None, _("Description:"), _(" ")]]:
             item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
             item['validator'] = input[0]

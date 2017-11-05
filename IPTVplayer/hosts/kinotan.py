@@ -16,6 +16,8 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
+try:    import json
+except Exception: import simplejson as json
 ###################################################
 # E2 GUI COMMPONENTS
 ###################################################
@@ -61,6 +63,7 @@ class Kinotan(CBaseHostClass):
                                 {'category':'sel',     'title':_('Collections'),     'url':self.getFullUrl('/serial/')},
                                 {'category':'years',   'title':_('By Year'),         'url':self.getFullUrl('/serial/')}
                                ]
+        self.cacheContentTab = {}
 
     def getPage(self, url, params={}, post_data=None):
         sts, data = self.cm.getPage(url, params, post_data)
@@ -179,6 +182,8 @@ class Kinotan(CBaseHostClass):
 
     def listContent(self, cItem, category):
         printDBG("Kinotan.listContent")
+        self.cacheContentTab = {}
+        
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
@@ -200,12 +205,32 @@ class Kinotan(CBaseHostClass):
             params['category'] = 'list_tab_content'
             self.listsTab(tabs, params)
             return
-            
+        
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'RalodePlayer.init(', '"});', False)[1]
+        if tmp != '':
+            try:
+                tmp = byteify(json.loads('[' + tmp + '"}]'))[0]
+                for sKey in tmp:
+                    tabs = []
+                    sTitle = self.cleanHtmlStr(tmp[sKey]['name'])
+                    sId = self.cleanHtmlStr(tmp[sKey]['id'])
+                    for eKey in tmp[sKey]['items']:
+                        title = self.cleanHtmlStr(tmp[sKey]['items'][eKey]['sname'])
+                        url = self.cm.ph.getSearchGroups(tmp[sKey]['items'][eKey]['scode'], 'src="([^"]*?)"')[0]
+                        if url.startswith('//'): url = 'http:' + url
+                        tabs.append({'title':title, 'url':url})
+                    
+                    if len(tabs):
+                        params = dict(cItem)
+                        params.update({'category':'list_tab_content', 'title':sTitle, 'tab_id':sId})
+                        self.addDir(params)
+                        self.cacheContentTab[sId] = tabs
+            except Exception:
+                printExc()
         
         d_url = self.cm.ph.getDataBeetwenMarkers(data, '<div class="full-text">', '</iframe>', False)[1]
         url = self.cm.ph.getSearchGroups(d_url, 'src="([^"]*?)"')[0]
-        if url.startswith('//'):
-            url = 'http:' + url
+        if url.startswith('//'): url = 'http:' + url
         desc = self.cm.ph.getDataBeetwenMarkers(data, '<h2 class="opisnie">', '</div>', True)[1]
         desc = self.cm.ph.getSearchGroups(desc, '>(.*?)</div>')[0]
         desc = self.cleanHtmlStr(desc)
@@ -236,8 +261,7 @@ class Kinotan(CBaseHostClass):
             seasons = self.hdgocc.getSeasonsList(url)
             for item in seasons:
                 param = dict(params)
-                param.update(
-                    {'host_name': 'hdgo.cc', 'title': item['title'], 'season_id': item['id'], 'url': item['url']})
+                param.update({'host_name': 'hdgo.cc', 'title': item['title'], 'season_id': item['id'], 'url': item['url']})
                 self.addDir(param)
             
             if 0 != len(seasons):
@@ -260,17 +284,26 @@ class Kinotan(CBaseHostClass):
     def listTabContent(self, cItem, category):
         printDBG("Kinotan.listTabContent")
         
-        post_data = cItem.get('post_data')
-        sts, data = self.getPage(cItem['url'], {}, post_data)
-        if not sts: return
+        tabId = cItem.get('tab_id', '')
+        if tabId != '':
+            tabs = self.cacheContentTab[tabId]
+            for item in tabs:
+                params = dict(cItem)
+                params['title'] = item['title']
+                self.exploreLink(params, category, item['url'])
         
-        printDBG("==========================================")
-        printDBG(data)
-        printDBG("==========================================")
-        
-        url = data.strip()
-        if url.startswith('http://') or url.startswith('https://'):
-            self.exploreLink(cItem, category, url)
+        else:
+            post_data = cItem.get('post_data')
+            sts, data = self.getPage(cItem['url'], {}, post_data)
+            if not sts: return
+            
+            printDBG("==========================================")
+            printDBG(data)
+            printDBG("==========================================")
+            
+            url = data.strip()
+            if url.startswith('http://') or url.startswith('https://'):
+                self.exploreLink(cItem, category, url)
 
     def listEpisodes(self, cItem):
         printDBG("Kinotan.listEpisodes")

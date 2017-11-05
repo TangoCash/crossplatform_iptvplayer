@@ -98,6 +98,7 @@ class SeriesOnlineIO(CBaseHostClass):
         urlData = deepcopy(post_data)
         unloadUrl = None #
         tries = 0
+        removeCookieItems = False
         while tries < 20:
             tries += 1
             sts, data = self.cm.getPageCFProtection(url, urlParams, urlData)
@@ -170,6 +171,7 @@ class SeriesOnlineIO(CBaseHostClass):
                         cookie = {cookie[0]:urllib.unquote(cookie[1])}
                         urlParams['cookie_items'] = cookie
                         addParams['cookie_items'] = cookie
+                        removeCookieItems = True
                         if not item.get('unload', False):
                             tmpParams = deepcopy(urlParams)
                             tmpParams['header']['Referer'] = baseUrl
@@ -192,9 +194,23 @@ class SeriesOnlineIO(CBaseHostClass):
                     printExc()
                 
                 return False, None
+            elif 'sucuri_cloudproxy' in data:
+                cookieItems = {}
+                jscode = self.cm.ph.getDataBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)[1]
+                if 'eval' in jscode:
+                    jscode = '%s\n%s' % (base64.b64decode('''dmFyIGlwdHZfY29va2llcz1bXSxkb2N1bWVudD17fTtPYmplY3QuZGVmaW5lUHJvcGVydHkoZG9jdW1lbnQsImNvb2tpZSIse2dldDpmdW5jdGlvbigpe3JldHVybiIifSxzZXQ6ZnVuY3Rpb24obyl7bz1vLnNwbGl0KCI7IiwxKVswXS5zcGxpdCgiPSIsMiksb2JqPXt9LG9ialtvWzBdXT1vWzFdLGlwdHZfY29va2llcy5wdXNoKG9iail9fSk7dmFyIHdpbmRvdz10aGlzLGxvY2F0aW9uPXt9O2xvY2F0aW9uLnJlbG9hZD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfY29va2llcykpfTs='''), jscode)
+                    ret = iptv_js_execute( jscode )
+                    if ret['sts'] and 0 == ret['code']:
+                        cookies = byteify(json.loads(ret['data'].strip()))
+                        for cookie in cookies: cookieItems.update(cookie)
+                self.defaultParams['cookie_items'] = cookieItems
+                urlParams['cookie_items'] = cookieItems
+                removeCookieItems = False
+                sts, data = self.cm.getPageCFProtection(url, urlParams, urlData)
             
             # remove not needed used cookie
-            self.defaultParams.pop('cookie_items', None)
+            if removeCookieItems:
+                self.defaultParams.pop('cookie_items', None)
             self.cm.clearCookie(self.COOKIE_FILE, removeNames=['___utmvc'])
             printDBG(data)
             return sts, data

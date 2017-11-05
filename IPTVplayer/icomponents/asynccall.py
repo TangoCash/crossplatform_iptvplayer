@@ -14,6 +14,19 @@ try: import ctypes
 except Exception: pass
 ###################################################
 
+gMainThreadId = None
+
+def IsMainThread():
+    global gMainThreadId
+    return gMainThreadId == threading.current_thread()
+
+def SetMainThreadId(mainThreadId=None):
+    global gMainThreadId
+    if mainThreadId == None:
+        gMainThreadId = threading.current_thread()
+    else:
+        gMainThreadId = mainThreadId
+
 gMainFunctionsQueueTab = [None, None]
 
 class AsyncCall(object):

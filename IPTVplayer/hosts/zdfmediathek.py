@@ -111,7 +111,7 @@ class ZDFmediathek(CBaseHostClass):
         HTTP_HEADER= dict(self.HEADER)
         params.update({'header':HTTP_HEADER})
         
-        if 'zdf-cdn.live.cellular.de' in url:
+        if 'zdf-cdn.live.cellular.de' in url and False:
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
             params['header']['Referer'] = proxy
             #params['header']['Cookie'] = 'flags=2e5;'
@@ -125,7 +125,7 @@ class ZDFmediathek(CBaseHostClass):
         
     def getIconUrl(self, url):
         url = self.getFullUrl(url)
-        if  'zdf-cdn.live.cellular.de' in url:
+        if  'zdf-cdn.live.cellular.de' in url and False:
             proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
             params = {}
             params['User-Agent'] = self.HEADER['User-Agent'],

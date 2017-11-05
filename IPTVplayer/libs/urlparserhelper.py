@@ -478,7 +478,7 @@ def decorateUrl(url, metaParams={}):
     return retUrl
 
 def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False):
-    if checkExt and not M3U8Url.split('?')[0].endswith('.m3u8'):
+    if checkExt and not M3U8Url.split('?', 1)[0].endswith('.m3u8'):
         return []
         
     cm = common()

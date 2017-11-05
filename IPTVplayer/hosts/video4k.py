@@ -115,7 +115,7 @@ class Video4K(CBaseHostClass):
         
         if config.plugins.iptvplayer.video4k_proxy_gateway.value:
             addParams = deepcopy(addParams)
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2c8'.format(base64.b64encode(baseUrl)) #http://www.2proxy.de/index.php?q=
+            proxy = 'https://www.sslgate.co.uk/index.php?q={0}&hl=2c8'.format(base64.b64encode(baseUrl))
             if 'header' not in addParams: addParams['header'] = dict(self.AJAX_HEADER)
             addParams['header']['Referer'] = proxy
             #params['header']['Cookie'] = 'flags=2e5;'

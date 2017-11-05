@@ -46,7 +46,7 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://cda.pl/'
+    return 'https://cda.pl/'
 
 class cda(CBaseHostClass):
     
@@ -58,7 +58,7 @@ class cda(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL = 'http://www.cda.pl/'
+        self.MAIN_URL = 'https://www.cda.pl/'
         self.SEARCH_URL = self.getFullUrl('video/show/%s/p%d?s=%s')
         self.DEFAULT_ICON_URL = 'http://www.download.net.pl/upload/NewsSeptember2015/CDA-Filmy/cdalogo.jpg'
         
@@ -179,7 +179,7 @@ class cda(CBaseHostClass):
             nextPage = True
             data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="covers-container">', '<div id="loadMore">', False)[1]
         else:
-            HEADER = dict(self.defaultParams['header'])
+            HEADER = dict(self.AJAX_HEADER)
             HEADER['Referer'] = baseUrl
             params = dict(self.defaultParams)
             params['header'] = HEADER

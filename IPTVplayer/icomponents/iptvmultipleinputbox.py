@@ -108,7 +108,7 @@ class IPTVMultipleInputBox(Screen):
             pY += dY*2 + item['input_size'][1]
             
         if self.withAcceptButton:
-            skinItems += '<widget name="accept_button"  position="10,%d"  zPosition="2" size="%d,50"  valign="center" halign="center" font="Regular;22" foregroundColor="#00FFFFFF" backgroundColor="#FFFFFFFF" />' % (pY, maxWidth-20)
+            skinItems += '<widget name="accept_button"  position="10,%d"  zPosition="2" size="%d,50"  valign="center" halign="center" font="Regular;22" foregroundColor="#00FFFFFF" backgroundColor="#320F0F0F" />' % (pY, maxWidth-20)
             pY += dY*2 + 50
         self.skin = """
         <screen name="IPTVMultipleInputBox" position="center,center" size="%d,%d" title="%s">
@@ -141,7 +141,7 @@ class IPTVMultipleInputBox(Screen):
             "left"  : self.keyLeft,
             "right" : self.keyRight,
             "up"    : self.keyUp,
-            "down"  : self.keyUp,
+            "down"  : self.keyDown,
             "right" : self.keyRight,
             "home"  : self.keyHome,
             "end"   : self.keyEnd,
@@ -238,7 +238,7 @@ class IPTVMultipleInputBox(Screen):
                 self['accept_button'].instance.setBackgroundColor( parseColor("#32CD32") )
             else:
                 self['accept_button'].instance.setForegroundColor( parseColor("#FFFFFF") )
-                self['accept_button'].instance.setBackgroundColor( parseColor("#FFFFFFFF") )
+                self['accept_button'].instance.setBackgroundColor( parseColor("#320F0F0F") )
         
         if "marker" in self:
             if self.idx < len(self.list):

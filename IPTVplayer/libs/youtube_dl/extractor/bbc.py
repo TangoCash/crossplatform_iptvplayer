@@ -26,7 +26,7 @@ config.plugins.iptvplayer.bbc_prefered_format     = ConfigSelection(default = "h
 ("hls", _("HLS/m3u8")),
 ("dash", _("DASH/mpd")),
 ])
-#config.plugins.iptvplayer.bbc_use_web_proxy = ConfigYesNo(default = False)
+config.plugins.iptvplayer.bbc_use_web_proxy = ConfigYesNo(default = False)
 
 def int_or_none(data):
     ret = 0
@@ -71,9 +71,9 @@ class BBCCoUkIE(InfoExtractor):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
     
     def getFullUrl(self, url):
-        #if config.plugins.iptvplayer.bbc_use_web_proxy.value and 'englandproxy.co.uk' not in url:
-        #    try: url = 'https://www.englandproxy.co.uk/' + url[url.find('://')+3:]
-        #    except Exception: pass
+        if config.plugins.iptvplayer.bbc_use_web_proxy.value and 'englandproxy.co.uk' not in url:
+            try: url = 'https://www.englandproxy.co.uk/' + url[url.find('://')+3:]
+            except Exception: pass
         return url
         
     def getPage(self, url, params={}, post_data=None):

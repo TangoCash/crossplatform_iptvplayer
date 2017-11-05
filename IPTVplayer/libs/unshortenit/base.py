@@ -18,7 +18,9 @@ try: import json
 except Exception: import simplejson as json
 
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import byteify, printExc
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import byteify, printExc, printDBG, GetCookieDir, rm
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError, GetIPTVSleep
 
 HTTP_HEADER = {
     "User-Agent": 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
@@ -49,7 +51,8 @@ class UnshortenIt(object):
     _viidme_regex = r'viid\.me'
     _hrefli_regex = r'href\.li'
     _anonymz_regex = r'anonymz\.com'
-
+    _iitvpl_regex = r'iiv\.pl'
+    
     _maxretries = 5
 
     _this_dir, _this_filename = os.path.split(__file__)
@@ -84,7 +87,8 @@ class UnshortenIt(object):
             return self._unshorten_hrefli(uri)
         if re.search(self._anonymz_regex, domain, re.IGNORECASE):
             return self._unshorten_anonymz(uri)
-
+        if re.search(self._iitvpl_regex, domain, re.IGNORECASE):
+            return self._unshorten_iivpl(uri)
         return uri, 200
 
     def unwrap_30x(self, uri, timeout=10):
@@ -279,7 +283,7 @@ class UnshortenIt(object):
 
 
             time_left = 5.033 - (time.time() - firstGet)
-            time.sleep(max(time_left, 0))
+            GetIPTVSleep().Sleep(max(time_left, 0))
 
             p3_url = urljoin(baseloc, "/intermission/loadTargetUrl?t={tok}&aK={key}&a_b=false".format(tok=token, key=str(authkey)))
             r3 = requests.get(p3_url, headers=HTTP_HEADER, timeout=self._timeout, cookies=r2.cookies)
@@ -367,7 +371,7 @@ class UnshortenIt(object):
                 http_header["Origin"]           = "http://sh.st"
                 http_header["X-Requested-With"] = "XMLHttpRequest"
 
-                time.sleep(5)
+                GetIPTVSleep().Sleep(5)
 
                 payload = {'adSessionId': session_id, 'callback': 'c'}
                 sts, response = self.cm.getPage('http://sh.st/shortest-url/end-adsession', {'header':http_header}, payload)
@@ -381,6 +385,54 @@ class UnshortenIt(object):
         except Exception as e:
             printExc()
             return uri, str(e)
+            
+    def _unshorten_iivpl(self, baseUri):
+        baseUri = strwithmeta(baseUri)
+        ref = baseUri.meta.get('Referer', baseUri)
+        USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        HTTP_HEADER = {'User-Agent':USER_AGENT, 'Accept':'*/*', 'Accept-Encoding':'gzip, deflate', 'Referer':ref}
+        HTTP_HEADER_AJAX = {'User-Agent':USER_AGENT, 'Accept':'*/*', 'Accept-Encoding':'gzip, deflate', 'Referer':baseUri, 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With':'XMLHttpRequest'}
+        
+        COOKIE_FILE = GetCookieDir('iit.pl')
+        tries = 0
+        retUri, retSts = '', 'KO'
+        while tries < 2 and retSts != 'OK':
+            tries += 1
+            rm(COOKIE_FILE)
+            try:
+                params = {'header':HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIE_FILE}
+                
+                sts, data = self.cm.getPage(baseUri, params)
+                
+                sts, headers = self.cm.getPage('http://iiv.pl/modules/system/assets/js/framework.js', params)
+                
+                headers = self.cm.ph.getDataBeetwenMarkers(headers, 'headers', '}')[1]
+                headers = re.compile('''['"]([^'^"]+?)['"]''').findall(headers)
+                salt = self.cm.ph.getSearchGroups(data, '''data\-salt="([^"]+?)"''')[0]
+                time = self.cm.ph.getSearchGroups(data, '''data\-time="([^"]+?)"''')[0]
+                action = self.cm.ph.getSearchGroups(data, '''data\-action="([^"]+?)"''')[0]
+                banner = self.cm.ph.getSearchGroups(data, '''data\-banner="([^"]+?)"''')[0]
+                component = self.cm.ph.getSearchGroups(data, '''data\-component="([^"]+?)"''')[0]
+                if tries > 1: GetIPTVSleep().Sleep(int(time))
+                
+                for header in headers:
+                    if 'HANDLER' in header:
+                        HTTP_HEADER_AJAX[header] = action
+                    elif 'PARTIALS' in header:
+                        HTTP_HEADER_AJAX[header] = 'visitLink/linker'
+                
+                post_data = {'salt':salt, 'banner':banner}
+                params['header'] = HTTP_HEADER_AJAX
+                sts, data = self.cm.getPage(baseUri, params, post_data)
+                data = byteify(json.loads(data))
+                uri = self.cm.ph.getSearchGroups(data['visitLink/linker'], '''href="(https?://[^"]+?)"''')[0]
+                retUri, retSts = uri, 'OK'
+                
+            except Exception as e:
+                retUri, retSts = baseUri, str(e)
+                printExc()
+            
+        return retUri, retSts
             
     def _unshorten_viidme(self, uri):
         try:
@@ -397,7 +449,7 @@ class UnshortenIt(object):
                 http_header["Origin"]           = "http://viid.me"
                 http_header["X-Requested-With"] = "XMLHttpRequest"
 
-                time.sleep(5)
+                GetIPTVSleep().Sleep(5)
 
                 payload = {'adSessionId': session_id, 'callback': 'c'}
                 sts, response = self.cm.getPage('http://viid.me/shortest-url/end-adsession', {'header':http_header}, payload)

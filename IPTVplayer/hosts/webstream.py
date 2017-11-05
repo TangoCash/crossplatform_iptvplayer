@@ -152,7 +152,7 @@ class HasBahCa(CBaseHostClass):
                         {'alias_id':'inne_matzg',              'name': 'm3u',                 'title': 'Różne Kanały IPTV_matzg',           'url': 'http://matzg2.prv.pl/inne_matzg.m3u',                                'icon': 'http://matzg2.prv.pl/iptv.png'}, \
                         {'alias_id':'filmon.com',              'name': 'filmon_groups',       'title': 'FilmOn TV',                         'url': 'http://www.filmon.com/',                                             'icon': 'http://static.filmon.com/theme/img/filmon_tv_logo_white.png'}, \
                         {'alias_id':'ustvnow.com',             'name': 'ustvnow',             'title': 'ustvnow.com',                       'url': 'https://www.ustvnow.com/',                                           'icon': 'http://2.bp.blogspot.com/-SVJ4uZ2-zPc/UBAZGxREYRI/AAAAAAAAAKo/lpbo8OFLISU/s1600/ustvnow.png'}, \
-                        {'alias_id':'showsport-tv.com',        'name': 'showsport-tv.com',    'title': 'showsport-tv.com',                  'url': 'http://showsport-tv.com/',                                           'icon': 'http://showsport-tv.com/img/logo1-white-inverse.png'}, \
+                        {'alias_id':'showsport-tv.com',        'name': 'showsport-tv.com',    'title': 'showsport-tv.com',                  'url': 'http://showsport-tv.com/',                                           'icon': 'http://showsport-tv.com/images/sstv-logo.png'}, \
                         {'alias_id':'sport365.live',           'name': 'sport365.live',       'title': 'sport365.live',                     'url': 'http://www.sport365.live/',                                          'icon': 'http://s1.medianetworkinternational.com/images/icons/48x48px.png'}, \
                         {'alias_id':'yooanime.com',            'name': 'yooanime.com',        'title': 'yooanime.com',                      'url': 'http://yooanime.com/',                                               'icon': 'https://socialtvplayground.files.wordpress.com/2012/11/logo-technicolor2.png?w=960'}, \
                         {'alias_id':'livetvhd.net',            'name': 'livetvhd.net',        'title': 'livetvhd.net',                      'url': 'https://livetvhd.net/',                                              'icon': 'https://livetvhd.net/images/logo.png'}, \
@@ -161,7 +161,7 @@ class HasBahCa(CBaseHostClass):
                         #{'alias_id':'wownet.ro',               'name': 'm3u',                 'title': 'Deutsch-Fernseher',                 'url': 'http://wownet.ro/iptv/',                                             'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
                         #{'alias_id':'iptv.ink',                'name': 'm3u',                 'title': 'Free Iptv Project',                 'url': 'http://tv.iptv.ink/iptv.ink',                                        'icon': ''}, \
                         {'alias_id':'wagasworld',              'name': 'wagasworld.com',      'title': 'WagasWorld',                        'url': 'http://www.wagasworld.com/channels.php',                              'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
-                        #{'alias_id':'live_stream_tv',          'name': 'live-stream.tv',      'title': 'Live-Stream.tv',                    'url': 'http://www.live-stream.tv/',                                          'icon': 'http://www.live-stream.tv/images/lstv-logo.png'}, \
+                        {'alias_id':'live_stream_tv',          'name': 'live-stream.tv',      'title': 'Live-Stream.tv',                    'url': 'http://www.live-stream.tv/',                                          'icon': 'http://www.live-stream.tv/images/lstv-logo.png'}, \
                         {'alias_id':'edem_tv',                 'name': 'edem.tv',             'title': 'Edem TV',                           'url': 'https://edem.tv/',                                                    'icon': 'https://edem.tv/public/images/logo_edem.png'}, \
                         #{'alias_id':'freetuxtv_programmes_en', 'name': 'm3u',                 'title': 'Angielska TV',                      'url': 'http://database.freetuxtv.net/playlists/playlist_programmes_en.m3u'}, \
                         {'alias_id':'matzg2_radio',            'name': 'm3u',                 'title': 'Radio-OPEN FM i inne',              'url':'http://matzg2.prv.pl/radio.m3u',                                      'icon': 'http://matzg2.prv.pl/openfm.png'}, \
@@ -204,6 +204,7 @@ class HasBahCa(CBaseHostClass):
         
         self.weebTvApi    = None
         self.hasbahcaiptv = {}
+        self.webcameraSubCats = {}
         
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0'}
@@ -532,7 +533,7 @@ class HasBahCa(CBaseHostClass):
         return self.weebTvApi.getVideoLink(url)
         
     def getWebCamera(self, cItem):
-        printDBG("getWebCamera start")
+        printDBG("getWebCamera start cItem[%s]" % cItem)
         baseMobileUrl = 'http://www.webcamera.mobi/'
         baseUrl = 'http://www.webcamera.pl/'
         
@@ -560,7 +561,7 @@ class HasBahCa(CBaseHostClass):
         category = cItem.get(catKey, '')
             
         if category == '':
-            sts, data = self.cm.getPage(baseMobileUrl)
+            sts, data = self.cm.getPage(baseUrl)
             if not sts: return
 
             params = dict(cItem)
@@ -573,34 +574,36 @@ class HasBahCa(CBaseHostClass):
             params.update({'title':'Ostatnio dodane', catKey:'list_videos', 'url':_getFullUrl('ostatniododane')})
             self.addDir(params)
             
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam inlinecamv2"', '</div>')
+            
+            self.webcameraSubCats = {}
+            
+            data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<nav[^>]+?>'''), re.compile('</nav>'))[1]
+            data = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('</ul', '>'), ('<li', '>', 'has-childre'), False)
             for item in data:
-                catUrl = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0]
-                icon   = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?)['"]""")[0] 
+                catUrl   = _getFullUrl( self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0] )
+                catTitle = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<a', '</a>')[1] )
+                catIcon  = _getFullUrl( 'images/logo_mobile.png' )
+                
+                subCats = []
+                item = self.cm.ph.getAllItemsBeetwenMarkers(item.split('<ul', 1)[-1], '<li', '</li>')
+                for it in item:
+                    url = _getFullUrl( self.cm.ph.getSearchGroups(it, """href=['"]([^'^"]+?)['"]""")[0] )
+                    subCats.append({'title':self._cleanHtmlStr(it), 'url':url, 'icon':catIcon, catKey:'list_videos'})
+                
                 params = dict(cItem)
-                params.update({'title':self._cleanHtmlStr(item), 'url':_getFullUrl(catUrl, True), 'icon':_getFullUrl(icon, True), catKey:'sub_cat'})
+                params.update({'title':catTitle, 'url':catUrl, 'icon':catIcon})
+                if len(subCats):
+                    self.webcameraSubCats[catUrl] = subCats
+                    params[catKey] = 'sub_cat'
+                else:
+                    params[catKey] = 'list_videos'
                 self.addDir(params)
         elif category == 'sub_cat':
-            sts, data = self.cm.getPage(cItem['url'])
-            if not sts: return
-            
-            hasSubCats = False
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="inlinecam inlinecamv2"', '</div>')
-            for item in data:
-                catUrl = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0].replace('?cat=', 'kategoria,')
-                icon   = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?)['"]""")[0] 
+            tab = self.webcameraSubCats.get(cItem['url'], [])
+            for item in tab:
                 params = dict(cItem)
-                params.update({'title':self._cleanHtmlStr(item), 'url':_getFullUrl(catUrl), 'icon':_getFullUrl(icon, True), catKey:'list_videos'})
+                params.update(item)
                 self.addDir(params)
-                hasSubCats = True
-            if hasSubCats:
-                params = dict(cItem)
-                params.update({'type':'category', 'title':'Wszystkie', 'url':_getFullUrl(params['url']).replace('?cat=', 'kategoria,')})
-                self.currList.insert(0, params)
-            else:
-                cItem = dict(cItem)
-                cItem['url'] = _getFullUrl(cItem['url']).replace('?cat=', 'kategoria,')
-                category = 'list_videos'
         
         if category == 'list_videos':
             sts, data = self.cm.getPage(cItem['url'])
@@ -918,7 +921,9 @@ class HasBahCa(CBaseHostClass):
         tmpList = self.showsportTvApi.getChannelsList(cItem)
         for item in tmpList:
             if 'video' == item.get('type', ''):
-                self.addVideo(item) 
+                self.addVideo(item)
+            elif 'marker' == item.get('type', ''):
+                self.addMarker(item)
             else:
                 self.addDir(item)
         

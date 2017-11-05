@@ -6,7 +6,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 
 ###################################################
@@ -18,29 +18,34 @@ except Exception: import simplejson
 ############################################
 
 
-class LiveStreamTvApi:
+class LiveStreamTvApi(CBaseHostClass):
     def __init__(self):
+        CBaseHostClass.__init__(self)
         self.MAIN_URL = 'http://live-stream.tv/'
-        self.cm = common()
-        self.up = urlparser()
 
     def getChannelsList(self, cItem):
         printDBG("LiveStreamTvApi.getChannelsList cItem[%s]" % cItem )
         channelsList = []
         sts,data = self.cm.getPage(self.MAIN_URL)
         if not sts: return channelsList
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="entry">', '<footer id="footer">', False)[1]
-        data = data.split('</a>')
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="channel', '</a>')
         desc = ''
         for item in data:
-            tmpDsc = self.cm.ph.getDataBeetwenMarkers(item, '<div class="fp_country">', '</div>', False)[1]
-            if '' != tmpDsc: desc = tmpDsc
-            title = self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0]
-            icon  = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
-            url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
-            if url.startswith('/'):
-                url = self.MAIN_URL + url[1:]
-            if url != '' and icon != '':
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<strong', '</strong>')[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''channame=['"]([^'^"]+?)['"]''')[0])
+            # desc
+            epgstart = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''epgstart=['"]([^'^"]+?)['"]''')[0])
+            epgend = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''epgend=['"]([^'^"]+?)['"]''')[0])
+            epgtitle = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''epgtitle=['"]([^'^"]+?)['"]''')[0])
+            epgdesc  = re.sub("</?br\s*/?>", "[/br]", self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''epgdesc=['"]([^'^"]+?)['"]''')[0]))
+            
+            desc = '%s - %s %s' % (epgstart, epgend, epgtitle) + '[/br]' + epgdesc
+            
+            icon  = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0])
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0])
+            if 'filterGray' in item: desc = '[offline] ' + title
+            else: desc = '[online] ' + desc
+            if self.cm.isValidUrl(url):
                 channelsList.append({'name':'live-stream.tv', 'title':title, 'url':url, 'desc':desc, 'icon':icon})
         return channelsList
     

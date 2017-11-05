@@ -52,9 +52,9 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://mythewatchseries.net/'
+    return 'http://watchseriesmovie.com/'
 
-class HDStreams(CBaseHostClass):
+class MyTheWatchseries(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'mythewatchseries', 'cookie':'mythewatchseries.cookie', 'cookie_type':'MozillaCookieJar'}) #, 'min_py_ver':(2,7,9)
@@ -65,13 +65,16 @@ class HDStreams(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://mythewatchseries.net/img/icon/logo.png'
+        self.DEFAULT_ICON_URL = 'http://watchseriesmovie.com/img/icon/logo.png'
         self.MAIN_URL = None
         self.cacheLinks = {}
+        self.cacheFilters  = {}
+        self.cacheFiltersKeys = []
         
     def selectDomain(self):
-        self.MAIN_URL = 'http://mythewatchseries.net/'
-        self.MAIN_CAT_TAB = [{'category':'list_items',       'title': _("MOVIES"),                     'url':self.getFullUrl('/movies')},
+        self.MAIN_URL = 'http://watchseriesmovie.com/'
+        self.MAIN_CAT_TAB = [{'category':'list_filters',     'title': _("LIST"),                       'url':self.getFullUrl('/list')},
+                             {'category':'list_items',       'title': _("MOVIES"),                     'url':self.getFullUrl('/movies')},
                              {'category':'list_items',       'title': _("CINEMA MOVIES"),              'url':self.getFullUrl('/cinema-movies')},
                              {'category':'list_items',       'title': _("THIS WEEK'S SERIES POPULAR"), 'url':self.getFullUrl('/recommended-series')},
                              {'category':'list_items',       'title': _("NEW RELEASE LIST"),           'url':self.getFullUrl('/new-release')},
@@ -99,8 +102,97 @@ class HDStreams(CBaseHostClass):
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
         
+    def fillCacheFilters(self, cItem):
+        printDBG("MyTheWatchseries.listCategories")
+        self.cacheFilters = {}
+        self.cacheFiltersKeys = []
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        def addFilter(data, marker, baseKey, addAll=True, titleBase=''):
+            key = 'f_' + baseKey
+            self.cacheFilters[key] = []
+            for item in data:
+                value = self.cm.ph.getSearchGroups(item, marker + '''="([^"]+?)"''')[0]
+                if value == '': continue
+                title = self.cleanHtmlStr(item)
+                if title.lower() in ['all', 'default', 'any']:
+                    addAll = False
+                self.cacheFilters[key].append({'title':title.title(), key:value})
+                
+            if len(self.cacheFilters[key]):
+                if addAll: self.cacheFilters[key].insert(0, {'title':_('All')})
+                self.cacheFiltersKeys.append(key)
+        
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<li', '>', 'first-char'), ('</li' , '>'))
+        addFilter(tmp, 'rel', 'key')
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<li', '>', 'class="text'), ('</' , 'select>'))
+        for tmp in data:
+            key = self.cm.ph.getSearchGroups(tmp, '''name="([^"]+?)"''')[0]
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<option', '</option>')
+            addFilter(tmp, 'value', key)
+        
+        printDBG(self.cacheFilters)
+        
+    def listFilters(self, cItem, nextCategory):
+        printDBG("MyTheWatchseries.listFilters")
+        cItem = dict(cItem)
+        
+        f_idx = cItem.get('f_idx', 0)
+        if f_idx == 0: self.fillCacheFilters(cItem)
+        
+        if f_idx >= len(self.cacheFiltersKeys): return
+        
+        filter = self.cacheFiltersKeys[f_idx]
+        f_idx += 1
+        cItem['f_idx'] = f_idx
+        if f_idx  == len(self.cacheFiltersKeys):
+            cItem['category'] = nextCategory
+        self.listsTab(self.cacheFilters.get(filter, []), cItem)
+        
+    def listItems2(self, cItem, nextCategory):
+        printDBG("MyTheWatchseries.listItems2 [%s]" % cItem)
+        page = cItem.get('page', 1)
+        query = {}
+        
+        url = cItem['url']
+        if page > 1: query['page'] = page
+        
+        keys = list(self.cacheFiltersKeys)
+        for key in keys:
+            baseKey = key[2:] # "f_"
+            if key in cItem: query[baseKey] = cItem[key]
+        query = urllib.urlencode(query)
+        if query != '': url += '?' + query
+        
+        sts, data = self.getPage(url)
+        if not sts: return
+        
+        nextPage = self.cm.ph.getDataBeetwenNodes(data,  ('<div', '>', 'pagination'), ('</nav', '>'), False)[1]
+        if ('>%s<' % (page + 1)) in nextPage: nextPage = True
+        else: nextPage = False
+        
+        data = self.cm.ph.getDataBeetwenNodes(data,  ('<div ', '>', 'list_movies'), ('</ul', '>'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            icon  = url + '?fake=need_resolve.jpeg'
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<a', '</a>')[1])
+            if title != '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0])
+            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<span', '</span>')[1])
+            params = dict(cItem)
+            params.update({'good_for_fav':True, 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            self.addDir(params)
+        
+        if nextPage:
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'title':_("Next page"), 'page':page+1})
+            self.addDir(params)
+        
     def listItems(self, cItem, nextCategory='', searchPattern=''):
-        printDBG("HDStreams.listItems |%s|" % cItem)
+        printDBG("MyTheWatchseries.listItems |%s|" % cItem)
         
         url  = cItem['url']
         page = cItem.get('page', 1)
@@ -149,7 +241,7 @@ class HDStreams(CBaseHostClass):
             self.addDir(params)
             
     def exploreItem(self, cItem):
-        printDBG("HDStreams.exploreItem")
+        printDBG("MyTheWatchseries.exploreItem")
         
         self.cacheLinks = {}
         
@@ -210,13 +302,13 @@ class HDStreams(CBaseHostClass):
             self.addVideo(params)
         
     def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("HDStreams.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        printDBG("MyTheWatchseries.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
         cItem['url'] = self.getFullUrl('/search.html')
         self.listItems(cItem, 'explore_item', searchPattern)
         
     def getLinksForVideo(self, cItem):
-        printDBG("HDStreams.getLinksForVideo [%s]" % cItem)
+        printDBG("MyTheWatchseries.getLinksForVideo [%s]" % cItem)
         linksTab = []
         if cItem.get('is_trailer'):
             linksTab.append({'name':'trailer', 'url':cItem['url'], 'need_resolve':1})
@@ -242,7 +334,7 @@ class HDStreams(CBaseHostClass):
         return linksTab
         
     def getVideoLinks(self, videoUrl):
-        printDBG("HDStreams.getVideoLinks [%s]" % videoUrl)
+        printDBG("MyTheWatchseries.getVideoLinks [%s]" % videoUrl)
         linksTab = []
         
         videoUrl = strwithmeta(videoUrl)
@@ -280,45 +372,43 @@ class HDStreams(CBaseHostClass):
         return linksTab
     
     def getArticleContent(self, cItem):
-        printDBG("HDStreams.getArticleContent [%s]" % cItem)
+        printDBG("MyTheWatchseries.getArticleContent [%s]" % cItem)
         retTab = []
         
         otherInfo = {}
         
-        sts, data = self.getPage(cItem['url'])
-        if not sts: return []
+        url = cItem['url']
+        if '/info/' not in url:
+            sts, data = self.getPage(url)
+            if sts:
+                data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="content">', '</div>')[1]
+                data = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''href=['"]([^'^"]*?/info/[^'^"]+?)['"]''')[0])
+                if self.cm.isValidUrl(data):
+                    url = data
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="post', '<div class="row">')[1]
+        sts, data = self.getPage(url)
+        if not sts: return
         
-        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="text-left title">', '</div>')[1])
-        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="summary-wrapper">', '</div>')[1])
-        icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+\.jpe?g)['"]''')[0] )
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', '"content"'), ('<div', '>', '"clr"'), False)[1]
         
-        tmpTab = []
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<span class="mdl-chip">', '</a>')
-        for t in tmp:
-            tmpTab.append(self.cleanHtmlStr(t))
-        otherInfo['genre'] = ', '.join(tmpTab)
+        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h1', '</h1>')[1])
+        desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', '"des"'), ('</div', '>'), False)[1].split('</span>', 1)[-1])
+        icon  = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'picture'), ('</div', '>'), False)[1]
+        icon  = self.cm.ph.getSearchGroups(icon, '<img[^>]+?src="([^"]+?)"')[0]
         
-        tmpTab = []
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="cast">', '<div class="text-left')[1]
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<span class="mdl-chip__text">', '</a>')
-        for t in tmp:
-            tmpTab.append(self.cleanHtmlStr(t))
-        otherInfo['actors'] = ', '.join(tmpTab)
+        keysMap = {'release':'released',
+                   'country' :'country',}
         
-        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('<div[^>]+?year"[^>]*?>'), re.compile('</div>'))[1])
-        if tmp != '': otherInfo['released'] = tmp
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', '"three"'), ('</ul', '>'))[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            item = item.split('</span>', 1)
+            if len(item) != 2: continue
+            keyMarker = self.cleanHtmlStr(item[0]).replace(':', '').strip().lower()
+            value = self.cleanHtmlStr(item[1]).replace(' , ', ', ')
+            key = keysMap.get(keyMarker, '')
+            if key != '' and value != '': otherInfo[key] = value
         
-        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div class="rating-votes">', '</div>')[1])
-        if tmp != '': otherInfo['rating'] = tmp
-        
-        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Original Titel:', '</div>', False, False)[1])
-        if tmp != '': otherInfo['alternate_title'] = tmp
-        
-        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Laufzeit:', '</div>', False, False)[1])
-        if tmp != '': otherInfo['duration'] = tmp
-            
         if title == '': title = cItem['title']
         if desc == '':  desc = cItem.get('desc', '')
         if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
@@ -326,11 +416,11 @@ class HDStreams(CBaseHostClass):
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
     
     def getFavouriteData(self, cItem):
-        printDBG('HDStreams.getFavouriteData')
+        printDBG('MyTheWatchseries.getFavouriteData')
         return json.dumps(cItem) 
         
     def getLinksForFavourite(self, fav_data):
-        printDBG('HDStreams.getLinksForFavourite')
+        printDBG('MyTheWatchseries.getLinksForFavourite')
         if self.MAIN_URL == None:
             self.selectDomain()
         links = []
@@ -341,7 +431,7 @@ class HDStreams(CBaseHostClass):
         return links
         
     def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('HDStreams.setInitListFromFavouriteItem')
+        printDBG('MyTheWatchseries.setInitListFromFavouriteItem')
         if self.MAIN_URL == None:
             self.selectDomain()
         try:
@@ -370,6 +460,10 @@ class HDStreams(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif category == 'list_filters':
+            self.listFilters(self.currItem, 'list_items_2')
+        elif category == 'list_items_2':
+            self.listItems2(self.currItem, 'explore_item')
         elif 'list_items' == category:
             self.listItems(self.currItem, 'explore_item')
         elif 'explore_item' == category:
@@ -390,10 +484,10 @@ class HDStreams(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, HDStreams(), True, [])
+        CHostBase.__init__(self, MyTheWatchseries(), True, [])
     
-    #def withArticleContent(self, cItem):
-    #    if 'video' == cItem.get('type', '') or 'explore_item' == cItem.get('category', ''):
-    #        return True
-    #    return False
+    def withArticleContent(self, cItem):
+        if 'video' == cItem.get('type', '') or 'explore_item' == cItem.get('category', ''):
+            return True
+        return False
     

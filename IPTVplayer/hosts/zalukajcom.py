@@ -41,16 +41,17 @@ config.plugins.iptvplayer.zalukajtv_filmssort    = ConfigSelection(default = "os
 config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
 config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_proxygateway = ConfigYesNo(default = False)
+config.plugins.iptvplayer.zalukajtv_proxy        = ConfigSelection(default = "None", choices = [("None",     _("None")),
+                                                                                                ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                                ("proxy_2",  _("Alternative proxy server (2)"))])
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry("Sortuj filmy: ", config.plugins.iptvplayer.zalukajtv_filmssort))
     optionList.append(getConfigListEntry("Zaloguj:", config.plugins.iptvplayer.zalukajtvPREMIUM))
     if config.plugins.iptvplayer.zalukajtvPREMIUM.value:
-        optionList.append(getConfigListEntry("Użyj bramki proxy (niebezpieczne):", config.plugins.iptvplayer.zalukajtv_proxygateway))
-        if config.plugins.iptvplayer.zalukajtv_proxygateway.value:
-            optionList.append(getConfigListEntry("  " + _("login") + ":", config.plugins.iptvplayer.zalukajtv_login))
-            optionList.append(getConfigListEntry("  " + _("hasło") + ":", config.plugins.iptvplayer.zalukajtv_password))
+        optionList.append(getConfigListEntry("  " + _("login") + ":", config.plugins.iptvplayer.zalukajtv_login))
+        optionList.append(getConfigListEntry("  " + _("hasło") + ":", config.plugins.iptvplayer.zalukajtv_password))
+    optionList.append(getConfigListEntry(_("Use proxy server:"),      config.plugins.iptvplayer.zalukajtv_proxy))
     return optionList
 ###################################################
 
@@ -94,42 +95,8 @@ class ZalukajCOM(CBaseHostClass):
     
     def __init__(self):
         printDBG("ZalukajCOM.__init__")
-        CBaseHostClass.__init__(self, {'history':'ZalukajCOM', 'cookie':'zalukajtv.cookie'})
+        CBaseHostClass.__init__(self, {'history':'ZalukajCOM', 'cookie':'zalukajtv.cookie', 'min_py_ver':(2,7,9)})
         self.loggedIn = None
-        self.needProxy = None
-        self.WGET_COOKIE_FILE = GetCookieDir('zalukajtv2.cookie')
-        
-    def _getPageWget(self, url, params={}, post_data=None):
-        cmd = DMHelper.getBaseWgetCmd(params.get('header', {})) +  (" '%s' " % url)
-        if post_data != None:
-            if params.get('raw_post_data', False):
-                post_data_str = post_data
-            else:
-                post_data_str = urllib.urlencode(post_data)
-            cmd += " --post-data '{0}' ".format(post_data_str)
-        
-        if params.get('use_cookie', False):
-            cmd += " --keep-session-cookies "
-            cookieFile = str(params.get('cookiefile', ''))
-            if params.get('load_cookie', False) and fileExists(cookieFile):
-                cmd += "  --load-cookies '%s' " %  cookieFile
-            if params.get('save_cookie', False):
-                cmd += "  --save-cookies '%s' " %  cookieFile
-        cmd += ' -O - 2> /dev/null'
-        
-        printDBG('_getPageWget request: [%s]' % cmd)
-        
-        data = iptv_execute()( cmd )
-        if not data['sts'] or 0 != data['code']: 
-            return False, None
-        else:
-            return True, data['data']
-        
-    def isNeedProxy(self):
-        if self.needProxy == None:
-            sts, data = self.cm.getPage(self.MAIN_URL)
-            self.needProxy = not sts
-        return self.needProxy
         
     def _getPage(self, url, http_params_base={}, params=None, loggedIn=None):
         if None == loggedIn: loggedIn=self.loggedIn
@@ -138,17 +105,22 @@ class ZalukajCOM(CBaseHostClass):
         else: http_params = {'header': HEADER}
         http_params.update(http_params_base)
         return self.getPage(url, http_params, params)
-    
-    def getPage(self, url, params={}, post_data=None):
-        HTTP_HEADER= dict(self.HEADER)
-        params.update({'header':HTTP_HEADER})
         
-        if self.isNeedProxy() and self.DOMAIN in url:
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
-            params['header']['Referer'] = proxy
-            #params['header']['Cookie'] = 'flags=2e5;'
-            url = proxy
-        sts, data = self.cm.getPage(url, params, post_data)
+    def getPage(self, url, addParams = {}, post_data = None):
+        HTTP_HEADER= dict(self.HEADER)
+        addParams = dict(addParams)
+        addParams.update({'header':HTTP_HEADER})
+            
+        proxy = config.plugins.iptvplayer.zalukajtv_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
+        
+        sts, data = self.cm.getPage(url, addParams, post_data)
         if sts and None == data:
             sts = False
         if sts and 'Duze obciazenie!' in data:
@@ -157,19 +129,14 @@ class ZalukajCOM(CBaseHostClass):
         
     def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
-        if self.DOMAIN in url and self.isNeedProxy():
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
-            params = {}
-            params['User-Agent'] = self.HEADER['User-Agent'],
-            params['Referer'] = proxy
-            params['Cookie'] = 'flags=2e5;'
-            url = strwithmeta(proxy, params) 
+        proxy = config.plugins.iptvplayer.zalukajtv_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            url = strwithmeta(url, {'iptv_http_proxy':proxy})
         return url
-        
-    def getFullUrl(self, url):
-        if 'proxy-german.de' in url:
-            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
-        return CBaseHostClass.getFullUrl(self, url)
             
     def _listLeftTable(self, cItem, category, m1, m2, sp):
         printDBG("ZalukajCOM.listLeftGrid")
@@ -315,13 +282,8 @@ class ZalukajCOM(CBaseHostClass):
                 printDBG( 'No href in data[%s]' % '')
                 continue
                 
-            if loggedIn and self.isNeedProxy():
-                params   = { 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.WGET_COOKIE_FILE }
-                sts, data = self._getPageWget(url, params)
-                if not sts: continue
-            else:
-                sts, data = self._getPage(url, loggedIn=loggedIn)
-                if not sts: continue
+            sts, data = self._getPage(url, loggedIn=loggedIn)
+            if not sts: continue
             
             # First check for premium link
             premium = False
@@ -368,20 +330,19 @@ class ZalukajCOM(CBaseHostClass):
     def tryTologin(self):
         printDBG('ZalukajCOM.tryTologin start')
         rm(self.COOKIE_FILE)
-        rm(self.WGET_COOKIE_FILE)
         sts,msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % config.plugins.iptvplayer.zalukajtv_login.value
         post_data = {'login': config.plugins.iptvplayer.zalukajtv_login.value, 'password': config.plugins.iptvplayer.zalukajtv_password.value}
         params    = { 'host': ZalukajCOM.HOST, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
-        params2   = { 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.WGET_COOKIE_FILE }
+        params2   = { 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
         sts, data  = self.getPage(ZalukajCOM.LOGIN_URL, params, post_data)
-        if sts: sts, data2 = self._getPageWget(ZalukajCOM.LOGIN_URL, params2, post_data)
+        if sts: sts, data2 = self._getPage(ZalukajCOM.LOGIN_URL, params2, post_data)
         if sts:
             printDBG( 'Host getInitList: chyba zalogowano do premium...' )
             sts, data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
             
             if sts: 
-                params2.update({'save_cookie':False, 'load_cookie':True})
-                sts, data2 = self._getPageWget(self.getFullUrl('/libs/ajax/login.php?login=1'), params2)
+                params.update({'save_cookie':False, 'load_cookie':True})
+                sts, data2 = self._getPage(self.getFullUrl('/libs/ajax/login.php?login=1'), params2)
 
             if sts:
                 printDBG(data)
@@ -396,15 +357,10 @@ class ZalukajCOM(CBaseHostClass):
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('ZalukajCOM.handleService start')
         if None == self.loggedIn and config.plugins.iptvplayer.zalukajtvPREMIUM.value:
-            if config.plugins.iptvplayer.zalukajtv_proxygateway.value:
-                self.loggedIn,msg = self.tryTologin()
-                if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
-                else: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
-            else:
-                msg = "Problem z zalogowaniem. W tej chwili, logowanie jest możliwe tylko z wykorzystaniem bramki proxy.\n"
-                msg += "Dostęp przez bramkę http://www.proxy-german.de/ można włączyć w konfiguracji hosta.\n\n"
-                msg += "Opcja ta jest niebezpieczna ponieważ możliwe jest przechwycenie loginu i hasła przez server pośredniczący."
-                self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 30 )
+            self.loggedIn,msg = self.tryTologin()
+            if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+            else: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         name     = self.currItem.get("name", None)
         category = self.currItem.get("category", '')

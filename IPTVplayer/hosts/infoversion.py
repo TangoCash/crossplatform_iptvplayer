@@ -28,12 +28,15 @@ from os import remove as os_remove, path as os_path, system as os_system
 config.plugins.iptvplayer.numerwersji = ConfigYesNo(default = True)
 config.plugins.iptvplayer.ilepozycji = ConfigInteger(8, (1, 99))  
 config.plugins.iptvplayer.religia = ConfigYesNo(default = True)  
+config.plugins.iptvplayer.natanek = ConfigInteger(8, (1, 999))  
 
 def GetConfigList():
     optionList = []
     optionList.append( getConfigListEntry( "Pokaz numer wersji:", config.plugins.iptvplayer.numerwersji) )
     optionList.append( getConfigListEntry( "Ile pozycji:", config.plugins.iptvplayer.ilepozycji) )
     optionList.append( getConfigListEntry( "Transmisje religijne:", config.plugins.iptvplayer.religia) )
+    optionList.append( getConfigListEntry( "Natanek ile pozycji:", config.plugins.iptvplayer.natanek) )
+
     return optionList
 ###################################################
 ###################################################
@@ -121,7 +124,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2017.10.01"
+    infoversion = "2017.11.05"
     inforemote  = "0.0.0"
     currList = []
 
@@ -130,6 +133,15 @@ class Host:
         self.cm = pCommon.common()
         self.up = urlparser() 
         self.currList = []
+        printDBG( 'Host __init__ begin' )
+        
+    def setCurrList(self, list):
+        printDBG( 'Host setCurrList begin' )
+        self.currList = list
+        printDBG( 'Host setCurrList end' )
+        return 
+    def getInitList(self):
+        printDBG( 'Host getInitList begin' )
         _url = 'https://gitlab.com/mosz_nowy/infoversion/raw/master/hosts/hostinfoversion.py'
         query_data = { 'url': _url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
         try:
@@ -141,15 +153,6 @@ class Host:
               self.inforemote=r
         except:
            printDBG( 'Host init query error' )
-        printDBG( 'Host __init__ begin' )
-        
-    def setCurrList(self, list):
-        printDBG( 'Host setCurrList begin' )
-        self.currList = list
-        printDBG( 'Host setCurrList end' )
-        return 
-    def getInitList(self):
-        printDBG( 'Host getInitList begin' )
         self.currList = self.listsItems(-1, '', 'main-menu')
         printDBG( 'Host getInitList end' )
         return self.currList
@@ -203,17 +206,15 @@ class Host:
            valTab.append(CDisplayListItem('Echo24', 'http://www.echo24.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.echo24.tv/live'], 'echo', 'http://www.pro-run.pl/images/stories/2016/echo24.jpg', None)) 
            valTab.append(CDisplayListItem('Sudecka TV', 'http://www.tvsudecka.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvsudecka.pl/streams/single/1'], 'tvsudecka', 'https://pbs.twimg.com/profile_images/585880676693454849/2eAO2_hC.jpg', None)) 
            valTab.append(CDisplayListItem('Kłodzka TV', 'http://www.tvklodzka.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCOBLslh96FyyppmaYaJDwyQ/live'], 'klodzka', 'https://d-nm.ppstatic.pl/k/r/46/d7/4c227342bda20_o.jpg', None)) 
-           #valTab.append(CDisplayListItem('Teletop Sudety TV', 'http://www.tvts.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC6jExnerSegVwurjdxHe2wg/live'], 'teletop', 'http://www.tvts.pl/wp-content/uploads/2015/03/1.jpg', None)) 
            valTab.append(CDisplayListItem('Zgorzelec TVT', 'http://www.tvtzgorzelec.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvtzgorzelec.pl/index.php/live', 1)], 'tvt', 'http://www.tvtzgorzelec.pl/images/TVT-mini.png', None)) 
            valTab.append(CDisplayListItem('Gorlice TV', 'http://gorlice.tv', CDisplayListItem.TYPE_CATEGORY, ['http://gorlice.tv/%C2%A0'], 'gorlice', 'http://gorlice.tv/static/gfx/service/gorlicetv/logo.png?96eb5', None)) 
            valTab.append(CDisplayListItem('Stella TVK', 'http://www.tvkstella.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvkstella.pl/live_tv', 1)], 'stella', 'http://www.tvkstella.pl/img/logo.png', None)) 
            valTab.append(CDisplayListItem('Narew TV', 'http://www.narew.info', CDisplayListItem.TYPE_CATEGORY, ['http://www.narew.info/streams/single/1'], 'narew', 'https://pbs.twimg.com/profile_images/684831832307810306/M9KmKBse_400x400.jpg', None)) 
-           #valTab.append(CDisplayListItem('Pomorska TV', 'http://www.pomorska.tv/livestream', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.pomorska.tv/livestream', 1)], 'pomorska', 'http://www.pomorska.tv/templates/pomorskatv/img/pomorska-tv-logo.png', None)) 
+           #valTab.append(CDisplayListItem('Pomorska TV', 'http://www.pomorska.tv/livestream', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://telewizja.pomorska.tv/livestream', 1)], 'pomorska', 'http://telewizja.pomorska.tv/templates/pomorskatv/img/pomorska-tv-logo.png', None)) 
            valTab.append(CDisplayListItem('WP1 TV', 'WP1 TV', CDisplayListItem.TYPE_CATEGORY, ['https://av-cdn-2.wpimg.pl/tv24/ngrp:wp1/chunklist_.m3u8'], 'wp1', 'http://telewizja-cyfrowa.com/wp-content/uploads/2016/09/wp1-logo.png', None)) 
            valTab.append(CDisplayListItem('Master TV', 'http://www.tv.master.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tv.master.pl/tv_online.php'], 'master', 'http://www.tv.master.pl/grafika/TV_Master2.png', None))
            valTab.append(CDisplayListItem('Opoka TV', 'http://opoka.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.popler.tv/embed/player.php?user=Opokatv&popler=1&kody_code='], 'opoka', 'http://opoka.tv/wp-content/uploads/2016/10/OPTV2016weblgtp1bc.png', None)) 
            valTab.append(CDisplayListItem('Sfera TV', 'http://www.sferatv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.sferatv.pl/sferalive/_definst_/mp4:live3', 0)], 'sfera', 'http://www.sferatv.pl/images/logo_www.png', None)) 
-           valTab.append(CDisplayListItem('EO TV', 'http://eotv.de/', CDisplayListItem.TYPE_CATEGORY, ['http://eotv.de/'], 'eotv', 'http://eotv.de/wp-content/uploads/2015/12/Cranberry-Logo.png', None))
            #valTab.append(CDisplayListItem('Kamery Ptaki w gniazdach na żywo', 'Ptaki w gniazdach na żywo', CDisplayListItem.TYPE_CATEGORY, [''], 'ptaki', 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
            valTab.append(CDisplayListItem('Kamery Toya GO', 'https://go.toya.net.pl/25', CDisplayListItem.TYPE_CATEGORY, ['https://go.toya.net.pl/25'], 'toyago', 'https://go.toya.net.pl/public/images/top_menu/logo-4.png?t=1494325022', None)) 
            valTab.append(CDisplayListItem('Podkarpacie TV', 'http://podkarpacielive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://podkarpacielive.tv'], 'podkarpacie', 'http://podkarpacielive.tv/wp-content/themes/podkarpackielivetv/images/logo.png', None)) 
@@ -221,12 +222,9 @@ class Host:
            valTab.append(CDisplayListItem('TRT PL', 'http://www.trt.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://www.trt.pl/'], 'trt', 'http://www.trt.pl/images/logo-new.png', None))
            valTab.append(CDisplayListItem('Toruń TV', 'http://www.tvtorun.net/', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvtorun.net/'], 'toruntv', 'http://www.tvtorun.net/public/img/new/logo.png', None))
            valTab.append(CDisplayListItem('Stream - Nadajemy TV', 'http://nadajemy.tv', CDisplayListItem.TYPE_CATEGORY, ['http://nadajemy.tv/api/api.php?method=getChannels'], 'nadajemy', 'http://www.tetex.com/wp-content/uploads/2015/11/Fotolia_92836261_Subscription_Monthly_M.jpg', None))
-           valTab.append(CDisplayListItem('Stream - POLAND', 'http://civeci.com/POLAND.txt', CDisplayListItem.TYPE_CATEGORY, ['http://civeci.com/POLAND.txt'], 'POLAND-STREAMS', 'http://www.gizycko.pl/data/multimedia2/jpg/6733.jpg', None))
-           valTab.append(CDisplayListItem('Stream - EUROPA', 'http://civeci.com/EUROPA.txt', CDisplayListItem.TYPE_CATEGORY, ['http://civeci.com/EUROPA.txt'], 'POLAND-STREAMS', 'http://www.gizycko.pl/data/multimedia2/jpg/6733.jpg', None))
            valTab.append(CDisplayListItem('Kamery Ośrodek Górnik - Łeba', 'http://gornik.pl/kamery.php', CDisplayListItem.TYPE_CATEGORY, ['http://gornik.pl/kamery.php'], 'gornik', 'http://gornik.pl/grafika/naglowek.png', None))
-           valTab.append(CDisplayListItem('WTK Play - Poznań', 'http://wtkplay.pl/live', CDisplayListItem.TYPE_CATEGORY, ['http://wtkplay.pl/live'], 'wtk', 'http://wtkplay.pl/graphic/header/wtkplay_logo.png', None))
+           #valTab.append(CDisplayListItem('WTK Play - Poznań', 'http://wtkplay.pl/live', CDisplayListItem.TYPE_CATEGORY, ['http://wtkplay.pl/live'], 'wtk', 'http://wtkplay.pl/graphic/header/wtkplay_logo.png', None))
            valTab.append(CDisplayListItem('Lech TV', 'http://lech.tv/live', CDisplayListItem.TYPE_CATEGORY, ['http://lech.tv/program'], 'lechtv', 'http://lech.tv/graphics_new/all/lechtv_logo_top.png', None))
-           valTab.append(CDisplayListItem('Euronews DE', 'http://de.euronews.com/live', CDisplayListItem.TYPE_CATEGORY, ['http://de.euronews.com/api/watchlive.json'], 'euronewsde', 'http://www.euronews.com/images/fallback.jpg', None))
            valTab.append(CDisplayListItem('Kamery WLKP24', 'http://wlkp24.info/kamery/', CDisplayListItem.TYPE_CATEGORY, ['http://wlkp24.info/kamery/'], 'wlkp24', 'http://archiwum.wlkp24.info/static/img/squarelogo400.jpg', None)) 
            valTab.append(CDisplayListItem('BG-Gledai TV', 'http://www.bg-gledai.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.bg-gledai.tv'], 'gledai', 'http://www.bg-gledai.tv/img/newlogo.png', None)) 
            valTab.append(CDisplayListItem('Stream - Goldvod', 'Goldvod', CDisplayListItem.TYPE_CATEGORY, ['http://api.j.pl/goldvod'], 'goldvod', 'http://goldvod.tv/assets/images/logo.png', None))
@@ -234,13 +232,16 @@ class Host:
            valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/kamerki/'], 'lookcam', 'https://r.cdn.cloudbitly.com/lookcam/static/images/logo_lookcam_oognet.png', None)) 
            valTab.append(CDisplayListItem('Fokus TV', 'http://www.fokus.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.fokus.tv'], 'fokus', 'http://www.fokus.tv/assets/gfx/logo-new.png', None)) 
            valTab.append(CDisplayListItem('News12 Long Island', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
+           valTab.append(CDisplayListItem('Megakanał 24', '', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.rmf24.pl/fakty/news-megakanal-24-najwiekszy-kanal-w-internecie-i-najcalsza-prawd,nId,2453999', 1)], 'megakanal', 'http://i.iplsc.com/megakanal24/0006Y5P256EH9SB5-C123-F4.jpg', None)) 
+           valTab.append(CDisplayListItem('Deutsch', 'Deutsch', CDisplayListItem.TYPE_CATEGORY, [''], 'Deutsch', '', None)) 
+           valTab.append(CDisplayListItem('Stream - MP3', 'http://musicmp3.ru', CDisplayListItem.TYPE_CATEGORY, ['http://musicmp3.ru/artists.html'], 'musicmp3-cat', 'https://musicmp3.ru/i/logo.png', None)) 
 
            valTab.sort(key=lambda poz: poz.name)
            valTab.insert(0,CDisplayListItem('Pobierz info o IPTV Player', 'Wersja hostinfoversion: '+self.infoversion, CDisplayListItem.TYPE_CATEGORY, ['https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/commits/master'], 'info', 'http://www.cam-sats.com/images/forumicons/ip.png', None)) 
            if self.infoversion <> self.inforemote and self.inforemote <> "0.0.0":
               valTab.insert(0,CDisplayListItem('---UPDATE---','UPDATE MENU',        CDisplayListItem.TYPE_CATEGORY,           [''], 'UPDATE',  '', None)) 
            if config.plugins.iptvplayer.religia.value:     
-              valTab.append(CDisplayListItem('Piotr Natanek Ogłoszenia bieżące', 'http://www.christusvincit-tv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.christusvincit-tv.pl/articles.php?article_id=120', 1)], 'religia', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
+              valTab.append(CDisplayListItem('Piotr Natanek Ogłoszenia bieżące', 'http://www.christusvincit-tv.pl', CDisplayListItem.TYPE_CATEGORY, ['http://christusvincit-tv.pl/articles.php?article_id=236'], 'religia', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
               valTab.append(CDisplayListItem('Piotr Natanek Live', 'http://www.christusvincit-tv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://185.48.128.148/hls playpath=test swfUrl=http://mediaserwer3.christusvincit-tv.pl/p/100/sp/10000/flash/kdp3/v3.9.9/kdp3.swf pageUrl=http://christusvincit-tv.pl/viewpage.php?page_id=1 live=1', 0)], 'religia', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
               valTab.append(CDisplayListItem('Piotr Natanek Kazanie', 'http://christusvincit-tv.pl', CDisplayListItem.TYPE_CATEGORY, ['http://christusvincit-tv.pl/viewpage.php?page_id=1'], 'religia', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
               valTab.append(CDisplayListItem('Sanktuarium Kraków-Łagiewniki', 'https://www.faustyna.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.faustyna.pl/zmbm/transmisja-on-line/'], 'faustyna', 'http://milosierdzie.pl/images/menu-obrazki/obraz.png', None)) 
@@ -248,6 +249,8 @@ class Host:
               valTab.append(CDisplayListItem('Parafia Skoczów   (exteplayer3)', 'http://www.kamera.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video1'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
               valTab.append(CDisplayListItem('Parafia Skoczów 2   (exteplayer3)', 'http://www.kamera2.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/pip_video2'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/templates/img/logo.png', None)) 
               valTab.append(CDisplayListItem('Kaplicówka - Sanktuarium Św. Jana Sarkandra', 'http://kamera.pompejanska.pl/', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://80.51.121.254:5119/live/kaplicowka', 0)], 'kaplicowka', 'http://www.polskaniezwykla.pl/pictures/original/278033.jpg', None))               #valTab.append(CDisplayListItem('Parafia Górny Bor', 'http://parafiagornybor.pl/kamera-online', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://parafiagornybor.pl/kamera-online', 1)], 'gornybor', 'http://www.parafiagornybor.ox.pl/images/slider/slide_02.jpg', None)) 
+              valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 1  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy1'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
+              valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 2  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy2'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
               valTab.append(CDisplayListItem('Cieszyn - Parafia Św. Marii Magdaleny', 'http://parafiamagdaleny.pl', CDisplayListItem.TYPE_CATEGORY, ['http://parafiamagdaleny.pl/parafia/transmisja-wideo'], 'magdalena', 'http://www.polskiekrajobrazy.pl/images/stories/big/50261.jpg', None)) 
               valTab.append(CDisplayListItem('Parafia pw Narodzenia Najświętszej Maryi Panny w Piwnicznej - Zdrój', 'http://www.parafia.piwniczna.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.parafia.piwniczna.com/s48-tv---online.html'], 'piwniczna', 'http://www.parafia.piwniczna.com/images/panel_boczny.jpg', None)) 
               valTab.append(CDisplayListItem('Dąbrowa Tarnowska Ołtarz', 'Parafia Najświętszej Maryi Panny Szkaplerznej', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://149.202.72.222:1936/live playpath=c2 swfUrl=http://www.alarmserwis.eu/components/com_hdflvplayer/hdflvplayer/hdplayer.swf pageUrl=http://alarmserwis.eu/dt/oltarz.html', 0)], '', 'http://www.dt.diecezja.tarnow.pl/wp-content/gallery/kosciol/dsc_0305.jpg', None)) 
@@ -261,7 +264,6 @@ class Host:
               valTab.append(CDisplayListItem('TV Lourdes', 'https://www.lourdes-france.org', CDisplayListItem.TYPE_CATEGORY, ['https://www.lourdes-france.org/en/tv-lourdes'], 'lourdes', 'http://www.fronda.pl/site_media/media/uploads/maryja_lourdes.jpg', None)) 
               valTab.append(CDisplayListItem('CTV Watykan', 'http://www.ctv.va', CDisplayListItem.TYPE_CATEGORY, ['http://www.ctv.va/content/ctv/it/livetv.html'], 'ctv', 'http://www.ctv.va/content/ctv/it/_jcr_content/logo.img.png/1383824514179.png', None)) 
               valTab.append(CDisplayListItem('Basilica of St. Francis in Assisi', 'Basilica of St. Francis in Assisi', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.skylinewebcams.com/en/webcam/italia/umbria/perugia/basilica-san-francesco-assisi.html', 1)], '', 'https://ladybudd.files.wordpress.com/2012/08/basilica-of-st-francis-of-assisi.jpg', None)) 
-              #valTab.append(CDisplayListItem('Chicago - Parafia św. Brunona', 'http://mass-online.org', CDisplayListItem.TYPE_CATEGORY, ['http://mass-online.org/st-brunos-church-chicago-il-usa/'], 'brunon', 'http://www.mszaswieta.com/UserContent/Church-Full-Size/parafia-swietego-brunona-chicago.jpg', None)) 
               valTab.append(CDisplayListItem('Wilno - Sanktuarium Miłosierdzia Bożego', 'http://msza-online.net/sanktuarium-milosierdzia-bozego-wilno-litwa/', CDisplayListItem.TYPE_CATEGORY, ['http://msza-online.net/sanktuarium-milosierdzia-bozego-wilno-litwa/'], 'wilno', 'http://www.faustyna.eu/IMG_1919aa.jpg', None)) 
               valTab.append(CDisplayListItem('Edmonton, Kanada - Parafia Różańca Świętego', 'http://msza-online.net', CDisplayListItem.TYPE_CATEGORY, ['http://msza-online.net/parafia-rozanca-swietego-edmonton-kanada/'], 'edmonton', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Holy_Rosary_Church_Edmonton_Alberta_Canada_01A.jpg/1200px-Holy_Rosary_Church_Edmonton_Alberta_Canada_01A.jpg', None)) 
               valTab.append(CDisplayListItem('TV Medziugorje', 'http://www.centrummedjugorje.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.centrummedjugorje.pl/PL-H516/video.html'], 'medju', 'http://www.medjugorje.org.pl/images/medjugorje-2.jpg', None)) 
@@ -308,6 +310,16 @@ class Host:
             mergeurl = decorateUrl("merge://audio_url|video_url", {'audio_url':Aurl, 'video_url':Vurl, 'prefered_merger':'MP4box'}) 
             printDBG( 'Host mergeurl:  '+mergeurl )
             valTab.append(CDisplayListItem('Parafia Skoczów ', Vurl+'|'+Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', mergeurl, 0)], 0, '', None))
+            return valTab 
+        if 'swjerzy' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            Aurl = 'rtmp://80.51.121.254:5119/live/jerzy_sound'
+            Vurl = urlparser.decorateUrl(url, {'Referer': 'http://www.swjerzycieszyn.ox.pl/1,strona-glowna.html?p=kamera'})
+            mergeurl = decorateUrl("merge://audio_url|video_url", {'audio_url':Aurl, 'video_url':Vurl, 'prefered_merger':'MP4box'}) 
+            printDBG( 'Host mergeurl:  '+mergeurl )
+            valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego ', Vurl+'|'+Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', mergeurl, 0)], 0, '', None))
+            valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego tylko video', Vurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Vurl, 0)], 0, '', None))
+            valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego tylko audio', Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Aurl, 0)], 0, '', None))
             return valTab 
 
         if 'gledai' == name:
@@ -478,6 +490,20 @@ class Host:
                     desc = self.cm.ph.getSearchGroups(data2, '''<p>([^>]+?)<''', 1, True)[0]
                     valTab.append(CDisplayListItem(nazwa, desc,  CDisplayListItem.TYPE_ARTICLE, [CUrlItem('', url, 0)], 0, image, None))
             return valTab  
+
+        if 'Deutsch' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            valTab.append(CDisplayListItem('Deutsche Welle Live', 'Deutsche Welle Live', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCMIgOXM2JEQ2Pv2d0_PVfcg/live'], 'dw', 'https://yt3.ggpht.com/--ZKsQsVYm2c/AAAAAAAAAAI/AAAAAAAAAAA/f0s4KdtP2Cg/s100-c-k-no-mo-rj-c0xffffff/photo.jpg', None))
+            valTab.append(CDisplayListItem('EO TV', 'http://eotv.de/', CDisplayListItem.TYPE_CATEGORY, ['http://eotv.de/'], 'eotv', 'http://eotv.de/wp-content/uploads/2015/12/Cranberry-Logo.png', None))
+            valTab.append(CDisplayListItem('Euronews DE', 'http://de.euronews.com/live', CDisplayListItem.TYPE_CATEGORY, ['http://de.euronews.com/api/watchlive.json'], 'euronewsde', 'http://www.euronews.com/images/fallback.jpg', None))
+            return valTab
+
+        if 'mp3' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            #valTab.append(CDisplayListItem('Artists', 'Artists', CDisplayListItem.TYPE_CATEGORY, ['http://musicmp3.ru/artists.html'], 'musicmp3-cat', '', None))
+            #valTab.append(CDisplayListItem('Top Albums', 'Top Albums', CDisplayListItem.TYPE_CATEGORY, ['http://musicmp3.ru/genres.html'], 'musicmp3-cat', '', None))
+            #valTab.append(CDisplayListItem('New Albums', 'New Albums', CDisplayListItem.TYPE_CATEGORY, ['http://musicmp3.ru/new_albums.html'], 'musicmp3-cat', '', None))
+            return valTab
 #############################################
         if len(url)>8:
            query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
@@ -573,6 +599,17 @@ class Host:
                     valTab.append(CDisplayListItem('Zabrze TV    '+Name, 'Zabrze TV    '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://tvzabrze.pl/assets/images/logo.png', None))
             return valTab 
 
+        if 'dw' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            videoUrls = self.getLinksForVideo(url)
+            if videoUrls:
+                for item in videoUrls:
+                    Url = item['url']
+                    Name = item['name']
+                    printDBG( 'Host name:  '+Name )
+                    valTab.append(CDisplayListItem('Deutsche Welle Live    '+Name, 'Deutsche Welle Live    '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://yt3.ggpht.com/--ZKsQsVYm2c/AAAAAAAAAAI/AAAAAAAAAAA/f0s4KdtP2Cg/s100-c-k-no-mo-rj-c0xffffff/photo.jpg', None))
+            return valTab 
+
         if 'tvsudecka' == name:
             printDBG( 'Host listsItems begin name='+name )
             link = re.search('<iframe\ssrc="(http[s]?://www.youtube.com.*?)"', data, re.S|re.I)
@@ -605,25 +642,6 @@ class Host:
                     Name = item['name']
                     printDBG( 'Host name:  '+Name )
                     valTab.append(CDisplayListItem('TV Kłodzka  '+Name, 'TV Kłodzka  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://d-nm.ppstatic.pl/k/r/46/d7/4c227342bda20_o.jpg', None))
-            return valTab 
-
-        if 'teletop' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            #youtube_url = self.cm.ph.getSearchGroups(data, '''og:video:url" content=['"](https://www.youtube.com/embed[^"^']+?)['"]''')[0] 
-            #try: data = self.cm.getURLRequestData({'url': youtube_url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
-            #except:
-            #    printDBG( 'Host listsItems ERROR' )
-            #    return valTab
-            #printDBG( 'Host listsItems data youtube '+data )
-            #youtube_url = self.cm.ph.getSearchGroups(data, '''href=['"](http://www.youtube.com/watch[^"^']+?)['"]''')[0] 
-            videoUrls = self.getLinksForVideo(url)
-            if videoUrls:
-                for item in videoUrls:
-                    Url = item['url']
-                    Name = item['name']
-                    printDBG( 'Host Url:  '+Url )
-                    printDBG( 'Host name:  '+Name )
-                    valTab.append(CDisplayListItem('Teletop Sudety    '+Name, 'Teletop Sudety    '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.tvts.pl/wp-content/uploads/2015/03/1.jpg', None))
             return valTab 
 
         if 'gorlice' == name:
@@ -775,8 +793,8 @@ class Host:
                if phUrl.startswith('//'): phUrl = 'http:' + phUrl
                printDBG( 'Host listsItems phUrl: '  +phUrl )
                phTitle = phUrl.split('.')[-1]
-               if 'mpd' in phUrl:
-                  valTab.append(CDisplayListItem(phTitle, phTitle,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 0)], 0, 'http://www.tvtorun.net/public/img/new/logo.png', None))
+               #if 'mpd' in phUrl:
+               #   valTab.append(CDisplayListItem(phTitle, phTitle,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 0)], 0, 'http://www.tvtorun.net/public/img/new/logo.png', None))
                if 'm3u8' in phUrl:
                   if self.cm.isValidUrl(phUrl): 
                      tmp = getDirectM3U8Playlist(phUrl)
@@ -874,20 +892,6 @@ class Host:
                     valTab.append(CDisplayListItem('Cieszyn  rtmp', 'Cieszyn  rtmp',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', rtmp_url, 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
                 f4m_url = link.group(1).replace('embed.html?dvr=false','manifest.f4m')
                 valTab.append(CDisplayListItem('Cieszyn  f4m', 'Cieszyn  f4m',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', f4m_url, 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
-            return valTab 
-
-        if 'brunon' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            link = re.search('(https://www.youtube.com/embed/.*?)"', data, re.S|re.I)
-            if link:
-                videoUrls = self.getLinksForVideo(link.group(1))
-                if videoUrls:
-                    for item in videoUrls:
-                        Url = item['url']
-                        Name = item['name']
-                        printDBG( 'Host Url:  '+Url )
-                        printDBG( 'Host name:  '+Name )
-                        valTab.append(CDisplayListItem('Parafia św. Brunona  '+Name, 'Parafia św. Brunona  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.polishnews.com/art_pics/A_Brunona.jpg', None))
             return valTab 
 
         if 'wilno' == name:
@@ -1104,27 +1108,15 @@ class Host:
             for item in data:
                 Title = self.cm.ph.getSearchGroups(item, '''title-text">([^"^']+?)<''', 1, True)[0] 
                 Url = self.cm.ph.getSearchGroups(item, '''<div id=['"]([^"^']+?)['"]''', 1, True)[0] 
-                valTab.append(CDisplayListItem(Title, Title, CDisplayListItem.TYPE_CATEGORY, [Url], 'wlkp24-clips', '', None)) 
-            return valTab
-        if 'wlkp24-clips' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            source = '"#'+url+'"'
-            query_data = {'url': 'http://wlkp24.info/kamery/', 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-            try:
-                data = self.cm.getURLRequestData(query_data)
-            except:
-                printDBG( 'Host listsItems ERROR' )
-                return valTab
-            data = self.cm.ph.getDataBeetwenMarkers(data, source, '</script>', False)[1]
-            url_m3u8 = self.cm.ph.getSearchGroups(data, '''src:  ['"]([^"^']+?)['"]''', 1, True)[0] 
-            url_rtmp = self.cm.ph.getSearchGroups(data, '''rtmp: ['"]([^"^']+?)['"]''', 1, True)[0] 
-            if url_m3u8:
-                if self.cm.isValidUrl(url_m3u8): 
-                    tmp = getDirectM3U8Playlist(url_m3u8)
-                    for item in tmp:
-                        valTab.append(CDisplayListItem(str(item['name']), str(item['url']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', str(item['url']), 0)], 0, '', None))
-            if url_rtmp:
-                valTab.append(CDisplayListItem('rtmp', url_rtmp,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url_rtmp, 0)], 0, '', None))
+                url_m3u8 = self.cm.ph.getSearchGroups(item, '''src:  ['"]([^"^']+?)['"]''', 1, True)[0] 
+                if url_m3u8:
+                    if self.cm.isValidUrl(url_m3u8): 
+                        tmp = getDirectM3U8Playlist(url_m3u8)
+                        for item in tmp:
+                            valTab.append(CDisplayListItem(Title, str(item['url']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', str(item['url']), 0)], 0, '', None))
+                #url_rtmp = self.cm.ph.getSearchGroups(item, '''rtmp: ['"]([^"^']+?)['"]''', 1, True)[0]
+                #if url_rtmp:
+                #    valTab.append(CDisplayListItem(Title, url_rtmp,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url_rtmp, 0)], 0, '', None))
             return valTab
 
         if 'faustyna' == name:
@@ -1167,6 +1159,7 @@ class Host:
                 return ''
             #printDBG( 'Host listsItems data2'+data )
             link = re.search('"items":(.*?),"messages":', data, re.S|re.I)
+            x = 0
             if link: 
                 baza = link.group(1)
                 printDBG( 'Host listsItems baza: '+baza )
@@ -1180,7 +1173,7 @@ class Host:
                     try: data = self.cm.getURLRequestData({'url': api, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True})
                     except:
                         printDBG( 'Host listsItems ERROR' )
-                        return ''
+                        return valTab
                     printDBG( 'Host listsItems data3'+data )
                     id = self.cm.ph.getSearchGroups(data, '''"videoCodecId":"avc1","status":2,"id":['"]([^"^']+?)['"]''', 1, True)[0] 
                     phUrl = phUrl.replace('raw/entry_id','serveFlavor/entryId').replace('version/0','v/2/flavorId/')
@@ -1189,7 +1182,11 @@ class Host:
                         printDBG( 'Host listsItems downloadUrl: '  +phUrl )
                         printDBG( 'Host listsItems name: '+phTitle ) 
                         printDBG( 'Host listsItems id: '+id ) 
+                        x += 1
+                        if x > config.plugins.iptvplayer.natanek.value : return valTab
                         valTab.append(CDisplayListItem(decodeNat2(phTitle), decodeNat2(phTitle),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 0)], 0, '', None))
+            return valTab
+
         if 'podkarpacie' == name:
             printDBG( 'Host listsItems begin name='+name )
             image = 'http://podkarpacielive.tv/wp-content/themes/podkarpackielivetv/images/logo.png'
@@ -1205,7 +1202,6 @@ class Host:
         if 'podkarpacie-kategorie' == name:
             printDBG( 'Host listsItems begin name='+name )
             next = self.cm.ph.getSearchGroups(data, '''next page-numbers" href=['"]([^"^']+?)['"]''', 1, True)[0]
-
             data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videos">', 'footer', False)[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<img', '</article>')
             for item in data:
@@ -1271,64 +1267,92 @@ class Host:
                 #valTab.sort(key=lambda poz: poz.name)
             return valTab
 
-        if 'POLAND-STREAMS' == name:
+        if 'musicmp3-cat' == name:
             printDBG( 'Host listsItems begin name='+name )
-            import codecs
-            tmpDir = GetTmpDir() 
-            source = os_path.join(tmpDir, 'POLAND.txt') 
-            dest = os_path.join(tmpDir , '') 
-            output = open(source,'wb')
-            query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-            try:
-                output.write(self.cm.getURLRequestData(query_data))
-                output.close()
-                printDBG( 'pobieranie' )
+            self.mainurl = 'http://musicmp3.ru'
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a class="menu_sub__link"', '</a>')
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''>([^>]+?)<''', 1, True)[0].strip()
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0]
+                if Url.startswith('/'): Url = self.mainurl + Url
+                printDBG( 'Host Title:  '+Title )
+                printDBG( 'Host Url:  '+Url )
+                valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title), CDisplayListItem.TYPE_CATEGORY, [Url], 'musicmp3-art', '', None)) 
+            return valTab
+        if 'musicmp3-art' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            self.COOKIEFILE = os_path.join(GetCookieDir(), 'musicmp3.cookie')
+            host = 'AppleWebKit/<WebKit Rev>'
+            self.header = {'Referer': 'http://musicmp3.ru/', 'User-Agent': host, 'Accept': 'audio/webm,audio/ogg,udio/wav,audio/*;q=0.9,application/ogg;q=0.7,video/*;q=0.6,*/*;q=0.5', 'Connection': 'keep-alive'}   
+            try: data = self.cm.getURLRequestData({ 'url': url, 'header': self.header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE, 'use_post': False, 'return_data': True })
             except:
-                printDBG( 'Blad pobierania' )
-                return valTab
-            try:
-                with codecs.open(source, 'r') as fp:
-                    lineNum = 0
-                    while True:
-                        line = fp.readline()
-                        line = line.strip()
-                        Name = str(line.split(',')[-2]).strip()
-                        Url = str(line.split(',')[-1])
-                        if 'mp4' in Url: Name = Name+'   (mp4)'
-                        if 'm3u8' in Url: Name = Name+'   (m3u8)'
-                        if '/udp/' in Url: Name = Name+'   (udp)'
-                        if 'wmv' in Url: Name = Name+'   (wmv)'
-                        if '.ts' in Url: 
-                            Name = Name+'   (ts -> m3u8)'
-                            Url = Url.replace('.ts','.m3u8')
-                        printDBG( 'Host name:  '+Name )
-                        printDBG( 'Host Url:  '+Url )
-                        if Url:
-                            if 'pvr.rete.netforms.cz' in Url: Url =''
-                            if 'gogo.jksw.cz' in Url: Url =''
-                            if 'fms.zulu.mk' in Url: Url =''
-                            if 'clientportalpro.com' in Url: Url =''
-                            if 'redcdn.pl' in Url: Url =''
-
-
-                            if 'PART' in Name: Url =''
-                        if Url:
-                            if Url.startswith('http'):
-                                valTab.append(CDisplayListItem(Name, Url,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://previews.123rf.com/images/sarahdesign/sarahdesign1403/sarahdesign140302179/26994295-live-stream-icon-Stock-Vector.jpg', None))
-                            elif Url.startswith('rtmp://'):
-                                valTab.append(CDisplayListItem(Name, Url,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://previews.123rf.com/images/sarahdesign/sarahdesign1403/sarahdesign140302179/26994295-live-stream-icon-Stock-Vector.jpg', None))
-                            elif Url.startswith('rtps://'):
-                                valTab.append(CDisplayListItem(Name, Url,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://previews.123rf.com/images/sarahdesign/sarahdesign1403/sarahdesign140302179/26994295-live-stream-icon-Stock-Vector.jpg', None))
-                            lineNum += 1
-                fp.close()
+                printDBG( 'Host getResolvedURL query error url: '+url )
+                return ''
+            printDBG( 'Host listsItems data1: '+data )
+            mainurl = 'http://musicmp3.ru'
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a class="menu_sub__link"', '</a>')
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''>([^>]+?)<''', 1, True)[0].strip()
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0]
+                if Url.startswith('/'): Url = mainurl + Url
+                printDBG( 'Host Title:  '+Title )
+                printDBG( 'Host Url:  '+Url )
+                valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title), CDisplayListItem.TYPE_CATEGORY, [Url], 'musicmp3-wyk', '', None)) 
+            return valTab
+        if 'musicmp3-wyk' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            try: data = self.cm.getURLRequestData({ 'url': url, 'header': self.header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE, 'use_post': False, 'return_data': True })
             except:
-                printDBG( 'Koniec' )
-                if os_path.exists(source):
-                    printDBG( 'remove '+source )
-                    os_remove(source)
-                valTab.sort(key=lambda poz: poz.name)
-                valTab.insert(0,CDisplayListItem("--- info:   Load "+str(lineNum)+" lines ---", url, CDisplayListItem.TYPE_CATEGORY,[], '', '',None))
-            return valTab 
+                printDBG( 'Host getResolvedURL query error url: '+url )
+                return ''
+            printDBG( 'Host listsItems data1: '+data )
+            mainurl = 'http://musicmp3.ru'
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a class="small_list__link"', '</a>')
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''>([^>]+?)<''', 1, True)[0].strip()
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0]
+                if Url.startswith('/'): Url = mainurl + Url
+                printDBG( 'Host Title:  '+Title )
+                printDBG( 'Host Url:  '+Url )
+                valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title), CDisplayListItem.TYPE_CATEGORY, [Url], 'musicmp3-album', '', None)) 
+            return valTab
+        if 'musicmp3-album' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            try: data = self.cm.getURLRequestData({ 'url': url, 'header': self.header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE, 'use_post': False, 'return_data': True })
+            except:
+                printDBG( 'Host getResolvedURL query error url: '+url )
+                return ''
+            printDBG( 'Host listsItems data1: '+data )
+            mainurl = 'http://musicmp3.ru'
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="album_report">', '</ul></div>')
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''', 1, True)[0].replace('mp3', '')
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0]
+                self.Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                rok = self.cm.ph.getSearchGroups(item, '''date">([^>]+?)<''', 1, True)[0]
+                if Url.startswith('/'): Url = mainurl + Url
+                printDBG( 'Host Title:  '+Title )
+                printDBG( 'Host Url:  '+Url )
+                valTab.append(CDisplayListItem(decodeHtml(Title)+'   ('+rok+')', decodeHtml(Title)+'   ('+rok+')', CDisplayListItem.TYPE_CATEGORY, [Url], 'musicmp3-utwory', self.Image, None)) 
+            return valTab
+        if 'musicmp3-utwory' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            try: data = self.cm.getURLRequestData({ 'url': url, 'header': self.header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE, 'use_post': False, 'return_data': True })
+            except:
+                printDBG( 'Host getResolvedURL query error url: '+url )
+                return ''
+            printDBG( 'Host listsItems data1: '+data )
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<tr class="song"', '</tr>')
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''"name">([^>]+?)<''', 1, True)[0].strip()
+                Url = self.cm.ph.getSearchGroups(item, '''rel=['"]([^"^']+?)['"]''', 1, True)[0]
+                Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                Url = 'https://listen.musicmp3.ru/'+Url
+                printDBG( 'Host Title:  '+Title )
+                printDBG( 'Host Url:  '+Url )
+                Url = urlparser.decorateUrl(Url, self.header)
+                valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, '', None))
+            return valTab
 
         if 'wtk' == name:
             printDBG( 'Host listsItems begin name='+name )
@@ -1727,12 +1751,14 @@ class Host:
         printDBG( 'Host getResolvedURL data'+data )
 
         if url == 'http://tvtoya.pl/live':
-           printDBG( 'Host getResolvedURL mainurl: '+url )
-           link = re.search('data-stream="(.*?)"', data, re.S|re.I)
-           if link: 
-              videoUrl = link.group(1).replace("index","03")
-              printDBG( 'Host link: '+videoUrl )
-              return videoUrl
+            printDBG( 'Host getResolvedURL mainurl: '+url )
+            videoUrl = self.cm.ph.getSearchGroups(data, '''data-stream=['"]([^"^']+?)['"]''', 1, True)[0]
+            if self.cm.isValidUrl(videoUrl): 
+                tmp = getDirectM3U8Playlist(videoUrl)
+                for item in tmp:
+                    printDBG( 'Host item: '+str(item) )
+                return urlparser.decorateUrl(item['url'], {'User-Agent': 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36'})
+
 
         if url.startswith('https://go.toya.net.pl'):
            printDBG( 'Host getResolvedURL mainurl: '+url )
@@ -1826,20 +1852,22 @@ class Host:
               videoUrl = '%s playpath=%s swfUrl=%s pageUrl=%s live=1' % (rtmp, playpatch, swfUrl, url)
               return videoUrl
 
-        if url.startswith('http://www.pomorska.tv'):
-           printDBG( 'Host getResolvedURL mainurl: '+url )
-           link = re.search('file: "(.*?)"', data, re.S|re.I)
-           if link: 
-              videoUrl = 'http://www.pomorska.tv'+link.group(1)
-              query_data = {'url': videoUrl, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-              try:
-                  data = self.cm.getURLRequestData(query_data)
-              except:
-                  return ''
-              #printDBG( 'Host listsItems data2'+data )
-              link = re.search('base="(.*?)"', data, re.S|re.I)
-              if link:
-                 return link.group(1)+' playpath=livestream_1 live=1 swfUrl=http://www.pomorska.tv/player/jwplayer.flash.swf pageUrl=http://www.pomorska.tv/livestream '
+        if url.startswith('http://telewizja.pomorska.tv'):
+            printDBG( 'Host getResolvedURL mainurl: '+url )
+            host = "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
+            link = self.cm.ph.getSearchGroups(data, '''file: ['"](/stream\.m3u8[^"^']+?)['"]''', 1, True)[0]
+            if link: 
+                videoUrl = 'http://telewizja.pomorska.tv'+link   
+                videoUrl = urlparser.decorateUrl(videoUrl, {'User-Agent': host})
+                query_data = {'url': videoUrl, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
+                try:
+                    data = self.cm.getURLRequestData(query_data)
+                except:
+                    printDBG( 'Host error: '+videoUrl )
+                    return ''
+                printDBG( 'Host listsItems data2'+data )
+                videoUrl = self.cm.ph.getSearchGroups(data, '''(http[^"^']+?m3u8)''', 1, True)[0]
+                return urlparser.decorateUrl(videoUrl, {'User-Agent': host, 'Referer': 'http://telewizja.pomorska.tv'})
 
         if url.startswith('http://nspjkluczbork.pl'):
            printDBG( 'Host getResolvedURL mainurl: '+url )
@@ -1884,6 +1912,11 @@ class Host:
                         return item['url']
             return link
 
+        if url.startswith('http://www.rmf24.pl'):
+            printDBG( 'Host getResolvedURL mainurl: '+url )
+            link = self.cm.ph.getSearchGroups(data, '''"src":['"]([^"^']+?mp4)['"]''', 1, True)[0].replace('\/','/')
+            return link.replace('v.iplsc.com','v-nocdn.iplsc.com')
+
         if url.startswith('https://www.youtube.com/embed'):
            printDBG( 'Host getResolvedURL mainurl: '+url )
            Url = self.cm.ph.getSearchGroups(data, '''['"](http://www.youtube.com/watch[^"^']+?)['"]''')[0] 
@@ -1900,6 +1933,8 @@ def decodeHtml(text):
 	text = text.replace('…  ...    …', '')
 	text = text.replace('  ...  ', '')
 	text = text.replace('&middot;', '')
+	text = text.replace('&amp;', '&')
+
 	return text	
 def decodeNat1(text):
 	text = text.replace('\u015a', '_')
@@ -1916,4 +1951,7 @@ def decodeNat2(text):
 	text = text.replace('\u017c', 'ż')
 	text = text.replace('\u0107', 'ć')
 	text = text.replace('\u0144', 'ń')
+	text = text.replace('\u0105', 'ą')
+	text = text.replace('\u0144', 'ń')
+
 	return text	

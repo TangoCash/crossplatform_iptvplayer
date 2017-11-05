@@ -179,30 +179,10 @@ class Youtube(CBaseHostClass):
                 
     def getLinksForVideo(self, cItem):
         printDBG("Youtube.getLinksForVideo cItem[%s]" % cItem)
-        url = cItem['url']
-        ytformats = config.plugins.iptvplayer.ytformat.value
-        maxRes    = int(config.plugins.iptvplayer.ytDefaultformat.value) * 1.1
-        dash      = config.plugins.iptvplayer.ytShowDash.value
-
-        if not url.startswith("http://") and not url.startswith("https://") :
-            url = 'http://www.youtube.com/' + url
-        tmpTab, dashTab = self.ytp.getDirectLinks(url, ytformats, dash, dashSepareteList = True)
-        
-        def __getLinkQuality( itemLink ):
-            tab = itemLink['format'].split('x')
-            return int(tab[0])
-        tmpTab = CSelOneLink(tmpTab, __getLinkQuality, maxRes).getSortedLinks()
-        if config.plugins.iptvplayer.ytUseDF.value and 0 < len(tmpTab):
-            tmpTab = [tmpTab[0]]
-        
-        videoUrls = []
-        for item in tmpTab:
-            url = strwithmeta(item['url'], {'youtube_id':item.get('id', '')})
-            videoUrls.append({'name': item['format'] + ' | ' + item['ext'] , 'url':url})
-        for item in dashTab:
-            url = strwithmeta(item['url'], {'youtube_id':item.get('id', '')})
-            videoUrls.append({'name': _("[dash] ") + item['format'] + ' | ' + item['ext'] , 'url':url})
-        return videoUrls
+        urlTab = self.up.getVideoLinkExt(cItem['url'])
+        if config.plugins.iptvplayer.ytUseDF.value and 0 < len(urlTab):
+            return [urlTab[0]]
+        return urlTab
         
     def getFavouriteData(self, cItem):
         printDBG('Youtube.getFavouriteData')

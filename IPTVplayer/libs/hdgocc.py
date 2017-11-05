@@ -68,7 +68,9 @@ class HdgoccParser():
         printDBG(seasonData)
         seasonData = re.compile('<option[^>]+?value="([0-9]+?)">([^<]+?)</option>').findall(seasonData)
         seasonMainUrl = self.cm.ph.getDataBeetwenMarkers(data, "$('#season').val();", '});', False)[1]
-        seasonMainUrl = self.cm.ph.getSearchGroups(seasonMainUrl, "var url = '([^']+?)'")[0] + '?season='
+        seasonMainUrl = self.cm.ph.getSearchGroups(seasonMainUrl, "var url = '([^']+?)'")[0]
+        if seasonMainUrl == '': seasonMainUrl = pageUrl.split('?', 1)[0]
+        seasonMainUrl += '?season='
         seasonMainUrl = self.getFullUrl(pageUrl, seasonMainUrl)
         
         for item in seasonData:
@@ -105,7 +107,9 @@ class HdgoccParser():
             episodeData = self.cm.ph.getDataBeetwenMarkers(data, 'id="episode"', '</select>', False)[1]
             episodeData = re.compile('<option[^>]+?value="([0-9]+?)">([^<]+?)</option>').findall(episodeData)
             episodeMainUrl = self.cm.ph.getDataBeetwenMarkers(data, "$('#episode').val();", '});', False)[1]
-            episodeMainUrl = self.cm.ph.getSearchGroups(episodeMainUrl, "var url = '([^']+?)'")[0] + '?season=' + str(seasonIdx) + '&episode='
+            episodeMainUrl = self.cm.ph.getSearchGroups(episodeMainUrl, "var url = '([^']+?)'")[0]
+            episodeMainUrl = seasonUrl.split('?', 1)[0]
+            episodeMainUrl += '?season=' + str(seasonIdx) + '&e='
             episodeMainUrl = self.getFullUrl(seasonUrl, episodeMainUrl)
             #int(item[0])
             idx = 1

@@ -68,9 +68,10 @@ class ArconaitvME(CBaseHostClass):
                              {'category':'search',            'title': _('Search'), 'search_item':True,},
                              {'category':'search_history',    'title': _('Search history'),            } 
                             ]
-    
+        self.proxyUrl = 'http://securefor.com/browse.php?u={0}&b=4&f=norefer'
+        
     def isProxyNeeded(self, url):
-        return 'arconai.tv' in url
+        return False #'arconai.tv' in url
         
     def getDefaulIcon(self, cItem=None):
         return self.getFullIconUrl(self.DEFAULT_ICON_URL)
@@ -80,9 +81,9 @@ class ArconaitvME(CBaseHostClass):
         if post_data != None: HTTP_HEADER['Content-Type'] = 'application/x-www-form-urlencoded'
         params.update({'header':HTTP_HEADER})
         if self.isProxyNeeded( url ):
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=240'.format(urllib.quote(url, ''))
+            proxy = self.proxyUrl.format(urllib.quote(url, ''))
             params['header']['Referer'] = proxy
-            params['header']['Cookie'] = 'flags=2e5;'
+            #params['header']['Cookie'] = 'flags=2e5;'
             url = proxy
         sts, data = self.cm.getPage(url, params, post_data)
         if sts and None == data:
@@ -92,17 +93,17 @@ class ArconaitvME(CBaseHostClass):
     def getFullIconUrl(self, url):
         url = self.getFullUrl(url)
         if self.isProxyNeeded( url ):
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=240'.format(urllib.quote(url, ''))
+            proxy = self.proxyUrl.format(urllib.quote(url, ''))
             params = {}
             params['User-Agent'] = self.HEADER['User-Agent'],
             params['Referer'] = proxy
-            params['Cookie'] = 'flags=2e5;'
+            #params['Cookie'] = 'flags=2e5;'
             url = strwithmeta(proxy, params) 
         return url
         
     def getFullUrl(self, url):
-        if 'proxy-german.de' in url:
-            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
+        if self.up.getDomain(self.proxyUrl) in url:
+            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?u=(http[^&]+?)&''')[0] )
         return CBaseHostClass.getFullUrl(self, url)
     
     def listItems(self, cItem, m1, m2, post_data=None):
@@ -151,8 +152,6 @@ class ArconaitvME(CBaseHostClass):
         urlsTab = []
         sts, data = self.getPage(cItem['url'])
         if not sts: return urlsTab
-        
-        printDBG(data)
         
         playerUrl = self.cm.ph.getSearchGroups(data, '''<source[^>]*?src=['"](https?:[^"^']+?\.m3u8[^"^']*?)['"]''', 1, ignoreCase=True)[0]
         try: playerUrl = byteify(json.loads('"%s"' % playerUrl))

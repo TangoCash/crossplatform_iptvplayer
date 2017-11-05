@@ -3,7 +3,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
@@ -21,7 +21,7 @@ except Exception: import simplejson as json
 def gettytul():
     return 'https://spryciarze.pl/'
     
-class Spryciarze():
+class Spryciarze(CBaseHostClass):
     MAIN_URL = 'https://www.spryciarze.pl/'
     MAIN_CATEGORIES_URL = MAIN_URL + 'kategorie/'
     VIDEO_URL = MAIN_URL + 'player/player/xml_connect.php?code='
@@ -30,9 +30,7 @@ class Spryciarze():
     SEARCH_RES_PER_PAGE = 30
     
     def __init__(self):
-        self.COOKIEFILE = GetCookieDir('spryciarze.cookie')
-        self.cm = pCommon.common()
-        self.up = urlparser.urlparser()
+        CBaseHostClass.__init__(self, {'history':'spryciarze.org', 'cookie':'spryciarze.cookie', 'cookie_type':'MozillaCookieJar'})
         self.catTree = []
         self.currList = []
         
@@ -326,7 +324,7 @@ class Spryciarze():
         while tries > 0:
             tries -= 1
             # get videoID
-            sts, data = self.cm.getPage(url, {'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE}, post_data)
+            sts, data = self.cm.getPage(url, {'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE}, post_data)
             if not sts: return []
             
             sts, block = self.cm.ph.getDataBeetwenMarkers(data, '<div class="film_blokada">', '</form>', False)
@@ -337,10 +335,16 @@ class Spryciarze():
                 post_data['s'] = val_s
                 post_data['yes'] = ''
                 continue
+                
+            player = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'video_container'), ('</div', '>'))[1]
+            player = self.getFullUrl(self.cm.ph.getSearchGroups(player, '''<iframe[^>]+?src=['"]([^"^']*?)['"]''', 1, True)[0])
+            if 1 == self.up.checkHostSupport(player):
+                linkstTab = self.up.getVideoLinkExt(player)
+                if len(linkstTab): break
             
-            player = self.cm.ph.getSearchGroups(data, 'src="(http://player.spryciarze.pl[^"]+?)"')[0]
+            player =  self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']*?player\.spryciarze\.pl[^"^']+?)['"]''', 1, True)[0])
             if '' != player:
-                sts, player = self.cm.getPage(player, {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIEFILE})
+                sts, player = self.cm.getPage(player, {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
                 if not sts: break
                 player = self.cm.ph.getSearchGroups(player, 'var data[^=]*?=[^\{]*?(\{[^;]+?);')[0]
                 try:
@@ -355,7 +359,7 @@ class Spryciarze():
             else:
                 player  = self.cm.ph.getSearchGroups(data, '"(http://www.spryciarze.pl/player/[^"]+?\.swf?[^"]+?)"')[0]
                 videoID = self.cm.ph.getSearchGroups(player + '|', 'VideoID=([0-9]+?)[^0-9]')[0]
-                sts, data = self.cm.getPage('http://www.spryciarze.pl/player/player/xml_connect.php?code=%s&ra=2' % videoID, {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIEFILE})
+                sts, data = self.cm.getPage('http://www.spryciarze.pl/player/player/xml_connect.php?code=%s&ra=2' % videoID, {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
                 if not sts: break
                 data = re.compile('<urlMOV([^>]+?)>([^<]+?)<').findall(data)
                 tmp = []
@@ -539,6 +543,7 @@ class IPTVHost(IHost):
             ico = ''
             if 'ico' in cItem:
                 ico = cItem['ico']
+            if ico == '': ico = 'http://mamrodzine.pl/wp-content/uploads/2011/06/logo_transparent.png'
 
             hostItem = CDisplayListItem(name = name + ' ' + ilosc,
                                         description = opis,

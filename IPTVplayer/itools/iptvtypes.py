@@ -17,6 +17,7 @@ def enum(**enums):
 #   "iptv_audio_url"        "http... link"
 #   "iptv_m3u8_custom_base_link" "http... link"
 #   "iptv_m3u8_skip_seg"    0, 2, 3 - defaul 0 (sip first num of seg from first list)
+#   "iptv_m3u8_live_start_index" segment index to start live streams at (negative values are from the end)
 #   "iptv_proxy_gateway"    "http... link"
 #   "iptv_refresh_cmd"      "refresh cmd line needed for some streams to keep playing"
 #   "iptv_wget_continue"    True | False - default False 

@@ -260,23 +260,45 @@ class BSTO(CBaseHostClass):
         sts, data = self.getPage(videoUrl)
         if not sts: return []
         
-        url  = self.cm.ph.getSearchGroups(data, '''href=['"][^'^"]*?(/out/[^'^"]+?)['"]''')[0]
-        url  = url.replace('/out/', '/watch/')[1:]
+        errorMsg = ''
         
-        hostUrl = ''
+        baseUrl  = self.cm.ph.getSearchGroups(data, '''href=['"][^'^"]*?(/out/[^'^"]+?)['"]''')[0]
+        url = self.getFullUrl(baseUrl)
+        params = dict(self.defaultParams)
+        params['return_data'] = False
         try:
-            sts, data = self.cm.getPage(self.getFullUrl('/api/' + url), self.getHeaders(url))
-            if not sts: return []
-            
-            data = byteify(json.loads(data))
-            printDBG(data)
-            
-            hostUrl = data['fullurl']
+            prevUrl = url
+            sts, response = self.cm.getPage(prevUrl, params)
+            url = response.geturl()
+            response.close()
+            if url == prevUrl:
+                sts, data = self.getPage(url)
+                if 'bitte das Captcha' in data: errorMsg = _('Link protected with google recaptcha v2.')
         except Exception:
             printExc()
         
-        if self.cm.isValidUrl(hostUrl):
+        if 1 != self.up.checkHostSupport(url):
+            url  = baseUrl.replace('/out/', '/watch/')[1:]
+            
+            hostUrl = ''
+            try:
+                sts, data = self.cm.getPage(self.getFullUrl('/api/' + url), self.getHeaders(url))
+                if not sts: return []
+                
+                data = byteify(json.loads(data))
+                printDBG(data)
+                
+                hostUrl = data['fullurl']
+            except Exception:
+                printExc()
+        else:
+            hostUrl = url
+            
+        if 1 != self.up.checkHostSupport(hostUrl):
+            SetIPTVPlayerLastHostError(errorMsg) 
+        elif self.cm.isValidUrl(hostUrl):
             urlTab = self.up.getVideoLinkExt(hostUrl)
+        
         return urlTab
         
     def getArticleContent(self, cItem):

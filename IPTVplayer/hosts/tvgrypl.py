@@ -7,6 +7,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -212,16 +213,21 @@ class TvGryPL(CBaseHostClass):
                     q = 'SD'
                 elif '/1280_' in url or "720p" in url:
                     q = 'HD'
-                if q != '': urlTab.append({'name':name, 'url':url, 'q':q, 'need_resolve':0})
+                if q != '': urlTab.append({'name':name, 'url':strwithmeta(url, {"Range": "bytes=0-"}), 'q':q, 'need_resolve':0})
         
         if urlTemplate != '':
+            params = dict(self.defaultParams)
+            params['header'] = dict(params['header'])
+            params['header']['Range'] = "bytes=0-"
+            params['return_data'] = False
+            params['header'].pop('Accept', None)
             for item in [('/500_', 'MOB'), ('/750_', 'SD'), ('/1280_', 'HD')]:
                 if item[0] in urlIDS: continue
                 try:
                     url = urlTemplate.format(item[0])
-                    sts, response = self.cm.getPage(url, {'return_data':False})
+                    sts, response = self.cm.getPage(url, params)
                     if 'mp4' in response.info().get('Content-Type', '').lower():
-                        urlTab.append({'name':item[1], 'url':url, 'q':item[1], 'need_resolve':0})
+                        urlTab.append({'name':item[1], 'url':strwithmeta(url, {"Range": "bytes=0-"}), 'q':item[1], 'need_resolve':0})
                     response.close()
                 except Exception:
                     printExc()

@@ -48,7 +48,7 @@ def gettytul():
 class KreskoweczkiPL(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'  KreskoweczkiPL.tv', 'cookie':'kreskoweczkipl.cookie'})
+        CBaseHostClass.__init__(self, {'history':'  KreskoweczkiPL.tv', 'cookie':'kreskoweczkipl.cookie', 'min_py_ver':(2,7,9)})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.abcCache = {}
         
@@ -70,21 +70,10 @@ class KreskoweczkiPL(CBaseHostClass):
                              {'icon':self.DEFAULT_ICON, 'category':'search_history',  'title': _('Search history')} ]
         self.needProxy = None
         
-    def isNeedProxy(self):
-        if self.needProxy == None:
-            sts, data = self.cm.getPage(self.MAIN_URL)
-            self.needProxy = not sts
-        return self.needProxy
-        
     def getPage(self, url, params={}, post_data=None):
         HTTP_HEADER= dict(self.HEADER)
         params.update({'header':HTTP_HEADER})
         
-        if self.isNeedProxy() and self.up.getDomain(self.MAIN_URL) in url:
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
-            params['header']['Referer'] = proxy
-            params['header']['Cookie'] = 'flags=2e5;'
-            url = proxy
         sts, data = self.cm.getPage(url, params, post_data)
         if sts and None == data:
             sts = False
@@ -93,19 +82,9 @@ class KreskoweczkiPL(CBaseHostClass):
         return sts, data
         
     def getFullIconUrl(self, url):
-        url = self.getFullUrl(url)
-        if self.up.getDomain(self.MAIN_URL) in url and self.isNeedProxy():
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
-            params = {}
-            params['User-Agent'] = self.HEADER['User-Agent'],
-            params['Referer'] = proxy
-            params['Cookie'] = 'flags=2e5;'
-            url = strwithmeta(proxy, params) 
-        return url
+        return self.getFullUrl(url)
         
     def getFullUrl(self, url):
-        if 'proxy-german.de' in url:
-            url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
         return CBaseHostClass.getFullUrl(self, url)
         
     def listABC(self, cItem, category):
@@ -155,8 +134,6 @@ class KreskoweczkiPL(CBaseHostClass):
             nextPage = False
         
         videoMarker = '''/([0-9]+?)/'''
-        if self.isNeedProxy():
-            videoMarker = videoMarker.replace('/', '\\%2F')
         
         video = True
         m1 = '<a class="item" '

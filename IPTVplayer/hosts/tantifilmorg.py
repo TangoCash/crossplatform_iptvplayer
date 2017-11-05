@@ -182,7 +182,7 @@ class TantiFilmOrg(CBaseHostClass):
             nextPage = False
         
         if '?s=' in url:
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="film film-2">', '<!-- search_post -->', withMarkers=True)
+            data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'film film-2'), ('<div', '</div>', 'class="descriere"'))
         else:
             if page == 1:
                 tmp = self.cm.ph.getDataBeetwenMarkers(data, '<h1 class="page-title">', '</body>', withMarkers=False)[1]
@@ -201,6 +201,12 @@ class TantiFilmOrg(CBaseHostClass):
             if title.endswith('streaming'): title = title[:-9].strip()
             icon  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
             desc  = self.cleanHtmlStr(item.replace('</p>', '[/br]'))
+            
+            try:
+                raiting = str(int(((float(self.cm.ph.getSearchGroups(item, '''data\-rateit\-value=['"]([^'^"]+?)['"]''')[0]) * 5) / 3)*10)/10.0) + '/5'
+                desc = raiting + ' | ' + desc
+            except Exception:
+                pass
             
             params = {'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':self.getFullUrl(url), 'icon':self.getFullIconUrl(icon), 'desc':desc}
             self.addDir(params)

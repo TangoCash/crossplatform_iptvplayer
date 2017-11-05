@@ -78,6 +78,7 @@ class FilmovizijaStudio(CBaseHostClass):
         self.cacheLinks = {}
         
     def isNeedProxy(self):
+        return True
         if self.needProxy == None:
             sts, data = self.cm.getPage(self.MAIN_URL)
             self.needProxy = not sts
@@ -88,7 +89,7 @@ class FilmovizijaStudio(CBaseHostClass):
         params.update({'header':HTTP_HEADER})
         
         if self.isNeedProxy() and 'filmovizija.' in url:
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
+            proxy = 'https://www.sslgate.co.uk/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
             params['header']['Referer'] = proxy
             params['header']['Cookie'] = 'flags=2e1;'
             url = proxy
@@ -100,7 +101,7 @@ class FilmovizijaStudio(CBaseHostClass):
     def _getIconUrl(self, url):
         url = self._getFullUrl(url)
         if 'filmovizija.' in url and self.isNeedProxy():
-            proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
+            proxy = 'https://www.sslgate.co.uk/index.php?q={0}&hl=2e1'.format(urllib.quote(url, ''))
             params = {}
             params['User-Agent'] = self.HEADER['User-Agent'],
             params['Referer'] = proxy
@@ -109,7 +110,7 @@ class FilmovizijaStudio(CBaseHostClass):
         return url
         
     def _getFullUrl(self, url):
-        if 'proxy-german.de' in url:
+        if 'sslgate.co.uk' in url:
             url = urllib.unquote( self.cm.ph.getSearchGroups(url+'&', '''\?q=(http[^&]+?)&''')[0] )
         if url.startswith('//'):
             url = 'http:' + url

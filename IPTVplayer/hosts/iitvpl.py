@@ -6,6 +6,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.unshortenit import unshorten
 ###################################################
 
 ###################################################
@@ -72,14 +73,13 @@ class IITVPL(CBaseHostClass):
         info['icon']  = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"')[0] )
         info['desc']  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<p class="description"', '</p>')[1].split('</strong>')[-1])
         info['full_desc']  = self.cleanHtmlStr(data.split('</h1>')[-1])
-        keysMap = {'Gatunek:':'genre'}
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<strong>', '<br/>', withMarkers=True)
+        keysMap = {'Gatunek:':'genre', 'Stacja:':'station'}
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<strong>', '</strong>'), ('<', '>', '/'), withNodes=True)
         for item in data:
-            tmp   = item.split('</strong>')
+            tmp   = item.split('</strong>', 1)
             key   = self.cleanHtmlStr(tmp[0])
             value = self.cleanHtmlStr(tmp[-1])
-            if key in keysMap:
-                info[keysMap[key]] = value
+            if key in keysMap: info[keysMap[key]] = value
         return info
         
     def listABC(self, cItem, nextCategory):
@@ -98,10 +98,19 @@ class IITVPL(CBaseHostClass):
                 if letter.isdigit(): letter = '0-9'
                 if letter not in self.cacheSeries:
                     self.cacheSeries[letter] = []
-                    params = dict(cItem)
-                    params.update({'category':nextCategory, 'title':letter, 'letter':letter, 'url':url})
-                    self.addDir(params)
                 self.cacheSeries[letter].append( {'title':title, 'url':url} )
+        
+        letterTab = ["0-9","a","A","ą","Ą","b","B","c","C","ć","Ć","d","D","e","E","ę","Ę","f","F","g","G","h","H","i","I","j","J","k","K","l","L","ł","Ł","m","M","n","N","ń","Ń","o","O","ó","Ó","p","P","q","Q","r","R","s","S","ś","Ś","t","T","u","U","v","V","w","W","x","X","y","Y","z","Z","ź","Ź","ż","Ż"]
+        for letter in letterTab:
+            if 0 == len(self.cacheSeries.get(letter, [])): continue
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':letter, 'letter':letter})
+            self.addDir(params)
+        for letter in self.cacheSeries:
+            if letter in letterTab: continue
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':letter, 'letter':letter})
+            self.addDir(params)
         
     def listSeriesByLetter(self, cItem, nextCategory):
         printDBG("IITVPL.listSeriesByLetter")
@@ -177,7 +186,7 @@ class IITVPL(CBaseHostClass):
                 if tmp[0].startswith('http://') or tmp[0].startswith('https://'):
                     links[tabTitle].append({'name':'[{0}] '.format(tabTitle) + self.cleanHtmlStr(tmp[1]), 'url':tmp[0], 'need_resolve':1})
         
-        keys = ['Lektor', 'Napisy PL', 'Orygina�']
+        keys = ['Lektor', 'Napisy PL', 'Oryginał']
         keys.extend(links.keys())
         for key in keys:
             for item in links.get(key, []):
@@ -218,6 +227,11 @@ class IITVPL(CBaseHostClass):
                     videoUrl = str(data['link'])
             except Exception:
                 printExc()
+        else:
+            uri, sts = unshorten(videoUrl)
+            if sts == 'OK': 
+                uri = self.cm.ph.getSearchGroups(uri, '''/(https?://[^'"]+?)$''')[0]
+                if self.cm.isValidUrl(uri): videoUrl = uri
         
         if 1 != self.up.checkHostSupport(videoUrl):
             try:
@@ -246,34 +260,10 @@ class IITVPL(CBaseHostClass):
         info  = self.getSeriesInfo(data)
         
         otherInfo = {}
-        if 'genre' in info:
-            otherInfo['genre'] = info['genre']
+        if 'genre' in info: otherInfo['genre'] = info['genre']
+        if 'station' in info: otherInfo['station'] = info['station']
         
         return [{'title':self.cleanHtmlStr( info['title'] ), 'text': self.cleanHtmlStr( info['desc'] ), 'images':[{'title':'', 'url':info['icon']}], 'other_info':otherInfo}]
-    
-    def getFavouriteData(self, cItem):
-        printDBG('IITVPL.getFavouriteData')
-        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem['icon']}
-        return json.dumps(params) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('IITVPL.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('IITVPL.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -315,88 +305,9 @@ class IITVPL(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, IITVPL(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
-    
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        cItem = self.host.currList[Index]
-        
+        CHostBase.__init__(self, IITVPL(), True, [])
+
+    def withArticleContent(self, cItem):
         if cItem['type'] != 'video' and cItem['category'] != 'list_episodes':
-            return RetHost(retCode, value=retlist)
-        hList = self.host.getArticleContent(cItem)
-        for item in hList:
-            title      = item.get('title', '')
-            text       = item.get('text', '')
-            images     = item.get("images", [])
-            othersInfo = item.get('other_info', '')
-            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-        if len(hList): retCode = RetHost.OK
-        return RetHost(retCode, value = retlist)
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        isGoodForFavourites = cItem.get('good_for_fav', False)
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch,
-                                    isGoodForFavourites = isGoodForFavourites)
-    # end converItem
-
+            return False
+        return True

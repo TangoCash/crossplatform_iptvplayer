@@ -345,37 +345,38 @@ class GamatoTV(CBaseHostClass):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
         
-        try:
-            httpParams = dict(self.defaultParams)
-            httpParams['return_data'] = False
+        if 1 != self.up.checkHostSupport(videoUrl):
+            try:
+                httpParams = dict(self.defaultParams)
+                httpParams['return_data'] = False
+                
+                sts, response = self.cm.getPage(videoUrl, httpParams)
+                videoUrl = response.geturl()
+                response.close()
+            except Exception:
+                printExc()
+                return []
             
-            sts, response = self.cm.getPage(videoUrl, httpParams)
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return []
-        
-        if self.up.getDomain(self.getMainUrl()) in videoUrl or self.up.getDomain(videoUrl) == self.up.getDomain(orginUrl):
-            sts, data = self.getPage(videoUrl)
-            if not sts: return []
-            
-            found = False
-            printDBG(data)
-            tmp = re.compile('''<iframe[^>]+?src=['"]([^"^']+?)['"]''', re.IGNORECASE).findall(data)
-            for url in tmp:
-                if 1 == self.up.checkHostSupport(url):
-                    videoUrl = url
-                    found = True
-                    break
-            if not found or 'flashx' in videoUrl:
-                tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'embedFrame', '</a>')
-                for urlItem in tmp:
-                    url = self.cm.ph.getSearchGroups(urlItem, '''href=['"](https?://[^'^"]+?)['"]''')[0]
+            if self.up.getDomain(self.getMainUrl()) in videoUrl or self.up.getDomain(videoUrl) == self.up.getDomain(orginUrl):
+                sts, data = self.getPage(videoUrl)
+                if not sts: return []
+                
+                found = False
+                printDBG(data)
+                tmp = re.compile('''<iframe[^>]+?src=['"]([^"^']+?)['"]''', re.IGNORECASE).findall(data)
+                for url in tmp:
                     if 1 == self.up.checkHostSupport(url):
                         videoUrl = url
                         found = True
                         break
+                if not found or 'flashx' in videoUrl:
+                    tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, 'embedFrame', '</a>')
+                    for urlItem in tmp:
+                        url = self.cm.ph.getSearchGroups(urlItem, '''href=['"](https?://[^'^"]+?)['"]''')[0]
+                        if 1 == self.up.checkHostSupport(url):
+                            videoUrl = url
+                            found = True
+                            break
         
         if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)

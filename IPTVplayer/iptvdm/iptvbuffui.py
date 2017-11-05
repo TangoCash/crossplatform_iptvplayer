@@ -216,6 +216,7 @@ class IPTVPlayerBufferingWidget(Screen):
                 self.setMainTimerSts(True)
             else:
                 # for live streams we will remove old buffer and start downloader once again
+                self.lastSize = 0
                 self.onEnd()
                 self.onStart()
 

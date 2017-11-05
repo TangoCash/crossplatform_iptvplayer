@@ -81,7 +81,7 @@ class TvnVod(CBaseHostClass):
         printDBG("TvnVod.__init__")
         CBaseHostClass.__init__(self, {'history':'TvnVod', 'history_store_type':True, 'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.proxyenable.value})
         self.itemsPerPage = 30 # config.plugins.iptvplayer.tvp_itemsperpage.value
-        
+        self.DEFAULT_ICON_URL = 'http://www.programosy.pl/download/screens/13711/android-player-1_s.png' 
         self.platforms = {
             'Panasonic': {
                 'platform' : 'ConnectedTV',
@@ -209,7 +209,7 @@ class TvnVod(CBaseHostClass):
         
     def listsCategories(self, cItem, searchCategories=False):
         printDBG("TvnVod.listsCategories cItem[%s]" % cItem)
-        pl = self.getDefaultPlatform()
+        pl = 'Panasonic' #self.getDefaultPlatform()
         
         searchMode = False
         page = 1 + cItem.get('page', 0)
@@ -274,6 +274,7 @@ class TvnVod(CBaseHostClass):
             if 0 != cItem.get('season', 0) or cItem.get('season', 0) == numSeasons:
                 for item in data:
                     category = self._getJItemStr(item, 'type', '')
+                    if category  in ['stream', 'catalog_with_widget', 'pauses', 'favorites']: continue
                     id       = self._getJItemStr(item, 'id', '')
                     # some fix for sub-categories
                     if catalogs:
@@ -284,7 +285,10 @@ class TvnVod(CBaseHostClass):
                     
                     # get title 
                     title = self._getJItemStr(item, 'name', '')
-                    if '' == title: title = self._getJItemStr(item, 'title', _('Brak nazwy'))
+                    if '' == title: title = self._getJItemStr(item, 'title', '')
+                    if '' == title:
+                        if category == 'recommended': continue
+                        else: title = _('Brak nazwy')
                     tmp = self._getJItemStr(item, 'episode', '')
                     if tmp not in ('', '0'): title += _(", odcinek ") + tmp
                     tmp = self._getJItemStr(item, 'season', '')
@@ -367,8 +371,8 @@ class TvnVod(CBaseHostClass):
                 params['category'] = 'search_history'
             self.addDir(params)
     
-    def resolveLink(self, url):
-        printDBG("TvnVod.resolveLink url[%s]" % url)
+    def getVideoLinks(self, url):
+        printDBG("TvnVod.getVideoLinks url[%s]" % url)
         url = strwithmeta(url)
         pl = url.meta.get('tvn_platform', self.getDefaultPlatform())
         videoUrl = ''
@@ -381,9 +385,10 @@ class TvnVod(CBaseHostClass):
                 sts, data  = self.cm.getPage(url, { 'header': self.getHttpHeader(pl) })
                 if sts and data.startswith('http'):
                     videoUrl =  data.encode('utf-8')
-                    
+        urlTab = []
         videoUrl = strwithmeta(videoUrl, { 'header': self.getHttpHeader(pl) })
-        return videoUrl
+        if self.cm.isValidUrl(videoUrl): urlTab.append({'name':'direct', 'url':videoUrl})
+        return urlTab
             
     def getLinksForVideo(self, cItem):
         return self.getLinks(cItem['id'])
@@ -478,58 +483,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, TvnVod(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 1
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        url = self.host.resolveLink(url)
-        urlTab = []
-        if isinstance(url, basestring) and url.startswith('http'):
-            urlTab.append(url)
-        return RetHost(RetHost.OK, value = urlTab)
-
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = []
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if cItem['type'] == 'category':
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  clean_html(cItem.get('desc', ''))
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                description = description,
-                                type = type,
-                                urlItems = hostLinks,
-                                urlSeparateRequest = 1,
-                                iconimage = icon,
-                                possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-

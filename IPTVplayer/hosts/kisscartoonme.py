@@ -77,9 +77,6 @@ class KissCartoonMe(CBaseHostClass):
         self.cache = {}
     
     def _getFullUrl(self, url):
-        if 'proxy-german.de' in url:
-            url = urllib.unquote(url.split('?q=')[1])
-        
         if url == '':
             return url
             
@@ -108,24 +105,6 @@ class KissCartoonMe(CBaseHostClass):
         
     def getPage(self, baseUrl, params={}, post_data=None):
         params['cloudflare_params'] = {'domain':'kisscartoon.es', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self._getFullUrl}
-        return self.cm.getPageCFProtection(baseUrl, params, post_data)
-        
-    def getPageProxy(self, baseUrl, params={}, post_data=None):
-        HTTP_HEADER= dict(self.HEADER)
-        params.update({'header':HTTP_HEADER})
-        
-        proxy = 'http://www.proxy-german.de/index.php?q={0}&hl=81'.format(urllib.quote(baseUrl, ''))
-        params['header']['Referer'] = proxy
-        #params['header']['Cookie'] = 'flags=2e5; COOKIE%253Blang%253B%252F%253Bwww.movie4k.to={0}%3B'.format(lang)
-        baseUrl = proxy
-        
-        def _getFullUrl(url):
-            return 'https://kisscartoon.es/cdn-cgi/l/chk_jschl'
-            
-        def _getFullUrl2(url):
-            return 'http://www.proxy-german.de/index.php?q={0}&hl=81'.format(urllib.quote(url, ''))
-        
-        params['cloudflare_params'] = {'domain':'kisscartoon.es', 'cookie_file':GetCookieDir('cf.kisscartoonme.cookie'), 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl, 'full_url_handle2':_getFullUrl2}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
     def _urlWithCookie(self, url):

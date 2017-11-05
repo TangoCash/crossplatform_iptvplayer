@@ -270,6 +270,11 @@ class IconMenager:
                 img_url = self.cm.ph.getSearchGroups(data, '(<img[^>]+?alt="Cover"[^>]+?>)')[0]
                 img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
                 if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif 'watchseriesmovie.com' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'picture'), ('</div', '>'), False)[1]
+                img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?)"')[0]
+                if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
             if not self.cm.isValidUrl(img_url): return False
         else:
             img_url = strwithmeta(img_url)

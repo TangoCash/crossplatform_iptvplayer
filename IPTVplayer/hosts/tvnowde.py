@@ -320,7 +320,8 @@ class TVNowDE(CBaseHostClass):
                     for m in range(1, 13, 1):
                         m1 = (m + 1)
                         if m1 > 12: m1 = m1 % 12
-                        days = (date(year +(m+1)/12, m1, 1)  - date(year, m, 1)).days
+                        days = (date(year + m/12, m1, 1)  - date(year, m, 1)).days
+                        
                         m = str(m)
                         if not m in months: continue
                         title = '%s/%s' % (year, m.zfill(2))

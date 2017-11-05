@@ -110,7 +110,7 @@ def GetPolishSubEncoding(filePath):
     return encoding
     
 def MapUcharEncoding(encoding):
-    ENCODING_MAP = {'X-MAC-CYRILLIC':"MAC-CYRILLIC"}
+    ENCODING_MAP = {'X-MAC-CYRILLIC':"MAC-CYRILLIC", "ASCII":"UTF-8"}
     printDBG("MapUcharEncoding in encoding[%s]" % encoding)
     try: encoding = ENCODING_MAP.get(encoding.strip().upper(), encoding.strip())
     except Exception: printExc()
@@ -609,6 +609,7 @@ def GetSkinsList():
     skins.sort()
     skins.insert(0,("Auto", "Auto"))
     skins.insert(0,("Default", "Default"))
+    skins.append(("auto", "auto"))
     printDBG('getSkinsList end')
     return skins
     
