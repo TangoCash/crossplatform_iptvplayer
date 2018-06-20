@@ -235,6 +235,9 @@ def GetPyScriptCmd(name):
 def GetUchardetPath():
     return config.plugins.iptvplayer.uchardetpath.value
     
+def GetCmdwrapPath():
+    return config.plugins.iptvplayer.cmdwrappath.value
+    
 def GetDukPath():
     return config.plugins.iptvplayer.dukpath.value
 
@@ -758,6 +761,12 @@ def rmtree(path, ignore_errors=False, onerror=None):
         os.rmdir(path)
     except os.error:
         onerror(os.rmdir, path) 
+       
+def GetFileSize(filepath):
+    try:
+        return os.stat(filepath).st_size
+    except Exception:
+        return -1
        
 def DownloadFile(url, filePath):
     printDBG('DownloadFile [%s] from [%s]' % (filePath, url) )

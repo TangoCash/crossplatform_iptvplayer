@@ -51,14 +51,12 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://series9.io/'
+    return 'https://series9.co/'
 
 class SeriesOnlineIO(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        
         self.DEFAULT_ICON_URL = 'https://series9.io/images/gomovies-logo-light.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language':'pl,en-US;q=0.7,en;q=0.3', 'Accept-Encoding':'gzip, deflate'}
@@ -68,7 +66,8 @@ class SeriesOnlineIO(CBaseHostClass):
         self.MAIN_URL = None
         self.cacheFilters = {}
         self.cacheLinks = {}
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'header':self.HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.MAIN_CAT_TAB = []
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
@@ -217,6 +216,10 @@ class SeriesOnlineIO(CBaseHostClass):
         
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
+    def setMainUrl(self, url):
+        if self.cm.isValidUrl(url):
+            self.MAIN_URL = self.cm.getBaseUrl(url)
+        
     def getDefaulIcon(self, cItem):
         return self.getFullIconUrl(self.DEFAULT_ICON_URL)
     
@@ -240,7 +243,7 @@ class SeriesOnlineIO(CBaseHostClass):
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
         
     def selectDomain(self):
-        domains = ['https://series9.io/'] #'http://123movieshd.us/'
+        domains = ['https://series9.co/'] #'http://123movieshd.us/'
         domain = config.plugins.iptvplayer.seriesonlineio_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -252,8 +255,10 @@ class SeriesOnlineIO(CBaseHostClass):
             for i in range(2):
                 sts, data = self.getPage(domain)
                 if sts:
+                    cUrl = data.meta['url']
+                    self.setMainUrl(cUrl)
                     if 'genre/action/' in data:
-                        confirmedDomain = domain
+                        confirmedDomain = self.MAIN_URL
                         break
                     else: 
                         continue
@@ -263,7 +268,7 @@ class SeriesOnlineIO(CBaseHostClass):
                 break
         
         if confirmedDomain == None:
-            self.MAIN_URL = 'https://series9.io/'
+            self.MAIN_URL = 'https://series9.co/'
         
         self.SEARCH_URL = self.MAIN_URL + 'movie/search'
         #self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/images/logo-light.png'
@@ -395,9 +400,36 @@ class SeriesOnlineIO(CBaseHostClass):
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("SeriesOnlineIO.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
-        cItem = dict(cItem)
-        cItem['url'] = self.SEARCH_URL + '/' + urllib.quote_plus(searchPattern).replace('+', '-')
-        self.listItems(cItem, 'list_episodes')
+        if self.MAIN_URL == None:
+            self.selectDomain()
+        
+        url = self.SEARCH_URL + '/' + urllib.quote_plus(searchPattern).replace('+', '-')
+        sts, data = self.getPage(url)
+        if not sts: return
+        cUrl = data.meta['url']
+        tmp = ''
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<script>', '</script>', False)
+        for item in data:
+            if '$.ajax(' in item:
+                tmp = item
+                break
+        if tmp == '': return
+        ret = iptv_js_execute( '$={}; $.ajax=function(setup){print(JSON.stringify(setup));}\n' + tmp)
+        if ret['sts'] and 0 == ret['code']:
+            decoded = ret['data'].strip()
+            printDBG('DECODED DATA -> \n[%s]\n' % decoded)
+            try:
+                decoded = byteify(json.loads(decoded))
+                searchUrl = self.getFullUrl(decoded.get('url', cUrl))
+                if '?' not in searchUrl: searchUrl += '?'
+                if 'data' in decoded:
+                    searchUrl += urllib.urlencode(decoded['data'])
+                printDBG('searchUrl [%s]\n' % searchUrl)
+                cItem = dict(cItem)
+                cItem['url'] = searchUrl
+                self.listItems(cItem, 'list_episodes')
+            except Exception:
+                printExc()
         
     def getLinksForVideo(self, cItem, forEpisodes=False):
         printDBG("SeriesOnlineIO.getLinksForVideo [%s]" % cItem)
@@ -490,9 +522,11 @@ class SeriesOnlineIO(CBaseHostClass):
             sp = '='
         
         for item in tmp:
-            url  = self.cm.ph.getSearchGroups(item, r'''['"]?{0}['"]?\s*{1}\s*['"](https?://[^"^']+)['"]'''.format(urlAttrName, sp))[0]
+            url  = self.cm.ph.getSearchGroups(item, r'''['"]?{0}['"]?\s*{1}\s*['"]((:?https?:)?//[^"^']+)['"]'''.format(urlAttrName, sp))[0]
             name = self.cm.ph.getSearchGroups(item, r'''['"]?label['"]?\s*{0}\s*['"]([^"^']+)['"]'''.format(sp))[0]
-            
+            if url == '' or 'error.com' in url: continue
+            if url.startswith('//'): url = 'https:' + url
+                
             printDBG('---------------------------')
             printDBG('url:  ' + url)
             printDBG('name: ' + name)
@@ -500,7 +534,7 @@ class SeriesOnlineIO(CBaseHostClass):
             printDBG(item)
             
             if 'mp4' in item:
-                urlTab.append({'name':name, 'url':url})
+                urlTab.append({'name':self.up.getDomain(url) + ' ' + name, 'url':url})
             elif 'captions' in item:
                 format = url[-3:]
                 if format in ['srt', 'vtt']:

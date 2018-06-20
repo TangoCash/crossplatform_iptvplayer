@@ -63,25 +63,10 @@ class KijkNL(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.tmpUrl = 'http://api.kijk.nl/'
         self.policyKeyCache = ''
-        self.isIPChecked = False
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
         return self.cm.getPage(baseUrl, addParams, post_data)
-        
-    def checkIP(self):
-        printDBG("KijkNL.checkIP")
-        if self.isIPChecked: return
-        lang = 'NL'
-        sts, data = self.cm.getPage('https://dcinfos.abtasty.com/geolocAndWeather.php')
-        if not sts: return
-        try:
-            data = byteify(json.loads(data.strip()[1:-1]), '', True)
-            if data['country'] != lang:
-                message = _('%s uses "geo-blocking" measures to prevent you from accessing the services from outside the %s Territory.') 
-                GetIPTVNotify().push(message % (self.getMainUrl(), lang), 'info', 5)
-            self.isIPChecked = True
-        except Exception: printExc()
         
     def listMainMenu(self, cItem):
         printDBG("KijkNL.listMainMenu")
@@ -345,7 +330,7 @@ class KijkNL(CBaseHostClass):
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         
-        self.checkIP()
+        self.informAboutGeoBlockingIfNeeded('NL')
         
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')

@@ -5,7 +5,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
@@ -35,12 +35,12 @@ except Exception: import json
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(default = "rtmp", choices = [("rtmp", "rtmp"),("hls", "HLS - m3u8")]) 
+config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(default = "hls", choices = [("rtmp", "rtmp"),("hls", "HLS - m3u8")]) 
 
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry( "SportDeutschland " + _("preferowany protokół strumieniowania" + ": "), config.plugins.iptvplayer.sportdeutschland_streamprotocol))
+    optionList.append(getConfigListEntry(_("Preferred streaming protocol"), config.plugins.iptvplayer.sportdeutschland_streamprotocol))
     return optionList
 ###################################################
 
@@ -48,27 +48,26 @@ def gettytul():
     return 'http://sportdeutschland.tv/'
 
 class SportDeutschland(CBaseHostClass):
-    MAINURL      = 'http://sportdeutschland.tv/'
-    MAIN_API_URL = 'http://splink.tv/api/'
-    SEARCH_URL   = ''
-    HTTP_JSON_HEADER  = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 
-                         'Accept'    : 'application/vnd.vidibus.v2.html+json',
-                         'Referer'   : MAINURL, 
-                         'Origin'    : MAINURL
-                        }
-    MAIN_MENU = [{'title':'Kategorie', 'category':'categories'},
-                 #{'title':'Program',   'category':'program'},
-                 {'title':'Wyszukaj',  'category':'Wyszukaj'},
-                 {'title':'Historia wyszukiwania', 'category':'Historia wyszukiwania'}]
-                 
+
     def __init__(self):
         printDBG("SportDeutschland.__init__")
+        
         CBaseHostClass.__init__(self, {'history':'SportDeutschland'})       
-        self.cm.HEADER = dict(SportDeutschland.HTTP_JSON_HEADER)
-
-    def _cleanHtmlStr(self, str):
-            str = self.cm.ph.replaceHtmlTags(str, ' ').replace('\n', ' ')
-            return clean_html(self.cm.ph.removeDoubles(str, ' ').replace(' )', ')').strip())
+        
+        self.DEFAULT_ICON_URL = 'https://www.sportdeutschland.de/typo3conf/ext/arx_template/Resources/Public/Images/WebSite/logo.png'
+        self.MAINURL      = 'http://sportdeutschland.tv/'
+        self.MAIN_API_URL = 'http://proxy.vidibusdynamic.net/sportdeutschland.tv/api/'
+        self.HTTP_JSON_HEADER  = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 
+                                  'Accept'    : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                                  'Accept-Encoding': 'gzip, deflate',
+                                  'Referer'   : self.MAINURL, 
+                                  'Origin'    : self.MAINURL
+                                 }
+        self.cm.HEADER = dict(self.HTTP_JSON_HEADER)
+        self.MAIN_CAT_TAB = [{'category':'categories',        'title': _('Categories'),},
+                             {'category':'search',            'title': _('Search'), 'search_item':True,},
+                             {'category':'search_history',    'title': _('Search history'),            }]
+                 
             
     def _getJItemStr(self, item, key, default=''):
         v = item.get(key, None)
@@ -104,27 +103,25 @@ class SportDeutschland(CBaseHostClass):
         now_timestamp = time.time()
         offset = datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp)
         return utc_datetime + offset
-        
-    def listsMainMenu(self):
-        printDBG("SportDeutschland.listsMainMenu")
-        for item in SportDeutschland.MAIN_MENU:
-            params = {'name':'category', 'title':item['title'], 'category':item['category']}
-            self.addDir(params)
             
     def listCategories(self, cItem):
         printDBG("SportDeutschland.listCategories")
-        data = self._getItemsListFromJson(SportDeutschland.MAIN_API_URL + 'sections?per_page=9999')
+        data = self._getItemsListFromJson(self.MAIN_API_URL + 'sections?access_token=true&per_page=9999')
         
         params = {'name':'category', 'title':_('--Wszystkie--'), 'category':'category', 'permalink':'', 'uuid':'', 'page':1}
         self.addDir(params)
         
         for item in data:
-            params = {'name':'category', 'title':self._getJItemStr(item, 'title'), 'category':'category', 'permalink':self._getJItemStr(item, 'permalink'), 'uuid':self._getJItemStr(item, 'uuid'), 'page':1}
+            icon = self._getJItemStr(item, 'image')
+            try: 
+                if icon == '': icon = (u'%s' % item['images'][0]).encode('utf-8')
+            except Exception: pass
+            params = {'name':'category', 'title':self._getJItemStr(item, 'title'), 'category':'category', 'icon':icon, 'permalink':self._getJItemStr(item, 'permalink'), 'uuid':self._getJItemStr(item, 'uuid'), 'page':1}
             self.addDir(params)
         
     def listCategory(self, cItem):
         printDBG("SportDeutschland.listCategory cItem[%s]" % cItem)
-        baseUrl     = SportDeutschland.MAIN_API_URL
+        baseUrl     = self.MAIN_API_URL
         page        = self._getJItemNum(cItem, 'page', 1)
         baseUuid    = self._getJItemStr(cItem, 'uuid')
         pattern     = cItem.get('pattern', '')
@@ -134,32 +131,37 @@ class SportDeutschland(CBaseHostClass):
             baseUrl += '/assets?'
         else:
             baseUrl += 'search?q=%s&' % pattern
-        data = self._getItemsListFromJson(baseUrl + 'page=%d&per_page=100' % page)
+        data = self._getItemsListFromJson(baseUrl + 'access_token=true&page=%d&per_page=100' % page)
         for item in data:
-            params = {'name':'category', 'title':self._getJItemStr(item, 'title'), 'category':'category', 'icon':self._getJItemStr(item, 'image'), 'desc':self._getJItemStr(item, 'teaser'), 'video':self._getJItemStr(item, 'video')}
+            icon = self._getJItemStr(item, 'image')
+            try: 
+                if icon == '': icon = (u'%s' % item['images'][0]).encode('utf-8')
+            except Exception: pass
+            
+            desc = '%s[/br]%s' % (self._getJItemStr(item, 'duration'), self._getJItemStr(item, 'teaser'))
+            
+            params = {'name':'category', 'title':self._getJItemStr(item, 'title'), 'category':'category', 'icon':icon, 'desc':desc, 'player':self._getJItemStr(item, 'player')}
             printDBG(":::::::::::::::::::::::::::::::::::::\n%s\n:::::::::::::::::::::::::::::::" % item)
-            planowany = False
+            planned = False
             #if 'LIVE' == self._getJItemStr(item, 'duration', ''):
             try:
                 dateUTC = self._getJItemStr(item, 'date').replace('T', ' ').replace('Z', ' UTC')
                 dateUTC = datetime.strptime(dateUTC, "%Y-%m-%d %H:%M:%S %Z")
                 if dateUTC > datetime.utcnow():
-                    params['title'] += _(" (planowany %s)") % self._utc2local(dateUTC).strftime('%Y/%m/%d %H:%M:%S')
-                    planowany = True
+                    params['title'] += _(" (planned %s)") % self._utc2local(dateUTC).strftime('%Y/%m/%d %H:%M:%S')
+                    planned = True
             except Exception:
                 printExc()
             
             sectionPermalink = self._getJItemStr(item.get('section', {}), 'permalink')
             permalink   = self._getJItemStr(item, 'permalink')
             if '' != sectionPermalink and '' != permalink:
-                #https://github.com/rg3/youtube-dl/commit/c00c7c0af0fdcb380aef0ea9e072a61979d17816#diff-dfd8f21b497fa4e74594244026aed662
                 params['url'] = 'http://proxy.vidibusdynamic.net/sportdeutschland.tv/api/permalinks/%s/%s?access_token=true' % (sectionPermalink, permalink)
-                #SportDeutschland.MAIN_API_URL + 
             else:
                 params['url'] = ''
                 
-            if '' != params['url'] or '' != params['video']:
-                if not planowany or params['video'].startswith('http'):
+            if '' != params['url'] or '' != params['player']:
+                if None != item.get('duration', None) or item.get('live', False):
                     self.addVideo(params)
                 else:
                     self.addArticle(params)
@@ -169,7 +171,7 @@ class SportDeutschland(CBaseHostClass):
         data = self._getItemsListFromJson(baseUrl + 'page=%d&per_page=100' % (page+1))
         if 0 < len(data):
             params = dict(cItem)
-            params.update({'title':'Następna strona', 'page':page+1})
+            params.update({'title':_('Next page'), 'page':page+1})
             self.addDir(params)
             
     def getLinksForVideo(self, cItem):
@@ -177,53 +179,47 @@ class SportDeutschland(CBaseHostClass):
         HTTP_HEADER= { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0',
                        'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' }
         videoUrls =[]
-        videoUrl = ''
-        if '' != cItem['video']:
-            videoUrl = cItem['video']
-        else:        
-            if '' != cItem['url']:
-                sts,data = self.cm.getPage(cItem['url'])
-                if sts:
-                    try:
-                        data = json.loads(data)
-                        #printDBG("[%s]" % data)
-                        videoUrl = self._getJItemStr(data['asset'], 'video')
-                        if '' == videoUrl:
-                            assets_info = self._getJItemStr(data['asset'], 'url')
-                            if len(assets_info):
-                                sts,assets_info = self.cm.getPage(assets_info, {'header' : HTTP_HEADER})
-                                if sts:
-                                    try:
-                                        assets_info = json.loads(assets_info)
-                                        videoUrl = self._getJItemStr(assets_info, 'video')
-                                        printDBG('SportDeutschland.getLinksForVideo "video" from "assets_info" |%s|' % videoUrl)
-                                    except Exception: printExc()
-                        if '' == videoUrl:  
-                            player = self._getJItemStr(data['asset'], 'player')
-                            if '' != player:
-                                sts,data = self.cm.getPage(player, {'header' : HTTP_HEADER})
-                                if sts: videoUrl = self.cm.ph.getSearchGroups(data, '<a class="asset"[^>]+?href="([^"]+?)"')[0]
-                    except Exception:
-                        printExc()
         
-        if '.smil?' in videoUrl:
-            if 'rtmp' == config.plugins.iptvplayer.sportdeutschland_streamprotocol.value:
-                sts,data = self.cm.getPage(videoUrl)
-                if sts:
-                    #printDBG("+++++++++++++++++++++++++++++++++\n%s\n+++++++++++++++++++++++++++++++++" % data)
-                    videoUrl = self.cm.ph.getSearchGroups(data, 'meta base="(rtmp[^"]+?)"')[0]
-                    if '' != videoUrl and not videoUrl.startswith('/'):
-                        videoUrl += '/'
-                    videoUrl += self.cm.ph.getSearchGroups(data, 'video src="([^"]+?)"')[0]
-                    if videoUrl.startswith('rtmp'):
-                        videoUrls.append({'name':'SportDeutschland rtmp', 'url':videoUrl.replace('&amp;', '&')})
-            else:
-                videoUrl = videoUrl.replace('.smil?', '.m3u8?')
-                videoUrls = getDirectM3U8Playlist(videoUrl, checkExt=False)
-        elif videoUrl.split('?')[0].endswith('mp4'):
-            videoUrl = self.up.decorateUrl(videoUrl, {"iptv_buffering":"forbidden"})
-            videoUrls.append({'name':'SportDeutschland mp4', 'url':videoUrl})
+        if self.cm.isValidUrl(cItem['url']):
+            sts,data = self.cm.getPage(cItem['url'])
+            if sts:
+                try:
+                    data = byteify(json.loads(data))
+                    printDBG(data['asset']['videos'])
+                    for item in data['asset']['videos']:
+                        videoUrl = item['url']
+                        if not self.cm.isValidUrl(videoUrl): continue
+                        if item.get('livestream', False):
+                            if '.smil?' in videoUrl:
+                                if 'rtmp' == config.plugins.iptvplayer.sportdeutschland_streamprotocol.value:
+                                    sts,data = self.cm.getPage(videoUrl)
+                                    if sts:
+                                        #printDBG("+++++++++++++++++++++++++++++++++\n%s\n+++++++++++++++++++++++++++++++++" % data)
+                                        videoUrl = self.cm.ph.getSearchGroups(data, 'meta base="(rtmp[^"]+?)"')[0]
+                                        if '' != videoUrl and not videoUrl.startswith('/'):
+                                            videoUrl += '/'
+                                        videoUrl += self.cm.ph.getSearchGroups(data, 'video src="([^"]+?)"')[0]
+                                        if videoUrl.startswith('rtmp'):
+                                            videoUrls.append({'name':'SportDeutschland rtmp', 'url':videoUrl.replace('&amp;', '&')})
+                                else:
+                                    videoUrl = videoUrl.replace('.smil?', '.m3u8?')
+                                    videoUrls.extend(getDirectM3U8Playlist(videoUrl, checkExt=False))
+                        elif 'mp4' in str(item.get('content_type', '')):
+                            name = '%sx%s' % (item['width'], item['height'])
+                            videoUrls.append({'name':name, 'url':videoUrl})
+                except Exception:
+                    printExc()
+                    
+        for idx in range(len(videoUrls)):
+            videoUrls[idx]['need_resolve'] = 0
+        
         return videoUrls
+        
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("SportDeutschland.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        cItem = dict(cItem)
+        cItem['pattern'] = searchPattern
+        self.listCategory(self.currItem)
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('SportDeutschland.handleService start')
@@ -234,110 +230,24 @@ class SportDeutschland(CBaseHostClass):
         self.currList = []
         
         if None == name:
-            self.listsMainMenu()
+            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif 'categories' == category:
             self.listCategories(self.currItem)
         elif 'category' == category:
             self.listCategory(self.currItem)
-    #WYSZUKAJ
-        elif category == "Wyszukaj":
-            self.listCategory({'pattern':searchPattern, 'category':'category'})
-    #HISTORIA WYSZUKIWANIA
-        elif category == "Historia wyszukiwania":
-            self.listsHistory()
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
             printExc()
 
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, SportDeutschland(), True)
+        CHostBase.__init__(self, SportDeutschland(), True, [])
 
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] != 'video':
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-
-        retlist = []
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-
-    def convertList(self, cList):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append(("Filmy", "filmy"))
-        #searchTypesOptions.append(("Seriale", "seriale"))
-    
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-            possibleTypesOfSearch = None
-
-            if cItem['type'] == 'category':
-                if cItem['title'] == 'Wyszukaj':
-                    type = CDisplayListItem.TYPE_SEARCH
-                    possibleTypesOfSearch = searchTypesOptions
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-            elif cItem['type'] == 'article':
-                type = CDisplayListItem.TYPE_ARTICLE
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-                
-            title       =  cItem.get('title', '')
-            description =  clean_html(cItem.get('desc', ''))
-            icon        =  cItem.get('icon', '')
-            
-            hostItem = CDisplayListItem(name = title,
-                                        description = description,
-                                        type = type,
-                                        urlItems = hostLinks,
-                                        urlSeparateRequest = 1,
-                                        iconimage = icon,
-                                        possibleTypesOfSearch = possibleTypesOfSearch)
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
-
-    def getSearchItemInx(self):
-        # Find 'Wyszukaj' item
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'Wyszukaj':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

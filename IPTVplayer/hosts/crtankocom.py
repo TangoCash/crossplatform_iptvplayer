@@ -92,62 +92,50 @@ class CrtankoCom(CBaseHostClass):
 
         return url
         
-    def cleanHtmlStr(self, data):
-        data = data.replace('&nbsp;', ' ')
-        data = data.replace('&nbsp', ' ')
-        return CBaseHostClass.cleanHtmlStr(data)
-        
     def replacewhitespace(self, data):
         data = data.replace(' ', '%20')
         return CBaseHostClass.cleanHtmlStr(data)
-            
-    def listsMainMenu(self, cItem, category1, category2):
-        printDBG("CrtankoCom.listsMainMenu")
-        self.cacheSubCategory = []
-        sts, data = self.cm.getPage(cItem['url'])
-        if not sts: return
+    
+    def listMainMenu(self, cItem, nextCategory1, nextCategory2):
+        printDBG("CrtankoCom.listMainMenu")
+        sts, data = self.cm.getPage(self.getMainUrl())
+        if sts:
+            data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'menu-meni-container'), ('</ul', '>'))[1]
+            data = re.compile('(<li[^>]*?>|</li>|<ul[^>]*?>|</ul>)').split(data)
+            if len(data) > 1:
+                try:
+                    cTree = self.listToDir(data[1:-1], 0)[0]
+                    params = dict(cItem)
+                    params['c_tree'] = cTree['list'][0]
+                    params['category'] = 'list_categories'
+                    self.listCategories(params, nextCategory1, nextCategory2)
+                except Exception:
+                    printExc()
+        self.listsTab(self.MAIN_CAT_TAB, cItem)
         
-        subCatMarker = '<ul class="dropdown-menu">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="menu-meni-container">', subCatMarker)[1]
-        data = re.split('<a[^>]+?href="#"[^>]*?>', data)
-        
-        for part in data:
-            subCatDataIdx = part.find(subCatMarker)
-        
-            idx = 0
-            if subCatDataIdx > 0:
-                subCatName = self.cleanHtmlStr( part[0:subCatDataIdx] )
-                idx  = subCatDataIdx
-            
-            part = self.cm.ph.getAllItemsBeetwenMarkers(part[idx:], '<li ', '</li>')
-            
-            tab = []
-            for item in part:
-                url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
-                title = self.cleanHtmlStr( item )
-                if not url.startswith('http'):
-                    continue
-                tab.append({'title':title, 'url':url})
-            
-            if subCatDataIdx > 0:
-                params = dict(cItem)
-                if len(tab):
-                    params.update({'category':category1,'title':subCatName, 'sub_cat_idx':len(self.cacheSubCategory)})
-                    self.addDir(params)
-                    self.cacheSubCategory.append(tab)
-            else:
-                params = dict(cItem)
-                params['category'] = category2
-                self.listsTab(tab, params)
-        
-    def listCategories(self, cItem, nextCategory):
+    def listCategories(self, cItem, nextCategory1, nextCategory2):
         printDBG("CrtankoCom.listCategories")
-        if 'sub_cat_idx' not in cItem: return
-        idx = cItem['sub_cat_idx']
-        if idx > -1 and idx < len(self.cacheSubCategory):
-            cItem = dict(cItem)
-            cItem['category'] = nextCategory
-            self.listsTab(self.cacheSubCategory[idx], cItem)
+        try:
+            cTree = cItem['c_tree']
+            for item in cTree['list']:
+                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item['dat'], '<a', '</a>')[1])
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item['dat'], '''href=['"]([^'^"]+?)['"]''')[0])
+                if url.endswith('/dugometrazni/') or url.endswith('/kratkometrazni/') or \
+                   url.endswith('/prijevod/') or url.endswith('/prijevod/'):
+                        params = dict(cItem)
+                        params.update({'good_for_fav':False, 'category':nextCategory2, 'title':title, 'url':url})
+                        self.addDir(params)
+                elif 'list' not in item:
+                    if self.cm.isValidUrl(url) and title != '':
+                        params = dict(cItem)
+                        params.update({'good_for_fav':False, 'category':nextCategory1, 'title':title, 'url':url})
+                        self.addDir(params)
+                elif len(item['list']) == 1 and title != '':
+                    params = dict(cItem)
+                    params.update({'good_for_fav':False, 'c_tree':item['list'][0], 'title':title, 'url':url})
+                    self.addDir(params)
+        except Exception:
+            printExc()
             
     def listLetters(self, cItem, nextCategory):
         printDBG("CrtankoCom.listCategories")
@@ -183,7 +171,7 @@ class CrtankoCom(CBaseHostClass):
         else:
             nextPage = False
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article ', '</article>')
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>'), ('</article', '>'))
         for item in data:
             title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''')[0]
             icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''data-src=['"]([^"^']+?)['"]''')[0])
@@ -217,11 +205,11 @@ class CrtankoCom(CBaseHostClass):
         
         tmp1 = self.cm.ph.getDataBeetwenMarkers(data, '<section', '</section', False)[1]
         tmp1 = self.cm.ph.getAllItemsBeetwenMarkers(tmp1, '<p', '</div>')
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="youtube">', '</div>')
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'class="youtube"'), ('</div', '>'))
         searchMore = True
         for tmp in [tmp1, data]:
             for item in tmp:
-                linkData = self.cm.ph.getDataBeetwenMarkers(item, '<div class="youtube">', '</div', False)[1]
+                linkData = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'class="youtube"'), ('</div', '>'), False)[1]
                 if linkData == '':
                     continue
                 titles = self.cm.ph.getAllItemsBeetwenMarkers(item, '<p', '</p>')
@@ -310,10 +298,9 @@ class CrtankoCom(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            self.listsMainMenu({'url':self.MAIN_URL}, 'categories', 'list_letters')
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
-        elif category == 'categories':
-            self.listCategories(self.currItem, 'list_letters')
+            self.listMainMenu({'name':'category', 'url':self.MAIN_URL}, 'list_items', 'list_letters')
+        elif category == 'list_categories':
+            self.listCategories(self.currItem, 'list_items', 'list_letters')
         elif category == 'list_letters':
             self.listLetters(self.currItem, 'list_items')
         elif category == 'list_items':

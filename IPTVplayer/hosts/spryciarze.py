@@ -357,9 +357,9 @@ class Spryciarze(CBaseHostClass):
                 except Exception:
                     printExc()
             else:
-                player  = self.cm.ph.getSearchGroups(data, '"(http://www.spryciarze.pl/player/[^"]+?\.swf?[^"]+?)"')[0]
+                player  = self.cm.ph.getSearchGroups(data, '(spryciarze.pl/player/[^"]+?\.swf?[^"]+?)"')[0]
                 videoID = self.cm.ph.getSearchGroups(player + '|', 'VideoID=([0-9]+?)[^0-9]')[0]
-                sts, data = self.cm.getPage('http://www.spryciarze.pl/player/player/xml_connect.php?code=%s&ra=2' % videoID, {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
+                sts, data = self.cm.getPage(self.getFullUrl('/player/player/xml_connect.php?code=%s&ra=2' % videoID), {'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
                 if not sts: break
                 data = re.compile('<urlMOV([^>]+?)>([^<]+?)<').findall(data)
                 tmp = []

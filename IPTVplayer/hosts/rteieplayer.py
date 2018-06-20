@@ -372,7 +372,9 @@ class RteIE(CBaseHostClass):
         if self.MAIN_URL == None:
             #rm(self.COOKIE_FILE)
             self.selectDomain()
-
+        
+        self.informAboutGeoBlockingIfNeeded('IE')
+        
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')

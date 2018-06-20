@@ -11,16 +11,11 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################
+import urlparse
 import re
 import urllib
-import string
-import base64
 try:    import json
 except Exception: import simplejson as json
-from random import randint
-from datetime import datetime
-from time import sleep
-from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -48,14 +43,14 @@ class HDPopcornsCom(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'HDPopcornsCom.tv', 'cookie':'HDPopcornsCom.cookie'})
-        
-        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_URL = 'http://hdpopcorns.com/'
-        self.DEFAULT_ICON_URL = self.MAIN_URL + 'wp-content/uploads/2016/08/large-logo.png' 
+        self.DEFAULT_ICON_URL = 'http://7428.net/wp-content/uploads/2014/07/Movie-Time-Ticket-Vector.jpg' 
         
         self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Categories'),           'url':self.getMainUrl()           },
                              {'category':'search',            'title': _('Search'),               'search_item':True,               },
@@ -64,9 +59,30 @@ class HDPopcornsCom(CBaseHostClass):
         
         self.cacheFilters = {}
         
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}: addParams = dict(self.defaultParams)
+        origBaseUrl = baseUrl
+        baseUrl = self.cm.iriToUri(baseUrl)
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url): return url
+            else: return urlparse.urljoin(baseUrl, url)
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+    
+    def getFullUrl(self, url):
+        if '://' not in url and ':/' in url:
+            url = url.split(':/', 1)[-1]
+        return CBaseHostClass.getFullUrl(self, url)
+    
+    def getFullIconUrl(self, url):
+        url = self.getFullUrl(url)
+        if url == '': return ''
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
+        
     def fillFilters(self, cItem):
         self.cacheFilters = {}
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         def addFilter(data, key, addAny, titleBase, marker):
@@ -128,22 +144,28 @@ class HDPopcornsCom(CBaseHostClass):
         post_data = None
         page = cItem.get('page', 1)
         if page == 1 and '/?s=' not in baseUrl:
-            post_data = 'ofsearch=&'
+            hasFilters = False
             for key in ['ofcategory', 'ofrating', 'ofquality']:
-                if cItem.get(key, '') not in ['-', '']:
-                    post_data += key + '={0}&ofcategory_operator=and&'.format(cItem[key])
-            post_data += 'ofsubmitted=1'
+                if cItem.get(key, '') not in ['-', '', '0']:
+                    hasFilters = True
+            
+            if hasFilters:
+                post_data = 'ofsearch=&'
+                for key in ['ofcategory', 'ofrating', 'ofquality']:
+                    if cItem.get(key, '') not in ['-', '']:
+                        post_data += key + '={0}&ofcategory_operator=and&'.format(cItem[key])
+                post_data += 'ofsubmitted=1'
         
         params = dict(self.defaultParams)
         params['header'] = dict(params['header'])
         params['raw_post_data'] = True
         
-        sts, data = self.cm.getPage(baseUrl, params, post_data)
+        sts, data = self.getPage(baseUrl, params, post_data)
         if not sts: return
         
         nextPage = self.cm.ph.getSearchGroups(data, 'var\s+?mts_ajax_loadposts\s*=\s*([^;]+?);')[0].strip()
         try:
-            nextPage = str(byteify(json.loads(nextPage)).get('nextLink', ''))
+            nextPage = self.getFullUrl(str(byteify(json.loads(nextPage)).get('nextLink', '')))
         except Exception:
             nextPage = ''
             printExc()
@@ -166,7 +188,7 @@ class HDPopcornsCom(CBaseHostClass):
     def listEpisodes(self, cItem):
         printDBG("HDPopcornsCom.listEpisodes")
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
         desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])
@@ -227,7 +249,7 @@ class HDPopcornsCom(CBaseHostClass):
         
         urlTab = []
         
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<form action', '</form>')[1]
@@ -239,7 +261,7 @@ class HDPopcornsCom(CBaseHostClass):
             params['header'] = dict(params['header'])
             params['header']['Referer'] = cItem['url']
             
-            sts, data = self.cm.getPage(url, params, post_data)
+            sts, data = self.getPage(url, params, post_data)
             if not sts: return []
             
             printDBG("+++++++++++++++++++++++++++++++++++++++")
@@ -301,7 +323,7 @@ class HDPopcornsCom(CBaseHostClass):
         url = cItem.get('prev_url', '')
         if url == '': url = cItem.get('url', '')
         
-        sts, data = self.cm.getPage(url)
+        sts, data = self.getPage(url)
         if not sts: return retTab
         
         desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])

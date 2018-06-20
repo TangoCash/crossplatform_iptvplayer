@@ -27,7 +27,7 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 # Config options for HOST
 ###################################################
 config.plugins.iptvplayer.ytformat        = ConfigSelection(default = "mp4", choices = [("flv, mp4", "flv, mp4"),("flv", "flv"),("mp4", "mp4")]) 
-config.plugins.iptvplayer.ytDefaultformat = ConfigSelection(default = "360", choices = [("0", _("the worst")), ("144", "144p"), ("240", "240p"), ("360", "360p"),("720", "720"), ("1080", "1080"),("9999", _("the best"))])
+config.plugins.iptvplayer.ytDefaultformat = ConfigSelection(default = "720", choices = [("0", _("the worst")), ("144", "144p"), ("240", "240p"), ("360", "360p"),("720", "720"), ("1080", "1080"),("9999", _("the best"))])
 config.plugins.iptvplayer.ytUseDF         = ConfigYesNo(default = True)
 config.plugins.iptvplayer.ytShowDash      = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ytSortBy        = ConfigSelection(default = "", choices = [("", _("Relevance")),("video_date_uploaded", _("Upload date")),("video_view_count", _("View count")),("video_avg_rating", _("Rating"))]) 
@@ -55,6 +55,7 @@ class YouTubeParser():
                 return [], []
             else: return []
         
+        retHLSList = []
         retList = []
         # filter dash
         dashAudioLists = []
@@ -87,7 +88,7 @@ class YouTubeParser():
                         item['format'] = format.group(1) + "x"
                         item['ext']  = item['ext'] + "_M3U8"
                         item['url']  = decorateUrl(item['url'], {"iptv_proto":"m3u8"})
-                        retList.append(item)
+                        retHLSList.append(item)
                 else:
                     format = re.search('([0-9]+?x[0-9]+?$)', item['format'])
                     if format != None:
@@ -112,6 +113,7 @@ class YouTubeParser():
                 if sts:
                     data = data.replace('\\"', '"').replace('\\\\\\/', '/')
                     hlsUrl = self.cm.ph.getSearchGroups(data, '''"hlsvp"\s*:\s*"(https?://[^"]+?)"''')[0]
+                    hlsUrl= byteify(json.loads('"%s"' % hlsUrl))
                     if self.cm.isValidUrl(hlsUrl):
                         hlsList = getDirectM3U8Playlist(hlsUrl)
                         if len(hlsList):
@@ -123,11 +125,17 @@ class YouTubeParser():
                                 retList.append(item)
             except Exception:
                 printExc()
+            if 0 == len(retList):
+                retList = retHLSList
+            
             if dash:
                 try:
                     sts, data = self.cm.getPage(url, {'header':{'User-agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'}})
                     data = data.replace('\\"', '"').replace('\\\\\\/', '/').replace('\\/', '/')
                     dashUrl = self.cm.ph.getSearchGroups(data, '''"dashmpd"\s*:\s*"(https?://[^"]+?)"''')[0]
+                    dashUrl = byteify(json.loads('"%s"' % dashUrl))
+                    if '?' not in dashUrl: dashUrl += '?mpd_version=5'
+                    else: dashUrl += '&mpd_version=5'
                     printDBG("DASH URL >>>>>>>>>>>>>>>>>>>>>>> [%s]" % dashUrl)
                     if self.cm.isValidUrl(dashUrl):
                         dashList = getMPDLinksWithMeta(dashUrl, checkExt=False)
@@ -184,9 +192,14 @@ class YouTubeParser():
                         title = self.cm.ph.getDataBeetwenMarkers(data[i],  titleMarker, '</%s>' % tmarker)[1]
             
             if '' != title: title = CParsingHelper.removeDoubles(remove_html_markup(title, ' '), ' ')
+            if i == 0:
+                printDBG(data[i])
                 
             img   = self.getAttributes('data-thumb="([^"]+?\.jpg[^"]*?)"', data[i])
             if '' == img:  img = self.getAttributes('src="([^"]+?\.jpg[^"]*?)"', data[i])
+            if '' == img:  img = self.getAttributes('<img[^>]+?data\-thumb="([^"]+?)"', data[i])
+            if '' == img:  img = self.getAttributes('<img[^>]+?src="([^"]+?)"', data[i])
+            if '.gif' in img: img = ''
             time  = self.getAttributes('data-context-item-time="([^"]+?)"', data[i])
             if '' == time: time  = self.getAttributes('class="video-time">([^<]+?)</span>', data[i])
             if '' == time: sts, time = CParsingHelper.getDataBeetwenReMarkers(data[i], re.compile('pl-video-time"[^>]*?>'), re.compile('<'), False)
@@ -206,7 +219,7 @@ class YouTubeParser():
             if desc != '': descTab.append(desc)
             
             newDescTab = []
-            for desc in descTab:            
+            for desc in descTab:
                 desc = self.cm.ph.removeDoubles(remove_html_markup(desc, ' '), ' ')
                 desc = clean_html(desc).strip()
                 if desc != '':
@@ -229,9 +242,9 @@ class YouTubeParser():
                             correctUrlTab[i] = 'http:' + correctUrlTab[i]
                         else:
                             correctUrlTab[i] = 'http://www.youtube.com' + correctUrlTab[i]
-                    else:
-                        if correctUrlTab[i].startswith('https:'):
-                            correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
+                    #else:
+                    #    if correctUrlTab[i].startswith('https:'):
+                    #        correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
 
                 title = clean_html(title)
                 params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1].replace('&amp;', '&'), 'time': time, 'desc': '[/br]'.join(newDescTab)}

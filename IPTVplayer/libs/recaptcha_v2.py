@@ -41,9 +41,12 @@ class UnCaptchaReCaptcha:
             message = self.cm.ph.getSearchGroups(data, '<label[^>]+class="fbc-imageselect-message-text"[^>]*>(.*?)</label>')[0]
             if '' == message: message = self.cm.ph.getSearchGroups(data, '<div[^>]+class="fbc-imageselect-message-error">(.*?)</div>')[0]
             if '' == message:
-                token = self.cm.ph.getSearchGroups(data, '"this\.select\(\)">(.*?)</textarea>')[0]
+                token = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'verification-token'), ('</div', '>'), False)[1]
+                token = self.cm.ph.getDataBeetwenNodes(data, ('<textarea', '>'), ('</textarea', '>'), False)[1].strip()
+                if token == '': token = self.cm.ph.getSearchGroups(data, '"this\.select\(\)">(.*?)</textarea>')[0]
+                if token == '': token = self.cm.ph.getDataBeetwenNodes(data, ('<textarea', '>'), ('</textarea', '>'), False)[1].strip()
                 if '' != token: printDBG('>>>>>>>> Captcha token[%s]' % (token))
-                else: printDBG('>>>>>>>> Captcha Failed')
+                else: printDBG('>>>>>>>> Captcha Failed\n\n%s\n\n' % data)
                 break
 
             cval = self.cm.ph.getSearchGroups(data, 'name="c"\s+value="([^"]+)')[0]

@@ -45,18 +45,18 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://movs4u.com/'
+    return 'https://movs4u.com/'
 
 class Movs4uCOM(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'movs4u.com', 'cookie':'movs4u.com.cookie', 'cookie_type':'MozillaCookieJar'})
-        self.DEFAULT_ICON_URL = 'http://www.movs4u.com/wp-content/uploads/2017/06/1IMG_1930.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'http://www.movs4u.com/'
+        self.MAIN_URL = 'https://www.movs4u.com/'
+        self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/uploads/2018/03/TcCsO2w.png')
         self.cacheLinks    = {}
         self.cacheSeasons = {}
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -83,7 +83,7 @@ class Movs4uCOM(CBaseHostClass):
         
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        printDBG('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++> [%s] - > [%s]' % (origBaseUrl, baseUrl) )
+        printDBG('+++> [%s] - > [%s]' % (origBaseUrl, baseUrl) )
         
         def _getFullUrl(url):
             if self.cm.isValidUrl(url):
@@ -149,7 +149,7 @@ class Movs4uCOM(CBaseHostClass):
             nextPage = True
         else: nextPage = False
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="content">', '<div class="fixed-sidebar-blank">')[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'class="content'), ('<div', '>', 'class="fixed-sidebar-blank"'))[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<article', '</article>')
         for item in data:
             url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
@@ -305,31 +305,40 @@ class Movs4uCOM(CBaseHostClass):
         if len(cacheTab):
             return cacheTab
         
-        sts, data = self.getPage(cItem['url'])
-        if not sts: return retTab
-        
-        linksData = self.cm.ph.getDataBeetwenMarkers(data, '<div class="playex">', '<div class="control">')[1]
-        linksData = re.sub("<!--[\s\S]*?-->", "", linksData)
-        linksData = self.cm.ph.getAllItemsBeetwenMarkers(linksData, '<iframe', '>')
-        linksMap = {}
-        for item in linksData:
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
-            id  = self.cm.ph.getSearchGroups(item, '''data-iframe-id=['"]([^'^"]+?)['"]''')[0]
-            linksMap[id] = url
-        
-        playerData = self.cm.ph.getDataBeetwenMarkers(data, '<nav class="player">', '</ul>')[1]
-        playerData = re.sub("<!--[\s\S]*?-->", "", playerData)
-        playerData = self.cm.ph.getAllItemsBeetwenMarkers(playerData, '<li', '</li>')
-        
-        for item in playerData:
-            id   = self.cm.ph.getSearchGroups(item, '''data-target-id=['"]([^'^"]+?)['"]''')[0]
-            name = self.cleanHtmlStr(item)
-            url  = linksMap.get(id, '')
-            if self.cm.isValidUrl(url):
-                retTab.append({'name':name, 'url':url, 'need_resolve':1})
-        
-        if len(retTab):
-            self.cacheLinks[cItem['url']] = retTab
+        currUrl = cItem['url']
+        prevUrl = ''
+        while currUrl != prevUrl:
+            sts, data = self.getPage(currUrl)
+            if not sts: return retTab
+            prevUrl = currUrl
+            
+            linksData = self.cm.ph.getDataBeetwenMarkers(data, '<div class="playex">', '<div class="control">')[1]
+            currUrl = self.getFullUrl(self.cm.ph.getSearchGroups(linksData, '''<a[^>]+?href=['"]([^'^"]+?view=[^'^"]+?)['"]''')[0])
+            
+            linksData = re.sub("<!--[\s\S]*?-->", "", linksData)
+            linksData = self.cm.ph.getAllItemsBeetwenMarkers(linksData, '<iframe', '>')
+            linksMap = {}
+            for item in linksData:
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
+                id  = self.cm.ph.getSearchGroups(item, '''data-iframe-id=['"]([^'^"]+?)['"]''')[0]
+                linksMap[id] = url
+            
+            playerData = self.cm.ph.getDataBeetwenMarkers(data, '<nav class="player">', '</ul>')[1]
+            playerData = re.sub("<!--[\s\S]*?-->", "", playerData)
+            playerData = self.cm.ph.getAllItemsBeetwenMarkers(playerData, '<li', '</li>')
+            
+            for item in playerData:
+                id   = self.cm.ph.getSearchGroups(item, '''data-target-id=['"]([^'^"]+?)['"]''')[0]
+                name = self.cleanHtmlStr(item)
+                url  = linksMap.get(id, '')
+                if self.cm.isValidUrl(url):
+                    retTab.append({'name':name, 'url':url, 'need_resolve':1})
+            
+            if len(retTab):
+                self.cacheLinks[cItem['url']] = retTab
+            
+            if currUrl == '':
+                break
         
         return retTab
         

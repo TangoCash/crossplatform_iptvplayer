@@ -153,6 +153,8 @@ class IconMenager:
        
     def getIconPathFromAAueue(self, item):
         printDBG("getIconPathFromAAueue item[%s]" % item)
+        if item.startswith('file://'): return item[7:]
+        
         hashAlg = MD5()
         name = hashAlg(item)
         filename = hexlify(name) + '.jpg'
@@ -270,11 +272,32 @@ class IconMenager:
                 img_url = self.cm.ph.getSearchGroups(data, '(<img[^>]+?alt="Cover"[^>]+?>)')[0]
                 img_url = self.cm.ph.getSearchGroups(img_url, 'src="([^"]+?)"')[0]
                 if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
-            elif 'watchseriesmovie.com' in domain:
+            elif 'watchseriesmovie.' in domain:
                 baseUrl = img_url
                 img_url = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'picture'), ('</div', '>'), False)[1]
                 img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?)"')[0]
                 if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif 'classiccinemaonline.com' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getDataBeetwenNodes(data, ('<center>', '</center>', '<img'), ('<', '>'))[1]
+                img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(:?\?[^"]+?)?)"')[0]
+                if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif 'nasze-kino.tv' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'single-poster'), ('<img', '>'))[1]
+                img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(:?\?[^"]+?)?)"')[0]
+                if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif 'allbox.' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getDataBeetwenNodes(data, ('<img', '>', '"image"'), ('<', '>'))[1]
+                if img_url != '': img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(:?\?[^"]+?)?)"')[0]
+                else: img_url = self.cm.ph.getSearchGroups(data, 'url\(([^"^\)]+?\.(:?jpe?g|png)(:?\?[^"^\)]+?)?)\);')[0].strip()
+                if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif 'efilmy.' in domain:
+                baseUrl = img_url
+                img_url = self.cm.ph.getDataBeetwenNodes(data, ('<img', '>', 'align="left"'), ('<', '>'))[1]
+                img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(:?\?[^"]+?)?)"')[0]
+                img_url = self.cm.getFullUrl(img_url, baseUrl)
             if not self.cm.isValidUrl(img_url): return False
         else:
             img_url = strwithmeta(img_url)

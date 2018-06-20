@@ -59,8 +59,8 @@ def gettytul():
     return 'http://zalukaj.com/'
 
 class ZalukajCOM(CBaseHostClass):
-    HOST = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
-    HEADER = {'User-Agent': HOST, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+    USER_AGENT = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
+    HEADER = {'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Connection': 'keep-alive', 'Pragma': 'no-cache', 'Cache-Control': 'no-cache'} )
     
@@ -97,11 +97,14 @@ class ZalukajCOM(CBaseHostClass):
         printDBG("ZalukajCOM.__init__")
         CBaseHostClass.__init__(self, {'history':'ZalukajCOM', 'cookie':'zalukajtv.cookie', 'min_py_ver':(2,7,9)})
         self.loggedIn = None
+        self.login    = ''
+        self.password = ''
+        self.msg = ''
         
     def _getPage(self, url, http_params_base={}, params=None, loggedIn=None):
         if None == loggedIn: loggedIn=self.loggedIn
         HEADER = ZalukajCOM.HEADER
-        if loggedIn: http_params = {'header': HEADER, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        if loggedIn: http_params = {'header': HEADER, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
         else: http_params = {'header': HEADER}
         http_params.update(http_params_base)
         return self.getPage(url, http_params, params)
@@ -124,7 +127,7 @@ class ZalukajCOM(CBaseHostClass):
         if sts and None == data:
             sts = False
         if sts and 'Duze obciazenie!' in data:
-            SetIPTVPlayerLastHostError(self.cleanHtmlStr(data))
+            SetIPTVPlayerLastHostError(self.cleanHtmlStr(re.compile('''<script.+?</script>''', re.DOTALL).sub("", data)))
         return sts, data
         
     def getFullIconUrl(self, url):
@@ -261,6 +264,8 @@ class ZalukajCOM(CBaseHostClass):
     
     def getLinksForVideo(self, cItem):
         printDBG("ZalukajCOM.getLinksForVideo url[%s]" % cItem['url'])
+        self.tryTologin()
+        
         if self.loggedIn: tries= [True, False]
         else: tries= [False]
         urlTab = []
@@ -328,38 +333,55 @@ class ZalukajCOM(CBaseHostClass):
         return urlTab
         
     def tryTologin(self):
-        printDBG('ZalukajCOM.tryTologin start')
-        rm(self.COOKIE_FILE)
-        sts,msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % config.plugins.iptvplayer.zalukajtv_login.value
-        post_data = {'login': config.plugins.iptvplayer.zalukajtv_login.value, 'password': config.plugins.iptvplayer.zalukajtv_password.value}
-        params    = { 'host': ZalukajCOM.HOST, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
-        params2   = { 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIE_FILE }
-        sts, data  = self.getPage(ZalukajCOM.LOGIN_URL, params, post_data)
-        if sts: sts, data2 = self._getPage(ZalukajCOM.LOGIN_URL, params2, post_data)
-        if sts:
-            printDBG( 'Host getInitList: chyba zalogowano do premium...' )
-            sts, data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
+        printDBG('tryTologin start')
+        
+        config.plugins.iptvplayer.zalukajtv_login   
+        config.plugins.iptvplayer.zalukajtv_password
+        
+        if None == self.loggedIn or self.login != config.plugins.iptvplayer.zalukajtv_login.value or\
+            self.password != config.plugins.iptvplayer.zalukajtv_password.value:
+        
+            self.login = config.plugins.iptvplayer.zalukajtv_login.value
+            self.password = config.plugins.iptvplayer.zalukajtv_password.value
             
-            if sts: 
-                params.update({'save_cookie':False, 'load_cookie':True})
-                sts, data2 = self._getPage(self.getFullUrl('/libs/ajax/login.php?login=1'), params2)
-
+            rm(self.COOKIE_FILE)
+            
+            self.loggedIn = False
+            self.msg = ''
+            
+            if '' == self.login.strip() or '' == self.password.strip():
+                return False
+            
+            rm(self.COOKIE_FILE)
+            sts, msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % self.login
+            post_data = {'login': self.login, 'password': self.password}
+            sts, data  = self._getPage(ZalukajCOM.LOGIN_URL, params=post_data, loggedIn=True)
             if sts:
-                printDBG(data)
-                sts,tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Typ Konta:', '</p>', False)
+                printDBG( 'Host getInitList: chyba zalogowano do premium...' )
+                sts, data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
+                
                 if sts: 
-                    tmp = tmp.replace('(kliknij by oglądać bez limitów)', '')
-                    msg = 'Zostałeś poprawnie zalogowany.' + '\nTyp Konta: '+self.cleanHtmlStr(tmp)
-                    tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Zebrane Punkty:', '</p>', False)[1].replace('&raquo; Wymień na VIP &laquo;', '')
-                    if '' != tmp: msg += '\nZebrane Punkty: '+self.cleanHtmlStr(tmp)
-        return sts,msg
+                    sts, data2 = self._getPage(self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
+
+                if sts:
+                    printDBG(data)
+                    sts,tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Typ Konta:', '</p>', False)
+                    if sts: 
+                        tmp = tmp.replace('(kliknij by oglądać bez limitów)', '')
+                        msg = 'Zostałeś poprawnie zalogowany.' + '\nTyp Konta: '+self.cleanHtmlStr(tmp)
+                        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<p>Zebrane Punkty:', '</p>', False)[1].replace('&raquo; Wymień na VIP &laquo;', '')
+                        if '' != tmp: msg += '\nZebrane Punkty: '+self.cleanHtmlStr(tmp)
+                        self.loggedIn = True
+            
+            if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+            else: self.msg = msg.replace('\n', '[/br]')
+        
+        return self.loggedIn
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('ZalukajCOM.handleService start')
-        if None == self.loggedIn and config.plugins.iptvplayer.zalukajtvPREMIUM.value:
-            self.loggedIn,msg = self.tryTologin()
-            if not self.loggedIn: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
-            else: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+        
+        self.tryTologin()
 
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         name     = self.currItem.get("name", None)
@@ -369,7 +391,7 @@ class ZalukajCOM(CBaseHostClass):
         self.currList = [] 
 
         if None == name:
-            self.listsTab(ZalukajCOM.MAIN_CAT_TAB, {'name':'category'})
+            self.listsTab(ZalukajCOM.MAIN_CAT_TAB, {'name':'category', 'desc':self.msg})
     #FILMS
         elif 'films_sub_menu' == category:
             self.listsTab(ZalukajCOM.FILMS_SUB_MENU, self.currItem)

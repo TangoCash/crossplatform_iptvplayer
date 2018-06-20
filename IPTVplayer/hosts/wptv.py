@@ -83,14 +83,25 @@ class WpTV(CBaseHostClass):
 
     def getSectionItems(self, section):
         sectionItemsTab = []
-        section = self.cm.ph.getAllItemsBeetwenMarkers(section, "<a", '</a>')
-        for item in section:
+        tmp = self.cm.ph.rgetAllItemsBeetwenNodes(section, ('</div', '>'), ('<div', '>', 'teaser teaser'))
+        if 0 == len(tmp): tmp = self.cm.ph.getAllItemsBeetwenNodes(section, ('<a', '>', 'teaser teaser'), ('</a', '>'))
+        for item in tmp:
+            cat = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<em', '</em>')[1])
+            dur = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<time', '</time>')[1])
+            des = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'description'), ('</div', '>'))[1])
+            
             url  = self.getFullUrl(self._getAttrVal(item, 'href'))
             icon = self._getAttrVal(item, 'src')
             if icon == '' or icon.startswith('data:image'): icon = self._getAttrVal(item, 'data-src')
             title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3', '</h3>')[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h2', '</h2>')[1])
             if title == '': title = self.cleanHtmlStr(self._getAttrVal(item, 'alt'))
-            desc = self.cleanHtmlStr(item)
+            if 'odcinek' in cat.lower(): title += ' - ' +  cat
+            
+            if cat != '' and dur != '' and des != '':
+                desc = '%s | %s [/br]%s' % (dur, cat, des)
+            else:
+                desc = self.cleanHtmlStr(item)
             if not self.cm.isValidUrl(url): continue
             params = {'title':title, 'url':url, 'icon':self.getFullUrl(icon), 'desc':desc}
             if ',klip.html' in url:
@@ -195,18 +206,20 @@ class WpTV(CBaseHostClass):
         nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''href=['"]([^'^"]+?\,page\,%d\,[^'^"]+?)['"]''' % (page+1))[0])
         mainDesc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<main class="main-content"' ,'</p>')[1])
         
-        trailerData  = self.cm.ph.getDataBeetwenMarkers(data, '<a class="see-trailer"', '</a>', withMarkers=True)[1]
-        trailerTitle = '{0} - {1}'.format(cItem['title'], self.cleanHtmlStr(trailerData))
-        trailerUrl   = self.getFullUrl(self._getAttrVal(trailerData, 'href'))
-        if self.cm.isValidUrl(trailerUrl) and ',klip.html' in trailerUrl:
-            params = {'good_for_fav': True, 'url':trailerUrl, 'title':trailerTitle, 'icon':cItem.get('icon', ''), 'desc':mainDesc}
-            self.addVideo(params)
+        if page == 1:
+            trailerData  = self.cm.ph.getDataBeetwenMarkers(data, '<a class="see-trailer"', '</a>', withMarkers=True)[1]
+            trailerTitle = '{0} - {1}'.format(cItem['title'], self.cleanHtmlStr(trailerData))
+            trailerUrl   = self.getFullUrl(self._getAttrVal(trailerData, 'href'))
+            if self.cm.isValidUrl(trailerUrl) and ',klip.html' in trailerUrl:
+                params = {'good_for_fav': True, 'url':trailerUrl, 'title':trailerTitle, 'icon':cItem.get('icon', ''), 'desc':mainDesc}
+                self.addVideo(params)
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<section', '</section>')
         for section in data:
+            if 'Zobacz także' in section: continue
             itemsTab = self.getSectionItems(section)
             for item in itemsTab:
-                item.update({'good_for_fav': True, 'title':item['desc'], 'desc':mainDesc})
+                item.update({'good_for_fav': True, 'desc':item['desc'] + '[/br]' + mainDesc}) #, 'title':item['desc']
                 self.addVideo(item)
         
         if self.cm.isValidUrl(nextPage):

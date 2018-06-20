@@ -46,10 +46,9 @@ class TeleWizjaComApi(CBaseHostClass):
 
     def __init__(self):
         CBaseHostClass.__init__(self)
-        self.MAIN_URL    = 'http://tele-wizja.com/'
+        self.MAIN_URL    = 'http://tele-wizja.ru/'
         self.HTTP_HEADER = { 'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0'}
         self.COOKIE_FILE = GetCookieDir('telewizjacom.cookie')
-        self.PROXY_URL   = 'http://www.proxy-german.de/index.php?q={0}&hl=2e5'
         self.http_params = {}
         self.useProxy    = False
         #self.http_params.update({'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
@@ -63,22 +62,9 @@ class TeleWizjaComApi(CBaseHostClass):
         
     def getIconUrl(self, url):
         url = self.getFullUrl(url)
-        if self.useProxy:
-            proxy = self.PROXY_URL.format(urllib.quote(url, ''))
-            params = {}
-            params['User-Agent'] = self.HTTP_HEADER['User-Agent'],
-            params['Referer']    = proxy
-            params['Cookie']     = 'flags=2e5;'
-            url = strwithmeta(proxy, params) 
         return url
         
     def getPage(self, url, params={}, post_data=None):
-        
-        if self.useProxy:
-            params.update({'header':self.HTTP_HEADER})
-            proxy = self.PROXY_URL.format(urllib.quote_plus(url))
-            params['header']['Referer'] = proxy
-            url = proxy
         return self.cm.getPage(url, params, post_data)
         
     def getListOfChannels(self, cItem):

@@ -57,7 +57,7 @@ class MergeDownloader(BaseDownloader):
         return "MergeDownloader"
 
     def isWorkingCorrectly(self, callBackFun):
-        self.iptv_sys = iptv_system( 'ffmpeg -version ' + " 2>&1 ", boundFunction(self._checkWorkingCallBack, callBackFun) )
+        self.iptv_sys = iptv_system( DMHelper.GET_FFMPEG_PATH() + ' -version ' + " 2>&1 ", boundFunction(self._checkWorkingCallBack, callBackFun) )
         
     def _checkWorkingCallBack(self, callBackFun, code, data):
         reason = ''
@@ -131,7 +131,7 @@ class MergeDownloader(BaseDownloader):
         return BaseDownloader.CODE_OK
         
     def doStartPostProcess(self):
-        cmd = 'ffmpeg '
+        cmd = DMHelper.GET_FFMPEG_PATH() + ' '
         for item in self.multi['files']:
             cmd += ' -i "{0}" '.format(item)
         cmd += ' -map 0:0 -map 1:0 -vcodec copy -acodec copy "{0}" >/dev/null 2>&1 '.format(self.filePath)

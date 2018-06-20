@@ -52,7 +52,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://watchseriesmovie.com/'
+    return 'https://gowatchseries.io/'
 
 class MyTheWatchseries(CBaseHostClass):
  
@@ -65,25 +65,18 @@ class MyTheWatchseries(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://watchseriesmovie.com/img/icon/logo.png'
+        self.DEFAULT_ICON_URL = 'https://gowatchseries.io/img/icon/logo.png'
         self.MAIN_URL = None
         self.cacheLinks = {}
         self.cacheFilters  = {}
         self.cacheFiltersKeys = []
         
     def selectDomain(self):
-        self.MAIN_URL = 'http://watchseriesmovie.com/'
-        self.MAIN_CAT_TAB = [{'category':'list_filters',     'title': _("LIST"),                       'url':self.getFullUrl('/list')},
-                             {'category':'list_items',       'title': _("MOVIES"),                     'url':self.getFullUrl('/movies')},
-                             {'category':'list_items',       'title': _("CINEMA MOVIES"),              'url':self.getFullUrl('/cinema-movies')},
-                             {'category':'list_items',       'title': _("THIS WEEK'S SERIES POPULAR"), 'url':self.getFullUrl('/recommended-series')},
-                             {'category':'list_items',       'title': _("NEW RELEASE LIST"),           'url':self.getFullUrl('/new-release')},
-                             
-                             #{'category':'list_categories', 'title': _('CATEGORIES'),  'url':self.getMainUrl()}, 
-                             
-                             {'category':'search',          'title': _('Search'), 'search_item':True, },
-                             {'category':'search_history',  'title': _('Search history'),             } 
-                            ]
+        self.MAIN_URL = 'https://gowatchseries.io/'
+        params = dict(self.defaultParams)
+        params['with_metadata'] = True
+        sts, data = self.getPage(self.getMainUrl(), params)
+        if sts: self.MAIN_URL = self.cm.getBaseUrl(data.meta['url'])
     
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
@@ -101,6 +94,23 @@ class MyTheWatchseries(CBaseHostClass):
         if url == '': return ''
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
+        
+    def listMain(self, cItem):
+        printDBG("MyTheWatchseries.listMain")
+        if self.MAIN_URL == None:
+            self.selectDomain()
+        MAIN_CAT_TAB = [{'category':'list_filters',     'title': _("LIST"),                       'url':self.getFullUrl('/list')},
+                        {'category':'list_items',       'title': _("MOVIES"),                     'url':self.getFullUrl('/movies')},
+                        {'category':'list_items',       'title': _("CINEMA MOVIES"),              'url':self.getFullUrl('/cinema-movies')},
+                        {'category':'list_items',       'title': _("THIS WEEK'S SERIES POPULAR"), 'url':self.getFullUrl('/recommended-series')},
+                        {'category':'list_items',       'title': _("NEW RELEASE LIST"),           'url':self.getFullUrl('/new-release')},
+                        
+                        #{'category':'list_categories', 'title': _('CATEGORIES'),  'url':self.getMainUrl()}, 
+                        
+                        {'category':'search',          'title': _('Search'), 'search_item':True, },
+                        {'category':'search_history',  'title': _('Search history'),             } 
+                       ]
+        self.listsTab(MAIN_CAT_TAB, cItem)
         
     def fillCacheFilters(self, cItem):
         printDBG("MyTheWatchseries.listCategories")
@@ -459,7 +469,7 @@ class MyTheWatchseries(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+            self.listMain({'name':'category'})
         elif category == 'list_filters':
             self.listFilters(self.currItem, 'list_items_2')
         elif category == 'list_items_2':

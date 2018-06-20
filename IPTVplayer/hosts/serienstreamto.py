@@ -68,8 +68,8 @@ class SerienStreamTo(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'https://serienstream.to/'
-        self.DEFAULT_ICON_URL = 'https://serienstream.to/public/img/facebook.jpg'
+        self.MAIN_URL = 'https://s.to/'
+        self.DEFAULT_ICON_URL = 'https://s.to/public/img/facebook.jpg'
         
         self.MAIN_CAT_TAB = [{'category':'list_abc',          'title': _('A-Z'),                          'url':self.MAIN_URL                       },
                              {'category':'list_genres',       'title': _('Genres'),                       'url':self.MAIN_URL                       },
@@ -271,6 +271,7 @@ class SerienStreamTo(CBaseHostClass):
                     langId = self.cm.ph.getSearchGroups(item, '''data-lang-key=['"]([^'^"]+?)['"]''')[0]
                     title  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h4>', '</h4>', withMarkers=False)[1])
                     url    = strwithmeta(self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]), {'base_url':cItem['url']})
+                    if url == '': url = strwithmeta(self.getFullUrl(self.cm.ph.getSearchGroups(item, '''data\-link\-target=['"]([^'^"]+?)['"]''')[0]), {'base_url':cItem['url']})
                     urlTab.append({'name': '[{0}] {1}'.format(langMap.get(langId, _('Unknown')), title), 'lang_id':langId, 'url':url, 'need_resolve':1})
                 
                 if len(urlTab):

@@ -174,7 +174,7 @@ class WeebTvApi:
                 elif video_quality == '0' and bitrate == 2:
                     playPath = playPath + 'LOW'
                 
-                rtmp = str(rtmpLink) + '/' + str(playPath) + ' live=1 pageUrl=token swfUrl=' + str(token)
+                rtmp = str(rtmpLink) + '/' + str(playPath) + ' live=1 token=fake pageUrl=token swfUrl=' + str(token)
                 printDBG("||||||||||||||||||||||||||||| " + rtmp)
         except Exception: printExc()
         

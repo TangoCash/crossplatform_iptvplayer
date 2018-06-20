@@ -57,7 +57,6 @@ class KreskoweczkiPL(CBaseHostClass):
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
         self.MAIN_URL      = 'https://www.kreskoweczki.pl/'
-        self.SEARCH_URL    = self.MAIN_URL + 'szukaj'
         self.DEFAULT_ICON  = "http://svn.sd-xbmc.org/filedetails.php?repname=sd-xbmc&path=%2Ftrunk%2Fxbmc-addons%2Fsrc%2Fxbmc-addons%2Fkreskoweczki.png&rev=936&peg=936"
 
         self.MAIN_CAT_TAB = [{'icon':self.DEFAULT_ICON, 'category':'list_abc',        'title': 'Alfabetycznie',   'url':self.MAIN_URL },
@@ -116,22 +115,19 @@ class KreskoweczkiPL(CBaseHostClass):
         url = cItem['url']
         page = cItem.get('page', 1)
         
-        if page > 1:
-            if '?' in url:
-                url += '&page=%d' % page
-            else:
-                url += '/strona-%d' % page
-        
         post_data = cItem.get('post_data', None)
         sts, data = self.getPage(url, {}, post_data)
         if not sts: return
         
-        nextPage = self.cm.ph.getSearchGroups(data, '''strona\-(%s)[^0-9]''' % (page + 1))[0]
-        if nextPage == '': nextPage = self.cm.ph.getSearchGroups(data, '''page\,(%s)[^0-9]''' % (page + 1))[0]
-        if nextPage != '':
-            nextPage = True
-        else: 
-            nextPage = False
+        if '/odcinki' not in url:
+            url = self.cm.ph.getDataBeetwenNodes(data, ('<a', '</a>', 'Lista Odcinków'), ('</div', '>'))[1]
+            url = self.getFullUrl( self.cm.ph.getSearchGroups(url, '''href=['"]([^'^"]+?)['"]''')[0] )
+            if url != '':
+                sts, data = self.getPage(url)
+                if not sts: return
+        
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pagination'), ('</div', '>'))[1]
+        nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(nextPage, '''href=['"]([^'^"]+?)['"][^>]*?>%s<''' % (page + 1))[0])
         
         videoMarker = '''/([0-9]+?)/'''
         
@@ -143,32 +139,49 @@ class KreskoweczkiPL(CBaseHostClass):
             if '' == self.cm.ph.getSearchGroups(item, videoMarker)[0]:
                 video = False
             # icon
-            icon  = self.cm.ph.getSearchGroups(item, '''url\(['"]([^'^"]+?)['"]''')[0]
-            if icon == '': icon = self.cm.ph.getSearchGroups(item, '''data-bg-url=['"]([^'^"]+?\.jpe?g)['"]''')[0]
+            icon  = self.cm.ph.getSearchGroups(item, '''url\(\s*?['"]([^'^"]+?)['"]''')[0]
+            if icon == '': icon = self.cm.ph.getSearchGroups(item, '''data-bg-url=['"]([^'^"]+?\.jpe?g(:?\?[^'^"]*?)?)['"]''')[0]
             if icon == '': icon = cItem.get('icon', '')
             # url
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             if url == '': continue
             #title
-            title = self.cm.ph.getDataBeetwenMarkers(item, '<div class="category-name"', '</div>')[1]
-            if title == '': title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
-            if title == '': title = self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>')[1]
-            title = self.cm.ph.getDataBeetwenMarkers(item, '<span class="pm-category-name', '</span>')[1] + ' ' + title
+            desc = []
+            title1 = []
+            title2 = []
+            item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<div', '</div>')
+            for t in item:
+                if 'category-nam' in t: 
+                    t = self.cleanHtmlStr(t).replace('Seria:', '').replace('Tytuł:', '')
+                    if t != '': title1.append(t)
+                elif '"header"' in t or '"number"' in t:
+                    t = self.cleanHtmlStr(t.split('</b>', 1)[-1])
+                    if t != '': title2.append(t)
+                else: 
+                    t = self.cleanHtmlStr(t.replace('</span>', '[/br]'))
+                    if t != '': desc.append(t)
+            
+            title = ' '.join(title1)
+            if len(title2): desc.insert(0, '  '.join(title2))
+            #title = self.cm.ph.getDataBeetwenMarkers(item, '<div class="category-name"', '</div>')[1]
+            #if title == '': title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0]
+            #if title == '': title = self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>')[1]
+            #title = self.cm.ph.getDataBeetwenMarkers(item, '<span class="pm-category-name', '</span>')[1] + ' ' + title
             
             params = dict(cItem)
             params.pop('post_data', None)
-            params.update({'good_for_fav':True, 'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon)})
-            printDBG(icon)
+            params.update({'good_for_fav':True, 'page':1, 'title':self.cleanHtmlStr(title), 'url':self.getFullUrl(url), 'icon':self.getFullUrl(icon), 'desc':'[/br]'.join(desc).replace('[/br][/br]', '[/br]')})
+
             if video:
-                params.update({'desc':self.cleanHtmlStr(item)})
+                #params.update({'desc':self.cleanHtmlStr(item)})
                 self.addVideo(params)
             else:
-                params.update({'desc':self.cleanHtmlStr(item.replace('</b>', '[/br]'))})
+                #params.update({'desc':self.cleanHtmlStr(item.replace('</b>', '[/br]'))})
                 self.addDir(params)
         
-        if nextPage:
+        if nextPage != '':
             params = dict(cItem)
-            params.update({'good_for_fav':False, 'title':_('Next page'), 'page':page+1})
+            params.update({'good_for_fav':False, 'title':_('Next page'), 'url':nextPage, 'page':page+1})
             self.addDir(params)
         
     def getLinksForVideo(self, cItem):
@@ -222,8 +235,8 @@ class KreskoweczkiPL(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("KreskoweczkiPL.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
-        cItem['url'] = self.SEARCH_URL
-        cItem['post_data'] = {'query':searchPattern}
+        cItem['category'] = 'list_items'
+        cItem['url'] = self.getFullUrl('/szukaj?query=' + urllib.quote_plus(searchPattern))
         self.listItems(cItem)
         
     def getFavouriteData(self, cItem):

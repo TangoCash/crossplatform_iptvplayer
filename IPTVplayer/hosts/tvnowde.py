@@ -169,7 +169,8 @@ class TVNowDE(CBaseHostClass):
     def listCats(self, cItem, nextCategory):
         printDBG("TVNowDE.listCats")
         
-        genres = ["Soap", "Action", "Crime", "Ratgeber", "Comedy", "Show", "Docutainment", "Drama", "Tiere", "News", "Mags", "Romantik", "Horror", "Familie", "Kochen", "Auto", "Sport", "Reportage und Dokumentationen", "Sitcom", "Mystery", "Lifestyle", "Musik", "Spielfilm", "Anime"]
+        genres = ["Tägliche Serien","Action","Crime","Ratgeber","Comedy","Show","Docutainment","Drama","Tiere","News","Mags","Romantik","Horror","Familie","Kochen","Auto","Sport","Reportage und Dokumentationen","Sitcom","Mystery","Lifestyle","Musik","Spielfilm","Anime"] 
+        #["Soap", "Action", "Crime", "Ratgeber", "Comedy", "Show", "Docutainment", "Drama", "Tiere", "News", "Mags", "Romantik", "Horror", "Familie", "Kochen", "Auto", "Sport", "Reportage und Dokumentationen", "Sitcom", "Mystery", "Lifestyle", "Musik", "Spielfilm", "Anime"]
         for item in genres:
             params = dict(cItem)
             params = {'good_for_fav': False, 'title':item, 'f_genre':item.lower()}
@@ -432,7 +433,9 @@ class TVNowDE(CBaseHostClass):
                 printExc()
         
         if self.cm.isValidUrl(urlDashClear):
-            urlHlsClear = urlDashClear.replace('/vodnowusodash.', '/vodnowusohls.')[:-3] + 'm3u8'
+            urlHlsClear = urlDashClear.replace('/vodnowusodash.', '/vodnowusohls.').split('?', 1)
+            urlHlsClear[0] = urlHlsClear[0][:-3] + 'm3u8'
+            urlHlsClear = '?'.join(urlHlsClear)
             hlsTab  = getDirectM3U8Playlist(urlHlsClear, checkContent=True)
             dashTab = getMPDLinksWithMeta(urlDashClear, False)
             try:

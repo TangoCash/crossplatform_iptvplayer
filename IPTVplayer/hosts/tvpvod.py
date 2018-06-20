@@ -76,7 +76,7 @@ class TvpVod(CBaseHostClass):
     ALL_FORMATS = [{"video/mp4":"mp4"}, {"application/x-mpegurl":"m3u8"}, {"video/x-ms-wmv":"wmv"}] 
     REAL_FORMATS = {'m3u8':'ts', 'mp4':'mp4', 'wmv':'wmv'}
     MAIN_VOD_URL = "https://vod.tvp.pl/"
-    LOGIN_URL = "https://www.tvp.pl/sess/ssologin.php"
+    LOGIN_URL = "https://www.tvp.pl/sess/user-2.0/login.php?ref="
     STREAMS_URL_TEMPLATE = 'http://www.api.v3.tvp.pl/shared/tvpstream/listing.php?parent_id=13010508&type=epg_item&direct=false&filter={%22release_date_dt%22:%22[iptv_date]%22,%22epg_play_mode%22:{%22$in%22:[0,1,3]}}&count=-1&dump=json'
     SEARCH_VOD_URL = MAIN_VOD_URL + 'szukaj?query=%s'
     IMAGE_URL = 'http://s.v3.tvp.pl/images/%s/%s/%s/uid_%s_width_500_gs_0.%s'
@@ -112,6 +112,8 @@ class TvpVod(CBaseHostClass):
                           'nasygnale.tvp.pl':      'http://vod.tvp.pl/13883615/na-sygnale'}
         self.FormatBitrateMap = [ ("360000",  "320x180"), ("590000",  "398x224"), ("820000",  "480x270"), ("1250000", "640x360"),
                                   ("1750000", "800x450"), ("2850000", "960x540"), ("5420000", "1280x720"), ("6500000", "1600x900"), ("9100000", "1920x1080") ]
+        self.MAIN_URL = 'https://vod.tvp.pl/'
+        self.loginMessage = ''
     
     def getJItemStr(self, item, key, default=''):
         v = item.get(key, None)
@@ -192,6 +194,7 @@ class TvpVod(CBaseHostClass):
         return ret
      
     def tryTologin(self):
+        self.loginMessage = ''
         email = config.plugins.iptvplayer.tvpvod_login.value
         password = config.plugins.iptvplayer.tvpvod_password.value
         msg = 'Wystąpił problem z zalogowaniem użytkownika "%s"!' % email
@@ -203,24 +206,19 @@ class TvpVod(CBaseHostClass):
             ref = self.cm.ph.getSearchGroups(data, 'name="ref".+?value="([^"]+?)"')[0]
             login = self.cm.ph.getSearchGroups(data, 'name="login".+?value="([^"]+?)"')[0]
             post_data = {'ref':ref, 'email':email, 'password':password, 'login':login, 'action':'login'}
-            sts, data = self._getPage(TvpVod.LOGIN_URL, self.defaultParams, post_data)
-            if sts and '"/sess/passwordreset.php"' not in data:
-                if "Strefa Widza nieaktywna" in data:
-                    msg = "Strefa Widza nieaktywna."
-                    sts = False
-                else:
-                    msg = 'Użytkownik "%s" zalogowany poprawnie!' % email
-            else: sts = False
+            sts, data = self._getPage(TvpVod.LOGIN_URL + ref, self.defaultParams, post_data)
+            if sts and 'action=sign-out' in data:
+                printDBG(">>>\n%s\n<<<" % data)
+                data = self.cm.ph.getDataBeetwenNodes(data, ('<section', '>', 'abo__section'), ('</section', '>'), False)[1]
+                data = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(data, ('<p', '>'), ('</p', '>'), False)[1] )
+                msg = ['Użytkownik "%s"' % email]
+                msg.append('Strefa Abo %s' % data)
+                self.loginMessage = '[/br]'.join(msg)
+                msg = self.loginMessage.replace('[/br]', '\n')
+            else: 
+                sts = False
         return sts, msg
-       
-    def listsTab(self, tab, cItem):
-        printDBG("TvpVod.listsMainMenu")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            self.addDir(params)
-            
+        
     def _addNavCategories(self, data, cItem, category):
         data = re.findall('href="([^"]+?)"[^>]*?>([^<]+?)<', data)
         for item in data:
@@ -389,21 +387,19 @@ class TvpVod(CBaseHostClass):
             params.update({'good_for_fav': False, 'category':nextCategory, 'title':self.cleanHtmlStr(item).title(), 'url':url, 'desc':''})
             self.addDir(params)
             
-        url = self._getFullUrl('/category/serwisy,699')
-        params = dict(cItem)
-        params.update({'good_for_fav': False, 'category':nextCategory, 'title':'Serwisy', 'url':url, 'desc':''})
-        self.addDir(params)
-            
-            
-    def mapHoeverItem(self, cItem, item, nextCategory):
+    def mapHoeverItem(self, cItem, item, rawItem, nextCategory):
         try:
             item = byteify(json.loads(item))
             title = self.getJItemStr(item, 'title')
             icon = self._getFullUrl(self.getJItemStr(item, 'image'))
             tmp = []
+            labelMap = {'age':'Wiek: %s'}
             for key in ['transmision', 'antena', 'age']:
                 val = self.getJItemStr(item, key)
-                if val != '': tmp.append(val)
+                if val != '': tmp.append(labelMap.get(key, '%s') % val)
+                
+            paymentTag = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(rawItem, ('<div', '>', 'showPaymentTag'), ('</div', '>'))[1])
+            if paymentTag != '': tmp.append(paymentTag)
             desc = ' | '.join(tmp)
             desc += '[/br]' + self.getJItemStr(item, 'description')
             
@@ -460,7 +456,7 @@ class TvpVod(CBaseHostClass):
         sectionsData = sectionsData.split('<section')
         if len(sectionsData): del sectionsData[0]
         
-        subFiltersData = self.cm.ph.getAllItemsBeetwenMarkers(data.split('</header>', 1)[-1], '"dropdown-menu"', '</ul>')
+        subFiltersData = self.cm.ph.getAllItemsBeetwenNodes(data[data.rfind('</header>'):], ('<ul', '>', '"dropdown-menu'), ('</ul', '>'))
         #subFiltersData.reverse()
         allSubFiltersTab = []
         for idx in range(len(subFiltersData)):
@@ -506,9 +502,10 @@ class TvpVod(CBaseHostClass):
                 data = data.split('<div class="col-md') #re.split('<div class="col-md[^>]+?>', data)
                 if len(data): del data[0]
             for item in data:
-                item = clean_html(self.cm.ph.getSearchGroups(item, '''data-hover\s*=\s*['"]([^'^"]+?)['"]''')[0])
-                self.mapHoeverItem(cItem, item, nextCategory)
+                jsItem = clean_html(self.cm.ph.getSearchGroups(item, '''data-hover\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                self.mapHoeverItem(cItem, jsItem, item, nextCategory)
         else:
+            sectionItems = []
             for section in sectionsData:
                 sectionHeader = self.cm.ph.getDataBeetwenMarkers(section, '<h1', '</h1>')[1]
                 if sectionHeader == '': sectionHeader = self.cm.ph.getDataBeetwenMarkers(section, '<h2>', '</h2>')[1]
@@ -519,29 +516,50 @@ class TvpVod(CBaseHostClass):
                 if self.cm.isValidUrl(sectionUrl):
                     if '>Oglądaj<' in section: continue
                     if sectionTitle.startswith('Zobacz także:'): continue
+                
+                itemsTab = []
+                tmp = self.cm.ph.getAllItemsBeetwenNodes(section, ('<div', '>', 'item'), ('</a', '>'))
+                for item in tmp:
+                    icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?data-lazy\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                    if icon == '': icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?src\s*=\s*['"]([^'^"]+?\.jpg)['"]''')[0])
+                    url  = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                    
+                    title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'title'), ('</h', '>'))[1])
+                    desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'sub-title'), ('</h', '>'))[1])
+                    if '/' not in desc: 
+                        title += ' ' + desc
+                        desc = ''
+                    if title == '': title = self.cleanHtmlStr(item)
+                    title = title.strip()
+                    if self.cm.isValidUrl(url) and title != '':
+                        if title.startswith('odc.'): 
+                            title = cItem['title'] + ' ' + title
+                        params = dict(cItem)
+                        params.update({'good_for_fav': False, 'title':title, 'url':url, 'icon':icon, 'desc':''})
+                        if '/video/' in url:
+                            params.update({'good_for_fav':True, 'type':'video'})
+                            itemsTab.append(params)
+                        else:
+                            params.update({'category':nextCategory,})
+                            itemsTab.append(params)
+                            
+                if self.cm.isValidUrl(sectionUrl) and (len(itemsTab) > 1 or 0 == len(itemsTab)):
                     params = dict(cItem)
                     params.update({'good_for_fav': False, 'category':nextCategory, 'title':sectionTitle, 'url':sectionUrl, 'icon':sectionIcon, 'desc':''})
-                    self.addDir(params)
-                elif (len(self.currList) == 0 and sectionTitle in ['Przeglądaj', 'Wideo', 'Oglądaj']) or isSearch:
-                    tmp = self.cm.ph.getAllItemsBeetwenMarkers(section, '<div class="item', '</a>')
-                    for item in tmp:
-                        icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?data-lazy\s*=\s*['"]([^'^"]+?)['"]''')[0])
-                        if icon == '': icon = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?src\s*=\s*['"]([^'^"]+?\.jpg)['"]''')[0])
-                        url  = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
-                        
-                        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h2', '</h3>')[1])
-                        if title == '': title = self.cleanHtmlStr(item)
-                        if self.cm.isValidUrl(url):
-                            params = dict(cItem)
-                            params.update({'good_for_fav': False, 'title':title, 'url':url, 'icon':icon, 'desc':''})
-                            if '/video/' in url:
-                                params['good_for_fav'] = True
-                                self.addVideo(params)
-                            else:
-                                params.update({'category':nextCategory,})
-                                self.addDir(params)
-                    if len(self.currList) and not isSearch:
-                        break
+                    sectionItems.append({'title':sectionTitle, 'items':[params]})
+                elif len(itemsTab):
+                    sectionItems.append({'title':sectionTitle, 'items':itemsTab})
+            
+            allItems = []
+            for sectionItem in sectionItems:
+                if sectionItem['title'] in ['Przeglądaj', 'Wideo', 'Oglądaj'] and not isSearch:
+                    self.currList = sectionItem['items']
+                    break
+                else:
+                    allItems.extend(sectionItem['items'])
+            
+            if 0 == len(self.currList):
+                self.currList = allItems
         
         if self.cm.isValidUrl(nextPageUrl):
             params = dict(cItem)
@@ -591,6 +609,8 @@ class TvpVod(CBaseHostClass):
         if not sts: return ''
         asset_id = self.cm.ph.getSearchGroups(data, 'object_id=([0-9]+?)[^0-9]')[0]
         if asset_id == '': asset_id = self.cm.ph.getSearchGroups(data, 'class="playerContainer"[^>]+?data-id="([0-9]+?)"')[0]
+        if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, 'data-video-id="([0-9]+?)"')[0]
+        if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, "object_id:'([0-9]+?)'")[0]
         return asset_id
                 
     def getLinksForVideo(self, cItem):
@@ -607,8 +627,8 @@ class TvpVod(CBaseHostClass):
                 if 1 < len(videoTab):
                     max_bitrate = int(config.plugins.iptvplayer.tvpVodDefaultformat.value)
                     def __getLinkQuality( itemLink ):
-                        if 'with' in itemLink and 'heigth' in itemLink:
-                            bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['with'], itemLink['heigth']))
+                        if 'width' in itemLink and 'height' in itemLink:
+                            bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['width'], itemLink['height']))
                             if bitrate != 0: return bitrate
                         return int(itemLink['bitrate'])
                     oneLink = CSelOneLink(videoTab, __getLinkQuality, max_bitrate)
@@ -632,54 +652,109 @@ class TvpVod(CBaseHostClass):
         
     def getVideoLink(self, asset_id):
         printDBG("getVideoLink asset_id [%s]" % asset_id)
-        sts, data = self.cm.getPage( 'http://www.tvp.pl/shared/cdn/tokenizer_v2.php?mime_type=video%2Fmp4&object_id=' + asset_id, self.defaultParams)
-        if False == sts:
-            printDBG("getVideoLink problem")
-        
         videoTab = []
-        try:
-            data = json.loads( data )
+        
+        if '' == asset_id: return  videoTab
+        
+        def _sortVideoLinks(videoTab):
+            if 1 < len(videoTab):
+                max_bitrate = int(config.plugins.iptvplayer.tvpVodDefaultformat.value)
+                def __getLinkQuality( itemLink ):
+                    if 'width' in itemLink and 'height' in itemLink:
+                        bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['width'], itemLink['height']))
+                        if bitrate != 0: return bitrate
+                    try: return int(itemLink['bitrate'])
+                    except Exception: return 0
+                oneLink = CSelOneLink(videoTab, __getLinkQuality, max_bitrate)
+                videoTab = oneLink.getSortedLinks()
+            return videoTab
+        
+        # main routine
+        if len(videoTab) == 0: 
+            sts, data = self.cm.getPage( 'http://www.tvp.pl/shared/cdn/tokenizer_v2.php?mime_type=video%2Fmp4&object_id=' + asset_id, self.defaultParams)
+            printDBG("%s -> [%s]" % (sts, data))
+            try:
+                data = json.loads( data )
+                
+                def _getVideoLink(data, FORMATS):
+                    videoTab = []
+                    for item in data['formats']:
+                        if item['mimeType'] in FORMATS.keys():
+                            formatType = FORMATS[item['mimeType']].encode('utf-8')
+                            format = self.REAL_FORMATS.get(formatType, '')
+                            name = self.getFormatFromBitrate( str(item['totalBitrate']) ) + '\t ' + formatType
+                            url = item['url'].encode('utf-8')
+                            if 'm3u8' == formatType:
+                                videoTab.extend( getDirectM3U8Playlist(url, checkExt=False, variantCheck=False) )
+                            else:
+                                meta = {'iptv_format':format}
+                                if config.plugins.iptvplayer.tvpVodProxyEnable.value:
+                                    meta['http_proxy'] = config.plugins.iptvplayer.proxyurl.value
+                                videoTab.append( {'name' : name, 'bitrate': str(item['totalBitrate']), 'url' : self.up.decorateUrl(url, meta) })
+                    return videoTab
+                
+                preferedFormats  = []
+                if config.plugins.iptvplayer.tvpVodPreferedformat.value == 'm3u8':
+                    preferedFormats = [TvpVod.ALL_FORMATS[1], TvpVod.ALL_FORMATS[0], TvpVod.ALL_FORMATS[2]]
+                else:
+                    preferedFormats = TvpVod.ALL_FORMATS
+                
+                for item in preferedFormats:
+                    videoTab.extend(_sortVideoLinks(_getVideoLink(data, item )))
+                
+            except Exception:
+                printExc("getVideoLink exception")
+        
+        # fallback routine
+        if len(videoTab) == 0: 
+            formatMap = {'1':("320x180", 360000), '2':('398x224', 590000), '3':('480x270', 820000), '4':('640x360', 1250000), '5':('800x450', 1750000), '6':('960x540', 2850000), '7':('1280x720', 5420000), '8':("1600x900", 6500000), '9':('1920x1080', 9100000)}
             
-            def _getVideoLink(data, FORMATS):
-                videoTab = []
+            params = dict(self.defaultParams)
+            params['header'] = {'User-Agent':'okhttp/3.8.1', 'Authorization':'Basic YXBpOnZvZA==', 'Accept-Encoding':'gzip'}
+            sts, data = self.cm.getPage( 'https://apivod.tvp.pl/tv/video/%s/default/default?device=android' % asset_id, params)
+            printDBG("%s -> [%s]" % (sts, data))
+            try:
+                data = byteify(json.loads( data ), '', True)
+                for item in data['data']:
+                    if 'formats' in item:
+                        data = item
+                        break
+                hlsTab = []
+                mp4Tab = []
                 for item in data['formats']:
-                    if item['mimeType'] in FORMATS.keys():
-                        formatType = FORMATS[item['mimeType']].encode('utf-8')
-                        format = self.REAL_FORMATS.get(formatType, '')
-                        name = self.getFormatFromBitrate( str(item['totalBitrate']) ) + '\t ' + formatType
-                        url = item['url'].encode('utf-8')
-                        if 'm3u8' == formatType:
-                            videoTab.extend( getDirectM3U8Playlist(url, checkExt=False, variantCheck=False) )
-                        else:
-                            meta = {'iptv_format':format}
-                            if config.plugins.iptvplayer.tvpVodProxyEnable.value:
-                                meta['http_proxy'] = config.plugins.iptvplayer.proxyurl.value
-                            videoTab.append( {'name' : name, 'bitrate': str(item['totalBitrate']), 'url' : self.up.decorateUrl(url, meta) })
-                if 1 < len(videoTab):
-                    max_bitrate = int(config.plugins.iptvplayer.tvpVodDefaultformat.value)
-                    def __getLinkQuality( itemLink ):
-                        if 'with' in itemLink and 'heigth' in itemLink:
-                            bitrate = self.getBitrateFromFormat('%sx%s' % (itemLink['with'], itemLink['heigth']))
-                            if bitrate != 0: return bitrate
-                        return int(itemLink['bitrate'])
-                    oneLink = CSelOneLink(videoTab, __getLinkQuality, max_bitrate)
-                    if config.plugins.iptvplayer.tvpVodUseDF.value:
-                        videoTab = oneLink.getOneLink()
-                    else:
-                        videoTab = oneLink.getSortedLinks()
-                return videoTab
-            
-            preferedFormats  = []
-            if config.plugins.iptvplayer.tvpVodPreferedformat.value == 'm3u8':
-                preferedFormats = [TvpVod.ALL_FORMATS[1], TvpVod.ALL_FORMATS[0], TvpVod.ALL_FORMATS[2]]
-            else:
-                preferedFormats = TvpVod.ALL_FORMATS
-            for item in preferedFormats:
-                videoTab = _getVideoLink(data, item )
-                if len(videoTab):
-                    break
-        except Exception:
-            printExc("getVideoLink exception") 
+                    if not self.cm.isValidUrl(item.get('url', '')):
+                        continue
+                    if item.get('mimeType', '').lower() == "application/x-mpegurl":
+                        hlsTab = getDirectM3U8Playlist(item['url'])
+                    elif item.get('mimeType', '').lower() == "video/mp4":
+                        id = self.cm.ph.getSearchGroups(item['url'], '''/video\-([1-9])\.mp4$''')[0]
+                        fItem = formatMap.get(id, ('0x0', 0))
+                        mp4Tab.append({'name':'%s \t mp4' % fItem[0], 'url':item['url'], 'bitrate':fItem[1], 'id':id})
+                
+                if len(hlsTab) > 0 and 1 == len(mp4Tab) and mp4Tab[0]['id'] != '':
+                    for item in hlsTab:
+                        res = '%sx%s' % (item['width'], item['height'])
+                        for key in formatMap.keys():
+                            if key == mp4Tab[0]['id']: continue
+                            if formatMap[key][0] != res: continue
+                            url = mp4Tab[0]['url']
+                            url = url[:url.rfind('/')] + ('/video-%s.mp4' % key)
+                            mp4Tab.append({'name':'%s \t mp4' % formatMap[key][0], 'url':url, 'bitrate':formatMap[key][1], 'id':key})
+               
+                hlsTab = _sortVideoLinks(hlsTab)
+                mp4Tab = _sortVideoLinks(mp4Tab)
+                if config.plugins.iptvplayer.tvpVodPreferedformat.value == 'm3u8':
+                    videoTab.extend(hlsTab)
+                    videoTab.extend(mp4Tab)
+                else:
+                    videoTab.extend(mp4Tab)
+                    videoTab.extend(hlsTab)
+            except Exception:
+                printExc("getVideoLink exception")
+        
+        if config.plugins.iptvplayer.tvpVodUseDF.value and len(videoTab):
+            videoTab = [videoTab[0]]
+        
         return videoTab
         
     def getLinksForFavourite(self, fav_data):
@@ -721,44 +796,51 @@ class TvpVod(CBaseHostClass):
             premium = config.plugins.iptvplayer.tvpvod_premium.value
             if premium:
                 self.loggedIn, msg = self.tryTologin()
-                self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
+                if self.loggedIn != True: self.sessionEx.open(MessageBox, msg, type = MessageBox.TYPE_INFO, timeout = 10 )
 
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
+        
+        self.informAboutGeoBlockingIfNeeded('PL')
+        
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         printDBG( "TvpVod.handleService: ---------> name[%s], category[%s] " % (name, category) )
         searchPattern = self.currItem.get("search_pattern", searchPattern)
         self.currList = [] 
         self.currItem.pop('good_for_fav', None)
-
+        currItem = dict(self.currItem)
+        
+        if None != name and  self.currItem.get('desc', '').startswith('Użytkownik'):
+            currItem.pop('desc', None)
+        
         if None == name:
-            self.listsTab(TvpVod.VOD_CAT_TAB, {'name':'category'})
+            self.listsTab(TvpVod.VOD_CAT_TAB, {'name':'category', 'desc':self.loginMessage})
     # STREAMS
         elif category == 'streams':
-            self.listsTab(TvpVod.STREAMS_CAT_TAB, self.currItem)
+            self.listsTab(TvpVod.STREAMS_CAT_TAB, currItem)
         elif category == 'tvp3_streams':
-            self.listTVP3Streams(self.currItem)
+            self.listTVP3Streams(currItem)
         elif category == 'week_epg':
-            self.listWeekEPG(self.currItem, 'epg_items')
+            self.listWeekEPG(currItem, 'epg_items')
         elif category == 'epg_items':
-            self.listEPGItems(self.currItem)
+            self.listEPGItems(currItem)
     # TVP SPORT
         elif category == 'tvp_sport':    
-            self.listTVPSportCategories(self.currItem, 'tvp_sport_list_items')
+            self.listTVPSportCategories(currItem, 'tvp_sport_list_items')
     # LIST TVP SPORT VIDEOS
         elif category == 'tvp_sport_list_items':
-            self.listTVPSportVideos(self.currItem)
+            self.listTVPSportVideos(currItem)
         elif category == 'vods_list_cats':
-            self.listCatalog(self.currItem, 'vods_explore_item')
+            self.listCatalog(currItem, 'vods_explore_item')
         elif category == 'vods_explore_item':
-            self.exploreVODItem(self.currItem, 'vods_explore_item')
+            self.exploreVODItem(currItem, 'vods_explore_item')
     #WYSZUKAJ
         elif category == "search":
-            cItem = dict(self.currItem)
+            cItem = dict(currItem)
             cItem.update({'category':'list_search', 'searchPattern':searchPattern, 'searchType':searchType, 'search_item':False})            
             self.listSearchResult(cItem, searchPattern, searchType)
         elif category == "list_search":
-            cItem = dict(self.currItem)
+            cItem = dict(currItem)
             searchPattern = cItem.get('searchPattern', '')
             searchType    = cItem.get('searchType', '')
             self.listSearchResult(cItem, searchPattern, searchType)

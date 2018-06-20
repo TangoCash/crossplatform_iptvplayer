@@ -64,6 +64,7 @@ class cda(CBaseHostClass):
         
         self.MAIN_TAB = [{'category':'video',             'title': 'Filmy wideo',  'url':''},
                          {'category':'premium',           'title': 'CDA Premium',  'url':self.getFullUrl('premium')},
+                         {'category':'channels_cats',     'title': 'Kanały',       'url':''},
                          {'category':'search',            'title': _('Search'), 'search_item':True},
                          {'category':'search_history',    'title': _('Search history')}]
         
@@ -239,14 +240,12 @@ class cda(CBaseHostClass):
                 nextPage = False
             
             if search:
-                data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="block-media', '<div class="block-media-inline-separator">')[1]
-                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="block-media', '</label>', withMarkers=True)
+                data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'video-clip-wrapper'), ('</label', '>'))
             elif 'poczekalnia' in url:
                 data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoInfo">', '<span class="next-wrapper">', False)[1]
                 data = data.split('<div class="videoInfo">')                
             else:
-                data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="rowElem">', '<div class="clear"></div>', False)[1]
-                data = data.split('</label>')
+                data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'video-clip-wrapper'), ('</label', '>'))
                 
             for item in data:
                 printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -264,19 +263,125 @@ class cda(CBaseHostClass):
                     desc = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)["']''', 1, True)[0] )
                 if '' != desc: descTab.append(desc)
                 desc = self.cleanHtmlStr('[/br]'.join(descTab))
+                if desc == '': desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'count-files'), ('</a', '>'))[1])  
                 
                 title  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<div class="text">', '</div>', False)[1] )
                 if '' == title: title  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<span style="color: #B82D2D; font-size: 14px">', '</a>', False)[1] )
                 if '' == title: title  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, 'alt="', '"', False)[1] )
+                if '' == title: title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<a', '>', 'link-title'), ('</a', '>'))[1])
+                
                 url    = self.getFullUrl(self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, 'href="', '"', False)[1] ))
                 icon   = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, 'src="', '"', False)[1] )
+                params = {'good_for_fav':True, 'title':self.cleanHtmlStr(title), 'url':url, 'icon':icon, 'desc':desc}
                 if '/video' in url:
-                    self.addVideo({'title':self.cleanHtmlStr(title), 'url':url, 'icon':icon, 'desc':desc})
+                    self.addVideo(params)
+                elif '/folder/' in url:
+                    params.update({'name':'dir', 'category':'list_folder_sort'})
+                    self.addDir(params)
                 
             if nextPage:
                 nextPage = dict(cItem)
-                nextPage.update({'title':'Następna strona', 'page':page+1})
+                nextPage.update({'good_for_fav':False, 'title':'Następna strona', 'page':page+1})
                 self.addDir(nextPage)
+    
+    def listChannelsCategories(self, cItem, nextCategory):
+        printDBG("cda.listChannelsCategories [%s]" % cItem['url'])
+        
+        url = self.getFullUrl('/partial/polecanekanaly_paski')
+        sts, data = self.cm.getPage(url)
+        if not sts: return
+        
+        cats = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s*?polecani_partnerzy\s*?='), re.compile(';'), False)[1].strip()
+        counts = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s*?polecani_video_count\s*?='), re.compile(';'), False)[1].strip()
+        maps = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s*?mapping \s*?='), re.compile(';'), False)[1].strip()
+        try:
+            tmp = re.compile('''"([^"]+?)"\s*?\:\s*?\[''').findall(cats) # we use this trick to get valid order of cats
+            data = []
+            for item in tmp: data.append('"%s"' % item)
+            data = '[%s]' % ','.join(data)
+            data   = byteify(json.loads(data), '')
+            cats   = byteify(json.loads(cats), '')
+            counts = byteify(json.loads(counts), '')
+            maps   = byteify(json.loads(maps), '')
+            for item in data:
+                url = self.getFullUrl('/video/' + maps.get(item, item.lower()))
+                printDBG("+++++++++++++++++++++++++++++++++")
+                printDBG(cats[item][0])
+                kid = cats[item][0]['kid']
+                title = item
+                desc = counts.get(kid, '')
+                params = dict(cItem)
+                params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'desc':desc, 'url':url})
+                self.addDir(params)
+        except Exception:
+            printExc()
+            
+    def listChannels(self, cItem, nextCategory):
+        printDBG("cda.listChannels [%s]" % cItem['url'])
+        
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<a', '>', 'tube-wrap'), ('</a', '>'))
+        for item in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            icon = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'tube-name'), ('</span', '>'), False)[1])
+            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'tube-count'), ('</span', '>'), False)[1])
+            
+            params = dict(cItem)
+            params.update({'good_for_fav':True, 'category':nextCategory, 'title':title, 'url':url, 'desc':desc, 'icon':icon})
+            self.addDir(params)
+            
+    def listFolders(self, cItem, nextCategory):
+        printDBG("cda.listFolders [%s]" % cItem['url'])
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'navigation_foldery'), ('<div', '>', 'panel-footer'))[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        for item in data:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            title = self.cleanHtmlStr(item)
+            params = dict(cItem)
+            params.update({'good_for_fav':True, 'category':nextCategory, 'title':title, 'url':url, 'desc':''})
+            self.addDir(params)
+            
+    def listFolderSort(self, cItem, nextCategory):
+        printDBG("cda.listFolderSort [%s]" % cItem['url'])
+        
+        items = [('od Z do A', 'sortby=name&order=desc'), ('od A do Z', ''), ('najnowsze', 'sortby=created&order=desc'), ('najstarsze', 'sortby=created&order=asc')]
+        for item in items:
+            url = cItem['url']
+            if item[1] != '': url += '?' + item[1]
+            title = item[0]
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
+            self.addDir(params)
+            
+    def listFolderItems(self, cItem):
+        printDBG("cda.listFolderItems [%s]" % cItem['url'])
+        url = cItem['url']
+        if '?' in url: url += '&'
+        else: url += '?'
+        url += 'type=pliki'
+        
+        sts, data = self.cm.getPage(url)
+        if not sts: return
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'list-when-small'), ('</div', '>'))
+        for item in data:
+            tmp = self.cm.ph.getDataBeetwenNodes(item, ('<a', '>', 'link-title'), ('</a', '>'))[1]
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''\shref=['"]([^'^"]+?)['"]''')[0])
+            if '/video/' not in url: continue
+            icon = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^'^"]+?)['"]''')[0])
+            desc = [self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'time-inline'), ('<', '>'), False)[1])]
+            desc.append(self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''\salt=['"]([^'^"]+?)['"]''')[0]))
+            
+            title = self.cleanHtmlStr(tmp)
+            params = dict(cItem)
+            params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
+            self.addVideo(params)
         
     def getLinksForVideo(self, cItem):
         if 'url' not in cItem: return []
@@ -284,10 +389,20 @@ class cda(CBaseHostClass):
         return self.up.getVideoLinkExt(cItem['url'])
         
     def getFavouriteData(self, cItem):
-        return cItem['url']
+        try:
+            return json.dumps(cItem)
+        except Exception: 
+            printExc()
+        return ''
         
     def getLinksForFavourite(self, fav_data):
-        return self.up.getVideoLinkExt(fav_data)
+        url = fav_data
+        try:
+            cItem = byteify(json.loads(fav_data))
+            url = cItem['url']
+        except Exception:
+            printExc()
+        return self.up.getVideoLinkExt(url)
         
     def tryTologin(self, login, password):
         printDBG('tryTologin start')
@@ -353,6 +468,17 @@ class cda(CBaseHostClass):
             self.listsTab(self.CATEGORIES_TAB, self.currItem)
         elif 'category' == category:
             self.listCategory(self.currItem)
+    # CHANNELS
+        elif 'channels_cats' == category:
+            self.listChannelsCategories(self.currItem, 'list_channels')
+        elif 'list_channels' == category:
+            self.listChannels(self.currItem, 'list_folders')
+        elif 'list_folders' == category:
+            self.listFolders(self.currItem, 'list_folder_sort')
+        elif 'list_folder_sort' == category:
+            self.listFolderSort(self.currItem, 'list_folder_items')
+        elif 'list_folder_items' == category:
+            self.listFolderItems(self.currItem)
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)

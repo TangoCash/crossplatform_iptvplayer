@@ -215,7 +215,7 @@ class Tata(CBaseHostClass):
         trailerUrl = self.cm.ph.getSearchGroups(tmp, '''href=['"](https?://[^'^"]+)['"]''')[0]
         
         data = self.cm.ph.getDataBeetwenMarkers(data, 'class="video-embed', '</div>')[1]
-        videoUrl = self.cm.ph.getSearchGroups(data, '''data-src=['"](https?://[^'^"]+)['"]''')[0]
+        videoUrl = self.cm.ph.getSearchGroups(data, '''data-src=['"](https?://[^'^"]+)['"]''')[0].strip()
         if '' == videoUrl:
             try:
                 getParams = dict(self.defaultParams)
@@ -231,7 +231,7 @@ class Tata(CBaseHostClass):
                 
                 data = base64.b64decode(data)
                 data = byteify(json.loads(data))
-                videoUrl = data['playinfo'].replace('\\/', '/')
+                videoUrl = data['playinfo'].replace('\\/', '/').strip()
             except Exception:
                 printExc()
         
@@ -250,7 +250,7 @@ class Tata(CBaseHostClass):
             try:
                 data = base64.b64decode(data)
                 data = byteify(json.loads(data))
-                videoUrl = data['playinfo'].replace('\\/', '/')
+                videoUrl = data['playinfo'].replace('\\/', '/').strip()
                 
                 sts, data = self.getPage(videoUrl, getParams)
                 if not sts: return []

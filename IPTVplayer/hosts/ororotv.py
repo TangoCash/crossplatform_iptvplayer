@@ -88,18 +88,24 @@ class OroroTV(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        sp = re.compile('''<div[^>]+?class=['"]channel['"][^>]*?>''')
-        data = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('''<div[^>]+?class=['"]site\-footer['"][^>]*?>'''), False)[1]
-        
-        data = sp.split(data)
-        for item in data:
-            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
-            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0] )
-            title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<span', '</span>')[1] ) 
-            desc  = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<p', '</p>')[1] )
-            params = dict(cItem)
-            params.update({'good_for_fav':True, 'category':nextCategory, 'title':title, 'desc':desc, 'url':url, 'icon':icon})
-            self.addDir(params)
+        data = self.cm.ph.getDataBeetwenMarkers(data, '"items":', '};', False)[1]
+        try:
+            data = byteify(json.loads(data), '', True)
+            for item in data:
+                url   = self.getFullUrl( item.get('url', '') )
+                icon  =  self.getFullUrl( item.get('banner', '') )
+                if icon == '': icon  = self.getFullUrl( item.get('image', '') )
+                title = self.cleanHtmlStr( item.get('title', '') ) 
+                
+                desc  = ' | '.join( item.get('parsed_tags', []) )
+                if desc != '': desc += ' [/br]' 
+                desc += self.cleanHtmlStr( item.get('description', '') )
+                
+                params = dict(cItem)
+                params.update({'good_for_fav':True, 'category':nextCategory, 'title':title, 'desc':desc, 'url':url, 'icon':icon})
+                self.addDir(params)
+        except Exception:
+            printExc()
         
     def listItems(self, cItem):
         printDBG("OroroTV.listItems [%s]" % cItem)
@@ -107,15 +113,45 @@ class OroroTV(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div[^>]+?class=['"]desc['"][^>]*?>'''), re.compile('</div>'))[1])
+        #desc = []
+        #tmp = self.cm.ph.getDataBeetwenNodes(data, ('<section', '>', 'show-desc'), ('</section', '>'))[1]
+        #tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li', '</li>')
+        #for t in tmpTab:
+        #    t = self.cleanHtmlStr(t)
+        #    if t == '': continue
+        #    desc.append(t)
+        #desc  = '|'.join( desc ) 
+        #if desc != '': desc + '[/br]' 
+        #desc += self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(tmp, ('<p', '>', 'show-desc-text'), ('</p', '>'))[1] )
         
-        sp = re.compile('''<div[^>]+?class=['"]video\s[^>]*?>''')
-        data = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('''<div[^>]+?class=['"]site\-footer['"][^>]*?>'''), False)[1]
+        sp = re.compile('''<div[^>]+?js\-watched\-mark[^>]+?>''')
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'show-content'), ('<div', '>', 'site-footer'))[1]
         data = sp.split(data)
+        if len(data): del data[0]
         for item in data:
-            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''data\-href=['"]([^'^"]+?)['"]''')[0] )
             icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''original=['"]([^'^"]+?)['"]''')[0] )
-            title = self.cleanHtmlStr( item ) 
+            title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(item, ('<a', '>', 'series-card-title'), ('</a', '>'))[1] )
+            
+            desc = []
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<i', '</i>')
+            for t in tmp:
+                if 'inactive' in t: continue
+                t = self.cm.ph.getSearchGroups(t, '''class=['"]([^'^"]*?flag[^'^"]*?)['"]''')[0].replace('flag', '').replace('active-sub', '')
+                t = self.cleanHtmlStr(t)
+                if t == '': continue
+                desc.append(t)
+            desc  = ' | '.join( desc ) 
+            if desc != '': desc += '[/br]' 
+            
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<p', '</p>')
+            tmpTab = []
+            for t in tmp:
+                t = self.cleanHtmlStr(t)
+                if t == '': continue
+                tmpTab.insert(0, t)
+            desc += '[/br]'.join(tmpTab)
+            
             params = dict(cItem)
             params.update({'good_for_fav':True, 'title':title, 'url':url, 'desc':desc, 'icon':icon})
             self.addVideo(params)

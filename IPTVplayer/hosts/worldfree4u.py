@@ -187,22 +187,28 @@ class WorldFree4u(CBaseHostClass):
                 
                 printDBG(data)
                 
-                data = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', ']')[1]
-                data = self.cm.ph.getAllItemsBeetwenMarkers(data, '{', '}', False, False)
-                for item in data:
+                linksCandidates = []
+                tmp = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', ']')[1]
+                linksCandidates = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '{', '}', False, False)
+                linksCandidates.extend(self.cm.ph.getAllItemsBeetwenMarkers(data, 'sources:', '}', False, False))
+                linksCandidates.extend(self.cm.ph.getAllItemsBeetwenMarkers(data, 'file:', '}'))
+                printDBG(">>")
+                printDBG(linksCandidates)
+                uniqueLinks = []
+                for item in linksCandidates:
                     url  = self.cm.ph.getSearchGroups(item, '''file['"]?\s*[=:]\s*['"]([^"^']+?)['"]''')[0]
-                    if url.startswith('//'):
-                        url = 'http:' + url
-                    if not url.startswith('http'):
-                        continue
+                    if url.startswith('//'): url = 'http:' + url
+                    if not url.startswith('http'): continue
+                    if url in uniqueLinks or 'error' in url: continue
+                    uniqueLinks.append(url)
                     
-                    if 'video/mp4' in item:
-                        type = self.cm.ph.getSearchGroups(item, '''type=['"]([^"^']+?)['"]''')[0]
-                        res  = self.cm.ph.getSearchGroups(item, '''res=['"]([^"^']+?)['"]''')[0]
-                        label = self.cm.ph.getSearchGroups(item, '''label=['"]([^"^']+?)['"]''')[0]
+                    if 'mp4' in item:
+                        type = self.cm.ph.getSearchGroups(item, '''[\s'"]type['"]?\s*[=:]\s*['"]([^"^']+?)['"]''')[0]
+                        res  = self.cm.ph.getSearchGroups(item, '''[\s'"]res['"]?\s*[=:]\s*['"]([^"^']+?)['"]''')[0]
+                        label = self.cm.ph.getSearchGroups(item, '''[\s'"]label['"]?\s*[=:]\s*['"]([^"^']+?)['"]''')[0]
                         if label == '': label = res
                         url = strwithmeta(url, {'Referer':cItem['url'], 'User-Agent':self.USER_AGENT})
-                        urlTab.append({'name':'{0}'.format(label), 'url':url})
+                        urlTab.append({'name':'[{1}] {0}'.format(type, label), 'url':url})
                     elif 'mpegurl' in item:
                         url = strwithmeta(url, {'iptv_proto':'m3u8', 'Referer':cItem['url'], 'Origin':urlparser.getDomain(cItem['url'], False), 'User-Agent':self.USER_AGENT})
                         tmpTab = getDirectM3U8Playlist(url, checkExt=True, checkContent=True)

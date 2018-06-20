@@ -63,7 +63,7 @@ class TreeTv(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'cookie_items':{'mycook':md5(str(time.time())).hexdigest()}}
         
         self.MAIN_URL = 'http://tree.tv/'
-        self.DEFAULT_ICON_URL = 'http://sales.admixer.ua/Home/GetImg?p=http%3A%2F%2Fcdn.admixer.net%2Fteaseradsources%2Flogo_treetv_1.jpg&w=200'
+        self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.tree.tv.dev.png.pagespeed.ic.bFRA1qn2nT.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Movies'),                       'url':self.getFullUrl('/films'),        'icon':self.DEFAULT_ICON_URL},
                              {'category':'list_items',        'title': _('Series'),                       'url':self.getFullUrl('/serials'),      'icon':self.DEFAULT_ICON_URL},

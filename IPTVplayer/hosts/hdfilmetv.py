@@ -19,6 +19,7 @@ import unicodedata
 import base64
 try:    import json
 except Exception: import simplejson as json
+from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -96,6 +97,15 @@ class HDFilmeTV(CBaseHostClass):
                 self.filtersCache[filter['key']].append({'title':title, filter['key']:value})
             if len(self.filtersCache[filter['key']]) and filter['key'] != 'sort':
                 self.filtersCache[filter['key']].insert(0, {'title':_('--All--'), filter['key']:''})
+        # add sort_type to sort filter
+        orderLen = len(self.filtersCache['sort'])
+        for idx in range(orderLen):
+            item = deepcopy(self.filtersCache['sort'][idx])
+            # desc
+            self.filtersCache['sort'][idx].update({'title':'\xe2\x86\x93 ' + self.filtersCache['sort'][idx]['title'], 'sort_type':'desc'})
+            # asc
+            item.update({'title': '\xe2\x86\x91 ' + item['title'], 'sort_type':'asc'})
+            self.filtersCache['sort'].append(item)
             
     def listFilters(self, cItem, nextCategory, nextFilter):
         filter = cItem.get('filter', '')
@@ -119,7 +129,7 @@ class HDFilmeTV(CBaseHostClass):
         if 'search_pattern' in cItem:
             url += '?key=%s&page=%s' % (cItem['search_pattern'], (page))
         else:
-            url += '?category=%s&country=%s&sort=%s&page=%s&sort_type=desc' % (cItem['genre'], cItem['country'], cItem['sort'], (page))
+            url += '?category=%s&country=%s&sort=%s&page=%s&sort_type=%s' % (cItem['genre'], cItem['country'], cItem['sort'], page, cItem['sort_type'])
         
         sts, data = self.getPage(url, self.defaultParams)
         if not sts: return
@@ -185,11 +195,12 @@ class HDFilmeTV(CBaseHostClass):
                     episodesLinks[episodeName] = []
                 episodesLinks[episodeName].append({'name':serverName, 'url':episodeUrl.replace('&amp;', '&'), 'need_resolve':1})
         
+        baseTitleReObj = re.compile('''staffel\s*[0-9]+?$''', flags=re.IGNORECASE)
         baseTitle = cItem['title']
         season = self.cm.ph.getSearchGroups(cItem['url'], '''staf[f]+?el-([0-9]+?)-''')[0]
         if season == '':
             season = self.cm.ph.getSearchGroups(baseTitle, '''staffel\s*([0-9]+?)$''', ignoreCase=True)[0]
-            if season != '': baseTitle = re.sub('''staffel\s*[0-9]+?$''', '', baseTitle, 1, re.IGNORECASE).strip()
+            if season != '': baseTitle = baseTitleReObj.sub('', baseTitle, 1).strip()
         
         try: episodesTab.sort(key=lambda item: int(item))
         except Exception:

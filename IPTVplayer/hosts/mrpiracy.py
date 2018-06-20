@@ -26,7 +26,7 @@ from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v1 import UnCaptchaReCaptcha
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
 ###################################################
 
 
@@ -562,8 +562,8 @@ class MRPiracyGQ(CBaseHostClass):
             passwd = config.plugins.iptvplayer.mrpiracy_password.value
             
             post_data = {'email':login, 'password':passwd, 'lembrar_senha':'lembrar'}
-                
-            sitekey = self.cm.ph.getSearchGroups(data, 'challenge\?k=([^"]+?)"')[0]
+            
+            sitekey = self.cm.ph.getSearchGroups(data, 'fallback\?k=([^"]+?)"')[0]
             if sitekey != '':
                 recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
                 recaptcha.HTTP_HEADER['Referer'] = self.getMainUrl()
@@ -571,7 +571,7 @@ class MRPiracyGQ(CBaseHostClass):
                 token = recaptcha.processCaptcha(sitekey)
                 if token == '':
                     return False, 'NOT OK'
-                post_data.update({'captcha_v':'1', 'g-recaptcha-response':'', 'recaptcha_challenge_field':token, 'recaptcha_response_field':'manual_challenge'})
+                post_data.update({'g-recaptcha-response':token, 'g-recaptcha-response2':token, 'url':'/'})
             
             data  = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>', False)[1]
             url   = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
@@ -591,7 +591,6 @@ class MRPiracyGQ(CBaseHostClass):
             cookie['id_utilizador'] = config.plugins.iptvplayer.mrpiracy_userid.value
             cookie['admin'] = config.plugins.iptvplayer.mrpiracy_userid.value
             self.defaultParams['cookie_items'] = cookie
-            
             
             #rm(self.COOKIE_FILE)
             sts, data = self.getPage(self.getMainUrl())

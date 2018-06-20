@@ -72,6 +72,7 @@ class KarwanTvApi(CBaseHostClass):
         try:
             initList = cItem.get('init_list', True)
             if initList:
+                rm(self.COOKIE_FILE)
                 for item in [{'title':'TV', 'priv_cat':'tv'}, {'url':self.getFullUrl('radio.html'), 'title':'Radio', 'priv_cat':'radio'}]: #{'url':self.getMainUrl24(), 'title':'Karwan24.com', 'priv_cat':'karwan24_tv'}
                     params = dict(cItem)
                     params.update(item)
@@ -113,19 +114,28 @@ class KarwanTvApi(CBaseHostClass):
         printDBG("KarwanTvApi.getVideoLink")
         urlsTab = []
         
-        sts, data = self.cm.getPage(cItem['url'])
+        params = dict(self.http_params)
+        sts, data = self.cm.getPage(cItem['url'], params)
         if not sts: return urlsTab
+        
+        params['header'] = dict(params['header'])
+        params['header']['Referer'] = cItem['url']
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="art-article">', '<tbody>', False)[1]
         if tmp == '': tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="video-player">', '</div>', False)[1]
         
-        url  = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0]
-        if 'karwan24' in self.up.getDomain(cItem['url']): url = self.getFullUrl24(url)
-        else: url = self.getFullUrl(url)
+        url = ''
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '>', caseSensitive=False)
+        for item in tmp:
+            if 'google' in item: continue
+            url  = self.cm.ph.getSearchGroups(item, '<iframe[^>]+?src="([^"]+?)"', ignoreCase=True)[0]
+            if 'karwan24' in self.up.getDomain(cItem['url']): url = self.getFullUrl24(url)
+            else: url = self.getFullUrl(url)
+            break
         
         if not self.cm.isValidUrl(url): return urlsTab
         
-        sts, data = self.cm.getPage(url)
+        sts, data = self.cm.getPage(url, params)
         if not sts: return urlsTab
         
         hlsUrl  = self.cm.ph.getSearchGroups(data, '''['"]?hls['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]

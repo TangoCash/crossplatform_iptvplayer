@@ -179,13 +179,36 @@ class Kinotan(CBaseHostClass):
             params = dict(cItem)
             params.update({'title': _('Next page'), 'page': cItem.get('page', 1) + 1})
             self.addDir(params)
-
-    def listContent(self, cItem, category):
-        printDBG("Kinotan.listContent")
-        self.cacheContentTab = {}
+    
+    def listIndexes(self, cItem, nextCategory, nextCategory2):
+        printDBG("Kinotan.listIndexes")
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        
+        idx = 0
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'news-item'), ('</div', '>'))
+        for item in tmp:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''', 1, True)[0])
+            if url == '' and idx == 0: url = cItem['url']
+            title = self.cleanHtmlStr(item)
+            if url == '': continue
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
+            self.addDir(params)
+            
+        if len(self.currList) < 2:
+            self.currList = []
+            cItem = dict(cItem)
+            self.listContent(cItem, nextCategory2, data)
+
+    def listContent(self, cItem, category, data = None):
+        printDBG("Kinotan.listContent")
+        self.cacheContentTab = {}
+        
+        if data == None:
+            sts, data = self.getPage(cItem['url'])
+            if not sts: return
         
         tabs = []
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="videotabs_', '</div>')
@@ -214,13 +237,17 @@ class Kinotan(CBaseHostClass):
                     tabs = []
                     sTitle = self.cleanHtmlStr(tmp[sKey]['name'])
                     sId = self.cleanHtmlStr(tmp[sKey]['id'])
+                    
                     for eKey in tmp[sKey]['items']:
                         title = self.cleanHtmlStr(tmp[sKey]['items'][eKey]['sname'])
                         url = self.cm.ph.getSearchGroups(tmp[sKey]['items'][eKey]['scode'], 'src="([^"]*?)"')[0]
                         if url.startswith('//'): url = 'http:' + url
-                        tabs.append({'title':title, 'url':url})
+                        try: sortVal = int(self.cm.ph.getSearchGroups(' %s ' % title, '''[^0-9]([0-9]+?)[^0-9]''')[0])
+                        except Exception: sortVal = 0
+                        tabs.append({'title':title, 'sort_value':sortVal, 'url':url})
                     
                     if len(tabs):
+                        tabs.sort(key=lambda item: item['sort_value'])
                         params = dict(cItem)
                         params.update({'category':'list_tab_content', 'title':sTitle, 'tab_id':sId})
                         self.addDir(params)
@@ -377,9 +404,9 @@ class Kinotan(CBaseHostClass):
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name': 'category'})
         elif category == 'cat_tv_shows':
-            self.listItems(self.currItem, 'list_content')
+            self.listItems(self.currItem, 'list_indexes')
         elif category == 'cat_mult':
-            self.listItems(self.currItem, 'list_content')
+            self.listItems(self.currItem, 'list_indexes')
     # SERIALES
         elif category == 'cat_serials':
             self.listsTab(self.SERIALS_CAT_TAB, {'name': 'category'})
@@ -394,7 +421,9 @@ class Kinotan(CBaseHostClass):
         elif category == 'years':
             self.listYears(self.currItem, 'list_items')
         elif category == 'list_items':
-            self.listItems(self.currItem, 'list_content')
+            self.listItems(self.currItem, 'list_indexes')
+        elif category == 'list_indexes':
+            self.listIndexes(self.currItem, 'list_content', 'list_episodes')
         elif category == 'list_content':
             self.listContent(self.currItem, 'list_episodes')
         elif category == 'list_tab_content':

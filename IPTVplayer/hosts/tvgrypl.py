@@ -54,7 +54,7 @@ class TvGryPL(CBaseHostClass):
 
     def __init__(self):
         printDBG("TvGryPL.__init__")
-        CBaseHostClass.__init__(self, {'history':'TvGryPL.tv', 'cookie':'grypl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'TvGryPL.tv', 'cookie':'grypl.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
@@ -62,7 +62,7 @@ class TvGryPL(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'http://www.gry-online.pl/apple-touch-icon-120x120.png'
-        self.MAIN_URL = 'http://tvgry.pl/'
+        self.MAIN_URL = 'https://tvgry.pl/'
         self.SEARCH_URL = self.getFullUrl('wyszukiwanie.asp')
         self.MAIN_CAT_TAB = [{'category':'list_tabs',          'title':'Materiały',            'url': self.getFullUrl('/wideo-tvgry.asp')},
                              {'category':'list_items',         'title':'Tematy',               'url': self.getFullUrl('/tematy.asp')},
@@ -70,15 +70,9 @@ class TvGryPL(CBaseHostClass):
                              {'category':'list_tabs',          'title':'Zwiastuny filmów',     'url': self.getFullUrl('/trailery-filmowe.asp')},
                              {'category':'search',         'title':_('Search'), 'search_item':True},
                              {'category':'search_history', 'title':_('Search history')} ]
-        
-    def _decodeData(self, data):
-        try: return data.decode('cp1250').encode('utf-8')
-        except Exception: return data
-
+    
     def getPage(self, url, params={}, post_data=None):
-        sts,data = self.cm.getPage(url, params, post_data)
-        if sts: data = self._decodeData(data)
-        return sts,data
+        return self.cm.getPage(url, params, post_data)
     
     def listTabs(self, cItem, post_data=None):
         printDBG("TvGryPL.listTabs")

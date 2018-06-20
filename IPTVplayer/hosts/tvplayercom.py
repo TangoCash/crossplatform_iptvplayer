@@ -120,7 +120,7 @@ class TVPlayer(CBaseHostClass):
             data = self.cm.ph.getDataBeetwenMarkers(data, '<ul id="nav"', '</ul>')[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
             for item in data:
-                genre = self.cm.ph.getSearchGroups(item, '''data-genre=['"]([^'^"]+?)['"]''')[0]
+                genre = self.cm.ph.getSearchGroups(item, '''data-genre=['"]([^'^"]+?)['"]''')[0].lower()
                 if genre == '': continue
                 params = {'title':self.cleanHtmlStr(item), 'f_genre':genre}
                 self.cacheChannelsGenres.append(params)
@@ -137,7 +137,7 @@ class TVPlayer(CBaseHostClass):
         self.listsTab(tab, cItem)
         
     def listChannels(self, cItem):
-        printDBG("TVPlayer.listChannels")
+        printDBG("TVPlayer.listChannels cItem[%s]" % cItem)
         
         self.fillChannelsFreeFlags()
         
@@ -147,7 +147,7 @@ class TVPlayer(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="list ', '</ul>')[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:
-            genres = self.cleanHtmlStr(self.cm.ph.getDataBeetwenReMarkers(item, re.compile('<p[^>]+?class="genre'), re.compile('</p>'))[1]).split(' ')
+            genres = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<p', '>', 'genre hidden'), ('</p', '>'), False)[1]).lower()
             if cItem.get('f_genre', '') not in genres: continue
             url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             
@@ -340,7 +340,7 @@ class TVPlayer(CBaseHostClass):
             sts, data = self.getPage(url)
             if not sts: return False
             
-            sts, data = self.cm.ph.getDataBeetwenMarkers(data, '<form ', '</form>', False)
+            sts, data = self.cm.ph.getDataBeetwenNodes(data, ('<form', '>', 'login'), ('</form', '>'))
             if not sts: return False
             actionUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<input', '>')

@@ -47,14 +47,14 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://streamlive.to/'
+    return 'https://streamlive.to/'
 
 class StreamLiveTo(CBaseHostClass):
     HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0', 'Accept': 'text/html'}
     HTTP_MOBILE_HEADER = {'User-Agent': 'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Accept': 'text/html'}
-    MAIN_URL = 'http://www.streamlive.to/'
+    MAIN_URL = 'https://www.streamlive.to/'
     
-    MAIN_CAT_TAB = [{'category':'category',        'title': 'Live Channels', 'icon':''},
+    MAIN_CAT_TAB = [{'category':'list_filters',    'title': 'Live Channels', 'icon':''},
                     {'category':'search',          'title': _('Search'), 'search_item':True},
                     {'category':'search_history',  'title': _('Search history')} ]
 
@@ -63,16 +63,15 @@ class StreamLiveTo(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'StreamLiveTo.tv', 'cookie':'streamliveto.cookie'})
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}
+        self.cacheFiltersKeys = []
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'images/logo.png' 
         
     def _getFullUrl(self, url):
         if 0 < len(url):
             if url.startswith('//'):
-                url = 'http:' + url
+                url = 'https:' + url
             elif not url.startswith('http'):
                 url =  self.MAIN_URL + url
-        if not self.MAIN_URL.startswith('https://'):
-            url = url.replace('https://', 'http://')
         return url
         
     def getPage(self, url, params={}, post_data=None):
@@ -94,92 +93,120 @@ class StreamLiveTo(CBaseHostClass):
                 self.addDir(params)
             else: self.addVideo(params)
             
-    def fillCategories(self):
-        printDBG("StreamLiveTo.fillCategories")
+    def fillCacheFilters(self):
+        printDBG("StreamLiveTo.fillCacheFilters")
         self.cacheFilters = {}
+        self.cacheFiltersKeys = []
+        
         sts, data = self.getPage(self._getFullUrl('channels'), self.defaultParams)
         #sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
         if not sts: return
         
-        catTab = []
+        tmpTab = []
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select name="category"', '</select>', False)[1]
         tmp = re.compile('<option [^>]*?value="([^"]*?)"[^>]*?>([^<]+?)</option>').findall(tmp)
         for item in tmp:
-            catTab.append({'title':item[1], 'cat':urllib.quote(item[0])})
+            tmpTab.append({'title':item[1], 'f_cat':urllib.quote(item[0])})
+        if len(tmpTab): 
+            self.cacheFilters['f_cat'] = tmpTab
+            self.cacheFiltersKeys.append('f_cat')
             
-        langTab = []
+        tmpTab = []
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select name="language"', '</select>', False)[1]
         tmp = re.compile('<option [^>]*?value="([^"]*?)"[^>]*?>([^<]+?)</option>').findall(tmp)
         for item in tmp:
-            langTab.append({'title':item[1], 'lang':item[0]})
+            tmpTab.append({'title':item[1], 'f_lang':item[0]})
+        if len(tmpTab): 
+            self.cacheFilters['f_lang'] = tmpTab
+            self.cacheFiltersKeys.append('f_lang')
             
-        sortTab = []
+        tmpTab = []
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '<select name="sortBy"', '</select>', False)[1]
         tmp = re.compile('<option [^>]*?value="([^"]*?)"[^>]*?>([^<]+?)</option>').findall(tmp)
         for item in tmp:
-            sortTab.append({'title':item[1], 'sort':item[0]})
+            tmpTab.append({'title':item[1], 'f_sort':item[0]})
             
-        self.cacheFilters['cat']  = catTab
-        self.cacheFilters['lang'] = langTab
-        self.cacheFilters['sort'] = sortTab
+        if len(tmpTab): 
+            self.cacheFilters['f_sort'] = tmpTab
+            self.cacheFiltersKeys.append('f_sort')
         
-    def listCategory(self, cItem, nextCategory):
-        printDBG("StreamLiveTo.listCategory")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
-        cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('cat', []), cItem)
+        sts, data = self.getPage(self._getFullUrl('channelsPages.php'), self.defaultParams)
+        if not sts: return
         
-    def listLanguage(self, cItem, nextCategory):
-        printDBG("StreamLiveTo.listLanguage")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<h2', '</h2>')[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        tmpTab = []
+        for item in data:
+            val = self.cm.ph.getSearchGroups(item, '''[\?&]list=([^'^"^&]+?)['"&]''')[0]
+            title = self.cleanHtmlStr(item)
+            tmpTab.append({'title':title, 'f_type':val})
+        if len(tmpTab) == 0:
+            for item in [(_('Any'), ''), (_('Free'), 'free'), (_('Premium'), 'premium')]:
+                tmpTab.append({'title':item[0], 'f_type':item[1]})
+        if len(tmpTab): 
+            self.cacheFilters['f_type'] = tmpTab
+            self.cacheFiltersKeys.insert(0, 'f_type')
+    
+    def listFilters(self, cItem, nextCategory):
+        printDBG("StreamLiveTo.listFilters")
         cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('lang', []), cItem)
         
-    def listSort(self, cItem, nextCategory):
-        printDBG("StreamLiveTo.listSort")
-        if {} == self.cacheFilters:
-            self.fillCategories()
-            
-        cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(self.cacheFilters.get('sort', []), cItem)
-            
+        f_idx = cItem.get('f_idx', 0)
+        if f_idx == 0: self.fillCacheFilters()
+        
+        if f_idx >= len(self.cacheFiltersKeys): return
+        
+        filter = self.cacheFiltersKeys[f_idx]
+        f_idx += 1
+        cItem['f_idx'] = f_idx
+        if f_idx  == len(self.cacheFiltersKeys):
+            cItem['category'] = nextCategory
+        self.listsTab(self.cacheFilters.get(filter, []), cItem)
+        
     def listChannels(self, cItem):
         printDBG("StreamLiveTo.listChannels")
         page = cItem.get('page', 1)
-        cat  = cItem.get('cat', '')
-        q    = cItem.get('q', '')
-        lang = cItem.get('lang', '')
-        sort = cItem.get('sort', '')
+        post_data = {'page':page}
         
-        post_data = {'page':page, 'category':cat, 'language':lang, 'sortBy':sort, 'query':q}
+        keysMap = {'cat':'category', 'lang':'language', 'sort':'sortBy', 'q':'query', 'type':'list' }
+        if 'f_q' in cItem: keys = ['f_q']
+        else: keys = []
+        keys.extend(self.cacheFiltersKeys)
+        for item in keys:
+            if item not in cItem: continue
+            key = keysMap.get(item[2:], item[2:])
+            post_data[key] = cItem[item]
+        
         url = self.getFullUrl('channelsPages.php')
 
         sts, data = self.getPage(url, self.defaultParams, post_data)
         if not sts: return
         
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        printDBG(data)
-        printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-        
         if 'data-page="{0}"'.format(page+1) in data:
             nextPage = True
         else: nextPage = False
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="servic', '</h4>')
+        data = self.cm.ph.rgetAllItemsBeetwenNodes(data.split('<nav>', 1)[0], ('</div', '>'), ('<div', '>', 'item'))
         for item in data:
             url  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
             icon = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
             title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<strong>', '</strong>', False)[1] )
             if '' == title: title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, 'title="([^"]+?)"')[0] )
-            if 'class="premium_only"' in item or 'Premium Only' in item: title += ' [PREMIUM ONLY]'
-            desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<h4', '</h4>')[1] )
+            if 'class="premium_only"' in item or 'Premium Only' in item: postfix = 'PREMIUM ONLY'
+            elif 'glyphicon-king' in item: postfix = 'KING'
+            else: postfix = ''
+            if postfix != '': title += ' [%s]' % postfix
+            desc = []
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(item, ('<div', '>', '"jt'), ('</div', '>'))
+            for t in tmp:
+                if 'bottom' in t: continue
+                t = self.cleanHtmlStr(t)
+                if t != '': desc.append(t)
+            desc = ' | '.join(desc)
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(item, ('<div', '>', 'block'), ('</div', '>'), False)
+            for t in tmp:
+                t = self.cleanHtmlStr(t)
+                if t != '': desc += '[/br]' + t
             if self.cm.isValidUrl(url):
                 params = {'title':title, 'url':url, 'desc':desc, 'icon':icon}
                 self.addVideo(params)
@@ -191,7 +218,7 @@ class StreamLiveTo(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("StreamLiveTo.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
-        cItem['q'] = urllib.quote(searchPattern)
+        cItem['f_q'] = urllib.quote(searchPattern)
         self.listChannels(cItem)
     
     def getLinksForVideo(self, cItem):
@@ -386,7 +413,7 @@ class StreamLiveTo(CBaseHostClass):
     #MAIN MENU
         if name == None:
             login  = config.plugins.iptvplayer.streamliveto_login.value
-            passwd = config.plugins.iptvplayer.streamliveto_password .value
+            passwd = config.plugins.iptvplayer.streamliveto_password.value
             logged = False
             if '' != login.strip() and '' != passwd.strip():
                 logged = self.doLogin(login, passwd)
@@ -397,12 +424,8 @@ class StreamLiveTo(CBaseHostClass):
             #    self.addDir({'name':'category', 'title':_('Get free credits'), 'category':'get_free_credits'})
         elif category == 'get_free_credits':
             self.listGetFreeCredits()
-        elif category == 'category':
-            self.listCategory(self.currItem, 'language')
-        elif category == 'language':
-            self.listLanguage(self.currItem, 'sort')
-        elif category == 'sort':
-            self.listSort(self.currItem, 'list_channels')
+        elif category == 'list_filters':
+            self.listFilters(self.currItem, 'list_channels')
         elif category == 'list_channels':
             self.listChannels(self.currItem)
     #SEARCH

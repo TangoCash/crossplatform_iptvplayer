@@ -9,8 +9,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.cover import SimpleAnimatedCover
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, touch, eConnectCallback
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta, enum
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, touch, eConnectCallback, ReadUint32
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvextmovieplayer import IPTVExtMoviePlayer
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
@@ -35,7 +35,6 @@ from datetime import timedelta
 ###################################################
 
 class IPTVPlayerBufferingWidget(Screen):
-    GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE = "/tmp/gst_flv_demux_is_demuxing_infinite_file"
     NUM_OF_ICON_FRAMES = 8
     #######################
     #       SIZES
@@ -53,6 +52,9 @@ class IPTVPlayerBufferingWidget(Screen):
     # console
     c_w = sz_w
     c_h = 80
+    # addinfo
+    a_w = sz_w - 10
+    a_h = 80
     #######################
     #     POSITIONS
     #######################  
@@ -66,17 +68,21 @@ class IPTVPlayerBufferingWidget(Screen):
     # console
     c_x = 0
     c_y = i_y + i_h
-    
+    # addinfo
+    a_x = 10
+    a_y = sz_h - 160
     printDBG("[IPTVPlayerBufferingWidget] desktop size %dx%d" % (sz_w, sz_h) )
     skin = """
         <screen name="IPTVPlayerBufferingWidget"  position="center,center" size="%d,%d" title="IPTV Player Buffering...">
          <widget name="percentage" size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" /> #foregroundColor="white" shadowColor="black" shadowOffset="-1,-1"
          <widget name="console"    size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" />
          <widget name="icon"       size="%d,%d"   position="%d,%d"  zPosition="4" transparent="1" alphatest="blend" />
+         <widget name="addinfo"   size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" />
         </screen>""" %( sz_w, sz_h,         # screen
                         p_w, p_h, p_x, p_y, # percentage
                         c_w, c_h, c_x, c_y, # console
-                        i_w, i_h, i_x, i_y  # icon
+                        i_w, i_h, i_x, i_y, # icon
+                        a_w, a_h, a_x, a_y  # addinfo
                       )
    
     def __init__(self, session, url, pathForRecordings, movieTitle, activMoviePlayer, requestedBuffSize, playerAdditionalParams={}):
@@ -106,7 +112,8 @@ class IPTVPlayerBufferingWidget(Screen):
 
         self["console"] = Label()
         self["percentage"] = Label()
-             
+        self["addinfo"] = Label()
+        
         self["icon"] = SimpleAnimatedCover()
         # prepare icon frames path
         frames = []
@@ -128,6 +135,29 @@ class IPTVPlayerBufferingWidget(Screen):
         self.lastPosition = None
         self.lastSize = 0
         
+        # Some MP4 files are not prepared for streaming
+        # MOOV atom is needed to start playback
+        # if it is located at the end of file, then 
+        # will try to download it separately to start playback
+        # without downloading the whole file
+        self.clouldBeMP4 = False
+        self.isMOOVAtomAtTheBeginning = None
+        self.checkMOOVAtom = True
+        self.maxMOOVAtomSize = 10 * 1024 * 1024 # 10 MB max moov atom size
+        self.moovAtomOffset = 0
+        self.moovAtomSize = 0
+        
+        self.MOOV_STS = enum( UNKNOWN     = 0,
+                              WAITING     = 1,
+                              DOWNLOADING = 2,
+                              DOWNLOADED  = 3,
+                              ERROR       = 4)
+        self.moovAtomStatus = self.MOOV_STS.UNKNOWN
+        self.moovAtomDownloader = None
+        self.moovAtomPath  = pathForRecordings + '/.iptv_buffering_moov.flv'
+        
+        printDBG(">> activMoviePlayer[%s]" % self.activMoviePlayer)
+        
     #end def __init__(self, session):
  
     def onStart(self):
@@ -141,19 +171,12 @@ class IPTVPlayerBufferingWidget(Screen):
             self.downloader.isWorkingCorrectly(self._startDownloader)
         else:
             self.session.openWithCallback(self.iptvDoClose, MessageBox, _("Downloading can not be started.\n The address ('%r') is incorrect.") % self.url, type = MessageBox.TYPE_ERROR, timeout = 10)
-
-    def _isFlvInfiniteFile(self, url):
-        try:
-            url = strwithmeta(url)
-            if (url.startswith('rtmp') or url.split('?')[0].endswith('.f4m')) and url.meta.get('iptv_livestream', True): return True
-        except Exception: printExc()
-        return False
         
     def _startDownloader(self, sts, reason):
         if sts:
             url,downloaderParams = DMHelper.getDownloaderParamFromUrl(self.url)
-            if self._isFlvInfiniteFile(self.url):
-                ret = touch(self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE) # TODO: check returns value, and display message in case of False
+            if url.split('?', 1)[0].lower().endswith('.mp4'):
+                self.clouldBeMP4 = True
             self.downloader.start(url, self.filePath, downloaderParams)
             self.setMainTimerSts(True)
             self.canRunMoviePlayer = True
@@ -176,6 +199,10 @@ class IPTVPlayerBufferingWidget(Screen):
         self.setMainTimerSts(False)
         if self.downloader:
             self.downloader.terminate()
+            self.downloader = None
+        
+        if self.downloader:
+            self.moovAtomDownloader.terminate()
             self.downloader = None
         self._cleanedUp()
 
@@ -243,23 +270,23 @@ class IPTVPlayerBufferingWidget(Screen):
         printDBG("Run MoviePlayer with buffer size [%s]" % formatBytes(float(buffSize)) )
         self.setMainTimerSts(False)
         
-        exteplayerBlocked =  strwithmeta(self.url).meta.get('iptv_block_exteplayer', False)
-        printDBG("runMovePlayer >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> exteplayerBlocked[%s]" % exteplayerBlocked)
-        
         player = self.activMoviePlayer
         printDBG('IPTVPlayerBufferingWidget.runMovePlayer [%r]' % player)
         playerAdditionalParams = dict(self.playerAdditionalParams)
         playerAdditionalParams['downloader'] = self.downloader
+        if self.isMOOVAtomAtTheBeginning:
+            playerAdditionalParams['moov_atom_info'] = {'offset':0, 'size':self.moovAtomOffset + self.moovAtomSize, 'file':''}
+        elif self.moovAtomStatus == self.MOOV_STS.DOWNLOADED and \
+             DMHelper.STS.DOWNLOADED != self.downloader.getStatus(): 
+            playerAdditionalParams['moov_atom_info'] = {'offset':self.moovAtomOffset, 'size': self.moovAtomSize, 'file':self.moovAtomPath}
+        
         if strwithmeta(self.url).meta.get('iptv_proto', '') in ['f4m', 'uds', 'm3u8']:
             playerAdditionalParams['file-download-timeout'] = 90000 # 90s
         else:
             playerAdditionalParams['file-download-timeout'] = 10000 # 10s
         playerAdditionalParams['file-download-live'] = self._isInLiveMode()
-        if "mini" == player:
-            self.session.openWithCallback(self.leaveMoviePlayer, IPTVMiniMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 4)
-        elif "exteplayer" == player:
-            if not exteplayerBlocked: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'eplayer', playerAdditionalParams)
-            else: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'gstplayer', playerAdditionalParams)
+        if "mini" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVMiniMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 4)
+        elif "exteplayer" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'eplayer', playerAdditionalParams)
         elif "extgstplayer" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'gstplayer', playerAdditionalParams)
         else: self.session.openWithCallback(self.leaveMoviePlayer, IPTVStandardMoviePlayer, self.filePath, self.movieTitle)
         playerAdditionalParams = None
@@ -276,7 +303,7 @@ class IPTVPlayerBufferingWidget(Screen):
                     self.mainTimer.stop()
                     self.mainTimerEnabled = False
         except Exception: printDBG("setMainTimerSts status[%r] EXCEPTION" % start)
-            
+    
     def updateDisplay(self):
         printDBG("updateDisplay")
         if self.inMoviePlayer:
@@ -288,9 +315,53 @@ class IPTVPlayerBufferingWidget(Screen):
             return
 
         self.downloader.updateStatistic()
-        tmpBuffSize = self.downloader.getLocalFileSize() - self.lastSize + 1 # simple when getLocalFileSize() returns -1
+        localSize  = self.downloader.getLocalFileSize()
+        remoteSize = self.downloader.getRemoteFileSize()
         
-        if None != self.downloader and "m3u8" in self.downloader.getName() \
+        if self.checkMOOVAtom and \
+           localSize > 10240:
+            self.checkMOOVAtom = False
+            
+            if remoteSize > self.maxMOOVAtomSize and \
+               self.downloader.getName() == "wget" and \
+               (self.clouldBeMP4 or (None != self.downloader.getMimeType() and \
+               'mp4' in self.downloader.getMimeType())):
+                # check moov atom position
+                # if it is located at the begining of MP4 file
+                # it should be just after ftyp atom
+                try:
+                    f = open(self.filePath, "rb")
+                    currOffset = 0
+                    while currOffset < localSize:
+                        rawSize =  ReadUint32(f.read(4), False)
+                        rawType = f.read(4)
+                        printDBG(">> rawType [%s]" % rawType)
+                        printDBG(">> rawSize [%d]" % rawSize)
+                        if currOffset == 0 and rawType != "ftyp":
+                            # this does not looks like MP4 file
+                            break
+                        else:
+                            if rawType == "moov":
+                                self.moovAtomOffset = currOffset
+                                self.moovAtomSize = rawSize
+                                self.isMOOVAtomAtTheBeginning = True
+                                break
+                            elif rawType == "mdat":
+                                # we are not sure if after mdat will be moov atom but 
+                                # if this will be max last 10MB of file then 
+                                # we will download it
+                                self.moovAtomOffset = currOffset + rawSize
+                                self.moovAtomSize = remoteSize - self.moovAtomOffset
+                                self.isMOOVAtomAtTheBeginning = False
+                                break
+                            currOffset += rawSize
+                        f.seek(currOffset, 0)
+                    printDBG(">> moovAtomOffset[%d]" % self.moovAtomOffset)
+                    printDBG(">> moovAtomSize[%d]" % self.moovAtomSize)
+                except Exception:
+                    printExc()
+        
+        if None != self.downloader and self.downloader.hasDurationInfo() \
            and self.downloader.getTotalFileDuration() > 0:
             totalDuration = self.downloader.getTotalFileDuration()
             downloadDuration = self.downloader.getDownloadedFileDuration()
@@ -302,18 +373,16 @@ class IPTVPlayerBufferingWidget(Screen):
                 lFileSize = lFileSize[2:]
         else:
             # remote size
-            rFileSize = self.downloader.getRemoteFileSize()       
-            if -1 == rFileSize: rFileSize = '??'
-            else: rFileSize = formatBytes(float(rFileSize))
+            if -1 == remoteSize: rFileSize = '??'
+            else: rFileSize = formatBytes(float(remoteSize))
             # local size
-            lFileSize = self.downloader.getLocalFileSize()
-            if -1 == lFileSize: lFileSize = '??'
-            else: lFileSize = formatBytes(float(lFileSize))
+            if -1 == localSize: lFileSize = '??'
+            else: lFileSize = formatBytes(float(localSize))
         
         
         # download speed
         dSpeed = self.downloader.getDownloadSpeed()
-        if dSpeed > -1 and self.downloader.getLocalFileSize() > 0:
+        if dSpeed > -1 and localSize > 0:
             dSpeed = formatBytes(float(dSpeed))
         else:
             dSpeed = ''
@@ -332,24 +401,82 @@ class IPTVPlayerBufferingWidget(Screen):
         
         self["console"].setText(self.movieTitle + tmpStr)
         
+        handled = False
         percentage = 0
         requestedBuffSize = -1
-        if self.downloader.getPlayableFileSize() > 0:
-            requestedBuffSize = self.requestedBuffSize
-            if tmpBuffSize > requestedBuffSize: percentage = 100
-            else: percentage = (100 * tmpBuffSize) / requestedBuffSize
-        elif self.downloader.getLocalFileSize() > 0 and self.downloader.getRemoteFileSize() > 0:
-            localSize  = self.downloader.getLocalFileSize()
-            remoteSize = self.downloader.getRemoteFileSize()
+        tmpBuffSize = 0
+        if self.isMOOVAtomAtTheBeginning == True:
+            moovAtomDataSize = self.moovAtomOffset + self.moovAtomSize
+            if moovAtomDataSize > localSize:
+                if self.moovAtomStatus != self.MOOV_STS.DOWNLOADING:
+                    self["addinfo"].setText(_("Please wait for initialization data."))
+                    self.moovAtomStatus = self.MOOV_STS.DOWNLOADING
+                remoteSize = self.moovAtomOffset + self.moovAtomSize
+                if localSize > remoteSize: percentage = 100
+                else: percentage = (100 * localSize) / remoteSize
+            else:
+                requestedBuffSize = self.requestedBuffSize
+                if self.lastSize > moovAtomDataSize: tmpBuffSize = localSize - self.lastSize
+                else: tmpBuffSize = localSize - moovAtomDataSize
+                if tmpBuffSize > requestedBuffSize: percentage = 100
+                else: percentage = (100 * tmpBuffSize) / requestedBuffSize
+                if self.moovAtomStatus != self.MOOV_STS.DOWNLOADED:
+                    self["addinfo"].setText("")
+                    self.moovAtomStatus = self.MOOV_STS.DOWNLOADED
+            handled = True
+        elif self.isMOOVAtomAtTheBeginning == False and self.moovAtomStatus not in [self.MOOV_STS.WAITING, self.MOOV_STS.ERROR, self.MOOV_STS.DOWNLOADED]:
+            # At now only exteplayer3 is able to use moov atom in separate file
+            if self.activMoviePlayer == 'exteplayer' and self.moovAtomStatus == self.MOOV_STS.UNKNOWN:
+                url, downloaderParams = DMHelper.getDownloaderParamFromUrl(self.url)
+                downloaderParams['start_pos'] = self.moovAtomOffset
+                self.moovAtomDownloader = DownloaderCreator(self.url)
+                self.moovAtomDownloader.start(url, self.moovAtomPath, downloaderParams)
+                self.moovAtomStatus = self.MOOV_STS.DOWNLOADING
+                self["addinfo"].setText(_("Please wait - downloading initialization data."))
+            elif self.moovAtomStatus == self.MOOV_STS.DOWNLOADING:
+                self.moovAtomDownloader.updateStatistic()
+                status = self.moovAtomDownloader.getStatus()
+                moovLocalSize  = self.moovAtomDownloader.getLocalFileSize()
+                moovRemoteSize = self.moovAtomDownloader.getRemoteFileSize()
+                if status == DMHelper.STS.DOWNLOADING:
+                    if moovLocalSize > 0 and self.moovAtomSize > 0:
+                        if moovLocalSize > self.moovAtomSize: percentage = 100
+                        else: percentage = (100 * moovLocalSize) / self.moovAtomSize
+                elif status == DMHelper.STS.DOWNLOADED or (status == DMHelper.STS.INTERRUPTED and moovLocalSize == self.moovAtomSize):
+                    self.moovAtomStatus = self.MOOV_STS.DOWNLOADED
+                    self["addinfo"].setText("")
+                else:
+                    self.moovAtomStatus = self.MOOV_STS.ERROR
+            
+            handled = True
+            if self.moovAtomStatus in [self.MOOV_STS.UNKNOWN, self.MOOV_STS.ERROR]:
+                printDBG(">> [%s] [%s]" % (self.activMoviePlayer, self.moovAtomStatus))
+                msg = [_("Whole file must be downloaded to start playback!")]
+                if self.moovAtomStatus == self.MOOV_STS.UNKNOWN and self.activMoviePlayer != 'exteplayer':
+                    msg.append(_("You can use external eplayer to start playback faster."))
+                self["addinfo"].setText('\n'.join(msg))
+                self.moovAtomStatus = self.MOOV_STS.WAITING
+                handled = False
+        
+        if not handled and self.moovAtomStatus != self.MOOV_STS.WAITING:
+            tmpBuffSize = localSize - self.lastSize + 1 # simple when getLocalFileSize() returns -1
+            if self.downloader.getPlayableFileSize() > 0:
+                requestedBuffSize = self.requestedBuffSize
+                if tmpBuffSize > requestedBuffSize: percentage = 100
+                else: percentage = (100 * tmpBuffSize) / requestedBuffSize
+                handled = True
+        
+        if not handled and localSize > 0 and remoteSize > 0:
             if localSize > remoteSize: percentage = 100
             else: percentage = (100 * localSize) / remoteSize
-            
+        
         self["percentage"].setText(str(percentage))
         self["icon"].nextFrame()
         
-        # check if we start move player
-        if self.canRunMoviePlayer and requestedBuffSize > -1:
-            if tmpBuffSize >= requestedBuffSize or (self.downloader.getStatus() == DMHelper.STS.DOWNLOADED and 0 < self.downloader.getLocalFileSize()):
+        # check if we start movie player
+        if self.canRunMoviePlayer:
+            if (requestedBuffSize > -1 and tmpBuffSize >= requestedBuffSize) or \
+               (self.downloader.getStatus() == DMHelper.STS.DOWNLOADED and 0 < localSize):
                 self.runMovePlayer()
                 return
         
@@ -382,10 +509,11 @@ class IPTVPlayerBufferingWidget(Screen):
     def _cleanedUp(self):
         if fileExists(self.filePath):
             try: os_remove(self.filePath)
-            except Exception: printDBG('Problem with removing old buffering file')
-        if fileExists(self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE):
-            try: os_remove(self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE)
-            except Exception: printDBG('Problem with removing gstreamer flag file [%s]' % self.GST_FLV_DEMUX_IS_DEMUXING_INFINITE_FILE)
+            except Exception: printDBG('Problem with removing old buffering file (%s)' % self.filePath)
+        
+        if fileExists(self.moovAtomPath):
+            try: os_remove(self.moovAtomPath)
+            except Exception: printDBG('Problem with removing old buffering file (%s)' % self.moovAtomPath)
     '''
     def doStart(self):
         if not self.onStartCalled:

@@ -34,6 +34,7 @@ config.plugins.iptvplayer.exteplayer3path = ConfigText(default = "", fixed_size 
 config.plugins.iptvplayer.gstplayerpath   = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.wgetpath        = ConfigText(default = "wget", fixed_size = False)
 config.plugins.iptvplayer.hlsdlpath       = ConfigText(default = "hlsdl", fixed_size = False)
+config.plugins.iptvplayer.cmdwrappath     = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.dukpath         = ConfigText(default = "duk", fixed_size = False)
 config.plugins.iptvplayer.rtmpdumppath    = ConfigText(default = "rtmpdump", fixed_size = False)
 config.plugins.iptvplayer.f4mdumppath     = ConfigText(default = "f4mdump", fixed_size = False)
@@ -49,6 +50,7 @@ config.plugins.iptvplayer.allowedcoverformats= ConfigSelection(default = "jpeg,p
 config.plugins.iptvplayer.showinextensions   = ConfigYesNo(default = True)
 config.plugins.iptvplayer.showinMainMenu     = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ListaGraficzna     = ConfigYesNo(default = False)
+config.plugins.iptvplayer.group_hosts        = ConfigYesNo(default = True)
 config.plugins.iptvplayer.NaszaSciezka       = ConfigDirectory(default = "/hdd/movie/") #, fixed_size = False)
 config.plugins.iptvplayer.bufferingPath      = ConfigDirectory(default = config.plugins.iptvplayer.NaszaSciezka.value) #, fixed_size = False)
 config.plugins.iptvplayer.buforowanie        = ConfigYesNo(default = False)
@@ -65,6 +67,8 @@ config.plugins.iptvplayer.AktualizacjaWmenu = ConfigYesNo(default = True)
 config.plugins.iptvplayer.sortuj = ConfigYesNo(default = True)
 config.plugins.iptvplayer.remove_diabled_hosts = ConfigYesNo(default = False)
 config.plugins.iptvplayer.IPTVWebIterface = ConfigYesNo(default = False)
+config.plugins.iptvplayer.plugin_autostart = ConfigYesNo(default = False)
+config.plugins.iptvplayer.plugin_autostart_method = ConfigSelection(default = "wizard", choices = [("wizard", "wizard"),("infobar", "infobar")])
 
 def GetMoviePlayerName(player):
     map = {"auto":_("auto"), "mini": _("internal"), "standard":_("standard"), 'exteplayer': _("external eplayer3"), 'extgstplayer': _("external gstplayer")}
@@ -130,6 +134,9 @@ config.plugins.iptvplayer.vkcom_password = ConfigText(default="", fixed_size = F
 config.plugins.iptvplayer.fichiercom_login    = ConfigText(default="", fixed_size = False)
 config.plugins.iptvplayer.fichiercom_password = ConfigText(default="", fixed_size = False)
 
+config.plugins.iptvplayer.iptvplayer_login    = ConfigText(default="", fixed_size = False)
+config.plugins.iptvplayer.iptvplayer_password = ConfigText(default="", fixed_size = False)
+
 config.plugins.iptvplayer.useSubtitlesParserExtension = ConfigYesNo(default = True)
 config.plugins.iptvplayer.opensuborg_login    = ConfigText(default="", fixed_size = False)
 config.plugins.iptvplayer.opensuborg_password = ConfigText(default="", fixed_size = False)
@@ -162,6 +169,9 @@ config.plugins.iptvplayer.russian_proxyurl = ConfigText(default = "http://user:p
 config.plugins.iptvplayer.ukrainian_proxyurl = ConfigText(default = "http://user:pass@ip:port", fixed_size = False)
 config.plugins.iptvplayer.alternative_proxy1 = ConfigText(default = "http://user:pass@ip:port", fixed_size = False)
 config.plugins.iptvplayer.alternative_proxy2 = ConfigText(default = "http://user:pass@ip:port", fixed_size = False)
+
+config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
 
 # Update
 config.plugins.iptvplayer.autoCheckForUpdate = ConfigYesNo(default = False)

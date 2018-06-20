@@ -31,7 +31,13 @@ try:
     import gzip
 except Exception: pass
 from Tools.Directories import fileExists
+from urlparse import urljoin, urlparse, urlunparse
 ###################################################
+
+def DecodeGzipped(data):
+    buf = StringIO(data)
+    f = gzip.GzipFile(fileobj=buf)
+    return f.read()
 
 class NoRedirection(urllib2.HTTPRedirectHandler):
     def http_error_302(self, req, fp, code, msg, headers):
@@ -73,6 +79,27 @@ class MultipartPostHandler(urllib2.BaseHandler):
     https_request = http_request
 
 class CParsingHelper:
+    @staticmethod
+    def listToDir(cList, idx):
+        cTree = {'dat':''}
+        deep = 0 
+        while (idx+1) < len(cList):
+            if cList[idx].startswith('<ul') or cList[idx].startswith('<li'):
+                deep += 1
+                nTree, idx, nDeep = CParsingHelper.listToDir(cList, idx+1)
+                if 'list' not in cTree: cTree['list'] = []
+                cTree['list'].append(nTree)
+                deep += nDeep
+            elif cList[idx].startswith('</ul>') or cList[idx].startswith('</li>'):
+                deep -= 1
+                idx += 1
+            else:
+                cTree['dat'] += cList[idx]
+                idx += 1
+            if deep < 0:
+                break
+        return cTree, idx, deep
+    
     @staticmethod
     def getSearchGroups(data, pattern, grupsNum=1, ignoreCase=False):
         tab = []
@@ -203,13 +230,13 @@ class CParsingHelper:
         return True, data[idx1:idx2]
         
     @staticmethod
-    def getDataBeetwenNodes(data, node1, node2, withNodes=True):
-        ret = CParsingHelper.getAllItemsBeetwenNodes(data, node1, node2, withNodes, 1)
+    def getDataBeetwenNodes(data, node1, node2, withNodes=True, caseSensitive=True):
+        ret = CParsingHelper.getAllItemsBeetwenNodes(data, node1, node2, withNodes, 1, caseSensitive)
         if len(ret): return True, ret[0]
         else: return False, ''
     
     @staticmethod
-    def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1):
+    def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1, caseSensitive=True):
         if len(node1) < 2 or len(node2) < 2:
             return []
         itemsTab = []
@@ -223,7 +250,18 @@ class CParsingHelper:
         else: n2P = None
         lastIdx = 0
         search = 1
-        sData = data
+        
+        if caseSensitive:
+            sData = data
+        else:
+            sData = data.lower()
+            n1S = n1S.lower()
+            n1E = n1E.lower()
+            if n1P != None: n1P = n1P.lower()
+            n2S = n2S.lower()
+            n2E = n2E.lower()
+            if n2P != None: n2P = n2P.lower()
+            
         while True:
             if search == 1:
                 # node 1 - start
@@ -254,19 +292,19 @@ class CParsingHelper:
                     idx1 = idx2 + len(n1E)
                     idx2 = tIdx1
                 search = 1
-                itemsTab.append(sData[idx1:idx2])
+                itemsTab.append(data[idx1:idx2])
             if numNodes > 0 and len(itemsTab) == numNodes:
                 break
         return itemsTab
         
     @staticmethod
-    def rgetDataBeetwenNodes(data, node1, node2, withNodes=True):
-        ret = CParsingHelper.rgetAllItemsBeetwenNodes(data, node1, node2, withNodes, 1)
+    def rgetDataBeetwenNodes(data, node1, node2, withNodes=True, caseSensitive=True):
+        ret = CParsingHelper.rgetAllItemsBeetwenNodes(data, node1, node2, withNodes, 1, caseSensitive)
         if len(ret): return True, ret[0]
         else: return False, ''
         
     @staticmethod
-    def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1):
+    def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1, caseSensitive=True):
         if len(node1) < 2 or len(node2) < 2:
             return []
         itemsTab = []
@@ -280,7 +318,16 @@ class CParsingHelper:
         else: n2P = None
         lastIdx = len(data)
         search = 1
-        sData = data
+        if caseSensitive:
+            sData = data
+        else:
+            sData = data.lower()
+            n1S = n1S.lower()
+            n1E = n1E.lower()
+            if n1P != None: n1P = n1P.lower()
+            n2S = n2S.lower()
+            n2E = n2E.lower()
+            if n2P != None: n2P = n2P.lower()
         while True:
             if search == 1:
                 # node 1 - end
@@ -308,7 +355,7 @@ class CParsingHelper:
                     s1 = tIdx2 + len(n2E)
                     s2 = idx1
                 search = 1
-                itemsTab.insert(0, sData[s1:s2])
+                itemsTab.insert(0, data[s1:s2])
             if numNodes > 0 and len(itemsTab) == numNodes:
                 break
         return itemsTab
@@ -396,11 +443,31 @@ class common:
         return outParams, postData
         
     @staticmethod
-    def getBaseUrl(url):
-        from urlparse import urlparse
+    def getBaseUrl(url, domainOnly=False):
         parsed_uri = urlparse( url )
-        domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
+        if domainOnly:
+            domain = '{uri.netloc}'.format(uri=parsed_uri)
+        else:
+            domain = '{uri.scheme}://{uri.netloc}/'.format(uri=parsed_uri)
         return domain
+        
+    @staticmethod
+    def getFullUrl(url, mainUrl='http://fake'):
+        if url.startswith('//'):
+            proto = mainUrl.split('://', 1)[0]
+            url = proto + ':' + url
+        elif url.startswith('://'):
+            proto = mainUrl.split('://', 1)[0]
+            url = proto + url
+        elif url.startswith('/'):
+            url = mainUrl + url[1:]
+        elif 0 < len(url) and not common.isValidUrl(url):
+            url = urljoin(mainUrl, url)
+        return url
+        
+    @staticmethod
+    def isValidUrl(url):
+        return url.startswith('http://') or url.startswith('https://')
     
     def __init__(self, proxyURL= '', useProxy = False, useMozillaCookieJar=True):
         self.proxyURL = proxyURL
@@ -438,20 +505,24 @@ class common:
         return True
         
     def getCookieItem(self, cookiefile, item):
-        ret = ''
+        ret = self.getCookieItems(cookiefile)
+        return ret.get(item, '')
+        
+    def getCookieItems(self, cookiefile, ignoreDiscard=True):
+        ret = {}
         try:
             if not self.useMozillaCookieJar:
                 cj = cookielib.LWPCookieJar()
             else:
                 cj = cookielib.MozillaCookieJar()
-            cj.load(cookiefile, ignore_discard = True)
+            cj.load(cookiefile, ignore_discard = ignoreDiscard)
             for cookie in cj:
-                if cookie.name == item: ret = cookie.value
+                ret[cookie.name] = cookie.value
         except Exception:
             printExc()
         return ret
         
-    def getCookieHeader(self, cookiefile, allowedNames=[]):
+    def getCookieHeader(self, cookiefile, allowedNames=[], unquote=True):
         ret = ''
         try:
             if not self.useMozillaCookieJar:
@@ -461,7 +532,9 @@ class common:
             cj.load(cookiefile, ignore_discard = True)
             for cookie in cj:
                 if 0 < len(allowedNames) and cookie.name not in allowedNames: continue
-                ret += '%s=%s; ' % (cookie.name, urllib.unquote(cookie.value))
+                value = cookie.value
+                if unquote: value = urllib.unquote(value)
+                ret += '%s=%s; ' % (cookie.name, value)
         except Exception:
             printExc()
         return ret
@@ -482,9 +555,6 @@ class common:
         string = string.decode('UTF-8')
         s = re.compile("&#?(\w+?);").sub(self.html_entity_decode_char, string)
         return s.encode('UTF-8')
-        
-    def isValidUrl(self, url):
-        return url.startswith('http://') or url.startswith('https://')
     
     def getPage(self, url, addParams = {}, post_data = None):
         ''' wraps getURLRequestData '''
@@ -577,24 +647,29 @@ class common:
         url = baseUrl
         header = {'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'}
         header.update(params.get('header', {}))
-        params.update({'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': cfParams.get('cookie_file', ''), 'header':header})
+        params.update({'with_metadata':True, 'use_cookie': True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': cfParams.get('cookie_file', ''), 'header':header})
         sts, data = self.getPage(url, params, post_data)
         
         current = 0
-        while current < 3:
+        while current < 5:
             #if True:
             if not sts and None != data:
                 start_time = time.time()
                 current += 1
                 doRefresh = False
                 try:
-                    #try: verData = data.fp.read()
-                    #except Exception: verData = data
-                    verData = data.fp.read()
                     domain = self.getBaseUrl(data.fp.geturl())
-                    printDBG("===============================================================")
+                    verData = data.fp.read() 
+                    if data.fp.info().get('Content-Encoding', '') == 'gzip':
+                        verData = DecodeGzipped(verData)
+                    printDBG("------------------")
                     printDBG(verData)
-                    printDBG("===============================================================")
+                    printDBG("------------------")
+                    if 'sitekey' not in verData and 'challenge' not in verData: break
+                    
+                    printDBG(">>")
+                    printDBG(verData)
+                    printDBG("<<")
                     
                     sitekey = self.ph.getSearchGroups(verData, 'data-sitekey="([^"]+?)"')[0]
                     id = self.ph.getSearchGroups(verData, 'data-ray="([^"]+?)"')[0]
@@ -606,11 +681,13 @@ class common:
                         if '' != cfParams.get('User-Agent', ''): recaptcha.HTTP_HEADER['User-Agent'] = cfParams['User-Agent']
                         token = recaptcha.processCaptcha(sitekey)
                         if token == '': return False, None
-                    
+                        
                         sts, tmp = self.ph.getDataBeetwenMarkers(verData, '<form', '</form>', caseSensitive=False)
                         if not sts: return False, None
                         
-                        url = _getFullUrl( self.ph.getSearchGroups(tmp, 'action="([^"]+?)"')[0] )
+                        url = self.ph.getSearchGroups(tmp, 'action="([^"]+?)"')[0]
+                        if url != '': url = _getFullUrl( url )
+                        else: url = data.fp.geturl()
                         actionType = self.ph.getSearchGroups(tmp, 'method="([^"]+?)"', 1, True)[0].lower()
                         post_data2 = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
                         #post_data2['id'] = id
@@ -628,7 +705,13 @@ class common:
                                 url += '?'
                             url += urllib.urlencode(post_data2)
                             post_data2 = None
-                        sts, data = self.getPage(url, params2)
+                            
+                        sts, data = self.getPage(url, params2, post_data2)
+                        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        printDBG(sts)
+                        printDBG("------------------------------------------------------------------")
+                        printDBG(data)
+                        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                     else:
                         dat = self.ph.getAllItemsBeetwenNodes(verData, ('<script', '>'), ('</script', '>'), False)
                         for item in dat:
@@ -638,16 +721,16 @@ class common:
                         decoded = ''
                         jscode = base64.b64decode('''ZnVuY3Rpb24gc2V0VGltZW91dCh0LGUpe2lwdHZfcmV0LnRpbWVvdXQ9ZSx0KCl9dmFyIGlwdHZfcmV0PXt9LGlwdHZfZnVuPW51bGwsZG9jdW1lbnQ9e30sd2luZG93PXRoaXMsZWxlbWVudD1mdW5jdGlvbih0KXt0aGlzLl9uYW1lPXQsdGhpcy5fc3JjPSIiLHRoaXMuX2lubmVySFRNTD0iIix0aGlzLl9wYXJlbnRFbGVtZW50PSIiLHRoaXMuc2hvdz1mdW5jdGlvbigpe30sdGhpcy5hdHRyPWZ1bmN0aW9uKHQsZSl7cmV0dXJuInNyYyI9PXQmJiIjdmlkZW8iPT10aGlzLl9uYW1lJiZpcHR2X3NyY2VzLnB1c2goZSksdGhpc30sdGhpcy5maXJzdENoaWxkPXtocmVmOmlwdHZfZG9tYWlufSx0aGlzLnN0eWxlPXtkaXNwbGF5OiIifSx0aGlzLnN1Ym1pdD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfcmV0KSl9LE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh0aGlzLCJzcmMiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4gdGhpcy5fc3JjfSxzZXQ6ZnVuY3Rpb24odCl7dGhpcy5fc3JjPXR9fSksT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsImlubmVySFRNTCIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9pbm5lckhUTUx9LHNldDpmdW5jdGlvbih0KXt0aGlzLl9pbm5lckhUTUw9dH19KSxPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywidmFsdWUiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4iIn0sc2V0OmZ1bmN0aW9uKHQpe2lwdHZfcmV0LmFuc3dlcj10fX0pfSwkPWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX07ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQ9ZnVuY3Rpb24odCl7cmV0dXJuIG5ldyBlbGVtZW50KHQpfSxkb2N1bWVudC5jcmVhdGVFbGVtZW50PWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX0sZG9jdW1lbnQuYXR0YWNoRXZlbnQ9ZnVuY3Rpb24oKXtpcHR2X2Z1bj1hcmd1bWVudHNbMV19Ow==''')
                         jscode = "var location = {hash:''}; var iptv_domain='%s';\n%s\n%s\niptv_fun();" % (domain, jscode, dat) #cfParams['domain']
-                        printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+                        printDBG("+ CODE +")
                         printDBG(jscode)
-                        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        printDBG("++++++++")
                         ret = iptv_js_execute( jscode )
                         decoded = byteify(json.loads(ret['data'].strip()))
                         
                         verData = self.ph.getDataBeetwenReMarkers(verData, re.compile('<form[^>]+?id="challenge-form"'), re.compile('</form>'), False)[1]
-                        printDBG("===============================================================")
+                        printDBG(">>")
                         printDBG(verData)
-                        printDBG("===============================================================")
+                        printDBG("<<")
                         verUrl =  _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0] )
                         get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
                         get_data['jschl_answer'] = decoded['answer']
@@ -738,11 +821,14 @@ class common:
                 if fileHandler != None:
                     fileHandler.close()
                 downHandler.close()
-                if None != contentLength and contentLength == downDataSize:
+                if None != contentLength:
+                    if contentLength == downDataSize:
+                        bRet = True
+                elif downDataSize > 0:
                     bRet = True
         except Exception:
             printExc("common.getFile download file exception")
-        dictRet.update( {'sts': True, 'fsize': downDataSize} )
+        dictRet.update( {'sts': bRet, 'fsize': downDataSize} )
         return dictRet
     
     def getURLRequestData(self, params = {}, post_data = None):
@@ -775,6 +861,7 @@ class common:
         req      = None
         out_data = None
         opener   = None
+        metadata = None
         
         timeout = params.get('timeout', None)
         
@@ -792,6 +879,8 @@ class common:
             
         if 'User-Agent' not in headers:
             headers['User-Agent'] = host
+        
+        metadata = {}
 
         printDBG('pCommon - getURLRequestData() -> params: ' + str(params))
         printDBG('pCommon - getURLRequestData() -> headers: ' + str(headers)) 
@@ -876,11 +965,18 @@ class common:
                 response = urlOpen(req, customOpeners, timeout)
                 if response.info().get('Content-Encoding') == 'gzip':
                     gzip_encoding = True
+                try: 
+                    metadata['url'] = response.geturl()
+                    metadata['status_code'] = response.getcode()
+                    if 'Content-Type' in response.info(): metadata['content-type'] = response.info()['Content-Type']
+                except Exception: pass
+                
                 data = response.read()
                 response.close()
             except urllib2.HTTPError, e:
                 ignoreCodeRanges = params.get('ignore_http_code_ranges', [(404, 404), (500, 500)])
                 ignoreCode = False
+                metadata['status_code'] = e.code
                 for ignoreCodeRange in ignoreCodeRanges:
                     if e.code >= ignoreCodeRange[0] and e.code <= ignoreCodeRange[1]:
                         ignoreCode = True
@@ -890,19 +986,23 @@ class common:
                     printDBG('!!!!!!!! %s: getURLRequestData - handled' % e.code)
                     if e.fp.info().get('Content-Encoding', '') == 'gzip':
                         gzip_encoding = True
+                    try: 
+                        metadata['url'] = e.fp.geturl()
+                        if 'Content-Type' in e.fp.info(): metadata['content-type'] = e.fp.info()['Content-Type']
+                    except Exception: pass
                     data = e.fp.read()
                     #e.msg
                     #e.headers
                 elif e.code == 503:
                     if params.get('use_cookie', False):
                         new_cookie = e.fp.info().get('Set-Cookie', '')
-                        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> new_cookie[%s]" % new_cookie)
+                        printDBG("> new_cookie[%s]" % new_cookie)
                         cj.save(params['cookiefile'], ignore_discard = True)
                     raise e
                 else:
                     if e.code in [300, 302, 303, 307] and params.get('use_cookie', False) and params.get('save_cookie', False):
                         new_cookie = e.fp.info().get('Set-Cookie', '')
-                        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> new_cookie[%s]" % new_cookie)
+                        printDBG("> new_cookie[%s]" % new_cookie)
                         #for cookieKey in params.get('cookie_items', {}).keys():
                         #    cj.clear('', '/', cookieKey)
                         cj.save(params['cookiefile'], ignore_discard = True)
@@ -915,7 +1015,11 @@ class common:
                     out_data = f.read()
                 else:
                     out_data = data
-            except Exception:
+            except Exception as e:
+                printExc()
+                msg1 = _("Critical Error – Content-Encoding gzip cannot be handled!")
+                msg2 = _("Last error:\n%s" % str(e))
+                GetIPTVNotify().push('%s\n\n%s' % (msg1, msg2), 'error', 20)
                 out_data = data
  
         if params.get('use_cookie', False) and params.get('save_cookie', False):
@@ -929,16 +1033,35 @@ class common:
                 GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 20)
                 SetTmpCookieDir()
                 raise e
-
+        
+        if params.get('return_data', False) and params.get('convert_charset', True) :
+            encoding = ''
+            if 'content-type' in metadata:
+                encoding = self.ph.getSearchGroups(metadata['content-type'], '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
+            
+            if encoding == '' and params.get('search_charset', False):
+                encoding = self.ph.getSearchGroups(out_data, '''(<meta[^>]+?Content-Type[^>]+?>)''', ignoreCase=True)[0]
+                encoding = self.ph.getSearchGroups(encoding, '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
+            
+            if encoding not in ['', 'UTF-8']:
+                printDBG(">> encoding[%s]" % encoding)
+                try:
+                    out_data = out_data.decode(encoding).encode('UTF-8')
+                except Exception:
+                    printExc()
+                metadata['orig_charset'] = encoding
+        
+        if params.get('with_metadata', False) and params.get('return_data', False):
+            out_data = strwithmeta(out_data, metadata)
+        
         return out_data 
 
     def urlEncodeNonAscii(self, b):
         return re.sub('[\x80-\xFF]', lambda c: '%%%02x' % ord(c.group(0)), b)
 
     def iriToUri(self, iri):
-        import urlparse
-        parts = urlparse.urlparse(iri.decode('utf-8'))
-        return urlparse.urlunparse(
+        parts = urlparse(iri.decode('utf-8'))
+        return urlunparse(
             part.encode('idna') if parti==1 else self.urlEncodeNonAscii(part.encode('utf-8'))
             for parti, part in enumerate(parts)
         )
@@ -948,39 +1071,3 @@ class common:
         for i in range(65,91):
             strTab.append(str(unichr(i)))    
         return strTab
-
-    def isNumeric(self,s):
-        try:
-            float(s)
-            return True
-        #except ValueError:
-        except Exception:
-            return False
-        
-    def setLinkTable(self, url, host):
-        strTab = []
-        strTab.append(url)
-        strTab.append(host)
-        return strTab
-    
-class Chars:
-    def __init__(self):
-        pass
-    
-    def setCHARS(self):
-        return CHARS
-    
-    def replaceString(self, array, string):
-        out = string
-        for i in range(len(array)):
-            out = string.replace(array[i][0], array[i][1])
-            string = out
-        return out    
-    
-    def replaceChars(self, string):
-        out = string
-        for i in range(len(CHARS)):
-            out = string.replace(CHARS[i][0], CHARS[i][1])
-            string = out
-        return out
-

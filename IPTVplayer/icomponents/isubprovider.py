@@ -8,7 +8,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_execute
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSearchHistoryHelper, GetCookieDir, printDBG, printExc, GetTmpDir, \
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSearchHistoryHelper, GetCookieDir, printDBG, printExc, GetTmpDir, GetSubtitlesDir, \
                                                           MapUcharEncoding, GetPolishSubEncoding, GetUchardetPath, GetDefaultLang, \
                                                           rm, rmtree, mkdirs
 from Plugins.Extensions.IPTVPlayer.itools.iptvsubtitles import IPTVSubtitlesHandler
@@ -216,6 +216,9 @@ class CBaseSubProviderClass:
     def getMaxFileSize(self):
         return 1024 * 1024 * 5 # 5MB, max size of sub file to be download
         
+    def getMaxItemsInDir(self):
+        return 500
+        
     def listsTab(self, tab, cItem):
         for item in tab:
             params = dict(cItem)
@@ -276,15 +279,40 @@ class CBaseSubProviderClass:
     def getMainUrl(self):
         return self.MAIN_URL
         
-    def getFullUrl(self, url):
+    #def getFullUrl(self, url):
+    #    if url.startswith('//'):
+    #        url = 'http:' + url
+    #    elif url.startswith('://'):
+    #        url = 'http' + url
+    #    elif url.startswith('/'):
+    #        url = self.getMainUrl() + url[1:]
+    #    elif 0 < len(url) and '://' not in url:
+    #        url =  self.getMainUrl() + url
+    #    return url
+        
+    def getFullUrl(self, url, currUrl=None):
+        if url.startswith('./'):
+            url = url[1:]
+        
+        if currUrl == None or not self.cm.isValidUrl(currUrl):
+            try: mainUrl = self.getMainUrl()
+            except Exception: mainUrl = 'http://fake'
+        else:
+            mainUrl = self.cm.getBaseUrl(currUrl)
+        
         if url.startswith('//'):
-            url = 'http:' + url
+            proto = mainUrl.split('://', 1)[0]
+            url = proto + ':' + url
         elif url.startswith('://'):
-            url = 'http' + url
+            proto = mainUrl.split('://', 1)[0]
+            url = proto + url
         elif url.startswith('/'):
-            url = self.getMainUrl() + url[1:]
+            url = mainUrl + url[1:]
         elif 0 < len(url) and '://' not in url:
-            url =  self.getMainUrl() + url
+            if currUrl == None or not self.cm.isValidUrl(currUrl):
+                url =  mainUrl + url
+            else:
+                url = urljoin(currUrl, url)
         return url
     
     def handleService(self, index, refresh=0):
@@ -424,11 +452,11 @@ class CBaseSubProviderClass:
             printExc()
         return itemType
     
-    def downloadAndUnpack(self, url, params={}, post_data=None):
+    def downloadAndUnpack(self, url, params={}, post_data=None, unpackToSubDir=False):
         data, fileName = self.downloadFileData(url, params, post_data)
         if data == None:
             return None
-        ext = fileName.split('.')[-1].lower()
+        ext = fileName.rsplit('.', 1)[-1].lower()
         printDBG("fileName[%s] ext[%s]" % (fileName, ext))
         if ext not in ['zip', 'rar']:
             SetIPTVPlayerLastHostError(_('Unknown file extension "%s".') % ext)
@@ -436,7 +464,15 @@ class CBaseSubProviderClass:
             
         tmpFile = GetTmpDir( self.TMP_FILE_NAME )
         tmpArchFile = tmpFile + '.' + ext
-        tmpDIR = GetTmpDir(self.TMP_DIR_NAME)
+        tmpDIR = ''
+        if unpackToSubDir:
+            dirName = fileName.rsplit('.', 1)[0].split('filename=', 1)[-1]
+            if dirName != '':
+                tmpDIR = GetSubtitlesDir(dirName)
+        
+        if tmpDIR == '':
+            tmpDIR = GetTmpDir(self.TMP_DIR_NAME)
+        
         printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         printDBG(fileName)
         printDBG(tmpFile)
@@ -538,20 +574,30 @@ class CBaseSubProviderClass:
             return True
         return False
         
-    def listSupportedFilesFromPath(self, cItem, subExt=['srt'], archExt=['rar', 'zip']):
+    def listSupportedFilesFromPath(self, cItem, subExt=['srt'], archExt=['rar', 'zip'], dirCategory=None):
         printDBG('CBaseSubProviderClass.listSupportedFilesFromPath')
+        maxItems = self.getMaxItemsInDir()
+        numItems = 0
         # list files
         for file in os_listdir(cItem['path']):
+            numItems += 1
             filePath = os_path.join(cItem['path'], file)
             params = dict(cItem)
-            ext = file.split('.')[-1].lower()
-            params.update({'file_path':filePath, 'title':os_path.splitext(file)[0]})
-            if ext in subExt:
-                params['ext'] = ext
-                self.addSubtitle(params)
-            elif ext in archExt:
+            if os_path.isfile(filePath):
+                ext = file.rsplit('.', 1)[-1].lower()
+                params.update({'file_path':filePath, 'title':os_path.splitext(file)[0]})
+                if ext in subExt:
+                    params['ext'] = ext
+                    self.addSubtitle(params)
+                elif ext in archExt:
+                    self.addDir(params)
+            elif dirCategory != None and os_path.isdir(filePath):
+                params.update({'category':dirCategory, 'path':filePath, 'title':file})
                 self.addDir(params)
-                
+            if numItems >= maxItems:
+                break
+        self.currList.sort(key=lambda k: k['title'])
+    
     def converFileToUtf8(self, inFile, outFile, lang=''):
         printDBG('CBaseSubProviderClass.converFileToUtf8 inFile[%s] outFile[%s]' % (inFile, outFile))
         # detect encoding

@@ -164,14 +164,14 @@ class iptv_system:
     please use iptv_system instead, this should be used as follow:
     self.handle = iptv_system("cmd", callBackFun)
     there is need to have reference to the obj created by iptv_system, 
-    other ways behaviour is undefined
+    without reference to return obj behavior is undefined
     
     iptv_system must be used only inside MainThread context, please see 
     iptv_execute class from asynccall module which is dedicated to be
     used inside other threads
     '''
     def __init__(self, cmd, callBackFun=None):
-        printDBG("iptv_system.__init__ ---------------------------------")
+        printDBG("iptv_system.__init__")
         self.callBackFun = callBackFun
         
         self.console = eConsoleAppContainer()
@@ -202,7 +202,7 @@ class iptv_system:
             self.outData += data
 
     def _cmdFinished(self, code):
-        printDBG("iptv_system._cmdFinished code[%r]---------------------------------" % code)
+        printDBG("iptv_system._cmdFinished code[%r]" % code)
         self.console_appClosed_conn = None
         self.console_stdoutAvail_conn = None
         self.console = None
@@ -210,7 +210,7 @@ class iptv_system:
         self.callBackFun = None
 
     def __del__(self):
-        printDBG("iptv_system.__del__ ---------------------------------")
+        printDBG("iptv_system.__del__")
 
 def IsHttpsCertValidationEnabled():
     return config.plugins.iptvplayer.httpssslcertvalidation.value
@@ -266,6 +266,9 @@ def GetPyScriptCmd(name):
     
 def GetUchardetPath():
     return config.plugins.iptvplayer.uchardetpath.value
+
+def GetCmdwrapPath():
+    return config.plugins.iptvplayer.cmdwrappath.value
     
 def GetDukPath():
     return config.plugins.iptvplayer.dukpath.value
@@ -341,6 +344,8 @@ def GetBinDir(file = '', platform=None):
     return resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/bin/') + platform + '/' + file
 def GetPluginDir(file = ''):
     return resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/') + file
+def GetExtensionsDir(file = ''):
+    return resolveFilename(SCOPE_PLUGINS, 'Extensions/') + file
 def GetSkinsDir(path = ''):
     return resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/skins/') + path
 def GetConfigDir(path = ''):
@@ -360,7 +365,9 @@ def Which(program):
             if is_exe(program):
                 return program
         else:
-            for path in os.environ["PATH"].split(os.pathsep):
+            pathTab = ['/iptvplayer_rootfs/bin', '/iptvplayer_rootfs/usr/bin', '/iptvplayer_rootfs/sbin', '/iptvplayer_rootfs/usr/sbin']
+            pathTab.extend(os.environ["PATH"].split(os.pathsep))
+            for path in pathTab:
                 path = path.strip('"')
                 exe_file = os.path.join(path, program)
                 if is_exe(exe_file):
@@ -495,49 +502,77 @@ def printDBG( DBGtxt ):
 #####################################################
 # get host list based on files in /hosts folder
 #####################################################
-def GetHostsList(fromList=True, fromHostFolder=True):
+g_cacheHostsFromList = None
+g_cacheHostsFromFolder = None
+def __isHostNameValid(hostName):
+    BLOCKED_MARKER = '_blocked_'
+    if len(hostName) > 4 and BLOCKED_MARKER not in hostName and hostName.startswith("host"):
+        return True
+    return False
+    
+def __getHostsPath(file=''):
+    return resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/' + file)
+    
+def GetHostsFromList(useCache=True):
+    global g_cacheHostsFromList
+    if useCache and g_cacheHostsFromList != None:
+        return list(g_cacheHostsFromList)
+    
+    lhosts = []
+    try:
+        sts, data = ReadTextFile(__getHostsPath('/list.txt') )
+        if sts:
+            data = data.split('\n')
+            for item in data:
+                line = item.strip()
+                if __isHostNameValid(line):
+                    lhosts.append( line[4:] )
+                    printDBG('getHostsList add host from list.txt hostName: "%s"' % line[4:])
+    except Exception:
+        printExc()
+    
+    g_cacheHostsFromList = list(lhosts)
+    return lhosts
+        
+def GetHostsFromFolder(useCache=True):
+    global g_cacheHostsFromFolder
+    if useCache and g_cacheHostsFromFolder != None:
+        return g_cacheHostsFromFolder
+    
+    lhosts = []
+    try:
+        fileList = os.listdir( __getHostsPath() )
+        for wholeFileName in fileList:
+            # separate file name and file extension
+            fileName, fileExt = os.path.splitext(wholeFileName)
+            nameLen = len( fileName )
+            if fileExt in ['.pyo', '.pyc', '.py'] and nameLen >  4 and __isHostNameValid(fileName):
+                if fileName[4:] not in lhosts:
+                    lhosts.append( fileName[4:] )
+                    printDBG('getHostsList add host with fileName: "%s"' % fileName[4:])
+        printDBG('getHostsList end')
+        lhosts.sort()
+    except Exception:
+        printDBG('GetHostsList EXCEPTION')
+    
+    g_cacheHostsFromFolder = list(lhosts)
+    return lhosts
+
+def GetHostsList(fromList=True, fromHostFolder=True, useCache=True):
     printDBG('getHostsList begin')
-    HOST_PATH = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/')
-    BLOCKED_MARKER = '_blocked_'  
+    
     lhosts = [] 
-    
-    def __isHostNameValid(hostName):
-        if len(hostName) > 4 and BLOCKED_MARKER not in hostName and hostName.startswith("host"):
-            return True
-        return False
-    
     if fromHostFolder:
-        try:
-            fileList = os.listdir( HOST_PATH )
-            for wholeFileName in fileList:
-                # separate file name and file extension
-                fileName, fileExt = os.path.splitext(wholeFileName)
-                nameLen = len( fileName )
-                if fileExt in ['.pyo', '.pyc', '.py'] and nameLen >  4 and __isHostNameValid(fileName):
-                    if fileName[4:] not in lhosts:
-                        lhosts.append( fileName[4:] )
-                        printDBG('getHostsList add host with fileName: "%s"' % fileName[4:])
-            printDBG('getHostsList end')
-            lhosts.sort()
-        except Exception:
-            printDBG('GetHostsList EXCEPTION')
+        lhosts = GetHostsFromFolder(useCache)
     
     # when new option to remove not enabled host is enabled 
     # on list should be also host which are not normally in 
     # the folder, so we will read first predefined list 
     if fromList:
-        try:
-            sts, data = ReadTextFile(HOST_PATH + '/list.txt')
-            if sts:
-                data = data.split('\n')
-                for item in data:
-                    line = item.strip()
-                    if __isHostNameValid(line):
-                        if line[4:] not in lhosts:
-                            lhosts.append( line[4:] )
-                            printDBG('getHostsList add host from list.txt hostName: "%s"' % line[4:])
-        except Exception:
-            printExc()
+        tmp = GetHostsFromList(useCache)
+        for host in tmp:
+            if host not in lhosts:
+                lhosts.append( host )
     
     return lhosts
 
@@ -616,7 +651,8 @@ def GetSkinsList():
 def IsHostEnabled( hostName ):
     hostEnabled  = False
     try:
-        exec('if config.plugins.iptvplayer.host' + hostName + '.value: hostEnabled = True')
+        if getattr(config.plugins.iptvplayer, 'host' + hostName).value:
+            hostEnabled = True
     except Exception:
         hostEnabled = False
     return hostEnabled
@@ -760,6 +796,12 @@ def rmtree(path, ignore_errors=False, onerror=None):
         os.rmdir(path)
     except os.error:
         onerror(os.rmdir, path) 
+        
+def GetFileSize(filepath):
+    try:
+        return os.stat(filepath).st_size
+    except Exception:
+        return -1
        
 def DownloadFile(url, filePath):
     printDBG('DownloadFile [%s] from [%s]' % (filePath, url) )
@@ -1124,6 +1166,7 @@ class CMoviePlayerPerHost():
         
     def set(self, activePlayer):
         self.activePlayer = activePlayer
+        self.save()
         
 def byteify(input, noneReplacement=None, baseTypesAsString=False):
     if isinstance(input, dict):
@@ -1199,7 +1242,11 @@ def IsBrokenDriver(filePath):
     # root@mbtwinplus:~# cat /proc/stb/video/policy2
     # Segmentation fault
     try:
-        return 'video/policy' in filePath and not fileExists('/proc/stb/video/aspect_choices')
+        if 'video/policy' in filePath and not fileExists('/proc/stb/video/aspect_choices'):
+            with open('/etc/hostname', 'r') as f:
+                data = f.read().strip()
+            if 'mbtwinplus' in data:
+                return True
     except Exception:
         printExc()
     return False
@@ -1285,3 +1332,144 @@ def GetE2VideoMode():
     
 def SetE2VideoMode(value):
     return SetE2OptionByFile('/proc/stb/video/videomode', value)
+
+def ReadUint16(tmp, le=True):
+    if le: return ord(tmp[1]) << 8 | ord(tmp[0])
+    else: return ord(tmp[0]) << 8 | ord(tmp[1])
+
+def ReadUint32(tmp, le=True):
+    if le: return ord(tmp[3]) << 24 | ord(tmp[2]) << 16 | ord(tmp[1]) << 8 | ord(tmp[0])
+    else: return ord(tmp[0]) << 24 | ord(tmp[1]) << 16 | ord(tmp[2]) << 8 | ord(tmp[3])
+
+def ReadGnuMIPSABIFP(elfFileName):
+    SHT_GNU_ATTRIBUTES=0x6ffffff5
+    SHT_MIPS_ABIFLAGS=0x7000002a
+    Tag_GNU_MIPS_ABI_FP=4
+    Val_GNU_MIPS_ABI_FP_ANY=0
+    Val_GNU_MIPS_ABI_FP_DOUBLE=1
+    Val_GNU_MIPS_ABI_FP_SINGLE=2
+    Val_GNU_MIPS_ABI_FP_SOFT=3
+    Val_GNU_MIPS_ABI_FP_OLD_64=4
+    Val_GNU_MIPS_ABI_FP_XX=5
+    Val_GNU_MIPS_ABI_FP_64=6
+    Val_GNU_MIPS_ABI_FP_64A=7
+    Val_GNU_MIPS_ABI_FP_NAN2008=8
+    
+    def _readLeb128(data, start, end):
+        result = 0
+        numRead = 0
+        shift = 0
+        byte = 0
+
+        while start < end:
+            byte = ord(data[start])
+            numRead += 1
+
+            result |= (byte & 0x7f) << shift
+
+            shift += 7
+            if byte < 0x80:
+                break
+        return numRead, result
+    
+    def _getStr(stsTable, idx):
+        val = ''
+        while stsTable[idx] != '\0':
+            val += stsTable[idx]
+            idx += 1
+        return val
+    
+    Val_HAS_MIPS_ABI_FLAGS = False
+    Val_GNU_MIPS_ABI_FP = -1
+    try:
+        with open(elfFileName, "rb") as file:
+            # e_shoff - Start of section headers
+            file.seek(32)
+            shoff = ReadUint32(file.read(4))
+        
+            # e_shentsize - Size of section headers
+            file.seek(46)
+            shentsize = ReadUint16(file.read(2))
+            
+            # e_shnum -  Number of section headers
+            shnum = ReadUint16(file.read(2))
+            
+            # e_shstrndx - Section header string table index
+            shstrndx = ReadUint16(file.read(2))
+            
+            # read .shstrtab section header
+            headerOffset = shoff + shstrndx * shentsize
+            
+            file.seek(headerOffset + 16)
+            offset = ReadUint32(file.read(4))
+            size = ReadUint32(file.read(4))
+            
+            file.seek(offset)
+            secNameStrTable = file.read(size)
+            
+            for idx in range(shnum):
+                offset = shoff + idx * shentsize
+                file.seek(offset)
+                sh_name = ReadUint32(file.read(4))
+                sh_type = ReadUint32(file.read(4))
+                if sh_type == SHT_GNU_ATTRIBUTES:
+                    file.seek(offset + 16)
+                    sh_offset = ReadUint32(file.read(4))
+                    sh_size   = ReadUint32(file.read(4))
+                    file.seek(sh_offset)
+                    contents = file.read(sh_size)
+                    p = 0
+                    if contents.startswith('A'):
+                        p += 1
+                        sectionLen = sh_size -1
+                        while sectionLen > 0:
+                            attrLen = ReadUint32(contents[p:])
+                            p += 4
+                            
+                            if attrLen > sectionLen:
+                                attrLen = sectionLen
+                            elif attrLen < 5:
+                                break
+                            sectionLen -= attrLen
+                            attrLen -= 4
+                            attrName =  _getStr(contents, p)
+                            
+                            p += len(attrName) + 1
+                            attrLen -= len(attrName) + 1
+                            
+                            while attrLen > 0 and p < len(contents):
+                                if attrLen < 6:
+                                    sectionLen = 0
+                                    break
+                                tag = ord(contents[p])
+                                p += 1
+                                size = ReadUint32(contents[p:])
+                                if size > attrLen:
+                                    size = attrLen
+                                if size < 6:
+                                    sectionLen = 0
+                                    break
+                                    
+                                attrLen -= size
+                                end = p + size - 1
+                                p += 4
+                                
+                                if tag == 1 and attrName == "gnu": #File Attributes
+                                    while p < end:
+                                        # display_gnu_attribute
+                                          numRead, tag = _readLeb128(contents, p, end)
+                                          p += numRead
+                                          if tag == Tag_GNU_MIPS_ABI_FP:
+                                            numRead, val = _readLeb128(contents, p, end)
+                                            p += numRead
+                                            Val_GNU_MIPS_ABI_FP = val
+                                            break
+                                elif p < end:
+                                    p = end
+                                else:
+                                    attrLen = 0
+                elif sh_type == SHT_MIPS_ABIFLAGS:
+                    Val_HAS_MIPS_ABI_FLAGS = True
+    except Exception:
+        printExc()
+    return Val_HAS_MIPS_ABI_FLAGS, Val_GNU_MIPS_ABI_FP

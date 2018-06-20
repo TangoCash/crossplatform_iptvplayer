@@ -23,12 +23,15 @@ from Screens.MessageBox import MessageBox
 from Screens.ChoiceBox import ChoiceBox
 from Components.config import config, ConfigSubsection, ConfigSelection, ConfigDirectory, ConfigYesNo, ConfigOnOff, Config, ConfigInteger, ConfigSubList, ConfigText, getConfigListEntry, configfile
 ###################################################
-config.plugins.iptvplayer.show_iframe = ConfigYesNo(default = False)
+config.plugins.iptvplayer.use_clear_iframe = ConfigYesNo(default = False)
+config.plugins.iptvplayer.show_iframe = ConfigYesNo(default = True)
 config.plugins.iptvplayer.iframe_file = ConfigIPTVFileSelection(fileMatch = "^.*\.mvi$", default = "/usr/share/enigma2/radio.mvi")
 config.plugins.iptvplayer.clear_iframe_file = ConfigIPTVFileSelection(fileMatch = "^.*\.mvi$", default = "/usr/share/enigma2/black.mvi")
 
 config.plugins.iptvplayer.remember_last_position = ConfigYesNo(default = False)
 config.plugins.iptvplayer.fakeExtePlayer3 = ConfigSelection(default = "fake", choices = [("fake", " ")])
+config.plugins.iptvplayer.rambuffer_sizemb_network_proto = ConfigInteger(0, (0, 999))
+config.plugins.iptvplayer.rambuffer_sizemb_files = ConfigInteger(0, (0, 999))
 config.plugins.iptvplayer.aac_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ac3_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.eac3_software_decode = ConfigYesNo(default = False)
@@ -184,6 +187,15 @@ class ConfigExtMoviePlayerBase():
         settings['box_height'] = config.plugins.iptvplayer.extplayer_subtitle_box_height.value
         return settings
         
+    def setSubtitleFontSettings(self, objConfig):
+        try:
+            if config.plugins.iptvplayer.extplayer_subtitle_pos.value != objConfig['pos']:
+                config.plugins.iptvplayer.extplayer_subtitle_pos.value = objConfig['pos']
+                config.plugins.iptvplayer.extplayer_subtitle_pos.save()
+                configfile.save()
+        except Exception:
+            printExc()
+        
     def getDefaultPlayerVideoOptions(self):
         defVideoOptions  = {'aspect':  config.plugins.iptvplayer.extplayer_aspect.value, 
                             'policy':  config.plugins.iptvplayer.extplayer_policy.value, 
@@ -201,6 +213,12 @@ class ConfigExtMoviePlayerBase():
         
     def getInfoBarTimeout(self):
         return config.plugins.iptvplayer.extplayer_infobar_timeout.value
+        
+    def clearVideoByIframeInjection(self):
+        return config.plugins.iptvplayer.use_clear_iframe.value
+        
+    def getBlankIframeFilePath(self):
+        return config.plugins.iptvplayer.clear_iframe_file.value
         
 class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
    
@@ -249,6 +267,8 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
         
     def getRuntimeOptionsValues(self):
         valTab = []
+        valTab.append(config.plugins.iptvplayer.rambuffer_sizemb_network_proto.value)
+        valTab.append(config.plugins.iptvplayer.rambuffer_sizemb_files.value)
         valTab.append(config.plugins.iptvplayer.aac_software_decode.value)
         valTab.append(config.plugins.iptvplayer.dts_software_decode.value)
         valTab.append(config.plugins.iptvplayer.wma_software_decode.value)
@@ -262,15 +282,18 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
         
     def runSetup(self):
         list = []
+        list.append(getConfigListEntry(_("Use black iframe at normal video playback finish"), config.plugins.iptvplayer.use_clear_iframe))
         list.append(getConfigListEntry(_("show iframe for audio item"), config.plugins.iptvplayer.show_iframe))
         if config.plugins.iptvplayer.show_iframe.value:
             list.append(getConfigListEntry("    " + _("Iframe file"), config.plugins.iptvplayer.iframe_file))
-            if 'sh4' != config.plugins.iptvplayer.plarform.value:
-                list.append(getConfigListEntry("    " + _("Clear iframe file"), config.plugins.iptvplayer.clear_iframe_file))
+        if 'sh4' != config.plugins.iptvplayer.plarform.value and (config.plugins.iptvplayer.show_iframe.value or config.plugins.iptvplayer.use_clear_iframe.value):
+            list.append(getConfigListEntry("    " + _("Black iframe file"), config.plugins.iptvplayer.clear_iframe_file))
         
         list.append(getConfigListEntry(_("Remember last watched position"), config.plugins.iptvplayer.remember_last_position))
         if 1:#IsExecutable(config.plugins.iptvplayer.exteplayer3path.value):
             list.append(getConfigListEntry(_("----------------- External exteplayer3 options -----------------"), config.plugins.iptvplayer.fakeExtePlayer3))
+            list.append(getConfigListEntry("    " + _("RAM buffer size [MB] for network protocols"), config.plugins.iptvplayer.rambuffer_sizemb_network_proto))
+            list.append(getConfigListEntry("    " + _("RAM buffer size [MB] for local files"), config.plugins.iptvplayer.rambuffer_sizemb_files))
             list.append(getConfigListEntry("    " + _("External player use software decoder for the AAC"), config.plugins.iptvplayer.aac_software_decode))
             list.append(getConfigListEntry("    " + _("External player use software decoder for the AC3"), config.plugins.iptvplayer.ac3_software_decode))
             list.append(getConfigListEntry("    " + _("External player use software decoder for the EAC3"), config.plugins.iptvplayer.eac3_software_decode))
@@ -335,6 +358,7 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
                config.plugins.iptvplayer.extplayer_subtitle_wrapping_enabled,
                config.plugins.iptvplayer.extplayer_subtitle_background,
                config.plugins.iptvplayer.show_iframe,
+               config.plugins.iptvplayer.use_clear_iframe,
               ]
 
     def changeSubOptions(self):

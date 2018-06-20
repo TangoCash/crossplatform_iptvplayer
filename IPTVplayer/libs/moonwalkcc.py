@@ -9,6 +9,8 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getDirectM3U8Playlist, getF4MLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 ###################################################
 
 ###################################################
@@ -18,6 +20,9 @@ import re
 import base64
 import copy
 import urllib
+from binascii import hexlify, unhexlify
+from hashlib import md5
+from urlparse import urlparse, parse_qsl
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 try: import json
 except Exception: import simplejson as json
@@ -34,67 +39,86 @@ class MoonwalkParser():
     USER_AGENT = 'Mozilla/5.0'
     def __init__(self):
         self.cm = common()
-        self.HTTP_HEADER= {'User-Agent':self.USER_AGENT, 'Referer':''}
+        self.HTTP_HEADER = {'User-Agent':self.USER_AGENT, 'Referer':''}
         self.COOKIEFILE = GetCookieDir("moonwalkcc.cookie")
-        self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE}
+        self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': self.COOKIEFILE}
         self.baseUrl = ''
         
     def _setBaseUrl(self, url):
         self.baseUrl = 'http://' + self.cm.ph.getDataBeetwenMarkers(url, '://', '/', False)[1]
+    
+    def cryptoJS_AES_decrypt(self, encrypted, key, iv):
+        cipher = AES_CBC(key=key, keySize=32)
+        return cipher.decrypt(encrypted, iv)
+        
+    def cryptoJS_AES_encrypt(self, decrypted, key, iv):
+        cipher = AES_CBC(key=key, keySize=32)
+        return cipher.encrypt(decrypted, iv)
+
+    def _getFunctionCode(self, data):
+        funData = ''
+        start = data.find('function(') 
+        idx = data.find('{', start) + 1
+        num = 1
+        while idx < len(data):
+            if data[idx] == '{':
+                num += 1
+            elif data[idx] == '}':
+                num -= 1
+            if num == 0:
+                funData = data[start:idx+1]
+                break
+            idx += 1
+        return funData
         
     def _getSecurityData(self, data, params):
         printDBG('MoonwalkParser._getSecurityData')
-        baseUrl = '/manifests/video/%s/all' % self.cm.ph.getSearchGroups(data, '''video_token['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
-        sec_header = {}
+        baseUrl = ''
+        sec_header = {'Referer':data.meta['url']}
         post_data = {}
         
         scriptUrl = self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]+?)['"]''')[0]
         if scriptUrl.startswith('/'):
             scriptUrl = self.baseUrl + scriptUrl
             
-        sts, data2 = self.cm.getPage(scriptUrl, params)
-        if not sts: data2 = ''
+        jscode = ['var iptv={onGetManifestSuccess:"",onGetManifestError:""},_={bind:function(){}},window=this;window._mw_adb=false,CryptoJS={AES:{},enc:{Utf8:{},Hex:{}}},CryptoJS.AES.encrypt=function(n,t,r){return JSON.stringify({data:n,password:t,salt:r})},CryptoJS.enc.Hex.parse=function(n){return{data:n,type:"hex"}},CryptoJS.enc.Utf8.parse=function(n){return{data:n,type:"utf-8"}};var $={ajax:function(n){return print(JSON.stringify(n)),{done:function(){},fail:function(){}}}},VideoBalancer=function(n){iptv.options=n};']
+        jscode.append('var navigator={userAgent:"%s"};' % self.HTTP_HEADER['User-Agent'])
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)
+        for item in data:
+            jscode.append(item)
         
-        tmp = self.cm.ph.getDataBeetwenReMarkers(data2, re.compile('getVideoManifests\s*:'), re.compile('onGetManifestSuccess'), False)[1]
+        sts, data = self.cm.getPage(scriptUrl, params)
+        if sts:
+            item = "iptv.call = %s;iptv['call']();" % self._getFunctionCode(data.split('getVideoManifests:', 1)[-1])
+            jscode.append(item)
+            
+        ret = iptv_js_execute( '\n'.join(jscode) )
+        if ret['sts'] and 0 == ret['code']:
+            printDBG(ret['data'])
+            try:
+                data = byteify( json.loads(ret['data']) )
+                baseUrl = data['url']
+                if baseUrl.startswith('/'):
+                    baseUrl = self.baseUrl + baseUrl
+                
+                for itemKey in data['data'].keys():
+                    tmp = byteify( json.loads(data['data'][itemKey]) )
+                    decrypted = tmp['data']['data']
+                    key       = tmp['password']['data']
+                    iv        = tmp['salt']['iv']['data']
+                    printDBG('>>>> key: [%s]' % key)
+                    printDBG('>>>> iv: [%s]' % iv)
+                    if tmp['password']['type'] == 'hex':
+                        key = unhexlify(key)
+                    if tmp['salt']['iv']['type'] == 'hex':
+                        iv = unhexlify(iv)
+                    
+                    post_data[itemKey] = base64.b64encode(self.cryptoJS_AES_encrypt(decrypted, key, iv)) #.replace('+', ' ')
+            except Exception:
+                printExc()
         
-        tmp2 = self.cm.ph.getAllItemsBeetwenMarkers(tmp, 'headers:', '}')
-        for item in tmp2:
-            printDBG("---------------------------------------------")
-            printDBG(item)
-            printDBG("---------------------------------------------")
-            item = re.compile('''['"]([^'^"]+?)['"]\s*:([^\,^\}^\s}]+?)[\,\}\s]''').findall(item)
-            for header in item:
-                value = header[1].strip()
-                if value[0] not in ['"', "'"]:
-                    value = self.cm.ph.getSearchGroups(data, '''%s\s*:\s*['"]([^'^"]+?)['"]''' % value.split('.')[-1])[0]
-                sec_header[header[0]] = value
+        return baseUrl, sec_header, post_data 
         
-        printDBG("---------------------------------------------------------")
-        printDBG("SECURITY HEADER")
-        printDBG("---------------------------------------------------------")
-        printDBG(sec_header)
-        printDBG("---------------------------------------------------------")
-        
-        tmp = self.cm.ph.getDataBeetwenReMarkers(tmp, re.compile('var\s[^\{]*?{'), re.compile('}'), False)[1]
-        tmp2 = re.compile('''[\{\}\s\,]*?['"]?([^\:]+?)['"]?:([^\{^\}^\s^\,]+?)[\{\}\s\,]''').findall(tmp + ',')
-        printDBG("---------------------------------------------------------")
-        printDBG("PARAMS")
-        printDBG("---------------------------------------------------------")
-        printDBG(tmp)
-        printDBG("---------------------------------------------------------")
-        for item in tmp2:
-            var = item[0].strip()
-            val = item[1].strip()
-            if val[0] in ['"', "'"]:
-                val = val[1:-1]
-            elif '.' in val:
-                val = self.cm.ph.getSearchGroups(data, '''%s\s*:\s*['"]?([^'^"^\,]+?)['"\,]''' % val.split('.')[-1])[0].strip()
-            if var[0] in ['"', "'"]:
-                var = var[1:-1]
-            post_data[var] = val
-        
-        return baseUrl, sec_header, post_data
-
     def getDirectLinks(self, url):
         printDBG('MoonwalkParser.getDirectLinks')
         linksTab = []
@@ -109,7 +133,9 @@ class MoonwalkParser():
             params['header'].update(sec_header)
             params['header']['X-Requested-With'] = 'XMLHttpRequest'
             params['load_cookie'] = True
-            sts, data = self.cm.getPage(self.baseUrl + url, params, post_data)
+            if not self.cm.isValidUrl(url):
+                url = self.baseUrl + url
+            sts, data = self.cm.getPage(url, params, post_data)
             printDBG("=======================================================")
             printDBG(data)
             printDBG("=======================================================")
@@ -120,7 +146,7 @@ class MoonwalkParser():
                 data = data['mans']
             except Exception: printExc()
             try:
-                mp4Url = strwithmeta(data["manifest_mp4"], {'User-Agent':'Mozilla/5.0', 'Referer':url})
+                mp4Url = strwithmeta(data["mp4"], {'User-Agent':'Mozilla/5.0', 'Referer':url})
                 sts, tmp = self.cm.getPage(mp4Url, {'User-Agent':'Mozilla/5.0', 'Referer':url})
                 tmpTab = []
                 tmp = byteify(json.loads(tmp))
@@ -143,7 +169,7 @@ class MoonwalkParser():
                 printExc()
 
             if 'm3u8' == config.plugins.iptvplayer.moonwalk_format.value:
-                hlsUrl = strwithmeta(data["manifest_m3u8"], {'User-Agent':'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Referer':url})
+                hlsUrl = strwithmeta(data['m3u8'], {'User-Agent':'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10', 'Referer':url})
                 tmpTab = getDirectM3U8Playlist(hlsUrl)
                 def __getLinkQuality( itemLink ):
                     return int(itemLink['heigth'])
@@ -182,8 +208,14 @@ class MoonwalkParser():
             self._setBaseUrl(url)
             params = copy.deepcopy(self.defaultParams)
             params['header']['Referer'] = url
+            params['with_metadata'] = True
             sts, data = self.cm.getPage( url, params)
             if not sts: return []
+            
+            url = data.meta['url']
+            parsedUri = urlparse( url )
+            baseUrl = '{uri.scheme}://{uri.netloc}{uri.path}'.format(uri=parsedUri)
+            query = dict(parse_qsl(parsedUri.query))
             
             printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             printDBG(data)
@@ -191,12 +223,18 @@ class MoonwalkParser():
             
             seasonData = self.cm.ph.getSearchGroups(data, '''seasons\s*:\s*\[([^\]]+?)\]''')[0]
             ref = self.cm.ph.getSearchGroups(data, '''ref\s*:[^'^"]*?['"]([^'^"]+?)['"]''')[0]
+            if 'ref' != '': query['ref'] = ref
+            query.pop('episode', None)
+            
             printDBG(seasonData)
             
             seasonData = seasonData.split(',')
             for item in seasonData:
                 item = item.strip()
-                seasonsTab.append({'title':_('Season') + ' ' + item, 'id':int(item), 'url': '%s?season=%s&ref=%s' % (url, item, urllib.quote(ref))})
+                if item[0] in ['"', "'"]: item = item[1:-1]
+                query['season'] = item
+                seasonsTab.append({'title':_('Season') + ' ' + item, 'id':int(item), 'url': '%s?%s' % (baseUrl, urllib.urlencode(query))})
+            seasonsTab.sort(key=lambda item: item['id'])
         except Exception:
             printExc()
         return seasonsTab
@@ -208,20 +246,36 @@ class MoonwalkParser():
             self._setBaseUrl(url)
             params = copy.deepcopy(self.defaultParams)
             params['header']['Referer'] = url
+            params['with_metadata'] = True
             sts, data = self.cm.getPage( url, params)
             if not sts: return []
+            
+            url = data.meta['url']
+            parsedUri = urlparse( url )
+            baseUrl = '{uri.scheme}://{uri.netloc}{uri.path}'.format(uri=parsedUri)
+            query = dict(parse_qsl(parsedUri.query))
             
             printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             printDBG(data)
             printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             
             episodeData = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''episodes\s*:'''), re.compile(']]'))[1]
-            printDBG(episodeData)
-            
-            episodeData = re.compile('''\[\s*[0-9]+?\s*\,\s*([0-9]+?)[^0-9]''').findall(episodeData)
-            for item in episodeData:
-                item = item.strip()
-                episodesTab.append({'title':_('Episode') + ' ' + item, 'id':int(item), 'url': '%s&episode=%s' % (url, item)})
+            if episodeData != '': 
+                episodeData = re.compile('''\[\s*[0-9]+?\s*\,\s*([0-9]+?)[^0-9]''').findall(episodeData)
+                for item in episodeData:
+                    item = item.strip()
+                    query['episode'] = item
+                    episodesTab.append({'title':_('Episode') + ' ' + item, 'id':int(item), 'url': '%s?%s' % (baseUrl, urllib.urlencode(query))})
+                    
+            else:
+                episodeData = self.cm.ph.getSearchGroups(data, '''episodes\s*:\s*\[([^\]]+?)\]''')[0]
+                episodeData = episodeData.split(',')
+                for item in episodeData:
+                    item = item.strip()
+                    if item[0] in ['"', "'"]: item = item[1:-1]
+                    query['episode'] = item
+                    episodesTab.append({'title':_('Episode') + ' ' + item, 'id':int(item), 'url': '%s?%s' % (baseUrl, urllib.urlencode(query))})
+            episodesTab.sort(key=lambda item: item['id'])
         except Exception:
             printExc()
         return episodesTab

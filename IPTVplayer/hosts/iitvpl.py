@@ -173,18 +173,28 @@ class IITVPL(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return []
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a class="tab-selector', '</ul>', withMarkers=True)
+        tabsTitles = {}
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<a', '>', 'tab-selector'), ('</a', '>'))
+        for item in tmp:
+            tabId = self.cm.ph.getSearchGroups(item, '''<a[^>]+?data\-tab=['"]\#([^'^"]+?)['"]''')[0]
+            tabsTitles[tabId] = self.cleanHtmlStr(item)
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<ul', '>', 'tab-content'), ('</ul', '>'))
         tabs = []
         links = {}
         for tItem in data:
-            tabTitle = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(tItem, '<a class="tab-selector', '</a>')[1] )
+            tabId = self.cm.ph.getSearchGroups(tItem, '''<ul[^>]+?id=['"]([^'^"]+?)['"]''')[0]
+            tabTitle = tabsTitles.get(tabId, tabId)
             links[tabTitle] = []
             tabs.append(tabTitle)
             lData = self.cm.ph.getAllItemsBeetwenMarkers(tItem, '<li', '</li>', withMarkers=True)
             for item in lData:
-                tmp   = self.cm.ph.getSearchGroups(item, '<a[^>]+?class="_?video-link"[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)<', 2)
-                if tmp[0].startswith('http://') or tmp[0].startswith('https://'):
-                    links[tabTitle].append({'name':'[{0}] '.format(tabTitle) + self.cleanHtmlStr(tmp[1]), 'url':tmp[0], 'need_resolve':1})
+                item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<a', '</a>')
+                for it in item:
+                    if 'data-link-id' not in it and 'class="_?video-link"' not in it: continue
+                    tmp   = self.cm.ph.getSearchGroups(it, '<a[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)<', 2)
+                    if self.cm.isValidUrl(tmp[0]):
+                        links[tabTitle].append({'name':'[{0}] '.format(tabTitle) + self.cleanHtmlStr(tmp[1]), 'url':tmp[0], 'need_resolve':1})
         
         keys = ['Lektor', 'Napisy PL', 'Oryginał']
         keys.extend(links.keys())
@@ -230,8 +240,9 @@ class IITVPL(CBaseHostClass):
         else:
             uri, sts = unshorten(videoUrl)
             if sts == 'OK': 
-                uri = self.cm.ph.getSearchGroups(uri, '''/(https?://[^'"]+?)$''')[0]
-                if self.cm.isValidUrl(uri): videoUrl = uri
+                subUri = self.cm.ph.getSearchGroups(uri, '''/(https?://[^'"]+?)$''')[0]
+                if self.cm.isValidUrl(subUri): videoUrl = subUri
+                elif self.up.checkHostSupport(uri): videoUrl = uri
         
         if 1 != self.up.checkHostSupport(videoUrl):
             try:

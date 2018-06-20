@@ -168,14 +168,27 @@ sed -i "s/\(_url.*hostXXX.py\)/\1DISABLED/g" $publicGitDir/hosts/XXX.py
 #echo 'Syncing contrib apps...'
 #wget -q http://iptvplayer.pl/resources/bin/sh4/exteplayer3_ffmpeg3.0 -O $publicGitDir/bin/sh4/exteplayer3
 #wget -q http://iptvplayer.pl/resources/bin/sh4/uchardet -O $publicGitDir/bin/sh4/uchardet
-############################## Keep only interesting hosts ##############################
+
+############################## Delete some unwanted hosts ##############################
 cd $publicGitDir
 #step 1 remove all definitevely unwanted
-HostsList='anime chomikuj favourites disabled blocked localmedia wolnelekturypl'
+HostsList='anime chomikuj favourites disabled blocked localmedia wolnelekturypl urllist iptvplayerinfo'
 for myfile in $HostsList
 do
   rm -rf ./hosts/*$myfile*
   rm -rf ./icons/*$myfile*
+done
+
+############################## Delete hosts with captcha ##############################
+cd $publicGitDir/hosts
+for myfile in `find -type f -name '*.py'`
+do
+  toDel='captcha';
+  if [[ `grep -c $toDel<$myfile` -ge 1 ]];then 
+    rm -rf $publicGitDir/hosts/*$myfile*
+    rm -rf $publicGitDir//icons/*$myfile*
+    echo "deleting captcha host: $myfile"
+  fi
 done
 
 ###change some default values

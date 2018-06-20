@@ -242,8 +242,8 @@ class FilmezzEU(CBaseHostClass):
             serverName = ' | '.join(serverName)
             #if 'letöltés' in serverName: continue
             
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''(/link_to\.php\?id=[^'^"]+?)['"]''')[0])
-            if not self.cm.isValidUrl(url): continue
+            url = self.getFullUrl(urllib.unquote(self.cm.ph.getSearchGroups(tmp, '''(link_to\.php[^'^"]+?)['"]''')[0]))
+            if url == '': continue
             
             if title not in titlesTab:
                 titlesTab.append(title)

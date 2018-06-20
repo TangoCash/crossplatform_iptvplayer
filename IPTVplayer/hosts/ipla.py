@@ -47,7 +47,7 @@ except Exception: import simplejson as json
 # Config options for HOST
 ###################################################
 config.plugins.iptvplayer.iplacachexml      = ConfigSelection(default = "12", choices = [("0", "nigdy"), ("6", "przez 6 godzin"), ("12", "przez 12 godzin"),("24", "przez dzień")])
-config.plugins.iptvplayer.iplaDefaultformat = ConfigSelection(default = "400", choices = [("200", "bitrate: 200"),("400", "bitrate: 400"),("900", "bitrate: 900"),("1900", "bitrate: 1900")])
+config.plugins.iptvplayer.iplaDefaultformat = ConfigSelection(default = "1900", choices = [("200", "bitrate: 200"),("400", "bitrate: 400"),("900", "bitrate: 900"),("1900", "bitrate: 1900")])
 config.plugins.iptvplayer.iplaUseDF         = ConfigYesNo(default = False)
 
 def GetConfigList():
@@ -73,6 +73,7 @@ class Ipla(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'ipla'})
         self.categoryXMLTree = None
         self.cacheFilePath   = os_path.join(config.plugins.iptvplayer.SciezkaCache.value, "iplaxml.cache")
+        self.cm.HEADER = {'User-Agent': self.HOST, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
         
     def getStr(self, v, default=''):
         if None == v:
@@ -100,6 +101,7 @@ class Ipla(CBaseHostClass):
             re_compile_vod    = re.compile('<vod ([^>]+?)>')
             re_compile_thumbs = re.compile('<thumb ([^>]+?)>')
             try:
+                vodList = []
                 for vod in videosXMLTree:
                     try:
                         val = re_compile_vod.search(vod)
@@ -119,9 +121,14 @@ class Ipla(CBaseHostClass):
                                     icon = attrib['url']
                         except Exception: printExc()
                         urls = self._getVideoUrls(vod)
-                        params = {'category': 'video', 'title': title, 'plot': plot, 'icon':icon, 'urls': urls, 'fav_item':{'url':url, 'vod_id':val.get('id', '')}}
-                        self.addVideo(params)
+                        sortNum = self.cm.ph.getSearchGroups(title, '''odcinek\s*?([0-9]+?)(?:^0-9|$)''', 1, True)[0]
+                        if sortNum != '': sortNum = int(sortNum) 
+                        params = {'category': 'video', 'sort_num':sortNum, 'title': self.cleanHtmlStr(title), 'plot': plot, 'icon':icon, 'urls': urls, 'fav_item':{'url':url, 'vod_id':val.get('id', '')}}
+                        vodList.append(params)
                     except Exception: printExc()
+                vodList.sort(key=lambda item: item['sort_num'])
+                for params in vodList:
+                    self.addVideo(params)
             except Exception: printExc()
     # end getVideosList
     
@@ -142,8 +149,9 @@ class Ipla(CBaseHostClass):
                     name = "Jakość: %s\t format: %s\t  bitrate: %s" % (attrib['quality'], attrib['format'], attrib['bitrate'])
                     urls.append( {'name':name, 'url':attrib['url'], 'bitrate':attrib['bitrate']} )
         except Exception: printExc()
-        if config.plugins.iptvplayer.iplaUseDF.value and 1 < len(urls):
-            urls = CSelOneLink(urls, __getLinkQuality, max_bitrate).getOneLink()
+        urls = CSelOneLink(urls, __getLinkQuality, max_bitrate).getSortedLinks()
+        if config.plugins.iptvplayer.iplaUseDF.value:
+            urls = [urls[0]]
         return urls
     
     def __writeCategoryCache(self, data):
@@ -247,7 +255,7 @@ class Ipla(CBaseHostClass):
                                     # if this is only linkt to another category, update category id
                                     catId = link.replace(linkMarker, "")
                             except Exception: pass
-                            params = {'category': 'category', 'title': title, 'plot': plot, 'icon':icon, 'catId': catId, 'pCatId': pid}
+                            params = {'category': 'category', 'title': self.cleanHtmlStr(title), 'plot': plot, 'icon':icon, 'catId': catId, 'pCatId': pid}
                             self.addDir(params)
                         #printDBG("||||||||||||||||: %s" %pid)
                     except Exception:
@@ -373,5 +381,4 @@ class IPTVHost(CHostBase):
             self.searchPattern = ''
             self.searchType = ''
         return
-
 

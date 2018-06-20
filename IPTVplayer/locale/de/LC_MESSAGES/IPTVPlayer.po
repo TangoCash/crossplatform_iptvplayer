@@ -167,7 +167,7 @@ msgid "ABORTED"
 msgstr "ABGEBROCHEN"
 
 msgid "AC3 mix mode"
-msgstr "AC3 mix Modus"
+msgstr "AC3 Mix Modus"
 
 msgid "ARTICLE"
 msgstr "ARTIKEL"
@@ -3046,13 +3046,10 @@ msgid "Use proxy gateway"
 msgstr "Benutze Proxy Gateway"
 
 msgid "show iframe for audio item"
-msgstr "Logo beim Abspielen von Audiodateien"
+msgstr "Iframe beim Abspielen von Audiodateien"
 
 msgid "Iframe file"
-msgstr "Audio Logo"
-
-msgid "Clear iframe file"
-msgstr "Leeres Logo"
+msgstr "Audio Iframe"
 
 msgid "Total size: "
 msgstr "Gesamtgröße: "
@@ -3635,8 +3632,8 @@ msgstr "Versuche DRM zu umgehen (könnte illegal sein)"
 msgid "Children"
 msgstr "Kinder"
 
-msgid "%s uses \"geo-blocking\" measures to prevent you from accessing the services from outside the Territory."
-msgstr "%s setzt Geoblocking ein, um Sie daran zu hindern diesen Service außerhalb seiner vorgesehenen geographischen Region zu nutzen."
+msgid "%s uses \"geo-blocking\" measures to prevent you from accessing the services from outside the %s Territory."
+msgstr "%s setzt Geoblocking ein, um Sie daran zu hindern diesen Service außerhalb von der %s Region zu nutzen."
 
 msgid "Bypass geo-blocking for VODs (it may be illegal):"
 msgstr "Umgehe Geoblocking für VOD (könnte illegal sein):"
@@ -3646,3 +3643,100 @@ msgstr "Deaktivieren/Aktivieren von Services"
 
 msgid "The color of the current version"
 msgstr "Farbauswahl für derzeitige Version"
+
+msgid "DRM protection detected."
+msgstr "DRM-Schutz festgestellt."
+
+msgid "Unknown file extension \"%s\"."
+msgstr "Unbekannte Dateierweiterung \"%s\"."
+
+msgid "Functionality protected by Google reCAPTCHA!"
+msgstr "Funktionalität ist geschützt mit Google reCAPTCHA!"
+
+msgid "Network connection failed."
+msgstr "Netzwerkverbindung fehlgeschlagen"
+
+msgid "Unknown server response."
+msgstr "Unbekannte Serverantwort."
+
+msgid "Disable/Enable groups"
+msgstr "Deaktivieren/Aktivieren von Gruppen"
+
+msgid "IPTVPlayer enable/disabled groups"
+msgstr "IPTV Player aktivierte/deaktivierte Gruppen"
+
+msgid "Hide \"%s\" group"
+msgstr "Verstecke \"%s\" Gruppe"
+
+msgid "Remove \"%s\" item"
+msgstr "Entferne \"%s\" Eintrag"
+
+msgid "Add host %s to group"
+msgstr "Hinzufügen von %s zur Gruppe"
+
+msgid "    Enable hosts groups"
+msgstr "    Zeige Service-Gruppen"
+
+msgid "User defined"
+msgstr "Benutzerdefiniert"
+
+msgid "Select group"
+msgstr "Wähle Gruppe"
+
+msgid "There is no hosts in this group."
+msgstr "Kein Service in dieser Gruppe vorhanden."
+
+msgid "Movies and series"
+msgstr "Filme und Serien"
+
+msgid "Cartoons and anime"
+msgstr "Cartoons und Anime"
+
+msgid "Documentary"
+msgstr "Dokumentationen"
+
+msgid "Science"
+msgstr "Wissenschaft"
+
+msgid "Russian"
+msgstr "Russisch"
+
+msgid "Hungarian"
+msgstr "Ungarisch"
+
+msgid "Arabic"
+msgstr "Arabisch"
+
+msgid "Greek"
+msgstr "Griechisch"
+
+msgid "Swedish"
+msgstr "Schwedisch"
+
+msgid "Balkans"
+msgstr "Balkanromanisch"
+
+msgid "Downloading graphics package."
+msgstr "Lade Grafik-Paket herunter."
+
+msgid "Extracting graphics package."
+msgstr "Entpacke Grafik-Paket."
+
+msgid "Downloading icons package."
+msgstr "Lade Icons-Paket herunter."
+
+msgid "Extracting icons package."
+msgstr "Entpacke Icons-Paket."
+
+msgid ""
+"The host %s requires subscription.\n"
+"Please fill your login and password in the host configuration - available under blue button."
+msgstr ""
+"Der Service %s benötigt ein Abonnement.\n"
+"Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration aus - zugänglich über die blaue Taste."
+
+msgid "Use black iframe at normal video playback finish"
+msgstr "Zeige schwarzes Iframe am Ende von Videowiedergabe"
+
+msgid "Black iframe file"
+msgstr "Schwarzes Iframe"

@@ -3,7 +3,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper, common
 from Plugins.Extensions.IPTVPlayer.libs import m3u8
@@ -284,7 +284,9 @@ def getParamsTouple(code, type=1, r1=False, r2=False ):
 def unpackJSPlayerParams(code, decryptionFun, type=1, r1=False, r2=False):
     printDBG('unpackJSPlayerParams')
     code = getParamsTouple(code, type, r1, r2)
-    return unpackJS(code, decryptionFun)
+    data = unpackJS(code, decryptionFun)
+    if data == '' and data.endswith('))'): data = unpackJS(code[:-1], decryptionFun)
+    return data
     
 def unpackJS(data, decryptionFun, addCode=''):
     paramsCode = addCode
@@ -457,6 +459,10 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'm3u8'
         elif urlLower.split('?')[0].endswith('.f4m'):
             retUrl.meta['iptv_proto'] = 'f4m'
+        elif 'protocol=hls' in urlLower:
+            retUrl.meta['iptv_proto'] = 'm3u8'
+        elif urlLower.split('?')[0].endswith('.mpd'):
+            retUrl.meta['iptv_proto'] = 'mpd'
         elif urlLower.startswith('rtmp'):
             retUrl.meta['iptv_proto'] = 'rtmp'
         elif urlLower.startswith('https'):
@@ -471,13 +477,9 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'mms'
         elif urlLower.startswith('mmsh'):
             retUrl.meta['iptv_proto'] = 'mmsh'
-        elif 'protocol=hls' in urlLower:
-            retUrl.meta['iptv_proto'] = 'm3u8'
-        elif urlLower.split('?')[0].endswith('.mpd'):
-            retUrl.meta['iptv_proto'] = 'mpd'
     return retUrl
 
-def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False):
+def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False, sortWithMaxBitrate=-1):
     if checkExt and not M3U8Url.split('?', 1)[0].endswith('.m3u8'):
         return []
         
@@ -490,11 +492,9 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
     try:
         finallM3U8Url = meta.get('iptv_m3u8_custom_base_link', '') 
         if '' == finallM3U8Url:
-            params['return_data'] = False
-            sts, response = cm.getPage(M3U8Url, params, postData)
-            finallM3U8Url = response.geturl()
-            data = response.read().strip()
-            response.close()
+            params['with_metadata'] = True
+            sts, data = cm.getPage(M3U8Url, params, postData)
+            finallM3U8Url = data.meta['url']
         else:
             sts, data = cm.getPage(M3U8Url, params, postData)
             data = data.strip()
@@ -527,15 +527,22 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                         codecs.append(c.split('.')[0].strip())
                         item['codecs'] = ','.join(codecs)
                 except Exception:
-                    printExc()
                     item['codecs'] = None
-                    pass
                 
                 item['name']  = "bitrate: %s res: %dx%d %s" % ( item['bitrate'], \
                                                                 item['width'],    \
                                                                 item['height'],  \
                                                                 item['codecs'] )
                 retPlaylists.append(item)
+            
+            if sortWithMaxBitrate > -1:
+                def __getLinkQuality( itemLink ):
+                    try:
+                        return int(itemLink['bitrate'])
+                    except Exception:
+                        printExc()
+                        return 0
+                retPlaylists = CSelOneLink(retPlaylists, __getLinkQuality, sortWithMaxBitrate).getSortedLinks()
         else:
             if checkContent and 0 == len(m3u8Obj.segments):
                 return []
@@ -545,12 +552,13 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
         printExc()
     return retPlaylists
     
-def getF4MLinksWithMeta(manifestUrl, checkExt=True):
+def getF4MLinksWithMeta(manifestUrl, checkExt=True, cookieParams={}, sortWithMaxBitrate=-1):
     if checkExt and not manifestUrl.split('?')[0].endswith('.f4m'):
         return []
         
     cm = common()
     headerParams, postData = cm.getParamsFromUrlWithMeta(manifestUrl)
+    headerParams.update(cookieParams)
     
     retPlaylists = []
     sts, data = cm.getPage(manifestUrl, headerParams, postData)
@@ -587,9 +595,18 @@ def getF4MLinksWithMeta(manifestUrl, checkExt=True):
             if liveStreamDetected:
                 link.meta['iptv_livestream'] = True
             retPlaylists.append({'name':'[f4m/hds]', 'bitrate':0, 'url':link})
+        
+        if sortWithMaxBitrate > -1:
+            def __getLinkQuality( itemLink ):
+                try:
+                    return int(itemLink['bitrate'])
+                except Exception:
+                    printExc()
+                    return 0
+            retPlaylists = CSelOneLink(retPlaylists, __getLinkQuality, sortWithMaxBitrate).getSortedLinks()
     return retPlaylists
     
-def getMPDLinksWithMeta(manifestUrl, checkExt=True):
+def getMPDLinksWithMeta(manifestUrl, checkExt=True, cookieParams={}, sortWithMaxBandwidth=-1):
     if checkExt and not manifestUrl.split('?')[0].endswith('.mpd'):
         return []
         
@@ -600,6 +617,7 @@ def getMPDLinksWithMeta(manifestUrl, checkExt=True):
         except Exception: return default
     
     headerParams, postData = cm.getParamsFromUrlWithMeta(manifestUrl)
+    headerParams.update(cookieParams)
     
     retPlaylists = []
     sts, data = cm.getPage(manifestUrl, headerParams, postData)
@@ -609,6 +627,9 @@ def getMPDLinksWithMeta(manifestUrl, checkExt=True):
             liveStreamDetected = True
         
         representation = {'audio':[], 'video':[]}
+        tmp = cm.ph.getAllItemsBeetwenMarkers(data, "<Period", '</Period>', withMarkers=True)
+        if len(tmp): data = tmp[-1]
+        # TODO!!! select period based on duration
         data = cm.ph.getAllItemsBeetwenMarkers(data, "<AdaptationSet", '</AdaptationSet>', withMarkers=True)
         for item in data:
             type = ''
@@ -627,6 +648,8 @@ def getMPDLinksWithMeta(manifestUrl, checkExt=True):
                 if '' == repParam['codecs']: repParam['codecs'] = cm.ph.getSearchGroups(item, '''codecs=['"]([^'^"]+?)['"]''')[0]
                 
                 repParam['codecs'] = repParam['codecs'].split('.')[0]
+                if 'vp9' in repParam['codecs']:
+                    continue
                 
                 if type == 'video':
                     repParam['width']  = _getNumAttrib(rep, 'width')
@@ -679,6 +702,15 @@ def getMPDLinksWithMeta(manifestUrl, checkExt=True):
                 retPlaylists.append(audioItem)
             
             audioIdx += 1
+            
+    if sortWithMaxBandwidth > -1:
+        def __getLinkQuality( itemLink ):
+            try:
+                return int(itemLink['bandwidth'])
+            except Exception:
+                printExc()
+                return 0
+        retPlaylists = CSelOneLink(retPlaylists, __getLinkQuality, sortWithMaxBandwidth).getSortedLinks()
     
     return retPlaylists
     

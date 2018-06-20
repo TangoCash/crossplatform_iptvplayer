@@ -1,12 +1,16 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
+
 ###################################################
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 
 ###################################################
@@ -14,9 +18,13 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 ###################################################
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 import re
-try:    import simplejson as json
-except Exception: import json
 import urllib
+import random
+import string
+try:    import json
+except Exception: import simplejson as json
+
+from os import path as os_path
 ############################################
 
 ###################################################
@@ -30,290 +38,253 @@ from Screens.MessageBox import MessageBox
 # Config options for HOST
 ###################################################
 
-config.plugins.iptvplayer.videostar_streamprotocol = ConfigSelection(default = "2", choices = [("1", "rtmp"),("2", "HLS - m3u8")]) 
-config.plugins.iptvplayer.videostar_defquality     = ConfigSelection(default = "950000", choices = [("400000", _("low")),("950000", _("average")),("1600000", _("high"))])
-config.plugins.iptvplayer.videostar_premium        = ConfigYesNo(default = False)
-config.plugins.iptvplayer.videostar_login          = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.videostar_password       = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.videostar_use_proxy_gateway  = ConfigYesNo(default = False)
-config.plugins.iptvplayer.videostar_proxy_gateway_url  = ConfigText(default = "http://darmowe-proxy.pl/browse.php?u={0}&b=192&f=norefer", fixed_size = False)
-
-#http://www.bramka-proxy.pl/browse.php?u={0}&b=192&f=norefer
-#185.5.99.77
-
-#http://darmowe-proxy.pl/browse.php?u={0}&b=192&f=norefer
-#85.128.142.29
-#http://proksiak.pl/show.php?u={0}&b=32
-
+config.plugins.iptvplayer.videostar_streamprotocol     = ConfigSelection(default = "2", choices = [("1", "rtmp"),("2", "HLS - m3u8"),("3", "DASHS - mpd"),("4", "DASH - mpd")]) 
+config.plugins.iptvplayer.videostar_defquality         = ConfigSelection(default = "9999999999", choices = [("0", _("the worst")),("400000", _("low")),("950000", _("average")),("1600000", _("high")), ("9999999999", _("the best"))])
+config.plugins.iptvplayer.videostar_use_defquality     = ConfigYesNo(default = True)
+config.plugins.iptvplayer.videostar_show_all_channels  = ConfigYesNo(default = False)
+config.plugins.iptvplayer.videostar_login              = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.videostar_password           = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_('Show all channels') + ": ", config.plugins.iptvplayer.videostar_show_all_channels))
     optionList.append(getConfigListEntry(_('Preferred streaming protocol') + ": ", config.plugins.iptvplayer.videostar_streamprotocol))
     optionList.append(getConfigListEntry(_('Preferred quality') + ": ", config.plugins.iptvplayer.videostar_defquality))
+    optionList.append(getConfigListEntry(_('Use preferred quality') + ": ", config.plugins.iptvplayer.videostar_use_defquality))
     optionList.append(getConfigListEntry( _("Login") + ": ", config.plugins.iptvplayer.videostar_login))
     optionList.append(getConfigListEntry( _("Password") + ": ", config.plugins.iptvplayer.videostar_password))
-    if False and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
-        optionList.append(getConfigListEntry(_("Use a proxy gateway") + ' ' + _('(unsafe)'), config.plugins.iptvplayer.videostar_use_proxy_gateway))
-        #if config.plugins.iptvplayer.videostar_use_proxy_gateway.value:
-        #    optionList.append(getConfigListEntry("    " + _("Url:"), config.plugins.iptvplayer.videostar_proxy_gateway_url))
     return optionList
 ###################################################
+    
+###################################################
 
-class VideoStarApi:
-    MAINURL_PC      = 'https://pilot.wp.pl/'
-    MAINURL_IOS     = 'https://pilot.wp.pl/'
-    HTTP_HEADER_PC   = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': MAINURL_PC }
-    HTTP_HEADER_IOS  = { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B179 Safari/7534.48.3', 'Referer': MAINURL_IOS }
-    HTTP_HEADER2     = { 'User-Agent':'Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16', 'Referer': MAINURL_IOS}
-
-    API_URLS = { 'subscriptions_url'  : 'subscriptions',
-                 'login_url'          : 'login',
-                 'get_ad_show'        : 'api/ad/show',
-                 'get_ad_urls'        : 'api/ad/urls',
-                 'get_channels_list'  : 'api/channels/list/web',
-                 'get_channel_url'    : 'api/channels/get/%s?format_id=%s',
-                 'close_channel'      : 'api/channels/close',
-               }
-    VIDEO_STAR_T   = ''
-    VIDEO_GUEST_M  = False
+class VideoStarApi(CBaseHostClass):
 
     def __init__(self):
-        self.cm = common()#proxyURL= '', useProxy = True)
-        self.up = urlparser()
-        self.sessionEx = MainSessionWrapper()
+        CBaseHostClass.__init__(self)
+        self.MAIN_URL          = 'https://pilot.wp.pl/'
+        self.API_BASE_URL      = 'https://api-pilot.wp.pl/'
+        self.STATIC_BASE_URL   = 'https://static-pilot.wp.pl/'
+    
+        self.DEFAULT_ICON_URL = 'http://satkurier.pl/uploads/53612.jpg'
+        self.USER_AGENT  = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'
+        self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
+        self.AJAX_HEADER = dict(self.HTTP_HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-    def printPageData(self, url, data):
-        printDBG("printPageData")
-        printDBG(": [%s]" % url)
+        self.COOKIE_FILE = GetCookieDir('pilot.wp.pl.cookie')
+        
+        self.defaultParams = {}
+        self.defaultParams.update({'header':self.HTTP_HEADER, 'ignore_http_code_ranges':[(422, 422), (404, 404), (500, 500)], 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
+        self.loggedIn = False
+        self.accountInfo = ''
+        
+        self.urlType = ''
+        
+        self.cacheChannelList = []
+    
+    def getFullUrl(self, url, urlType=''):
+        self.urlType = urlType
+        return CBaseHostClass.getFullUrl(self, url)
+        
+    def getMainUrl(self):
+        if self.urlType == 'api':
+            return self.API_BASE_URL
+        elif self.urlType == 'static':
+            return self.STATIC_BASE_URL
+        return self.MAIN_URL
+        
+    def doLogin(self, login, password):
+        printDBG("VideoStarApi.doLogin")
+        
+        logged = False
+        loginUrl = self.getFullUrl('/login')
+        errMessage = _("Get page \"%s\" error.")
+        
+        sts, data = self.cm.getPage(loginUrl, self.defaultParams)
+        if not sts: return False, (errMessage % loginUrl)
+        
+        sts, data = self.cm.ph.getDataBeetwenNodes(data, ('<form', '>', 'login'), ('</form', '>'))
+        if not sts: return False, ""
+        
+        actionUrl = self.getFullUrl('/user/login', 'api')
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<input', '>')
+        post_data = {}
+        for item in data:
+            name  = self.cm.ph.getSearchGroups(item, '''name=['"]([^'^"]+?)['"]''')[0]
+            if name == '': continue
+            value = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
+            post_data[name] = value
+        
+        post_data.update({'login': login, 'password': password, 'permanent': '1', 'device':'web'})
+        httpParams = dict(self.defaultParams)
+        httpParams['header'] = dict(httpParams['header'])
+        httpParams['header']['Referer'] = self.getMainUrl()
+        sts, data = self.cm.getPage(actionUrl, httpParams, post_data)
+        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
         printDBG(data)
-        printDBG("--------------------------------------------------")
-
-    def doInit(self):
-        if False and config.plugins.iptvplayer.videostar_use_proxy_gateway.value and '2' == config.plugins.iptvplayer.videostar_streamprotocol.value:
-            self.proxy_gateway_url      = "http://www.bramka-proxy.pl/browse.php?u={0}&b=60" #192&f=norefer" #config.plugins.iptvplayer.videostar_proxy_gateway_url.value
-            self.proxy_gateway_url_ssl  = "http://www.bramka-proxy.pl/includes/process.php?action=sslagree"
-            self.my_ip = ''
-            #self.my_ip                   = self.getProxyGatewayIP()
-        else:
-            self.my_ip = ''
-            self.proxy_gateway_url = ''
-            self.proxy_gateway_url_ssl = ''
-        self._reInit()
-        self.channelsList = []
-        
-    def getProxyGatewayIP(self):
-        url = 'http://showip.net/'
-        sts, data = self.cm.getPage(url, {'header':{'User-Agent':'Mozilla/5.0', 'Referer':self.proxy_gateway_url}, 'proxy_gateway':self.proxy_gateway_url})
-        my_ip = ''
+        printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         if sts:
+            errMessage = ''
             try:
-                my_ip = self.cm.ph.getSearchGroups(data, 'name="checkip"[^>]+?value="([^"]+?)"')[0]
-                printDBG('getProxyGatewayIP my_ip[%s]' % my_ip)
+                data = byteify(json.loads(data), '', True)
+                if data['status'] == 'error':
+                    errMessage = 'Błędne dane do logowania.'
+                elif data['status'] == 'ok' and '' != data['user']['token']:
+                    self.userToken = data['user']['token']
+                    return True, ''
             except Exception:
                 printExc()
-        if '' == my_ip:
-            self.sessionEx.open(MessageBox, _('Problem z uzyskaniem IP bramki proxy!'), type = MessageBox.TYPE_INFO, timeout = 10 )
-        return my_ip
-        
-
-    def _getUrl(self, key):
-        if '2' == self.streamprotocol:
-            MAINURL = VideoStarApi.MAINURL_IOS
+                errMessage = 'Niezrozumiała odpowiedź serwera.'
+            if errMessage != '': 
+                return False, errMessage
         else:
-            MAINURL = VideoStarApi.MAINURL_PC
-        if key in VideoStarApi.API_URLS:
-            return MAINURL + VideoStarApi.API_URLS[key]
-        if not key.startswith('http'):
-            return MAINURL + key
-        return key
+            return False, (errMessage % actionUrl)
         
-    def _reInit(self): 
-        self.streamprotocol  = config.plugins.iptvplayer.videostar_streamprotocol.value
-        if '2' == self.streamprotocol:
-            self.MAINURL = VideoStarApi.MAINURL_IOS
-            self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER_IOS)
+        return False, _("Unknown error.")
+    
+    def getList(self, cItem):
+        printDBG("VideoStarApi.getList")
+        
+        rm(self.COOKIE_FILE)
+        
+        self.informAboutGeoBlockingIfNeeded('PL')
+        
+        login    = config.plugins.iptvplayer.videostar_login.value
+        password = config.plugins.iptvplayer.videostar_password.value
+        if login != '' and password != '':
+            self.accountInfo = ''
+            ret, msg = self.doLogin(login, password)
+            if ret:
+                self.loggedIn = True
+                self.accountInfo = msg
+            else:
+                self.sessionEx.open(MessageBox, '%s\nProblem z zalogowanie użytkownika "%s". Sprawdź dane do logowania w konfiguracji hosta.' % (msg, login), type = MessageBox.TYPE_INFO, timeout = 10 )
+                self.loggedIn = False
         else:
-            self.MAINURL = VideoStarApi.MAINURL_PC
-            self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER_PC)
-        if '' != self.my_ip:
-            self.cm.HEADER['X-Forwarded-For'] = self.my_ip
-        self.LOGIN           = config.plugins.iptvplayer.videostar_login.value
-        self.PASSWORD        = config.plugins.iptvplayer.videostar_password.value
+            self.doLogin('guest', 'guest')
         
-    def getDefaultQuality(self):
-        return config.plugins.iptvplayer.videostar_defquality.value
-
-    def getChannelsList(self, refresh=False):
-        printDBG("VideoStarApi.getChannelsList")
-        self.doInit()
-        if not refresh and 0 < len(self.channelsList):
-            return self.channelsList
-
-        self.channelsList = []
-        if '' != self.LOGIN.strip() and '' != self.PASSWORD.strip():
-            if not self.doLogin(self.LOGIN, self.PASSWORD):
-                self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."') % self.LOGIN, type = MessageBox.TYPE_INFO, timeout = 10 )
-                return self.channelsList
+        self.cacheChannelList = []
+        channelsTab = []
+        
+        if self.loggedIn:
+            url = self.getFullUrl('/channels/list?device=web', 'api')
         else:
-            self.sessionEx.open(MessageBox, _('Strona wymaga darmowego konta na http://pilot.wp.pl/.\nProszę uzupełnić dane w konfiguracji hosta.'), type = MessageBox.TYPE_INFO, timeout = 10 )
-            return self.channelsList
-         
-        self._fillChannelsList()
-        return self.channelsList 
+            url = self.getFullUrl('/static/guest/channels/list/web.json', 'static')
         
-    def _fillChannelsList(self):
-        printDBG("VideoStarApi._fillChannelsList")
+        sts, data = self.cm.getPage(url, self.defaultParams)
+        if not sts: return channelsTab
         
-        HTTP_HEADER = dict(self.cm.HEADER)
-        HTTP_HEADER.update( {'X-Reguested-With':'XMLHttpReguest'} )
+        try:
+            idx = 0
+            data = byteify(json.loads(data), '', True)
+            for item in data['channels']:
+                guestTimeout = item.get('guest_timeout', '')
+                if not config.plugins.iptvplayer.videostar_show_all_channels.value and (item['access_status'] == 'unsubscribed' or (not self.loggedIn and guestTimeout == '0')): continue
+                title = self.cleanHtmlStr(item['name'])
+                icon  = self.getFullUrl(item.get('thumbnail', '')) 
+                url   = self.getFullUrl(item['slug'])
+                
+                desc = []
+                if item.get('hd', False): desc.append('HD')
+                else: desc.append('SD')
+                if self.loggedIn: desc.append(item['access_status'])
+                elif guestTimeout != '': desc.append(_('Guest timeout: %s') % guestTimeout)
+                if item.get('geoblocked', False): desc.append('geoblocked')
+                
+                params = {'name':cItem['name'], 'type':'video', 'title':title, 'url':url, 'icon':icon, 'priv_idx':idx, 'desc':' | '.join(desc)}
+                channelsTab.append(params)
+                self.cacheChannelList.append(item)
+                idx += 1
+        except Exception:
+            printExc()
         
-        if self.proxy_gateway_url != '':
-            HTTP_HEADER['Referer'] = self.proxy_gateway_url.format( urllib.quote(HTTP_HEADER['Referer']) )
-            params = {'header': HTTP_HEADER, 'proxy_gateway':self.proxy_gateway_url}
-        else:
-            params = {'header': HTTP_HEADER}
-        # get channels list
-        url = self._getUrl('get_channels_list')
-        sts, data = self.cm.getPage(url, params )
-        if sts:
-            self.printPageData(url, data)
-            try:
-                data = byteify(json.loads(data))
-                if "ok" == data['status']:
-                    self.channelsList = data['channels']
-            except Exception:
-                printExc()
-
-    def getVideoLink(self, channelID):
+        return channelsTab
+        
+    def getVideoLink(self, cItem):
         printDBG("VideoStarApi.getVideoLink")
         urlsTab = []
         
-        #get referer page
-        referer = ''
-        guestMode   = False 
-        for item in self.channelsList:
-            if channelID == item['id']:
-                referer = self.MAINURL  + '#' + item['slug'] # "slug" attrib can be also taken from stream_channel data
-                linkType = 'basic'
-                if "unsubscribed" == item['access_status']:
-                    guestMode = True
-                elif 'subscribed' == item['access_status']:
-                    linkType = 'premium'
-                break
-        
-        for tryNum in range(2):
-        
-            # there is need to close previuse played channel 
-            #self._closePrevChannel()
+        idx = cItem.get('priv_idx', -1)
+        if idx < 0 or idx >= len(self.cacheChannelList):
+            return urlsTab
             
-            if tryNum > 0:
-                # retrie if there was unknown problem with getting link
-                self._reInit()
-                if not guestMode:
-                    self.doLogin(self.LOGIN, self.PASSWORD)
-                else:
-                    self.cm.HEADER = dict(VideoStarApi.HTTP_HEADER2)
-            
-            if '' != self.my_ip:
-                self.cm.HEADER['X-Forwarded-For'] = self.my_ip
-            
-            url     = self._getUrl('get_channel_url') % (channelID, self.streamprotocol)
-            
-            HTTP_HEADER = dict(self.cm.HEADER)
-            HTTP_HEADER.update( {'X-Reguested-With':'XMLHttpReguest'} )
-            
-            if self.proxy_gateway_url != '':
-                HTTP_HEADER['Referer'] = self.proxy_gateway_url.format( urllib.quote(HTTP_HEADER['Referer']) )
-                params = {'header': HTTP_HEADER, 'proxy_gateway':self.proxy_gateway_url}
-            else:
-                params = {'header': HTTP_HEADER}
-            
-            if guestMode: 
-                url = url.replace('https://pilot.wp.pl/api', 'https://api.pilot.wp.pl/guest')
-            sts, data = self.cm.getPage( url, params )
+        vidItem = self.cacheChannelList[idx]
+        formatId = config.plugins.iptvplayer.videostar_streamprotocol.value
+        tries = 0
+        while True:
+            tries += 1
             try:
-                self.printPageData(url, data)
+                if self.loggedIn:
+                    url = 'v1/channel/%s?format_id=%s&device_type=web' % (vidItem['id'], formatId)
+                else:
+                    url = 'v1/guest/channel/%s?format_id=%s&device_type=web' % (vidItem['id'], formatId)
+                url = self.getFullUrl(url, 'api')
+                sts, data = self.cm.getPage(url, self.defaultParams)
+                printDBG(data)
+                if not sts and not self.loggedIn and tries == 1:
+                    rm(self.COOKIE_FILE)
+                    self.doLogin('guest', 'guest')
+                    sts, data = self.cm.getPage(self.getFullUrl('/static/guest/channels/list/web.json', 'static'), self.defaultParams)
+                    if sts: continue
+                
+                if not sts: break
                 data = byteify(json.loads(data))
-                if "ok" == data['status']:
-                    VideoStarApi.VIDEO_STAR_T = data['stream_channel']['url_params'][-1].decode('utf-8')
-                    url_param1 = data['stream_channel']['url_params'][1].decode('utf-8')
-                    VideoStarApi.VIDEO_GUEST_M  = guestMode
-                    if '1' == self.streamprotocol:
-                        url = data['stream_channel']['url_base'].decode('utf-8')
-                        sts, data = self.cm.getPage( url, params)
-                        self.printPageData(url, data)
-                        r = re.search('<baseURL>([^<]+?)</baseURL>', data).group(1)
-                        
-                        streams = re.findall('url="([^"]+?)" bitrate="([0-9]+?)"', data)
-                        for item in streams:
-                            # swfVfy=https://pilot.wp.pl/javascripts/libs/flowplayer/flowplayer.netvi-x.swf protocol=1 
-                            url = r + '/' + item[0] + ' live=1 swfUrl=https://pilot.wp.pl/javascripts/libs/flowplayer/flowplayer.commercial-3.2.11.swf' + ' pageUrl=' + referer + (' conn=S:%s conn=S:%s token=%s' % (url_param1, VideoStarApi.VIDEO_STAR_T, VideoStarApi.VIDEO_STAR_T)) + ' flashVer=WIN 12,0,0,44 '
-                            urlsTab.append({'url': strwithmeta(url, {'iptv_proto':'rtmp'}), 'name': item[1], 'bitrate':item[1]+'000', 'type':'rtmpt'})
-                    else:
-                        # hls
-                        url = data['stream_channel']['url_base'].decode('utf-8')
-                        meta = {'iptv_proto':'m3u8'}
-                        if '' != self.proxy_gateway_url:
-                            channelID = data['stream_channel']['channel_id']
-                            #if url.startswith('https://'): url = 'http://' + url[8:]
-                            server = self.cm.ph.getSearchGroups(url, r'://([^/]+?)/')[0]
-                            #if linkType == 'basic':
-                            #    meta['iptv_m3u8_custom_base_link'] = 'https://%s:443/%s/%s%s.stream/list.m3u8' % (server, channelID, channelID, 2)
-                            #else:
-                            meta['iptv_m3u8_custom_base_link'] = 'https://%s:443/%s/smil:%s.ism/list.m3u8' % (server, channelID, linkType) #'http://%s:1935/%s/smil:%s.ism/list.m3u8' % (server, channelID, linkType)
-                            meta['iptv_proxy_gateway'] = self.proxy_gateway_url
-                            meta['Referer'] =  self.proxy_gateway_url
-                            meta['User-Agent'] = 'Mozilla/5.0'
-                            if '' != self.my_ip:
-                                meta['X-Forwarded-For'] = self.my_ip
-                            meta['Cookie'] = self.cm.HEADER.get('Cookie', '')
-                        urlsTab.append({'url': self.up.decorateUrl(url, meta), 'name': 'videostar hls', 'type':'hls'})
+                if data['data'] != None:
+                    for item in data['data']['stream_channel']['streams']:
+                        if formatId == '2':
+                            if 'hls' in item['type']:
+                                hslUrl = item['url'][0] # add here random
+                                urlsTab.extend(getDirectM3U8Playlist(hslUrl, checkExt=False, cookieParams=self.defaultParams, checkContent=True))
+                        elif formatId in ['3', '4']:
+                            if 'dash' in item['type']:
+                                dashUrl = item['url'][0] # add here random
+                                urlsTab.extend(getMPDLinksWithMeta(dashUrl, checkExt=False, cookieParams=self.defaultParams))
+                elif data['_meta'] != None:
+                    info = data['_meta']['error']['info']
+                    message = []
+                    message.append('Oglądasz już kanał %s na urządeniu %s o adresie: %s.' % (info['channel_name'], info['device'], info['user_ip']))
+                    message.append('W WP Pilocie nie możesz oglądać większej liczby kanałów jednocześnie.')
+                    message.append('Czy chcesz kontynować tutaj?')
+                    arg1 = self.sessionEx.waitForFinishOpen(MessageBox, '\n'.join(message), type = MessageBox.TYPE_YESNO)
+                    if arg1:
+                        url = self.getFullUrl('v1/channels/close', 'api')
+                        paramsUrl = dict(self.defaultParams)
+                        paramsUrl['header'] = dict(paramsUrl['header'])
+                        paramsUrl['header']['Referer'] = self.getFullUrl('tv')
+                        paramsUrl['header']['Origin'] = self.MAIN_URL[:-1]
+                        paramsUrl['header']['content-type'] = 'application/json;charset=UTF-8'
+                        paramsUrl['raw_post_data'] = True
+                        sts, data = self.cm.getPage(url, paramsUrl, '{"channelId":"%s","t":"%s"}' % (info['channel_id'], self.userToken))
+                        printDBG("==================== token1[%s] token2[%s]" % (self.userToken, info['stream_token']))
+                        printDBG(data)
+                        printDBG("====================")
+                        continue
+
             except Exception:
                 printExc()
-                
-            if 0 < len(urlsTab):
-                break
+            break
         
-        printDBG(urlsTab)
+        if len(urlsTab):
+            cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+            for idx in range(len(urlsTab)):
+                urlsTab[idx]['url'] = strwithmeta(urlsTab[idx]['url'], {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
+        
+        if len(urlsTab):
+            maxBitrate = int(config.plugins.iptvplayer.videostar_defquality.value) * 1.3
+            def __getLinkQuality( itemLink ):
+                try:
+                    if 'bitrate' in itemLink:
+                        return int(itemLink['bitrate'])
+                    elif 'bandwidth' in itemLink:
+                        return int(itemLink['bandwidth'])
+                except Exception:
+                    printExc()
+                return 0
+            
+            oneLink = CSelOneLink(urlsTab, __getLinkQuality, maxBitrate)
+            urlsTab = oneLink.getSortedLinks()
+            if config.plugins.iptvplayer.videostar_use_defquality.value:
+                urlsTab = [urlsTab[0]]
+        
         return urlsTab
-    
-    def doLogin(self, login, password):
-        HTTP_HEADER= dict(self.cm.HEADER)
-        HTTP_HEADER.update( {'Content-Type':'application/x-www-form-urlencoded'} )
-        
-        cookiePath = GetCookieDir('videostar.cookie')
-        params = {'header':HTTP_HEADER, 'cookiefile': cookiePath, 'use_cookie': True, 'save_cookie':True}
-        
-        rm(cookiePath)
-        
-        if self.proxy_gateway_url_ssl != '':
-            HTTP_HEADER['Referer'] = self.proxy_gateway_url
-            sts, data = self.cm.getPage(self.proxy_gateway_url_ssl, params)
-            self.printPageData(self.proxy_gateway_url_ssl, data)
-            if not sts: return False
-            params['load_cookie'] = True
-            params['proxy_gateway'] = self.proxy_gateway_url
-
-        post_data = {'login': login, 'password': password, 'permanent': '1'}
-        url = self._getUrl('login')
-        
-        sts, data = self.cm.getPage(url, params, post_data)
-        if not sts: return False
-        
-        self.printPageData(url, data)
-        self.cm.HEADER['Cookie'] = self.cm.getCookieHeader(cookiePath)
-        if self.proxy_gateway_url != '':
-            HTTP_HEADER = dict(self.cm.HEADER)
-            HTTP_HEADER['Referer'] = self.proxy_gateway_url.format(urllib.quote(HTTP_HEADER['Referer']))
-            params = {'proxy_gateway':self.proxy_gateway_url, 'header':HTTP_HEADER}
-        else:
-            params = {}
-        
-        url = self._getUrl('subscriptions_url')
-        sts, data = self.cm.getPage(url, params)
-        if sts:
-            self.printPageData(url, data)
-            if 'Wyloguj' in data:
-                return True
-
-        return False

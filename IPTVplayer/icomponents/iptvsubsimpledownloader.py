@@ -153,7 +153,7 @@ class IPTVSubSimpleDownloaderWidget(Screen):
             encoding = encoding.strip()
         try:
             with codecs.open(self.downloader.getFullFileName(), 'r', encoding, 'replace') as fp:
-                subText = fp.read().encode('utf-8')
+                subText = fp.read().encode('utf-8').strip()
             
             ext = self.currItem.get('format', '')
             if ext == '':

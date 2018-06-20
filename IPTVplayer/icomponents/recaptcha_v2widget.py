@@ -104,7 +104,7 @@ class UnCaptchaReCaptchaWidget(Screen):
         self.onLayoutFinish.append(self.onStart)
         
     def __del__(self):
-        printDBG("PlayerSelectorWidget.__del__ --------------------------")    
+        printDBG("UnCaptchaReCaptchaWidget.__del__ --------------------------")    
         
     def onStart(self):
         self.onLayoutFinish.remove(self.onStart)

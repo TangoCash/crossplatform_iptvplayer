@@ -218,6 +218,7 @@ class FightVideo(CBaseHostClass):
                 sts, data = self.getPage(url)
                 if not sts: break
                 tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="content">', '<div class="back2top">')
+                tItems = []
                 for item in tmp:
                     tItems = self.cm.ph.getAllItemsBeetwenMarkers(item, '<strong', '</table>')
                     if 0 == len(tItems):

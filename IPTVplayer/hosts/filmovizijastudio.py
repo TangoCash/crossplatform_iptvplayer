@@ -43,42 +43,43 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://filmovizija.ws/'
+    return 'http://filmovizija.tv/'
 
 class FilmovizijaStudio(CBaseHostClass):
-    USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36'
-    HEADER = {'User-Agent': USER_AGENT, 'Accept': 'text/html'}
-    AJAX_HEADER = dict(HEADER)
-    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    
-    MAIN_URL       = 'http://www.filmovizija.ws/'
-    MOV_SEARCH_URL = MAIN_URL + 'search1.php?ser=506&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords='
-    SER_SEARCH_URL = MAIN_URL + 'search1.php?ser=528&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords='
-    
-    DEFAULT_ICON  = "http://www.filmovizija.ws/cdn/images/logo6.png"
-    EPISODE_URL   = MAIN_URL + 'episode.php?vid='
-    
-    mc = 'browse-movies-videos-1-date.html'
-    my = 'years.php'
-    MAIN_CAT_TAB = [{'category':'list_movie_cats', 'title': _('Movies'),        'url':MAIN_URL+mc,   'icon':DEFAULT_ICON, 'filter':'movies'},
-                    {'category':'categories',      'title': _('Top Movies'),    'url':MAIN_URL,      'icon':DEFAULT_ICON, 'filter':'top_movies'},
-                    {'category':'categories',      'title': _('Series'),        'url':MAIN_URL,      'icon':DEFAULT_ICON, 'filter':'series'},
-                    {'category':'categories',      'title': _('New Videos'),    'url':MAIN_URL,      'icon':DEFAULT_ICON, 'filter':'new_videos'},
-                    {'category':'categories',      'title': _('New HD Videos'), 'url':MAIN_URL,      'icon':DEFAULT_ICON, 'filter':'new_hd_videos'},
-                    {'category':'year',            'title': _('Year'),          'url':MAIN_URL+my,   'icon':DEFAULT_ICON},
-                    {'category':'search',          'title': _('Search'), 'search_item':True,         'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),                     'icon':DEFAULT_ICON} ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'  filmovizija.studio', 'cookie':'filmovizijastudio.cookie', 'cookie_type':'MozillaCookieJar'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_videos':[], 'new_hd_videos':[]}
+        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_movies':[], 'new_episodes':[]}
+        
+        self.USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36'
+        self.HEADER = {'User-Agent': self.USER_AGENT,  'Accept-Encoding':'gzip, deflate', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.MAIN_URL       = 'http://www.filmovizija.tv/'
+        self.MOV_SEARCH_URL = self.getFullUrl('search1.php?ser=506&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords=')
+        self.SER_SEARCH_URL = self.getFullUrl('search1.php?ser=528&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords=')
+        
+        self.DEFAULT_ICON_URL = 'http://prvobitno.com/slike/filmovizijatv.jpg' #self.getFullUrl('/cdn/images/logo6.png')
+        self.EPISODE_URL = self.getFullUrl('/episode.php?vid=')
+        
+        mc = 'browse-movies-videos-1-date.html'
+        my = 'years.php'
+        self.MAIN_CAT_TAB = [{'category':'list_movie_cats', 'title': _('Movies'),        'url':self.getFullUrl(mc), 'filter':'movies'      },
+                             {'category':'categories',      'title': _('New Movies'),    'url':self.getMainUrl(),   'filter':'new_movies'  },
+                             {'category':'categories',      'title': _('Top Movies'),    'url':self.getMainUrl(),   'filter':'top_movies'  },
+                             {'category':'categories',      'title': _('Series'),        'url':self.getMainUrl(),   'filter':'series'      },
+                             {'category':'categories',      'title': _('New Episodes'),  'url':self.getMainUrl(),   'filter':'new_episodes'},
+                             {'category':'year',            'title': _('Year'),          'url':self.getFullUrl(my),                        },
+                             {'category':'search',          'title': _('Search'), 'search_item':True,               },
+                             {'category':'search_history',  'title': _('Search history'),                           }]
+        
         self.cacheSeasons = []
         self.needProxy = None
         self.cacheLinks = {}
         
     def isNeedProxy(self):
-        return True
         if self.needProxy == None:
             sts, data = self.cm.getPage(self.MAIN_URL)
             self.needProxy = not sts
@@ -125,7 +126,7 @@ class FilmovizijaStudio(CBaseHostClass):
         return url
         
     def getPage2(self, baseUrl, params={}, post_data=None):
-        params['cloudflare_params'] = {'domain':'www.filmovizija.ws', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self._getFullUrl}
+        params['cloudflare_params'] = {'domain':'www.filmovizija.tv', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self._getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
         
     def _urlWithCookie(self, url):
@@ -158,14 +159,13 @@ class FilmovizijaStudio(CBaseHostClass):
             
     def fillCategories(self):
         printDBG("FilmovizijaStudio.fillCategories")
-        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_videos':[], 'new_hd_videos':[]}
+        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_movies':[], 'new_episodes':[]}
         sts, data = self.getPage(self.MAIN_URL)
         if not sts: return
-                     #('movies',        '>Movies</a>',        '</ul>'), \
         for cat in  [('top_movies',    '>Top Movies</a>',    '</ul>'), \
                      ('series',        '>Series</a>',        'divider'), \
-                     ('new_videos',    '>New Videos</a>',    '</ul>'), \
-                     ('new_hd_videos', '>New HD Videos</a>', '</ul>')]:
+                     ('new_movies',    '>New Movies</a>',    '</ul>'), \
+                     ('new_episodes',  '>New Episodes</a>', '</ul>')]:
             self.cacheFilters[cat[0]] = [] 
             tmp = self.cm.ph.getDataBeetwenMarkers(data, cat[1], cat[2], False)[1]
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a ', '</a>')
@@ -173,13 +173,14 @@ class FilmovizijaStudio(CBaseHostClass):
                 url = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"^>]+?)[>'"]''')[0]
                 if '' == url: continue
                 self.cacheFilters[cat[0]].append({'title':self.cleanHtmlStr(item.split('</i>')[-1]), 'url':self._getFullUrl(url)})
+                
+                
         
     def listCategories(self, cItem, nextCategory):
         printDBG("FilmovizijaStudio.listCategories")
         filter = cItem.get('filter', '')
         tab = self.cacheFilters.get(filter, [])
-        if 0 == len(tab):
-            self.fillCategories()
+        if 0 == len(tab): self.fillCategories()
         tab = self.cacheFilters.get(filter, [])
             
         cItem = dict(cItem)
@@ -194,7 +195,7 @@ class FilmovizijaStudio(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenMarkers(data, 'godine', '<script', False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
         for item in data:
-            url = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"]+?)['"]''')[0]
+            url = self.cm.ph.getSearchGroups(item, '''href=['"](https?://[^'^"]+?)['"]''')[0]
             if '' == url: continue
             tab.append({'title':self.cleanHtmlStr(item), 'url':url})
         
@@ -207,12 +208,12 @@ class FilmovizijaStudio(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         tab = []
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="wrapper">', '</ul', False)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'cbp-rfgrid-c'), ('</ul', '>'), False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:
             url  = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"]+?)['"]''')[0]
             if '' == url: continue
-            icon = self.cm.ph.getSearchGroups(item, '''src=['"]*(http[^'^"^>]+?)[>'"]''')[0]
+            icon = self.cm.ph.getSearchGroups(item, '''src=['"]*(https?://[^'^"^>]+?)[>'"]''')[0]
             title = self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0] 
             title += ' ' + self.cleanHtmlStr(item)
             tab.append({'title':title, 'url':self._getFullUrl(url), 'icon':self._urlWithCookie(icon)})
@@ -227,7 +228,7 @@ class FilmovizijaStudio(CBaseHostClass):
         sts, data = self.getPage(cItem['url']) 
         if not sts: return
         
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '"pagination"', '</ul>', False)[1]
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'pagination'), ('</ul', '>'), False)[1]
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a ', '</a>')
         nextPageUrl = ''
         for item in tmp:
@@ -235,38 +236,38 @@ class FilmovizijaStudio(CBaseHostClass):
             nextPageUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0]
         tmp = ''
         
-        m1 = '<ul class="cbp-rfgrid">'
-        if m1 in data:
-            data = self.cm.ph.getDataBeetwenMarkers(data, m1, "</ul>", False)[1]
+        if 'cbp-rfgrid' in data:
+            data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'cbp-rfgrid'), ('</ul', '>'), False)[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li>', '</li>')
         else:
-            data = self.cm.ph.getDataBeetwenMarkers(data, "<div class='series-top'>", "<script>", False)[1]
+            data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'series-top'), ('<script', '>'), False)[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
             
         for item in data:
             url = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''['"]([^"^']*?watch-[^"^']+?)['"]''')[0] )
             if url == '': url = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''['"]([^"^']*?movie[^"^']+?)['"]''')[0] )
             title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''')[0] )
-            if title == '':
-                title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>')[1] )
-            icon  = self._urlWithCookie( self.cm.ph.getSearchGroups(item, '''<img[^>]+?data-original=['"]([^"^']+?)['"]''')[0] )
+            if title == '': title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<a ', '</a>')[1] )
+            icon  = self._urlWithCookie( self.cm.ph.getSearchGroups(item, '''<img[^>]+?data\-original=['"]([^"^']+?)['"]''')[0] )
+            if icon == '': icon = self._urlWithCookie( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?\.jpe?g(:?\?[^'^"]*?)?)['"]''')[0] )
             if icon == '': icon = cItem.get('icon', '') 
             dUrl  = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''data-url=['"]([^"^']+?)['"]''')[0] )
             desc  = self.cleanHtmlStr(item)
             
-            if not url.startswith('http'): 
+            if not self.cm.isValidUrl(url): 
                 self.addDir({'title':'Error please report'})
                 continue
             params = dict(cItem)
-            params.update({'title':title, 'url':self._getFullUrl(url), 'icon':self._urlWithCookie(icon), 'desc':desc, 'data_url':dUrl})
+            params.update({'good_for_fav':True, 'title':title, 'url':self._getFullUrl(url), 'icon':self._urlWithCookie(icon), 'desc':desc, 'data_url':dUrl})
             if 'tvshow' in url:
                 params['category'] = nextCategory
                 self.addDir(params)
             else:
                 self.addVideo(params)
+        
         if nextPageUrl != '':
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':cItem.get('page', 1)+1, 'url':self._getFullUrl(nextPageUrl)})
+            params.update({'good_for_fav':False, 'title':_('Next page'), 'page':cItem.get('page', 1)+1, 'url':self._getFullUrl(nextPageUrl)})
             self.addDir(params)
             
     def listSeasons(self, cItem, nextCategory):
@@ -276,8 +277,7 @@ class FilmovizijaStudio(CBaseHostClass):
         url = cItem['url']
         if '--tvshow' in url and 'data_url' in cItem:
             sts, data = self.getPage(cItem['data_url'])
-            if sts:
-                url = self._getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^"^']*?watch-[^"^']+?)['"]''')[0] )
+            if sts: url = self._getFullUrl( self.cm.ph.getSearchGroups(data, '''['"]([^"^']*?watch-[^"^']+?)['"]''')[0] )
             
         sts, data = self.getPage(url) 
         if not sts: return
@@ -304,10 +304,10 @@ class FilmovizijaStudio(CBaseHostClass):
                 title = self.cleanHtmlStr( episodeItem )
                 dUrl  = self._getFullUrl( self.cm.ph.getSearchGroups(episodeItem, '''data-url=['"]([^"^']+?)['"]''')[0] )
                 seasonNum = self.cm.ph.getSearchGroups(seasonTitle+'|', '[^0-9]([0-9]+?)[^0-9]')[0]
-                episodesTab.append({'title':cItem['title'] + ' - s%se%s' % (seasonNum, title), 'url':self._getFullUrl(url), 'data_url':dUrl})
+                episodesTab.append({'good_for_fav':False, 'title':cItem['title'] + ' - s%se%s' % (seasonNum, title), 'url':self._getFullUrl(url), 'data_url':dUrl})
             if 0 == len(episodesTab): continue
             params = dict(cItem)
-            params.update({'category':nextCategory, 'title':seasonTitle, 'desc':desc, 'icon':icon, 'season_idx':len(self.cacheSeasons)})
+            params.update({'good_for_fav':False, 'category':nextCategory, 'title':seasonTitle, 'desc':desc, 'icon':icon, 'season_idx':len(self.cacheSeasons)})
             self.addDir(params)
             self.cacheSeasons.append(episodesTab)
     
@@ -495,10 +495,8 @@ class FilmovizijaStudio(CBaseHostClass):
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self._urlWithCookie(icon)}], 'other_info':otherInfo}]
         
-    def getFavouriteData(self, cItem):
-        return cItem['url']
-        
     def getLinksForFavourite(self, fav_data):
+        if fav_data.startswith('{'): return CBaseHostClass.getLinksForFavourite(self, fav_data)
         return self.getLinksForVideo({'url':fav_data})
     
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
@@ -524,7 +522,7 @@ class FilmovizijaStudio(CBaseHostClass):
         elif category == 'list_movie_cats':
             self.listMovieCats(self.currItem, 'list_items')
         elif category == 'list_items':
-                self.listItems(self.currItem)
+            self.listItems(self.currItem)
     #SEASONS
         elif category == 'list_seasons':
             self.listSeasons(self.currItem, 'list_episodes')
@@ -545,110 +543,4 @@ class FilmovizijaStudio(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        # for now we must disable favourites due to problem with links extraction for types other than movie
         CHostBase.__init__(self, FilmovizijaStudio(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('filmovizijastudiologo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-        
-    def getArticleContent(self, Index = 0):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-    
-        hList = self.host.getArticleContent(self.host.currList[Index])
-        for item in hList:
-            title      = item.get('title', '')
-            text       = item.get('text', '')
-            images     = item.get("images", [])
-            othersInfo = item.get('other_info', '')
-            retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        searchTypesOptions.append((_("Movies"),   "movie"))
-        searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

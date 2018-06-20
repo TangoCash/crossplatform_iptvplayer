@@ -139,13 +139,17 @@ class IPTVPlayerSleep(object):
         self.timeout = 0
         self.startTimestamp = 0
         
-    def Sleep(self, timeout):
+    def Sleep(self, timeout, blocking=True):
         tmp = float(timeout)
         with self.mainLock:
             self.timeout = timeout
             self.startTimestamp = time.time()
-        time.sleep(self.timeout)
+        if blocking: time.sleep(self.timeout)
         
+    def Reset(self):
+        with self.mainLock:
+            self.startTimestamp = 0
+    
     def getTimeout(self):
         ret = 0
         with self.mainLock:

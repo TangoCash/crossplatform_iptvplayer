@@ -58,7 +58,7 @@ class CineTO(CBaseHostClass):
         
         self.cacheFilters  = {}
         self.cacheLinks   = {}
-        self.defaultParams = {'header':self.HEADER, 'raw_post_data':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'with_metadata':True, 'header':self.HEADER, 'raw_post_data':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.MAIN_CAT_TAB = [
                              {'category':'search',                'title': _('Search'),              'search_item':True, },
@@ -189,8 +189,12 @@ class CineTO(CBaseHostClass):
         self.listsTab(self.cacheFilters['year'], params)
             
     def _addItem(self, item, cItem, nextCategory):
+        printDBG("------------------------------------")
+        printDBG(item)
         title = self.cleanHtmlStr(item['title'])
-        icon  = self.getFullIconUrl(item['cover'])
+        if 'cover' in item: icon  = self.getFullIconUrl(item['cover'])
+        else: icon = 'https://s.cine.to/cover/%s.jpg' % item['imdb']
+        
         descTab = []
         for it in ['year', 'quality', 'language']:
             tmp = item.get(it, '')
@@ -221,9 +225,10 @@ class CineTO(CBaseHostClass):
         except Exception:
             printExc()
 
+        nextPage = False
         try:
-            if int(data['pages']) > (page + 1): nextPage = True
-            else: nextPage = False
+            if int(data['pages']) > (page + 1):
+                nextPage = True
         except Exception:
             printExc()
         
@@ -258,28 +263,35 @@ class CineTO(CBaseHostClass):
             tmp = ', '.join(data.get('genres', []))
             if tmp != '': descTab.append(tmp)
             
-            # move better language at top
-            langKeys = list(data['lang'].keys())
-            defLang = GetDefaultLang()
-            if defLang not in langKeys:
-                defLang = 'en'
-            if defLang in langKeys:
-                langKeys.remove(defLang)
-                langKeys.insert(0, defLang)
+            langIdsTab = []
+            for lang in data['lang']:
+                langIdsTab.append(str(lang))
+            langsIdDict = {'en':'1', 'de':'2'}
+            langsDict = {'1':'en', '2':'de'}
             
-            for langKey in langKeys:
-                langName = data['lang'][langKey]
-                trailerUrl = data.get('trailer_%s' % langKey, '')
-                desc = ' | '.join(descTab) + '[/br]' + data.get('plot_%s' % langKey, '')
+            # move better language at top
+            defIdLang = langsIdDict.get(GetDefaultLang(), '1')
+            if defIdLang not in langIdsTab:
+                defIdLang = '1'
+            
+            if defIdLang in langIdsTab:
+                langIdsTab.remove(defIdLang)
+                langIdsTab.insert(0, defIdLang)
+            
+            for langId in langIdsTab:
+                lang = langsDict.get(langId, langId)
+                langName = lang
+                trailerUrl = data.get('trailer_%s' % lang, '')
+                desc = ' | '.join(descTab) + '[/br]' + data.get('plot_%s' % lang, '')
                 
                 if trailerUrl != '':
                     url = 'https://www.youtube.com/watch?v=%s' % trailerUrl
                     title = '[TRAILER] [%s] %s' % (langName, data['title'])
-                    params = {'title':title,  'imdb':cItem['imdb'], 'f_lang':langKey, 'url':url, 'icon':icon, 'desc':desc}
+                    params = {'title':title,  'imdb':cItem['imdb'], 'f_lang_id':langId, 'f_lang':lang, 'url':url, 'icon':icon, 'desc':desc}
                     self.addVideo(params)
                 
                 title = '[%s] %s (%s)' % (langName, data['title'], data.get('year', ''))
-                params = {'title':title, 'imdb':cItem['imdb'], 'f_lang':langKey, 'icon':icon, 'desc':desc}
+                params = {'title':title, 'imdb':cItem['imdb'], 'f_lang_id':langId, 'f_lang':lang, 'icon':icon, 'desc':desc}
                 self.addVideo(params)
         except Exception:
             printExc()
@@ -297,14 +309,15 @@ class CineTO(CBaseHostClass):
             videoUrl = cItem['url'].replace('youtu.be/', 'youtube.com/watch?v=')
             return self.up.getVideoLinkExt(videoUrl)
 
-        cacheKey = 'ID=%s&lang=%s' % (cItem.get('imdb'), cItem.get('f_lang'))
+        cacheKey = 'ID=%s&lang=%s' % (cItem.get('imdb'), cItem.get('f_lang_id'))
         cacheTab = self.cacheLinks.get(cacheKey, [])
         if len(cacheTab):
             return cacheTab
-            
+        
+        qualityMap = {'0': "CAM", '1': "TS", '2': "DVD", '3': "HD"}
         try:
             url = self.getFullUrl('/request/links')
-            post_data = 'ID=%s&lang=%s' % (cItem['imdb'], cItem['f_lang'])
+            post_data = 'ID=%s&lang=%s' % (cItem['imdb'], cItem['f_lang_id'])
             
             sts, data = self.getPage(url, post_data=post_data)
             if not sts: return []
@@ -316,7 +329,8 @@ class CineTO(CBaseHostClass):
                 links = data[hosting]
                 if len(links) < 2: continue
                 
-                quality = links[0]
+                quality = str(links[0])
+                quality = qualityMap.get(quality, quality)
                 for idx in range(1, len(links), 1):
                     name = '[%s] %s' % (quality, hosting)
                     url  = self.getFullUrl('/out/' + links[idx]) 
@@ -342,16 +356,15 @@ class CineTO(CBaseHostClass):
                         if not self.cacheLinks[key][idx]['name'].startswith('*'):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
-        try:
-            params = dict(self.defaultParams)
-            params['return_data'] = False
-            sts, response = self.getPage(videoUrl, params)
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
         
-        urlTab = self.up.getVideoLinkExt(videoUrl)
+        sts, data = self.getPage(videoUrl)
+        if sts: 
+            videoUrl = data.meta['url']
+            urlTab = self.up.getVideoLinkExt(videoUrl)
+            if 0 == len(urlTab) and 'gcaptchaSetup' in data:
+                SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.'))
+        else:
+            urlTab = self.up.getVideoLinkExt(videoUrl)
         
         return urlTab
         

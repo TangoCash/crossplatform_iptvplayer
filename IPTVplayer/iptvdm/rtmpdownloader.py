@@ -89,7 +89,7 @@ class RtmpDownloader(BaseDownloader):
                 elif '' != value:
                     printDBG('_getCMD.RtmpDownloader no parameters for value[%s]' % value.strip())
                     if 0 < len(cmd): 
-                        cmd = cmd[:-1] + ' %s"' % value.strip()
+                        cmd = cmd[:-1] + ' %s"' % value.strip().replce('\\', '\\\\')
                         value = ''
                 parameter = item
             else:

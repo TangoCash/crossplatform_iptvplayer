@@ -3,22 +3,16 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from datetime import timedelta
-import time
 import re
 import urllib
-import unicodedata
 import base64
 try:    import json
 except Exception: import simplejson as json
@@ -46,214 +40,235 @@ def gettytul():
     return 'http://dardarkom.com/'
 
 class DardarkomCom(CBaseHostClass):
-    HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-    AJAX_HEADER = dict(HEADER)
-    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    
-    MAIN_URL      = 'http://www.dardarkom.com/'
-    SEARCH_URL    = MAIN_URL
-    DEFAULT_ICON  = "https://lh5.ggpht.com/xTFuZwF3HX9yPcDhbyCNnjDtZZ1l9qEwUVwoWsPW9Pxry9JsNLSPvWpbvL9waHbHMg=h900"
-    
-    MAIN_CAT_TAB = [{'category':'categories', 'title': _('Categories'),     'url':MAIN_URL+'aflamonline/',  'icon':DEFAULT_ICON, 'filter':'main'},
-                    {'category':'categories', 'title': _('Foreign films'),  'url':MAIN_URL+'aflamonline/',  'icon':DEFAULT_ICON, 'filter':'movies'},
-                    {'category':'categories', 'title': _('Major rankings'), 'url':MAIN_URL+'aflamonline/',  'icon':DEFAULT_ICON, 'filter':'rankings'},
-                    {'category':'categories', 'title': _('By year'),        'url':MAIN_URL+'aflamonline/',  'icon':DEFAULT_ICON, 'filter':'years'},
-                    {'category':'search',          'title': _('Search'), 'search_item':True, 'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),             'icon':DEFAULT_ICON} ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'  DardarkomCom.tv', 'cookie':'dardarkomcom.cookie'})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        self.cacheFilters = {'main':[], 'movies':[], 'rankings':[]}
+        self.defaultParams = {'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        
+        self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        
+        self.MAIN_URL = 'http://www.dardarkom.com/'
+        self.DEFAULT_ICON_URL  = "https://lh5.ggpht.com/xTFuZwF3HX9yPcDhbyCNnjDtZZ1l9qEwUVwoWsPW9Pxry9JsNLSPvWpbvL9waHbHMg=h900"
+        
+        self.MAIN_CAT_TAB = [{'category':'search',          'title': _('Search'), 'search_item':True},
+                             {'category':'search_history',  'title': _('Search history')            } ]
+        
         self.cacheLinks = {}
         
-    def _getFullUrl(self, url):
-        if url.startswith('//'):
-            url = 'http:' + url
-        else:
-            if 0 < len(url) and not url.startswith('http'):
-                url =  self.MAIN_URL + url
-            if not self.MAIN_URL.startswith('https://'):
-                url = url.replace('https://', 'http://')
-                
-        url = self.cleanHtmlStr(url)
-        url = self.replacewhitespace(url)
-
-        return url
-        
-    def cleanHtmlStr(self, data):
-        data = data.replace('&nbsp;', ' ')
-        data = data.replace('&nbsp', ' ')
-        return CBaseHostClass.cleanHtmlStr(data)
-        
-    def replacewhitespace(self, data):
-        data = data.replace(' ', '%20')
-        return CBaseHostClass.cleanHtmlStr(data)
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("DardarkomCom.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
-            
-    def fillCategories(self, url):
-        printDBG("DardarkomCom.fillCategories")
-        self.cacheFilters = {'main':[], 'movies':[], 'rankings':[]}
-        sts, data = self.cm.getPage(url)
+    def listMainMenu(self, cItem, nextCategory1, nextCategory2):
+        printDBG("DardarkomCom.listFooterMenu")
+        sts, data = self.cm.getPage(self.getMainUrl())
         if not sts: return
         
-        #movies and rankings 
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="archives-menu', '<br>', False)[1]
-        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<ul', '</ul>')
-        
-        # main
-        tmp2 = self.cm.ph.getDataBeetwenMarkers(data, '<div class="catlinksf">', '</ul>')[1]
-        tmp.insert(0, tmp2)
-        
-        keys = ['movies', 'rankings', 'main', 'years'] 
-        for idx in range(len(tmp)):
-            if idx >= len(keys):
-                break
-            key  = keys[idx]
-            self.cacheFilters[key] = [] 
-            categories = self.cm.ph.getAllItemsBeetwenMarkers(tmp[idx], '<a ', '</a>')
-            for cat in categories:
-                url   = self.cm.ph.getSearchGroups(cat, '''href=['"]([^"^']+?)['"]''')[0]
-                title = self.cleanHtmlStr(cat) 
-                if url.endswith('/'):
-                    title = '[%s] ' % url.split('/')[-2].replace('-', ' ').title() + title
-                printDBG(title)
-                printDBG(url)
-                if 'dardarkom.com' in url and 'series-online' not in url:
-                    desc  = self.cm.ph.getSearchGroups(cat, '''title=['"]([^"^']+?)['"]''')[0]
-                    self.cacheFilters[key].append({'title':title, 'url':self._getFullUrl(url), 'desc':desc})
-        
-    def listCategories(self, cItem, nextCategory):
-        printDBG("DardarkomCom.listCategories")
-        filter = cItem.get('filter', '')
-        tab = self.cacheFilters.get(filter, [])
-        if 0 == len(tab):
-            self.fillCategories(cItem['url'])
-        tab = self.cacheFilters.get(filter, [])
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'ft-col'), ('</div', '>'))
+        for section in data:
+            tabItems = []
+            sTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(section, '<p', '</p>')[1])
+            section = self.cm.ph.getAllItemsBeetwenMarkers(section, '<a', '</a>')
+            for item in section:
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                if url == '': continue
+                if 'howtowatch.' in url:
+                    tabItems = []
+                    break
+                if 'series-online' in url:
+                    continue
+                if url.endswith('#'):
+                    continue
+                title = self.cleanHtmlStr(item)
+                params = dict(cItem)
+                params.update({'title':title, 'category':nextCategory2, 'url':url})
+                tabItems.append(params)
             
-        cItem = dict(cItem)
-        cItem['category'] = nextCategory
-        self.listsTab(tab, cItem)
-            
-    def listItems(self, cItem):
+            if len(tabItems):
+                params = dict(cItem)
+                params.update({'title':sTitle, 'category':nextCategory1, 'sub_items':tabItems})
+                self.addDir(params)
+        
+    def listSubItems(self, cItem):
+        printDBG("DardarkomCom.listSubItems")
+        self.currList = cItem['sub_items']
+    
+    def listItems(self, cItem, nextCategory):
         printDBG("DardarkomCom.listItems")
         page      = cItem.get('page', 1)
         post_data = cItem.get('post_data', None) 
         url       = cItem['url'] 
         
-        sts, data = self.cm.getPage(url, {}, post_data)
-        if not sts: return
+        attempt = 0
+        while attempt < 3:
+            attempt += 1
+            sts, data = self.cm.getPage(url, {'with_metadata':True, 'ignore_http_code_ranges':[(404, 404), (500, 500)]}, post_data)
+            if not sts: return
+            if sts and 404 == data.meta.get('status_code', 200):
+                newUrl = url.replace('/page/%s/' % page, '/page/%s/' % (page + 1))
+                if newUrl != url:
+                    url = newUrl
+                    page += 1
+                    continue
+            break
         
-        pagnationMarker = '<div class="navigation-center">'
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, pagnationMarker, '</div>', False)[1]
-        if tmp != '': hasPadinationMarker = True
-        else: hasPadinationMarker = False
-        nextPageUrl = self.cm.ph.getSearchGroups(tmp, '<a[^>]+?href="([^"]+?)"[^>]*?>{0}</a>'.format(page+1))[0]
-        if '#' == nextPageUrl:
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pagi-nav'), ('</div', '>'), False)[1]
+        nextPage = self.cm.ph.getSearchGroups(nextPage, '''<a[^>]+?href=['"]([^"^']+?)['"][^>]*?>{0}</a>'''.format(page+1))[0]
+        if '#' == nextPage:
             if '&' in url and post_data == None:
-                nextPageUrl = url.split('&search_start')[0] + '&search_start=%s' % (page+1)
+                nextPage = url.split('&search_start')[0] + '&search_start=%s' % (page+1)
             elif post_data != None:
-                nextPageUrl = url
+                nextPage = url
         
-        if hasPadinationMarker: m2 = pagnationMarker
-        else: m2 = '<div class="footer">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="main-news"', m2, True)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'short-poster'), ('<div', '>', 'bottom-nav'))[1]
+        if data == '': data = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'short-poster'), ('<h1', '>'))[1]
         
-        data = re.split('<div class="main-news"[^>]*>', data)
+        #printDBG(data)
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
         for item in data:
-            url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?online\.html[^"^']*?)['"]''')[0] )
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
             if not self.cm.isValidUrl(url): continue
-            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="main-news-title">', '</a>', False)[1])
-            icon  = self._getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0] )
-            desc  = self.cleanHtmlStr(item)
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?(:?\.jpe?g|\.png)(:?\?[^'^"]*?)?)['"]''')[0] )
+            title = ''
+            desc = []
+            item = self.cm.ph.getAllItemsBeetwenNodes(item, ('<div', '>', 'short-'), ('</div', '>'))
+            for it in item:
+                t = self.cleanHtmlStr(it)
+                if t == '': continue
+                if title == '' and '-title' in it: title = t
+                else: desc.append(t)
             
             params = dict(cItem)
-            params.update({'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            params.update({'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
             self.addVideo(params)
         
-        if nextPageUrl.startswith('http'):
+        if self.cm.isValidUrl(nextPage):
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'page':cItem.get('page', 1)+1, 'url':self._getFullUrl(nextPageUrl)})
+            params.update({'title':_('Next page'), 'page':page + 1, 'url':self.getFullUrl(nextPage)})
             self.addDir(params)
+        
+    def listSearchItems(self, cItem, nextCategory):
+        printDBG("DardarkomCom.listSearchItems")
+        page      = cItem.get('page', 1)
+        post_data = cItem.get('post_data', None) 
+        url       = cItem['url'] 
+        
+        post_data.update({'search_start':page, 'result_from':12 * (page-1) + 1})
+        sts, data = self.cm.getPage(url, post_data=post_data)
+        
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pagi-nav'), ('</div', '>'), False)[1]
+        nextPage = self.cm.ph.getSearchGroups(nextPage, '''<a[^>]+?href=['"]([^"^']+?)['"][^>]*?>{0}</a>'''.format(page+1))[0]
+        
+        #printDBG(data)
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<a', '>', 'sres-wrap'), ('</a', '>'))
+        for item in data:
+            url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
+            if not self.cm.isValidUrl(url): continue
+            icon  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?(:?\.jpe?g|\.png)(:?\?[^'^"]*?)?)['"]''')[0] )
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>'), ('</h', '>'))[1])
             
-    
+            desc = []
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'sres-date'), ('</div', '>'))[1])
+            if tmp != '': desc.append(tmp)
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'sres-desc'), ('</div', '>'))[1])
+            if tmp != '': desc.append(tmp)
+            
+            params = dict(cItem)
+            params.update({'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
+            self.addVideo(params)
+        
+        if '' != nextPage:
+            params = dict(cItem)
+            params.update({'title':_('Next page'), 'page':page + 1})
+            self.addDir(params)
+        
     def getLinksForVideo(self, cItem):
         printDBG("DardarkomCom.getLinksForVideo [%s]" % cItem)
         urlTab = []
+        
+        cacheKey = cItem['url']
+        urlTab = self.cacheLinks.get(cacheKey, [])
+        if len(urlTab):
+            return urlTab
         
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return []
         
         # get tabs names
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="index-tabs">', '</div>', False)[1]
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'tabs-sel'), ('</div', '>'), False)[1]
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<span', '</span>') 
         tabsNames = []
         for item in tmp:
             tabsNames.append(self.cleanHtmlStr(item))
-            
-        printDBG(tabsNames)
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="tt-panel"', '<div class="clearleech">') 
+        printDBG(tabsNames)
+        uniqueUrls = []
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'fplay tabs-b'), ('<div', '>', 'featurelist'), False)[1]
+        data = re.compile('<div[^>]+?fplay tabs\-b[^>]+?>').split(data)
+        printDBG(data)
         for idx in range(len(data)):
-            item = data[idx]
             if idx < len(tabsNames):
                 tabName = self.cleanHtmlStr(tabsNames[idx])
             else:
                 tabName = 'ERROR'
             
+            #if 'VIP' in tabName.upper():
+            #    # vip links are not supported
+            #    continue
+            #elif 'باقي المشغلات' in tabName:
+            #    # download links not supported
+            #    continue
+            #else:
             url = ''
-            if 'ViP' in tabName:
-                # vip links are not supported
-                continue
-            elif 'روابط التحميل' in tabName:
-                # download links not supported
-                continue
-            elif 'إعلان الفيلم' in tabName:
-                # trailer
-                url = self.cm.ph.getSearchGroups(item, '''file:[^"^']*?["'](http[^'^"]+?)["']''')[0]
-                title = _('[Trailer]') + ' ' + tabName
-            elif 'باقي السيرفرات' in tabName or '/templates/server/server.htm' in item:
-                # diffrents servers
-                servers   = self.cm.ph.getAllItemsBeetwenMarkers(item, '<a ', '</a>')
-                for server in servers:
-                    url   = self._getFullUrl( self.cm.ph.getSearchGroups(server, '''href=['"]([^'^"]+?)['"]''')[0] )
-                    title = tabName + ' ' + self.cleanHtmlStr( server )
-                    if self.cm.isValidUrl(url):
-                        urlTab.append({'name':title, 'url':url, 'need_resolve':1})
-                url = ''
-            elif 'iframe' in item:
-                url = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
-                title = tabName
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data[idx], '<a', '</a>')
+            for server in tmp:
+                printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> SERVER: " + server)
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(server, '''href=['"]([^'^"]+?\.video/[^'^"]+?)['"]''')[0] ) #
+                if url == '' or url in uniqueUrls: continue
+                name = self.cleanHtmlStr( server )
+                urlTab.append({'name':name, 'url':url, 'need_resolve':1})
+                uniqueUrls.append(url)
             
-            url = self._getFullUrl( url )
-            if url.startswith('http'):
-                params = {'name':title, 'url':url, 'need_resolve':1}
-                if 'الإفتراضي' in title:
-                    #when default insert as first
-                    urlTab.insert(0, params)
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data[idx], '<iframe', '</iframe>')
+            for server in tmp:
+                printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> SERVER: " + server)
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(server, '''src=['"]([^'^"]+?)['"]''')[0] )
+                if url == '' or url in uniqueUrls or '/templates/' in url: continue
+                if 'youtube' in url:
+                    name = '[TRAILER]'
                 else:
-                    urlTab.append(params)
+                    name = tabName
+                urlTab.append({'name':name, 'url':url, 'need_resolve':1})
+                uniqueUrls.append(url)
+            
+        if len(urlTab):
+            self.cacheLinks[cacheKey] = urlTab
         
         return urlTab
         
     def getVideoLinks(self, videoUrl):
         printDBG("DardarkomCom.getVideoLinks [%s]" % videoUrl)
         
+        # mark requested link as used one
+        if len(self.cacheLinks.keys()):
+            for key in self.cacheLinks:
+                for idx in range(len(self.cacheLinks[key])):
+                    if videoUrl in self.cacheLinks[key][idx]['url']:
+                        if not self.cacheLinks[key][idx]['name'].startswith('*'):
+                            self.cacheLinks[key][idx]['name'] = '*** %s ***' % self.cacheLinks[key][idx]['name']
+                        break
+        
         m1 = '?s=http'
         if m1 in videoUrl:
             videoUrl = videoUrl[videoUrl.find(m1)+3:]
         
-        if 'dardarkom.com' in videoUrl or 'darkom.me' in videoUrl or 'jacvideo.com' in videoUrl:
-            sts, data = self.cm.getPage(videoUrl)
+        referer = ''
+        urlParams = dict(self.defaultParams)
+        urlParams['header'] = dict(self.HEADER)
+        urlParams['header']['Referer'] = self.getMainUrl()
+        tries = 0
+        while 1 != self.up.checkHostSupport(videoUrl) and tries < 5:
+            tries += 1
+            sts, data = self.cm.getPage(videoUrl, urlParams)
             if not sts: return []
             url = ''
             urlTmpTab = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe ', '</iframe>', False, True)
@@ -265,8 +280,9 @@ class DardarkomCom(CBaseHostClass):
             if url == '': url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
             if url == '': url = self.cm.ph.getSearchGroups(data, '''window\.open\(\s*['"](https?://[^"^']+?)['"]''', 1, True)[0]
             printDBG(url)
-            url = self._getFullUrl( url )
-            videoUrl = url
+            url = self.getFullUrl( url )
+            urlParams['header']['Referer'] = videoUrl
+            videoUrl = strwithmeta(url, {'Referer':videoUrl})
         
         urlTab = []
         if self.cm.isValidUrl(videoUrl):
@@ -276,12 +292,13 @@ class DardarkomCom(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("DardarkomCom.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
-        cItem['url'] = self.SEARCH_URL
+        cItem['url'] = self.getFullUrl('/index.php?do=search')
         cItem['post_data'] = {'do':'search', 'subaction':'search', 'story':searchPattern}
         if cItem.get('page', 1) > 1:
             cItem['post_data']['search_start'] = cItem['page']
-        self.listItems(cItem)
-
+        cItem['category'] = 'list_search_items'
+        self.listSearchItems(cItem, 'explore_item')
+    
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -296,16 +313,22 @@ class DardarkomCom(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+            baseItem = {'type':'category', 'name':'category'}
+            self.listMainMenu(baseItem, 'sub_items', 'list_items')
+            self.listsTab(self.MAIN_CAT_TAB, baseItem)
+        elif category == 'sub_items':
+            self.listSubItems(self.currItem)
         elif category == 'categories':
             self.listCategories(self.currItem, 'list_items')
         elif category == 'list_items':
-            self.listItems(self.currItem)
+            self.listItems(self.currItem, 'explore_item')
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)
             cItem.update({'search_item':False, 'name':'category'}) 
             self.listSearchResult(cItem, searchPattern, searchType)
+        elif category == 'list_search_items':
+            self.listSearchItems(self.currItem, 'explore_item')
     #HISTORIA SEARCH
         elif category == "search_history":
             self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))

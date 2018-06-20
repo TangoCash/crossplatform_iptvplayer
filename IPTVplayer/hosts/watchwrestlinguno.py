@@ -186,7 +186,7 @@ class WatchwrestlingUNO(CBaseHostClass):
                 self.serversCache.append(partsTab)
         
     def listParts(self, cItem):
-        printDBG("WatchwrestlingUNO.listServers [%s]" % cItem)
+        printDBG("WatchwrestlingUNO.listParts [%s]" % cItem)
         partIdx = cItem['part_idx']
         self.listsTab(self.serversCache[partIdx], cItem, 'video')
         

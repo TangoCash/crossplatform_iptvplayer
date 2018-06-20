@@ -42,12 +42,12 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://streamcomplet.com/'
+    return 'http://streamcomplet.me/'
 
 class StreamComplet(CBaseHostClass):
-    MAIN_URL    = 'http://www.streamcomplet.com/'
+    MAIN_URL    = 'http://www.streamcomplet.me/'
     SRCH_URL    = MAIN_URL + '?s='
-    DEFAULT_ICON_URL = 'http://streamcomplet.com/wp-content/themes/streaming/logo/logo.png'
+    DEFAULT_ICON_URL = 'http://streamcomplet.me/wp-content/themes/streaming/logo/logo.png'
     
     MAIN_CAT_TAB = [{'category':'categories',     'title': _('Categories'),     'icon':DEFAULT_ICON_URL, 'filters':{}},
                     {'category':'search',         'title': _('Search'),         'icon':DEFAULT_ICON_URL, 'search_item':True},

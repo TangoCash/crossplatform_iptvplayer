@@ -63,6 +63,15 @@ class Sport365LiveApi:
         self.http_params = {'header': dict(self.HTTP_HEADER), 'use_cookie':True, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.needRefreshAdvert = True
         
+    def getPage(self, url, params={}, post_data=None):
+        sts, data = self.cm.getPage(url, params, post_data)
+        if sts and params.get('return_data', False):
+            printDBG("-------------------------------------------------------")
+            printDBG("url: %s" % url)
+            printDBG(data)
+            printDBG("-------------------------------------------------------")
+        return sts, data
+        
     def getFullUrl(self, url):
         if url.startswith('http'):
             return url
@@ -112,7 +121,7 @@ class Sport365LiveApi:
         params['return_data'] = False
         baseUrl = self.MAIN_URL
         try:
-            sts, response = self.cm.getPage(baseUrl, params)
+            sts, response = self.getPage(baseUrl, params)
             baseUrl = response.geturl()
             response.close()
         except Exception:
@@ -120,7 +129,7 @@ class Sport365LiveApi:
             return
         
         params['return_data'] = True
-        sts, data = self.cm.getPage(self.MAIN_URL, params)
+        sts, data = self.getPage(self.MAIN_URL, params)
         if not sts: return 
         
         sessionCookie = self.cm.getCookieHeader(COOKIE_FILE)
@@ -136,14 +145,14 @@ class Sport365LiveApi:
         if jscUrl.endswith('t='): jscUrl += timeMarker
         adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
         
-        sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+        sts, data = self.getPage(self.getFullUrl(adUrl), params)
         if sts: adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
         
-        sts, data = self.cm.getPage(self.getFullUrl(jscUrl), params)
+        sts, data = self.getPage(self.getFullUrl(jscUrl), params)
         marketCookie = self.getMarketCookie(jscUrl, baseUrl)
         params['use_cookie'] = False
         params['header']['Cookie'] = marketCookie
-        sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+        sts, data = self.getPage(self.getFullUrl(adUrl), params)
         
         return
 
@@ -152,25 +161,25 @@ class Sport365LiveApi:
             awrapperUrl = self.getFullUrl(awrapperUrl)
             params['header']['Referer'] = baseUrl
             params['header']['Cookie'] = sessionCookie + marketCookie
-            sts, data = self.cm.getPage(awrapperUrl, params)
+            sts, data = self.getPage(awrapperUrl, params)
             if not sts: continue
             
             adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
             params['header']['Referer'] = awrapperUrl
             params['header']['Cookie'] = marketCookie
             
-            sts, data = self.cm.getPage(self.getFullUrl(adUrl), params)
+            sts, data = self.getPage(self.getFullUrl(adUrl), params)
             if not sts: continue
             
             jscUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?jsc\.mgid[^'^"]*?)['"]''')[0]
             if jscUrl.endswith('t='): jscUrl += timeMarker
             if jscUrl != '':
-                sts, tmp = self.cm.getPage(self.getFullUrl(jscUrl), params)
+                sts, tmp = self.getPage(self.getFullUrl(jscUrl), params)
                 if sts: params['header']['Cookie'] = self.getMarketCookie(jscUrl, awrapperUrl)
             adUrls = re.compile('''['"]([^'^"]*?bannerid[^'^"]*?)['"]''').findall(data)
             for adUrl in adUrls:
                 adUrl = adUrl.replace('&amp;', '&')
-                sts, tmp = self.cm.getPage(self.getFullUrl(adUrl), params)
+                sts, tmp = self.getPage(self.getFullUrl(adUrl), params)
         
         return
         
@@ -183,8 +192,8 @@ class Sport365LiveApi:
         if OFFSET % 10 == 9:
             OFFSET += 1
         url = self.getFullUrl('en/events/-/1/-/-/%s' % (OFFSET))
-        sts, data = self.cm.getPage(self.MAIN_URL, self.http_params)
-        sts, data = self.cm.getPage(url, self.http_params)
+        sts, data = self.getPage(self.MAIN_URL, self.http_params)
+        sts, data = self.getPage(url, self.http_params)
         if not sts: return []
         
         date = ''
@@ -222,7 +231,7 @@ class Sport365LiveApi:
         
         eventId = linksData[0].replace('event_', '')
         url = self.getFullUrl('en/links/{0}/{1}'.format(eventId, linksData[-1]))
-        sts, data = self.cm.getPage(url, self.http_params)
+        sts, data = self.getPage(url, self.http_params)
         if not sts: return []
         
         desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<table', '</table>')[1] ) + '[/br]' + cItem.get('desc', '')
@@ -260,7 +269,7 @@ class Sport365LiveApi:
         if Sport365LiveApi.CACHE_AES_PASSWORD != '' and not forceRefresh:
             return Sport365LiveApi.CACHE_AES_PASSWORD
         
-        sts, data = self.cm.getPage(self.getFullUrl('en/home/' + cItem['event_id']), self.http_params)
+        sts, data = self.getPage(self.getFullUrl('en/home/' + cItem['event_id']), self.http_params)
         if not sts: return []
         
         jsData = ''
@@ -276,7 +285,7 @@ class Sport365LiveApi:
         aes = ''
         data = re.compile('''src=['"](http[^"^']*?/js/[0-9a-fA-F]{32}\.js[^'^"]*?)["']''').findall(data)[::-1]
         for commonUrl in data:
-            sts, tmpData = self.cm.getPage(commonUrl, self.http_params)
+            sts, tmpData = self.getPage(commonUrl, self.http_params)
             if not sts: continue
             if tmpData.startswith(';eval('):
                 try:
@@ -303,7 +312,7 @@ class Sport365LiveApi:
         if Sport365LiveApi.CACHE_AES_PASSWORD != '' and not forceRefresh:
             return Sport365LiveApi.CACHE_AES_PASSWORD
         
-        sts, data = self.cm.getPage(self.getFullUrl('en/home/' + cItem['event_id']), self.http_params)
+        sts, data = self.getPage(self.getFullUrl('en/home/' + cItem['event_id']), self.http_params)
         if not sts: return []
         
         aes = ''
@@ -312,7 +321,7 @@ class Sport365LiveApi:
         deObfuscatedData = ''
         for commonUrl in data:
             num += 1
-            sts, tmpData = self.cm.getPage(commonUrl, self.http_params)
+            sts, tmpData = self.getPage(commonUrl, self.http_params)
             if not sts: return []
             aes = ''
             try:
@@ -388,7 +397,7 @@ class Sport365LiveApi:
                 
                 if not playerUrl.startswith('http'): 
                     continue
-                sts, data = self.cm.getPage(playerUrl, self.http_params)
+                sts, data = self.getPage(playerUrl, self.http_params)
                 if not sts: return []
                 data = self.cm.ph.getDataBeetwenMarkers(data, 'document.write(', '(')[1]
                 playerUrl = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](http[^"^']+?)['"]''', 1, True)[0] )

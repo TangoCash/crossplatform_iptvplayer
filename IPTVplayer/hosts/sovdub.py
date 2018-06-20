@@ -57,20 +57,10 @@ class Sovdub(CBaseHostClass):
                              {'category': 'search_history', 'title': _('Search history')                     }
                             ]
         self.encoding = ''
-        
-    def _decodeData(self, data):
-        charset = self.cm.ph.getSearchGroups(data, 'charset=([^"]+?)"')[0]
-        self.encoding = charset
-        retData = data
-        try:
-            retData = data.decode(charset).encode('utf-8')
-        except Exception:
-            printExc()
-        return retData
     
     def getPage(self, url, params={}, post_data=None):
         sts,data = self.cm.getPage(url, params, post_data)
-        if sts: data = self._decodeData(data)
+        if sts and self.encoding == '': self.encoding = self.cm.ph.getSearchGroups(data, 'charset=([^"]+?)"')[0]
         return sts,data
     
     def getFullUrl(self, url):

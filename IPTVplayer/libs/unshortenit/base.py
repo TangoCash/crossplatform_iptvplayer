@@ -415,17 +415,22 @@ class UnshortenIt(object):
                 component = self.cm.ph.getSearchGroups(data, '''data\-component="([^"]+?)"''')[0]
                 if tries > 1: GetIPTVSleep().Sleep(int(time))
                 
+                sts, partials = self.cm.getPage('http://iiv.pl/themes/cutso/assets/javascript/shortcut/shortcut.js', params)
+                partials = self.cm.ph.getDataBeetwenMarkers(partials, 'update:', '}')[1]
+                partials = self.cm.ph.getSearchGroups(partials, '''['"]([^'^"]+?)['"]''')[0]
+                if partials == '': partials = 'shortcut/link_show'
                 for header in headers:
                     if 'HANDLER' in header:
                         HTTP_HEADER_AJAX[header] = action
                     elif 'PARTIALS' in header:
-                        HTTP_HEADER_AJAX[header] = 'visitLink/linker'
+                        HTTP_HEADER_AJAX[header] = partials
                 
-                post_data = {'salt':salt, 'banner':banner}
+                post_data = {'salt':salt, 'banner':banner, 'blocker':0}
                 params['header'] = HTTP_HEADER_AJAX
                 sts, data = self.cm.getPage(baseUri, params, post_data)
                 data = byteify(json.loads(data))
-                uri = self.cm.ph.getSearchGroups(data['visitLink/linker'], '''href="(https?://[^"]+?)"''')[0]
+                printDBG(">>>%s<<<" % data)
+                uri = self.cm.ph.getSearchGroups(data[partials], '''href="(https?://[^"]+?)"''')[0]
                 retUri, retSts = uri, 'OK'
                 
             except Exception as e:

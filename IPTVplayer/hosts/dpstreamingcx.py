@@ -2,7 +2,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
@@ -46,20 +46,22 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://dpstreaming.cx/'
+    return 'https://streaming-series.watch/'
 
-class DPStreamingCX(CBaseHostClass):
-    USER_AGENT = 'Mozilla/5.0'
-    HTTP_HEADER = {'User-Agent': USER_AGENT, 'Accept': 'text/html'}
-    MAIN_URL = 'http://dpstreaming.cx/'
-    DEFAULT_ICON_URL = 'http://dpstreaming.cx/wp-content/uploads/2017/09/dpstreaming-cx.png'
-    MAIN_CAT_TAB = [{'category':'list_items',      'title':_('Last added'),   'url':MAIN_URL},
-                    {'category':'categories',      'title':_('Categories'),   'url':MAIN_URL},
-                    {'category':'search',          'title': _('Search'), 'search_item':True },
-                    {'category':'search_history',  'title': _('Search history'),            } ]
+class StreamingSeriesWatch(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'dpstreaming.cx', 'cookie':'dpstreaming.cx.cookie'})
+        
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
+        self.MAIN_URL = 'https://www.streaming-series.watch/'
+        self.DEFAULT_ICON_URL = 'http://reviewme.co.za/wp-content/uploads/2013/06/lista_series_7327_622x.jpg'
+        self.MAIN_CAT_TAB = [{'category':'list_items',      'title':'Nouveaux Films',   'url':self.getMainUrl()},
+                             {'category':'sort',            'title':'Parcourir',        'url':self.getFullUrl('/parcourir/')},
+                             {'category':'search',          'title': _('Search'), 'search_item':True },
+                             {'category':'search_history',  'title': _('Search history'),            } ]
+                        
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
@@ -75,43 +77,51 @@ class DPStreamingCX(CBaseHostClass):
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
         sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         return sts, data
-    
-    def cleanHtmlStr(self, data):
-        data = data.replace('&nbsp;', ' ')
-        data = data.replace('&nbsp', ' ')
-        return CBaseHostClass.cleanHtmlStr(data)
+        
+    def getFullIconUrl(self, url):
+        url = self.getFullUrl(url)
+        if url == '': return ''
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
             
-    def listCategories(self, cItem, category):
-        printDBG("DPStreamingCX.listCategories")
+    def listSort(self, cItem, nextCategory):
+        printDBG("StreamingSeriesWatch.listSort")
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<li', '>', 'cat-item'), ('</li', '>'))
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'dropdown'), ('</ul', '>'))[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
         for item in data:
             url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
             title = self.cleanHtmlStr(item)
             params = dict(cItem)
-            params.update({'category':category, 'url':url, 'title':title})
+            params.update({'category':nextCategory, 'url':url, 'title':title})
             self.addDir(params)
     
     def listItems(self, cItem, category):
-        printDBG("DPStreamingCX.listItems")
+        printDBG("StreamingSeriesWatch.listItems")
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        nextPage = self.cm.ph.getSearchGroups(data, '''rel=["']next["'][^>]+?href=['"]([^'^"]+?)['"]''')[0]
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="filmcontent">', '<div class="filmcontent">')[1]
-        data = data.split('<div class="moviefilm">')
+        nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"]([^'^"]+?)['"][^>]*?>\s*Suivante''')[0])
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'space'), ('<div', '>', 'clear'), False)[1]
+        data = re.compile('''<div[^>]+?video[^>]+?>''').split(data)
         if len(data): del data[0]
         for item in data:
             url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
             icon  = self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0]
             title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'title'), ('</div', '>'))[1])
-            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'content'), ('</div', '>'))[1])
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0])
+            desc = []
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<div', '</div>')
+            for t in tmp:
+                t = self.cleanHtmlStr(t)
+                if t != '': desc.append(t)
             season = self.cm.ph.getSearchGroups(url, 'saison-([0-9]+?)-' )[0]
             params = dict(cItem)
-            params.update({'good_for_fav': True, 'category':category, 'url':url, 'title':title, 'desc':desc, 'icon':icon, 'season':season})
+            params.update({'good_for_fav': True, 'category':category, 'url':url, 'title':title, 'desc':'[/br]'.join(desc), 'icon':icon, 'season':season})
             self.addDir(params)
             
         if nextPage != '':
@@ -120,12 +130,12 @@ class DPStreamingCX(CBaseHostClass):
             self.addDir(params)
         
     def listEpisodes(self, cItem):
-        printDBG("DPStreamingCX.listEpisodes")
+        printDBG("StreamingSeriesWatch.listEpisodes")
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        descData  = self.cm.ph.getDataBeetwenMarkers(data, '<div class="filmicerik">', '<h2 class="tags">')[1]
+        descData  = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'video-container'), ('<div', '>', 'clear'))[1]
         desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(descData, 'Synopsis', '</p>')[1])
         icon = self.cm.ph.getSearchGroups(descData, '''src=['"]([^'^"]+?)['"]''')[0]
         titleSeason = cItem['title'].split('Saison')[0]
@@ -140,36 +150,36 @@ class DPStreamingCX(CBaseHostClass):
             self.addVideo(params)
     
     def listSearchResult(self, cItem, searchPattern, searchType):
-        printDBG("DPStreamingCX.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        printDBG("StreamingSeriesWatch.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         cItem = dict(cItem)
         cItem['url'] = self.MAIN_URL + '?s=' + urllib.quote(searchPattern)
         self.listItems(cItem, 'episodes')
     
     def getLinksForVideo(self, cItem):
-        printDBG("DPStreamingCX.getLinksForVideo [%s]" % cItem)
+        printDBG("StreamingSeriesWatch.getLinksForVideo [%s]" % cItem)
         urlTab = []
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="filmicerik">', '<div id="alt">')[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'video-container'), ('</div', '>'))[1]
         data = data.split('</iframe>')
         if len(data): del data[-1]
         
         lang = ''
         for item in data:
-            tmp = self.cm.ph.getDataBeetwenMarkers(item, '<span class="lg">', '</span>', False)[1].strip()
+            tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', '"lg"'), ('</span', '>'), False)[1])
             if tmp != '': lang = tmp
-            name = self.cm.ph.getDataBeetwenMarkers(item, '<b>', '</b>', False)[1]
+            name = self.cm.ph.getDataBeetwenMarkers(item, '<b', '</b>', False)[1]
             if lang != '':
                 name = '%s: %s' % (lang, name)
-            url  = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''')[0]
-            if url.startswith('http'):
+            url = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''')[0]
+            if self.cm.isValidUrl(url):
                 urlTab.append({'name': name, 'url':url, 'need_resolve':1})
         return urlTab
         
     def getVideoLinks(self, url):
-        printDBG("DPStreamingCX.getVideoLinks [%s]" % url)
+        printDBG("StreamingSeriesWatch.getVideoLinks [%s]" % url)
         urlTab = []
         
         if 'protect-stream.com' not in url: return []
@@ -177,13 +187,14 @@ class DPStreamingCX(CBaseHostClass):
         sts, data = self.getPage(url, self.defaultParams)
         if not sts: return []
         
-        k = self.cm.ph.getSearchGroups(data, 'var k[^"]*?=[^"]*?"([^"]+?)"')[0]
+        k = self.cm.ph.getSearchGroups(data, 'var\s+?k[^"]*?=[^"]*?"([^"]+?)"')[0]
+        secure = self.cm.ph.getSearchGroups(data, '''['"/](secur[^\.]*?)\.js''')[0]
         
         try:
-            sts, tmp = self.getPage('http://www.protect-stream.com/secur2.js', self.defaultParams)
-            count = self.cm.ph.getSearchGroups(tmp, 'var count = ([0-9]+?);')[0]
+            sts, tmp = self.getPage('https://www.protect-stream.com/%s.js' % secure, self.defaultParams)
+            count = self.cm.ph.getSearchGroups(tmp, 'var\s+?count\s*?=\s*?([0-9]+?);')[0]
             if int(count) < 15:
-                time.sleep(int(count))
+                GetIPTVSleep().Sleep(int(count))
         except Exception:
             printExc()
             return []
@@ -192,24 +203,27 @@ class DPStreamingCX(CBaseHostClass):
         params = dict(self.defaultParams)
         header['Referer'] = url
         header['Content-Type'] = "application/x-www-form-urlencoded"
+        header['Accept-Encoding'] = 'gzip, deflate'
         params['header'] = header
+        params['use_cookie'] = False
         
-        sts, data = self.getPage('http://www.protect-stream.com/secur2.php', params, {'k':k})
+        sts, data = self.getPage('https://www.protect-stream.com/%s.php' % secure, params, {'k':k})
         if not sts: return []
         printDBG('==========================================')
         printDBG(data)
         printDBG('==========================================')
+        
         videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''')[0]
-        if not videoUrl.startswith('http'):
+        if not self.cm.isValidUrl(videoUrl):
             videoUrl = self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"]([^'^"]+?)['"]''')[0]
         return self.up.getVideoLinkExt(videoUrl)
         
     def getFavouriteData(self, cItem):
-        printDBG('DPStreamingCX.getFavouriteData')
+        printDBG('StreamingSeriesWatch.getFavouriteData')
         return json.dumps(cItem) 
         
     def getLinksForFavourite(self, fav_data):
-        printDBG('DPStreamingCX.getLinksForFavourite')
+        printDBG('StreamingSeriesWatch.getLinksForFavourite')
         links = []
         try:
             cItem = byteify(json.loads(fav_data))
@@ -218,7 +232,7 @@ class DPStreamingCX(CBaseHostClass):
         return links
         
     def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('DPStreamingCX.setInitListFromFavouriteItem')
+        printDBG('StreamingSeriesWatch.setInitListFromFavouriteItem')
         try:
             params = byteify(json.loads(fav_data))
         except Exception: 
@@ -282,8 +296,8 @@ class DPStreamingCX(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
-        elif category == 'categories':
-            self.listCategories(self.currItem, 'list_items')
+        elif category == 'sort':
+            self.listSort(self.currItem, 'list_items')
         elif category == 'list_items':
             self.listItems(self.currItem, 'episodes')
         elif category == 'episodes':
@@ -303,4 +317,4 @@ class DPStreamingCX(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, DPStreamingCX(), True, [])
+        CHostBase.__init__(self, StreamingSeriesWatch(), True, [])

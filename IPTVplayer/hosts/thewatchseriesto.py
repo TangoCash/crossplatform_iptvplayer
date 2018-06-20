@@ -43,17 +43,17 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://xwatchseries.to/'
+    return 'http://dwatchseries.to/'
 
 class TheWatchseriesTo(CBaseHostClass):
-    HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-    AJAX_HEADER = dict(HEADER)
-    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-    
-    DOMAIN        = 'xwatchseries.to'
+    DOMAIN        = 'dwatchseries.to'
     MAIN_URL      = 'http://%s/' % DOMAIN
     SEARCH_URL    = MAIN_URL + 'search/'
     DEFAULT_ICON  = "http://%s/templates/default/images/apple-touch-icon.png" % DOMAIN
+    
+    HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':MAIN_URL}
+    AJAX_HEADER = dict(HEADER)
+    AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
     
     MAIN_CAT_TAB = [{'icon':DEFAULT_ICON, 'category':'list_series',     'title': _('Series list'),           'url':MAIN_URL+'series'},
                     {'icon':DEFAULT_ICON, 'category':'episodes',        'title': _('Popular Episodes'),      'url':MAIN_URL+'new'},
@@ -84,8 +84,8 @@ class TheWatchseriesTo(CBaseHostClass):
         params.update({'header':HTTP_HEADER})
         
         if self.isNeedProxy() and ('thewatchseries.to' in url or 'watch-series.to' in url or 'the-watch-series.to' in url or self.DOMAIN in url):
-            proxy = 'http://securefor.com/browse.php?u={0}&b=4&f=norefer'.format(urllib.quote(url, ''))
-            params['header']['Referer'] = proxy
+            proxy = 'http://securefor.com/browse.php?u={0}&b=4'.format(urllib.quote(url, ''))
+            params['header']['Referer'] = proxy + '&f=norefer'
             params['header']['Cookie'] = 'flags=2e5;'
             url = proxy
         sts, data = self.cm.getPage(url, params, post_data)
@@ -257,16 +257,22 @@ class TheWatchseriesTo(CBaseHostClass):
             host = self.cm.ph.getSearchGroups(item, '''"download_link_([^'^"]+?)['"]''')[0]
             #if self.up.checkHostSupport('http://'+host+'/') != 1: continue
             printDBG(item)
-            if self.isNeedProxy():
-                url = urllib.unquote(self.cm.ph.getSearchGroups(item, '''href=['"][^'^"]*?%3Fr%3D([^'^"^&]+?)['"&][^>]*?buttonlink''')[0])
-            else:
-                url = self.cm.ph.getSearchGroups(item, '''href=['"][^'^"]*?\?r=([^'^"]+?)['"][^>]*?buttonlink''')[0]
+            printDBG('-----------------------------------')
+            url = ''
+            item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<a', '</a>')
+            for it in item:
+                if self.isNeedProxy():
+                    url = urllib.unquote(self.cm.ph.getSearchGroups(it, '''href=['"][^'^"]*?%3Fr%3D([^'^"^&]+?)['"&]''')[0])
+                else:
+                    url = self.cm.ph.getSearchGroups(it, '''href=['"][^'^"]*?\?r=([^'^"]+?)['"]''')[0]
+                
+                if url == '': continue
+                try:
+                    url = base64.b64decode(url)
+                except Exception:
+                    continue
+                break
             if url == '': continue
-            try:
-                url = base64.b64decode(url)
-            except Exception:
-                printExc()
-                continue
             if self.up.checkHostSupport(url) != 1: continue
             urlTab.append({'name':host, 'url':self.getFullUrl(url), 'need_resolve':1})
         if len(urlTab):

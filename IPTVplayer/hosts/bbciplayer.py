@@ -72,23 +72,9 @@ class BBCiPlayer(CBaseHostClass):
                              {'category':'search',             'title': _('Search'), 'search_item':True,         'icon':'https://raw.githubusercontent.com/vonH/plugin.video.iplayerwww/master/media/search.png'},
                              {'category':'search_history',     'title': _('Search history'),                     }]
         self.otherIconsTemplate = 'https://raw.githubusercontent.com/vonH/plugin.video.iplayerwww/master/media/%s.png'
-        self.isIPChecked = False
     
     def getFullUrl(self, url):
         return CBaseHostClass.getFullUrl(self, url).replace('&amp;', '&')
-        
-    def checkIP(self):
-        if self.isIPChecked: return
-        lang = 'GB'
-        sts, data = self.cm.getPage('https://dcinfos.abtasty.com/geolocAndWeather.php')
-        if not sts: return
-        try:
-            data = byteify(json.loads(data.strip()[1:-1]), '', True)
-            if data['country'] != lang:
-                message = _('%s uses "geo-blocking" measures to prevent you from accessing the services from outside the %s Territory.') 
-                GetIPTVNotify().push(message % (self.getMainUrl(), lang), 'info', 5)
-            self.isIPChecked = True
-        except Exception: printExc()
 
     def listAZMenu(self, cItem, nextCategory):
         characters = [('A', 'a'), ('B', 'b'), ('C', 'c'), ('D', 'd'), ('E', 'e'), ('F', 'f'),
@@ -100,20 +86,25 @@ class BBCiPlayer(CBaseHostClass):
             params = {'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':cItem['url'] + url}
             self.addDir(params)
     
-    def listAZ(self, cItem):
+    def listAZ(self, cItem, nextCategory):
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<ol class="tleo-list', '</ol>', withMarkers=True)
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<ol', '>',  'tleo-list'), ('</ol', '>'))
         for col in data:
-            col = self.cm.ph.getAllItemsBeetwenMarkers(col, '<li', '</li>', withMarkers=True)
+            col = self.cm.ph.getAllItemsBeetwenMarkers(col, '<li', '</li>')
             for item in col:
                 title = self.cleanHtmlStr(item)
                 url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
+                if '/brand/' in url: url = url.replace('/brand/', '/episodes/')
                 params = dict(cItem)
                 params.update({'good_for_fav': True, 'title':title, 'url':self.getFullUrl(url)})
-                self.addVideo(params)
+                if '/episodes/' in url:
+                    params['category'] = nextCategory
+                    self.addDir(params)
+                else:
+                    self.addVideo(params)
         
     def listLive(self, cItem):
         channel_list = [
@@ -298,7 +289,7 @@ class BBCiPlayer(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="channel-panel">', '<div class="endpanel js-stat" role="complementary">', withMarkers=False)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'channel-page'), ('<div', '>', 'endpanel js-stat'), withNodes=False)[1]
         data = data.split('</div><div class="gel-layout__item')
         for item in data:
             if 'grouped-items' in item:
@@ -386,39 +377,52 @@ class BBCiPlayer(CBaseHostClass):
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: return
         
+        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG(data)
+        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        
         t1 = '<div id="tvip-footer-wrap">'
         t2 = '<div class="footer js-footer">'
         if t1 in data: endTag = t1
         else: endTag = t2
         
-        mTag = '<div class="paginate">'
-        nextPage = self.cm.ph.getDataBeetwenMarkers(data, mTag, '</div>', withMarkers=False)[1]
-        if '' != nextPage: 
-            if '' != self.cm.ph.getSearchGroups(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]: nextPage = True
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<ol', '>', 'pagination'), ('</ol', '>'))[1]
+        if nextPage != '':
+            nextPage = self.cm.ph.getSearchGroups(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]
+            if '' != nextPage: nextPage = True
             else: nextPage = False
-            endTag = mTag
+            endTag = '<ol[^>]+?pagination[^>]+?>'
         else:
-            mTag = '<ul class="pagination'
-            nextPage = self.cm.ph.getDataBeetwenMarkers(data, mTag, '</ul>', withMarkers=False)[1]
+            mTag = '<div class="paginate">'
+            nextPage = self.cm.ph.getDataBeetwenMarkers(data, mTag, '</div>', withMarkers=False)[1]
             if '' != nextPage: 
-                if '' != self.cm.ph.getSearchGroups(nextPage, '''page&#x3D;(%s)[^0-9]''' % (page+1))[0]: nextPage = True
+                if '' != self.cm.ph.getSearchGroups(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]: nextPage = True
                 else: nextPage = False
                 endTag = mTag
+            else:
+                mTag = '<ul class="pagination'
+                nextPage = self.cm.ph.getDataBeetwenMarkers(data, mTag, '</ul>', withMarkers=False)[1]
+                if '' != nextPage: 
+                    if '' != self.cm.ph.getSearchGroups(nextPage, '''page&#x3D;(%s)[^0-9]''' % (page+1))[0]: nextPage = True
+                    else: nextPage = False
+                    endTag = mTag
         
-        startTag = re.compile('<li class="list-item[^>]*?>')
+        startTag = re.compile('''<li[^>]+?(?:class=['"]list-item|list__grid__item|layout__item)[^>]*?>''')
         data = self.cm.ph.getDataBeetwenReMarkers(data, startTag, re.compile(endTag), withMarkers=False)[1]
         data = startTag.split(data)
         
         subTitleReOb1 = re.compile('<h2[^>]+?class="[^"]*?subtitle[^"]*?"')
         subTitleReOb2 = re.compile('</h2>')
         for item in data:
-            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<div class="title', '</div>')[1])
+            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'title'), ('</div', '>'))[1])
             if title == '': title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h1 class="list-item__title', '</h1>')[1])
-            icon  = self.cm.ph.getSearchGroups(item, '''<source[^>]+?srcset=['"]([^'^"]+?)['"]''')[0]
+            icon  = self.cm.ph.getSearchGroups(item, '''<source[^>]+?srcset=['"]([^'^"]+?)['"]''', ignoreCase=True)[0]
+            
+            printDBG(item)
             descTab = []
             descTab.append(self.cleanHtmlStr(item.split('<div class="primary">')[-1]))
             
-            tmp = self.cm.ph.getDataBeetwenMarkers(item, '<div class="view-more-grid">', '</div>', withMarkers=False)[1]
+            tmp = self.cm.ph.getDataBeetwenNodes(item, ('<a', '>', 'content-item__secondary'), ('</a', '>'))[1]
             if tmp != '': 
                 url = self.cm.ph.getSearchGroups(tmp, '''href=['"]([^'^"]+?)['"]''')[0]
                 #title += ' | ' + self.cleanHtmlStr(tmp)
@@ -433,8 +437,18 @@ class BBCiPlayer(CBaseHostClass):
                 if subtitle != '': title += ' ' + subtitle
             
             if 'data-timeliness-type="unavailable"' in item:
-                title = '[' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<span class="signpost editorial">', '</span>')[1]) + '] ' + title 
-            if url == '' or title == '': continue
+                title = '[' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<span class="signpost editorial">', '</span>')[1]) + '] ' + title
+            
+            if title.lower().startswith('episode '): title = '%s - %s' % (cItem['title'], title)
+            elif cItem['category'] == 'list_episodes': title = cItem['title'] + ' ' + title
+            
+            if url == '' or title == '': 
+                printDBG("+++++++++++++++ NO TITLE url[%s], title[%s]" % (url, title))
+                continue
+            if '/iplayer' not in url:
+                printDBG("+++++++++++++++ URL NOT SUPPORTED AT NOW url[%s], title[%s]" % (url, title))
+                continue
+                
             params = {'good_for_fav': True, 'title':title, 'url':self.getFullUrl(url), 'icon':self.getFullIconUrl(icon), 'desc':'[/br]'.join(descTab)}
             if type == 'video':
                 self.addVideo(params)
@@ -454,7 +468,6 @@ class BBCiPlayer(CBaseHostClass):
         cItem = dict(cItem)
         cItem['url'] = baseUrl
         self.listItems(cItem, 'list_episodes')
-
     
     def getLinksForVideo(self, cItem):
         printDBG("BBCiPlayer.getLinksForVideo [%s]" % cItem)
@@ -492,7 +505,7 @@ class BBCiPlayer(CBaseHostClass):
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         
-        self.checkIP()
+        self.informAboutGeoBlockingIfNeeded('GB')
         
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
@@ -503,6 +516,7 @@ class BBCiPlayer(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
+            rm(self.COOKIE_FILE)
             self.listMainMenu({'name':'category', 'url':self.MAIN_URL}, 'list_items')
         elif 'live_streams' == category:
             self.listLive(self.currItem)
@@ -513,7 +527,7 @@ class BBCiPlayer(CBaseHostClass):
         elif 'list_az_menu' == category:
             self.listAZMenu(self.currItem, 'list_az')
         elif 'list_az' == category:
-            self.listAZ(self.currItem)
+            self.listAZ(self.currItem, 'list_episodes')
         elif 'list_categories' == category:
             self.listCategories(self.currItem, 'list_cat_filters')
         elif category in 'list_cat_filters':
@@ -546,5 +560,4 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, BBCiPlayer(), True, [])
-
     

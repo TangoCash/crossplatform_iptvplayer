@@ -29,10 +29,10 @@ class customMoviePlayer(InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, Inf
                 iPlayableService.evEOF: self.__evEOF,
                 iPlayableService.evSOF: self.__evEOF,
             })
-        
         self["actions"] = HelpableActionMap(self, "MoviePlayerActions",
             {
                 "leavePlayer": (self.leavePlayer, _("leave movie player...")),
+                "leavePlayerOnExit": (self.leavePlayer, _("leave movie player...")),
             }, -5)
         
         for x in HelpableScreen, InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, InfoBarSubtitleSupport, InfoBarNotifications:

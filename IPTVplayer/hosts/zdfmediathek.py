@@ -193,8 +193,7 @@ class ZDFmediathek(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<main id="skip-main"', '<article class="b-cluster x-web-only"', False)[1]
-        
+        data = self.cm.ph.rgetDataBeetwenNodes(data, ('<article class="b-cluster', '>', 'x-web-only'), ('<main', '>', 'id="skip-main"'), False)[1]
         # split data per sections
         sections = re.split('''<section[^>]+?class=['"]b-content-teaser-list['"][^>]*?>|<article[^>]+?itemtype=['"]http://schema.org/ItemList['"][^>]*?>|<article[^>]+?class=['"]b-content-module['"][^>]*?>''', data)
         for section in sections:
@@ -235,6 +234,8 @@ class ZDFmediathek(CBaseHostClass):
                     desc.append(self.cleanHtmlStr(tmp))
                     desc.append(self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<dl', '</dl>')[1].replace('</dd>', ' | ')))
                     desc = '[/br]'.join(desc)
+                    
+                    if 'assets/a-z-teaser' in icon: continue
                     
                     params = {'url':url, 'title':title, 'icon':icon, 'desc':desc}
                     if '_play' in item:

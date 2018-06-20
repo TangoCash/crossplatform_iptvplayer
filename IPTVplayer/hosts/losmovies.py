@@ -37,15 +37,19 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.losmovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
+                                                                                            ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                            ("proxy_2",  _("Alternative proxy server (2)"))])
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.losmovies_proxy))
     return optionList
 ###################################################
 
 
 def gettytul():
-    return 'http://losmovies.cc/'
+    return 'http://los-movies.com/'
 
 class LosMovies(CBaseHostClass):
  
@@ -58,7 +62,7 @@ class LosMovies(CBaseHostClass):
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'http://losmovies.cc/'
+        self.MAIN_URL = 'http://los-movies.com/'
         self.cacheEpisodes = {}
         self.cacheLinks = {}
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -80,12 +84,22 @@ class LosMovies(CBaseHostClass):
         if addParams == {}:
             addParams = dict(self.defaultParams)
         
+        proxy = config.plugins.iptvplayer.losmovies_proxy.value
+        printDBG(">> " + proxy)
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
+            
         def _getFullUrl(url):
             if self.cm.isValidUrl(url):
                 return url
             else:
                 return urlparse.urljoin(baseUrl, url)
-            
+                
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         

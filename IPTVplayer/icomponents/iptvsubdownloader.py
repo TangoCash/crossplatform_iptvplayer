@@ -57,11 +57,11 @@ class IPTVSubDownloaderWidget(Screen):
                     <screen name="IPTVSubDownloaderWidget" position="center,center" size="1590,825" title="IPTV Player HD v%s">
                             <ePixmap position="5,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <widget render="Label" source="key_red" position="45,9" size="140,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-                            <widget name="headertext" position="15,55" zPosition="1" size="1080,30" font="Regular;30" transparent="1" backgroundColor="#00000000" />
-                            <widget name="statustext" position="15,148" zPosition="1" size="1080,180" font="Regular;30" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
-                            <widget name="list" position="5,115" zPosition="2" size="860,690" enableWrapAround="1" scrollbarMode="showOnDemand" transparent="1" backgroundColor="#00000000" />
-                            <widget name="console" position="5,310" zPosition="1" size="860,630" font="Regular;26" transparent="1" backgroundColor="#00000000" />
-                            <ePixmap zPosition="4" position="5,395" size="1080,5" pixmap="%s" transparent="1" />
+                            <widget name="headertext" position="15,55" zPosition="1" size="1580,30" font="Regular;30" transparent="1" backgroundColor="#00000000" />
+                            <widget name="statustext" position="15,148" zPosition="1" size="1580,180" font="Regular;30" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
+                            <widget name="list" position="5,115" zPosition="2" size="1580,410" enableWrapAround="1" scrollbarMode="showOnDemand" transparent="1" backgroundColor="#00000000" />
+                            <widget name="console" position="5,570" zPosition="1" size="1580,140" font="Regular;26" transparent="1" backgroundColor="#00000000" />
+                            <ePixmap zPosition="4" position="5,535" size="1580,5" pixmap="%s" transparent="1" />
                             <widget name="spinner"   zPosition="2" position="508,240" size="16,16" transparent="1" alphatest="blend" />
                             <widget name="spinner_1" zPosition="1" position="508,240" size="16,16" transparent="1" alphatest="blend" />
                             <widget name="spinner_2" zPosition="1" position="524,240" size="16,16" transparent="1" alphatest="blend" />
@@ -77,7 +77,7 @@ class IPTVSubDownloaderWidget(Screen):
                             <widget name="headertext" position="5,47" zPosition="1" size="1080,23" font="Regular;20" transparent="1" backgroundColor="#00000000" />
                             <widget name="statustext" position="5,140" zPosition="1" size="1080,180" font="Regular;20" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
                             <widget name="list" position="5,100" zPosition="2" size="1080,280" enableWrapAround="1" scrollbarMode="showOnDemand" transparent="1" backgroundColor="#00000000" />
-                            <widget name="console" position="5,430" zPosition="1" size="1080,140" font="Regular;20" transparent="1" backgroundColor="#00000000" />
+                            <widget name="console" position="5,400" zPosition="1" size="1080,170" font="Regular;20" transparent="1" backgroundColor="#00000000" />
                             <ePixmap zPosition="4" position="5,395" size="1080,5" pixmap="%s" transparent="1" />
                             <widget name="spinner"   zPosition="2" position="508,240" size="16,16" transparent="1" alphatest="blend" />
                             <widget name="spinner_1" zPosition="1" position="508,240" size="16,16" transparent="1" alphatest="blend" />
@@ -309,7 +309,6 @@ class IPTVSubDownloaderWidget(Screen):
             self.showWindow()
     #end ok_pressed(self):
     
-
     def loadHost(self):
         try:
             _temp = __import__('Plugins.Extensions.IPTVPlayer.subproviders.subprov_' + self.hostName, globals(), locals(), ['IPTVSubProvider'], -1)
@@ -575,6 +574,7 @@ class IPTVSubDownloaderWidget(Screen):
         napisy24pl       = {'title':"Napisy24.pl",                'sub_provider':'napisy24pl'        }
         openSubtitles    = {'title':"OpenSubtitles.org API",      'sub_provider':'opensubtitlesorg'  }
         openSubtitles2   = {'title':"OpenSubtitles.org WWW",      'sub_provider':'opensubtitlesorg2' }
+        openSubtitles3   = {'title':"OpenSubtitles.org REST",     'sub_provider':'opensubtitlesorg3' }
         napiprojektpl    = {'title':"Napiprojekt.pl",             'sub_provider':'napiprojektpl'     }
         podnapisinet     = {'title':"Podnapisi.net",              'sub_provider':'podnapisinet'      }
         titlovi          = {'title':"Titlovi.com",                'sub_provider':'titlovicom'        }
@@ -583,7 +583,9 @@ class IPTVSubDownloaderWidget(Screen):
         popcornsubtitles = {'title':"PopcornSubtitles.com",       'sub_provider':'popcornsubtitles'  }
         subtitlesgr      = {'title':"Subtitles.gr",               'sub_provider':'subtitlesgr'       }
         prijevodi        = {'title':"Prijevodi-Online.org",       'sub_provider':'prijevodi'         }
+        subsro           = {'title':"Subs.ro",                    'sub_provider':'subsro'            }
         
+        defaultLang = GetDefaultLang()
         
         if 'youtube_id' in self.params['url_params'] and '' != self.params['url_params']['youtube_id']:
             subProvidersList.append(youtube)
@@ -591,33 +593,40 @@ class IPTVSubDownloaderWidget(Screen):
         if 'popcornsubtitles_url' in self.params['url_params'] and '' != self.params['url_params']['popcornsubtitles_url']:
             subProvidersList.append(popcornsubtitles)
             
-        if 'hr' == GetDefaultLang(): 
+        if 'hr' == defaultLang: 
             subProvidersList.append(prijevodi)
         
-        if 'el' == GetDefaultLang(): 
+        if 'el' == defaultLang: 
             subProvidersList.append(subtitlesgr)
         
-        if 'pl' == GetDefaultLang(): 
+        if 'ro' == defaultLang: 
+            subProvidersList.append(subsro)
+        
+        if 'pl' == defaultLang: 
             subProvidersList.append(napisy24pl)
             if IsSubtitlesParserExtensionCanBeUsed():
                 subProvidersList.append(napiprojektpl)
         
         subProvidersList.append(openSubtitles2)
+        subProvidersList.append(openSubtitles3)
         subProvidersList.append(openSubtitles)
         subProvidersList.append(podnapisinet)
         subProvidersList.append(titlovi)
         subProvidersList.append(subscene)
         
-        if 'pl' != GetDefaultLang(): 
+        if 'pl' != defaultLang: 
             subProvidersList.append(napisy24pl)
             if IsSubtitlesParserExtensionCanBeUsed():
                 subProvidersList.append(napiprojektpl)
                 
-        if 'el' != GetDefaultLang(): 
+        if 'el' != defaultLang: 
             subProvidersList.append(subtitlesgr)
         
-        if 'hr' != GetDefaultLang(): 
+        if 'hr' != defaultLang: 
             subProvidersList.append(prijevodi)
+        
+        if 'ro' != defaultLang: 
+            subProvidersList.append(subsro)
         
         self.currList = []
         for item in subProvidersList:

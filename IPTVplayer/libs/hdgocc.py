@@ -55,10 +55,12 @@ class HdgoccParser():
         refUrl = strwithmeta(pageUrl).meta.get('Referer', pageUrl)
         params = copy.deepcopy(self.defaultParams)
         params['header']['Referer'] = refUrl
+        params['with_metadata'] = True
         sts, data = self.cm.getPage( pageUrl, params)
         if not sts: return []
         
         urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+        urlNext = self.getFullUrl(data.meta['url'], urlNext)
         if self.cm.isValidUrl(urlNext):
             params['header']['Referer'] = pageUrl
             sts, data = self.cm.getPage(urlNext, params)
@@ -75,7 +77,7 @@ class HdgoccParser():
         
         for item in seasonData:
             seasonsTab.append({'title':item[1], 'id':int(item[0]), 'url': strwithmeta(seasonMainUrl + item[0], {'Referer':refUrl})})
-                
+        seasonsTab.sort(key=lambda item: item['id'])
         return seasonsTab
         
     def getEpiodesList(self, seasonUrl, seasonIdx):
@@ -85,10 +87,12 @@ class HdgoccParser():
         refUrl = strwithmeta(seasonUrl).meta.get('Referer', seasonUrl)
         params = copy.deepcopy(self.defaultParams)
         params['header']['Referer'] = refUrl
+        params['with_metadata'] = True
         sts, data = self.cm.getPage( seasonUrl, params)
         if not sts: return []
         
         urlNext = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0]
+        urlNext = self.getFullUrl(data.meta['url'], urlNext)
         if self.cm.isValidUrl(urlNext):
             params['header']['Referer'] = seasonUrl
             sts, data = self.cm.getPage(urlNext, params)
@@ -114,6 +118,11 @@ class HdgoccParser():
             #int(item[0])
             idx = 1
             for item in episodeData:
-                episodesTab.append({'title':item[1], 'id':idx, 'url': strwithmeta(episodeMainUrl + item[0], {'Referer':refUrl})})
+                try: id = int(self.cm.ph.getSearchGroups(' %s ' % item, '''[^0-9]([0-9]+?)[^0-9]''')[0])
+                except Exception: 
+                    printExc()
+                    id = idx
+                episodesTab.append({'title':item[1], 'id':id, 'url': strwithmeta(episodeMainUrl + item[0], {'Referer':refUrl})})
                 idx += 1
+        episodesTab.sort(key=lambda item: item['id'])
         return episodesTab

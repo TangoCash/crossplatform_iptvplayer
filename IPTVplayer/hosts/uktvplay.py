@@ -62,7 +62,6 @@ class UKTVPlay(CBaseHostClass):
         self.cacheFiltersKeys = []
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.tmpUrl = 'http://vschedules.uktv.co.uk/mobile/v2/%splatform=android&app_ver=4.3.2'
-        self.isIPChecked = False
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
@@ -73,19 +72,6 @@ class UKTVPlay(CBaseHostClass):
             else: return urlparse.urljoin(baseUrl, url)
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-    
-    def checkIP(self):
-        if self.isIPChecked: return
-        lang = 'GB'
-        sts, data = self.cm.getPage('https://dcinfos.abtasty.com/geolocAndWeather.php')
-        if not sts: return
-        try:
-            data = byteify(json.loads(data.strip()[1:-1]), '', True)
-            if data['country'] != lang:
-                message = _('%s uses "geo-blocking" measures to prevent you from accessing the services from outside the %s Territory.') 
-                GetIPTVNotify().push(message % (self.getMainUrl(), lang), 'info', 5)
-            self.isIPChecked = True
-        except Exception: printExc()
     
     def getChannelUrl(self, channel):
         return 'most_popular?channel=%s&carousel_limit=200&' % channel
@@ -280,7 +266,7 @@ class UKTVPlay(CBaseHostClass):
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         
-        self.checkIP()
+        self.informAboutGeoBlockingIfNeeded('GB')
         
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')

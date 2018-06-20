@@ -2,15 +2,18 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir, GetCacheSubDir, ReadTextFile, WriteTextFile
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
+
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
 ###################################################
 
 ###################################################
@@ -40,9 +43,21 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.bsto_linkcache = ConfigYesNo(default = True)
+config.plugins.iptvplayer.bsto_bypassrecaptcha = ConfigSelection(default = "None", choices = [("None",        _("None")),
+                                                                                             ("9kw.eu",       "https://9kw.eu/"),
+                                                                                             ("2captcha.com", "http://2captcha.com/")])
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use links cache"), config.plugins.iptvplayer.bsto_linkcache))
+    optionList.append(getConfigListEntry(_("Captcha solving service"), config.plugins.iptvplayer.bsto_bypassrecaptcha))
+    if config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '9kw.eu':
+        optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_9kweu))
+    elif config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '2captcha.com':
+        optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_2captcha))
     return optionList
 ###################################################
 
@@ -51,7 +66,7 @@ def gettytul():
     return 'https://bs.to/'
 
 class BSTO(CBaseHostClass):
- 
+    LINKS_CACHE = {}
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'bs.to', 'cookie':'bsto.cookie', 'cookie_type':'MozillaCookieJar'})
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
@@ -64,9 +79,9 @@ class BSTO(CBaseHostClass):
         self.cacheSeries = []
         self.cacheGenres = {}
         self.cacheLinks = {}
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'with_metadata':True, 'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self._getHeaders = None
-        
+    
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
@@ -260,43 +275,62 @@ class BSTO(CBaseHostClass):
         sts, data = self.getPage(videoUrl)
         if not sts: return []
         
-        errorMsg = ''
+        errorMsgTab = []
         
         baseUrl  = self.cm.ph.getSearchGroups(data, '''href=['"][^'^"]*?(/out/[^'^"]+?)['"]''')[0]
         url = self.getFullUrl(baseUrl)
-        params = dict(self.defaultParams)
-        params['return_data'] = False
-        try:
-            prevUrl = url
-            sts, response = self.cm.getPage(prevUrl, params)
-            url = response.geturl()
-            response.close()
-            if url == prevUrl:
-                sts, data = self.getPage(url)
-                if 'bitte das Captcha' in data: errorMsg = _('Link protected with google recaptcha v2.')
-        except Exception:
-            printExc()
+        prevUrl = url
         
-        if 1 != self.up.checkHostSupport(url):
-            url  = baseUrl.replace('/out/', '/watch/')[1:]
+        linkId = self.cm.ph.getSearchGroups(url, '''/out/([0-9]+)''')[0]
+        hostUrl = BSTO.LINKS_CACHE.get(linkId, '')
+        if hostUrl == '' and config.plugins.iptvplayer.bsto_linkcache.value:
+            hostUrl = ReadTextFile(GetCacheSubDir('bs.to', linkId))[1]
+        
+        if hostUrl == '':
+            sts, data = self.cm.getPage(prevUrl, self.defaultParams)
+            if not sts: return []
+            url = data.meta['url']
             
-            hostUrl = ''
-            try:
-                sts, data = self.cm.getPage(self.getFullUrl('/api/' + url), self.getHeaders(url))
-                if not sts: return []
+            if url == prevUrl:
+                sitekey = self.cm.ph.getSearchGroups(data, '''['"]sitekey['"]\s*?:\s*?['"]([^'^"]+?)['"]''')[0]
+                if sitekey != '' and 'bitte das Captcha' in data:
+                    errorMsgTab = [_('Link protected with google recaptcha v2.')]
+                    recaptcha = None
+                    if config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '9kw.eu':
+                        recaptcha = UnCaptchaReCaptcha_9kw()
+                    elif config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '2captcha.com':
+                        recaptcha = UnCaptchaReCaptcha_2captcha()
+                    
+                    if recaptcha != None:
+                        token = recaptcha.processCaptcha(sitekey, prevUrl)
+                        if token != '':
+                            sts, data = self.cm.getPage(url + '?token=' + token, self.defaultParams)
+                            if not sts: return []
+                            url = data.meta['url']
+            
+            if 1 != self.up.checkHostSupport(url):
+                url  = baseUrl.replace('/out/', '/watch/')[1:]
                 
-                data = byteify(json.loads(data))
-                printDBG(data)
-                
-                hostUrl = data['fullurl']
-            except Exception:
-                printExc()
-        else:
-            hostUrl = url
+                hostUrl = ''
+                try:
+                    sts, data = self.cm.getPage(self.getFullUrl('/api/' + url), self.getHeaders(url))
+                    if not sts: return []
+                    
+                    data = byteify(json.loads(data))
+                    printDBG(data)
+                    
+                    hostUrl = data['fullurl']
+                except Exception:
+                    printExc()
+            else:
+                hostUrl = url
             
         if 1 != self.up.checkHostSupport(hostUrl):
-            SetIPTVPlayerLastHostError(errorMsg) 
+            SetIPTVPlayerLastHostError('\n'.join(errorMsgTab)) 
         elif self.cm.isValidUrl(hostUrl):
+            BSTO.LINKS_CACHE[linkId] = hostUrl
+            if config.plugins.iptvplayer.bsto_linkcache.value:
+                WriteTextFile(GetCacheSubDir('bs.to', linkId), hostUrl)
             urlTab = self.up.getVideoLinkExt(hostUrl)
         
         return urlTab

@@ -49,7 +49,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://skstream.ws/'
+    return 'http://skstream.info/'
 
 class SKStream(CBaseHostClass):
  
@@ -60,7 +60,7 @@ class SKStream(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.DEFAULT_ICON_URL = 'http://www.skstream.ws/apple-touch-icon.png'
+        self.DEFAULT_ICON_URL = 'http://www.skstream.info/apple-touch-icon.png'
         self.MAIN_URL = None
         self.cacheCategories = []
         self.episodesCache = []
@@ -88,7 +88,7 @@ class SKStream(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        self.MAIN_URL = 'http://www.skstream.ws/'
+        self.MAIN_URL = 'http://www.skstream.info/'
         params = dict(self.defaultParams)
         params['return_data'] = False
         try:
@@ -99,14 +99,17 @@ class SKStream(CBaseHostClass):
             printExc()
         printDBG("selectDomain [%s]" % self.MAIN_URL)
         
-        self.MAIN_CAT_TAB = [{'category':'list_categories',         'title': 'Films',                    'url':self.getFullUrl('/films')},
-                             {'category':'list_categories',         'title': 'Séries',                   'url':self.getFullUrl('/series')},
-                             {'category':'list_categories',         'title': 'Mangas',                   'url':self.getFullUrl('/mangas')},
-                             
-                             {'category':'search',          'title': _('Search'), 'search_item':True, },
-                             {'category':'search_history',  'title': _('Search history'),             } 
-                            ]
-                            
+    def listMainMenu(self, cItem):
+        if self.MAIN_URL == None: return
+        MAIN_CAT_TAB = [{'category':'list_categories',         'title': 'Films',                    'url':self.getFullUrl('/films')},
+                        {'category':'list_categories',         'title': 'Séries',                   'url':self.getFullUrl('/series')},
+                        {'category':'list_categories',         'title': 'Mangas',                   'url':self.getFullUrl('/mangas')},
+                        
+                        {'category':'search',          'title': _('Search'), 'search_item':True, },
+                        {'category':'search_history',  'title': _('Search history'),             } 
+                       ]
+        self.listsTab(MAIN_CAT_TAB, cItem)
+        
     def listCategories(self, cItem, nextCategory):
         printDBG("SKStream.listCategories")
         self.cacheCategories = []
@@ -267,8 +270,16 @@ class SKStream(CBaseHostClass):
             self.cacheLinks[cItem['url']] = urlTab
         return urlTab
         
+    def _generatePass(self, nb):
+        chars = 'azertyupqsdfghjkmwxcvbn23456789AZERTYUPQSDFGHJKMWXCVBN_-#@'
+        password = ''
+        for idx in range(nb):
+            wpos = random.randrange(0, len(chars))
+            password += chars[wpos]
+        return password
+        
     def getVideoLinks(self, videoUrl):
-        printDBG("LosMovies.getVideoLinks [%s]" % videoUrl)
+        printDBG("SKStream.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
         # mark requested link as used one
@@ -289,31 +300,80 @@ class SKStream(CBaseHostClass):
             if 1 != self.up.checkHostSupport(url):
                 params = dict(self.defaultParams)
                 try:
+                    maxAttempt = 3
+                    attempt = 0
                     params['header'] = dict(params['header'])
                     params['header']['Referer'] = videoUrl.meta['Referer']
-                    #params['header'].pop('Referer', None)
                     params['return_data'] = False
-                    sts, response = self.getPage(url, params)
-                    url = response.geturl()
-                    if 'dl-protect.co' in self.up.getDomain(url):
-                        data = response.read(1024*1024*1024)
-                        response.close()
-                        
-                        # get JS player script code from confirmation page
-                        sts, tmpData = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
-                        if sts: data += unpackJSPlayerParams(tmpData, VIDEOMEGA_decryptPlayerParams, 0, r2=True) #YOUWATCH_decryptPlayerParams == VIDUPME_decryptPlayerParams
-                        
-                        printDBG(data)
-                        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-                        if url == '': url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''iframe.src\s*=\s*['"]([^"^']+?)['"]''', 1, True)[0])
-                        if not self.cm.isValidUrl(url):
-                            data = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', '],', False)[1] + ']'
-                            data = byteify(json.loads(data))
-                            for item in data:
-                                if "mp4" == item['type']:
-                                    urlTab.append({'name':str(item.get('label', 'default')), 'url':item['file']})
-                    else:
-                        response.close()
+                    post_data = None
+                    while attempt < maxAttempt:
+                        attempt += 1
+                        sts, response = self.getPage(url, params, post_data)
+                        url = response.geturl()
+                        if 'dl-protect.co' in self.up.getDomain(url):
+                            data = response.read(1024*1024*1024)
+                            response.close()
+                            
+                            # get JS player script code from confirmation page
+                            sts, tmpData = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
+                            if sts: data += unpackJSPlayerParams(tmpData, VIDEOMEGA_decryptPlayerParams, 0, r2=True) #YOUWATCH_decryptPlayerParams == VIDUPME_decryptPlayerParams
+                            
+                            printDBG(data)
+                            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+                            if url == '': url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''iframe.src\s*=\s*['"]([^"^']+?)['"]''', 1, True)[0])
+                            if not self.cm.isValidUrl(url):
+                                data = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', '],', False)[1] + ']'
+                                data = byteify(json.loads(data))
+                                for item in data:
+                                    if "mp4" == item['type']:
+                                        urlTab.append({'name':str(item.get('label', 'default')), 'url':item['file']})
+                            break
+                        else:
+                            if 1 != self.up.checkHostSupport(url):
+                                data = response.read(1024*1024*1024)
+                                response.close()
+                                
+                                scriptUrl = self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?QapTcha.jquery[^"^']*?\.js)['"]''', 1, True)[0]
+                                if scriptUrl != '' and not self.cm.isValidUrl(scriptUrl):
+                                    scriptUrl = self.getFullUrl('/dl/' + scriptUrl)
+                                if not self.cm.isValidUrl(scriptUrl):
+                                    printDBG(">> scriptUrl not valid")
+                                    break
+                                
+                                sts, data = self.getPage(scriptUrl)
+                                if not sts:
+                                    break
+                                
+                                formUrl = self.cm.ph.getSearchGroups(data, '''['"]([^"^']*?QapTcha.jquery[^"^']*?\.php)['"]''', 1, True)[0]
+                                if formUrl != '' and not self.cm.isValidUrl(formUrl):
+                                    formUrl = self.getFullUrl('/dl/' + formUrl)
+                                if not self.cm.isValidUrl(formUrl):
+                                    printDBG(">> formUrl not valid")
+                                    break
+                                
+                                qaptchaKey = self._generatePass(37)
+                                post_data2 = {'action':'qaptcha', 'qaptcha_key':qaptchaKey}
+                                params2 = dict(self.defaultParams)
+                                params2['header'] = dict(self.AJAX_HEADER)
+                                params2['header']['Referer'] = url
+                                sts, data = self.getPage(formUrl, params2, post_data2)
+                                if not sts:
+                                    break
+                                printDBG(">>>>>>\n%s\n<<<<<<" % data)
+                                
+                                post_data2 = {'submit':'Valider', qaptchaKey:''}
+                                sts, data = self.getPage(url, params2, post_data2)
+                                if not sts:
+                                    break
+                                printDBG(">>>>>>\n%s\n<<<<<<" % data)
+                                
+                                url = self.cm.ph.getSearchGroups(data, '''['"](https?://[^"^"]*?dl\-protect\.co[^'^"]+?)['"]''', 1, True)[0]
+                                if self.cm.isValidUrl(url):
+                                    continue
+                                break
+                            else:
+                                response.close()
+                                break                            
                 except Exception:
                     printExc()
                     continue
@@ -371,7 +431,7 @@ class SKStream(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+            self.listMainMenu({'name':'category'})
         elif category == 'list_categories':
             self.listCategories(self.currItem, 'list_cats_items')
         elif category == 'list_cats_items':

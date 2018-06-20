@@ -43,10 +43,9 @@ class VevoIE(InfoExtractor):
     (currently used by MTVIE and MySpaceIE)
     """
     _VALID_URL = r'''(?x)
-        (?:https?://www\.vevo\.com/watch/(?:[^/]+/(?:[^/]+/)?)?|
+        (?:https?://(?:www\.)?vevo\.com/watch/(?!playlist|genre)(?:[^/]+/(?:[^/]+/)?)?|
            https?://cache\.vevo\.com/m/html/embed\.html\?video=|
            https?://videoplayer\.vevo\.com/embed/embedded\?videoId=|
-           https?://api\.vevo\.com/embed/embedded\?videoId=|
            vevo:)
         (?P<id>[^&?#]+)'''
     _SMIL_BASE_URL = 'http://smil.lvl3.vevo.com/'

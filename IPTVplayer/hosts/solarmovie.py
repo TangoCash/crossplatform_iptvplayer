@@ -55,7 +55,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://solarmovie.st/'
+    return 'https://solarmoviex.to/'
 
 class SolarMovie(CBaseHostClass):
  
@@ -145,18 +145,22 @@ class SolarMovie(CBaseHostClass):
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
         
     def selectDomain(self):
-        domains = ['https://solarmovie.st/']
+        printDBG("SolarMovie.selectDomain")
+        domains = ['https://solarmoviex.to/']
         domain = config.plugins.iptvplayer.solarmovie_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
             domains.insert(0, domain)
         
+        urlParams = dict(self.defaultParams)
+        urlParams['with_metadata'] = True
         for domain in domains:
             for i in range(2):
-                sts, data = self.getPage(domain)
+                sts, data = self.getPage(domain, urlParams)
                 if sts:
-                    if 'genre/action/' in data:
-                        self.MAIN_URL = domain
+                    if 'genre/action' in data:
+                        self.MAIN_URL = data.meta.get('url')
+                        printDBG(">> meta[%s]" %  data.meta)
                         break
                     else: 
                         continue
@@ -297,6 +301,7 @@ class SolarMovie(CBaseHostClass):
         data = data.split('<div class="server row"')
         for tmp in data:
             serverName = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<label', '</label>')[1])
+            serverId   = self.cm.ph.getSearchGroups(tmp, '''data-id=['"]([^'^"]+?)['"]''')[0]
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<li', '</li>')
             for item in tmp:
                 title = self.cleanHtmlStr(item)
@@ -305,7 +310,7 @@ class SolarMovie(CBaseHostClass):
                 if title not in titlesTab:
                     titlesTab.append(title)
                     self.cacheLinks[title] = []
-                url = strwithmeta(url, {'id':id})
+                url = strwithmeta(url, {'id':id, 'server_id':serverId})
                 self.cacheLinks[title].append({'name':serverName, 'url':url, 'need_resolve':1})
         
         for item in titlesTab:
@@ -342,10 +347,9 @@ class SolarMovie(CBaseHostClass):
     def _updateParams(self, params):
         if self._myFun == None:
             try:
-                tmp = '89aac45129123590486772c958b0efc9074993ad1ffddc7fecfec3755806ca1d51a76813a3fbf891ee09081e10ea4f74681823b1443295b8b4ee2f14d8f209194fe5db528cbbf29117101f346dc7b4dd1474dff6face052de50948157720f1fd9d162c4068f329ca732336edd335ae93e29d3515f32b9c1963255b979da52f52bede1bfa1f505581bd8a92a4d43ce162ebe4efe19303d3a3b141305610bfe8257fa70af3c548003c3b5a216e2e5204568f09abfa0f8448d18aafc79bd7d893f5a182f7529ffbb5678b236ef43a0e33782a50e35650e2f4e2381f7f045b4ac6c6e1af1f2e2d9558a3fd2cdf3339a4ec74cf84049e0e8f82b8072c7d09c1daaf92a66a529c7fa40105d22949770323f8e54d4fbbcdd26e5815c49ba012ff628e186ba5318094b3cc9283e1d3c7ad75b552cb6cf95112020ecd975dee875581013917f16a2961cebd82eb2d2e9dbc4e4e72d4ae86d4a07d5713254e6cf95d59888e102e0562941dfbb7371b431ed9d43f39be000bacd84e06cf1a6429ea58cfc58856b778c4662e515e90d1309b27b00cf642a8ca479fe80a9bc51906bf95bb76b9572bbe32e6b97cc562c0cce8835932117e8f1e95584519257b4707bdbfdf3b7b07f4dcf58b6cf41b651d081d976f0799070bca4fa013b901b4520a41ec008b84748ab9e6226c6502ed06372dfc75a0bbff243c42ff58cbede6c71bdc452753f928f6859e52af6405c29903a2c3c3e3eee95e642f45a7b52e9fa4f51f5ebf46ab94157c90b2965e7d8c85507fb0855959f02190736b6486b8d0cf6c8d0766716384a7155609eebd3e9537195c24262a44b7525db231fc768e84bf40f5d21a0b5375255a82d97c23b732bc72e7f587a0a7e8670b0ed50cb32605e43ec1b7d95bcb9628250537235ea20ee3b2de83f8d439d321969550aa36f92074a85578e659cd48c955ab7040eb851632961e24fe4965448b65b28c76f24edf6c7c9efa0dbaa032f053154217e102844a3f587f592e08f68d3a24dfdf4c1b15ff9826a5d8809faa49faff26467e1d0110ac50e5665e0d5f1c3c6e9895872535a8c2cb840df003c32711d19390fe8f4b04f384010fc58ef10d807201a5dc4656c7f7dfe4e759d4a53af7bc384f532ad55fe65c5dd218d97becf1fc2a368a9da99e18ebf0cd3c0e43406d454fc172ef1dec06da0e945290365d7c96cce5ea9dd65e4b7bd9bef2e287f01f8cf72e5565f63c77d5752511f5924485c058fb889b49ba7628200bd1313624f1a030efaf45069b6a6bff8be70620d8170519895c442994a4786b81e5e76c8b7955784cea2932ea570d024541b851b242fcefd0fabe9e61dd1f975633a40a5033d3f21590f06f4e5224a5a146cad3f9298835495a03b7cb748c485b7ed316ca87b903f3339cdf0a7c597e4ac0bcdfaa8c8cfd05a26a567182584683310cd04baaff41d5105f0813f3e596eb0c7d06a3e4f9f099049077f5a37944a28cafb6841724d1d22fcc06890119357f52148c56740bfe88aa6235ad364f79f75e40ee00af6f13d8d00d43c9505033eaa170abcbb41c83629bee5f9e0687d0d7fade3e17f94f1559954b7a7c1f616246cd7bdd12ed0e6397cdda5b5a03b566301d4c'
+                tmp = 'd4dc09ccf50eec3e8ff154e9aaae91d70fd5cb194964f86c2f2b4dda892d816c987cca66475b807bf875241ea891e7063f608834577df64b8a97f73fcb5598a2f7cd9aee7a7720eca337c09b1fd8808a1140579345f89aea4169d465869f1149e7e79245df09793524d95bfe8ed80b693316d6dce7c09a57c16fd29f0210ad2711f3a1fb4641bf914f7ef342fb1355211601edc691103e5c635ca2af3b8e730f18732e87348f95b806f4d976c113adbc6104b7524d5a22824fa2f694fda0e32b44bac01b78a2ff3baa2c224036bde220417074720a6965a6a835031b97fd18eaac53af1477d6e67ab66f324d9e2e3fc9051840f038336821ad2695090b6fc18589769b4fd63fa2baca4dbdec2d636b261537d3bb54c25ea3cdf591e1896486e086047ae196d93f625da5aefabed41b163297e09d4d6d39bb6336997197d76fdd829b7946e1e48a1182c633f9ad690798b17f8a01e3bb72838839779bd1e36f85857a45d09ae592435642f83d0629264a7f90f4822bb3ab51e78489659cbdcaa22ee798482edafcb948833bff410bb88c25440971f12ab54a5082d98cdf0bb6be9a9c992fac672e8ce3b4525c63d02ca3ea344ae3c150bf1c49e9b83bc7c40839d3bd9babd75860d3560ca0887a38c29eab0155c81cd6f400c1e69d05b228a84052683a5a6821d72185140aaa343fae61a9e06d2100924d4f716f752436528d2b169cd585ce0e5ca243bd6ad457cba5ba402f4706311ccaeefcce6bbccd4e65ba1e2d4318af6f1844d32c27bf871ca198c31bf6f7dcc9185357fd202f419795cb104ccb5383fafd91dd1ad97b2098f579077233c8ce07952a696babdd4e5ae913c5166c92950dc4a1457d2e77f39e4b72c044c3e248a76de4af1dcea6bafe66ea12bce34fe9d6be668f85a2f329256c312c4ec44b86ad66b32be861b916fff7ee33692be1f8a93161c1215e4c621a58427bb0a0d26bda5459f6335b982cf0725af821d6ee7d3dc12d1b3228a3fc2548646819ec8001649088e9cf042d248ef9e7'
                 tmp = self._cryptoJS_AES(unhexlify(tmp), ''.join(GetPluginDir().split('/')[-5:]))
                 tmp = base64.b64decode(tmp.split('\r')[-1]).replace('\r', '')
-                
                 _myFun = compile(tmp, '', 'exec')
                 vGlobals = {"__builtins__": None, 'len': len, 'dict':dict, 'list': list, 'ord':ord, 'range':range, 'str':str, 'max':max, 'hex':hex}
                 vLocals = { 'zaraza': '' }
@@ -359,6 +363,7 @@ class SolarMovie(CBaseHostClass):
         
     def getVideoLinks(self, videoUrl):
         printDBG("SolarMovie.getVideoLinks [%s]" % videoUrl)
+        baseUrl = videoUrl
         videoUrl = strwithmeta(videoUrl)
         urlTab = []
         
@@ -375,16 +380,19 @@ class SolarMovie(CBaseHostClass):
         #if not sts: return []
         #cookieItem = self.uncensored(data)
         
-        id = videoUrl.meta.get('id', '')
         params = dict(self.defaultParams)
         params['header'] = dict(self.AJAX_HEADER)
         params['header']['Referer'] = str(videoUrl)
         #params['cookie_items'] = cookieItem
         
-        sts, data = self.getPage(videoUrl, params)
-        if not sts: return []
+        sts, data = self.getPage(videoUrl[:videoUrl.rfind('/')], params)
+        if sts: timestamp = self.cm.ph.getSearchGroups(data, '''data-ts=['"]([0-9]+?)['"]''')[0]
+        else: timestamp = ''
         
-        timestamp = self.cm.ph.getSearchGroups(data, '''data-ts=['"]([0-9]+?)['"]''')[0]
+        if timestamp == '': 
+            sts, data = self.getPage(videoUrl, params)
+            if not sts: return []
+            timestamp = self.cm.ph.getSearchGroups(data, '''data-ts=['"]([0-9]+?)['"]''')[0]
 
         getParams = {'ts':timestamp, 'id':videoUrl.meta.get('id', ''), 'Q':'1'}
         getParams = self._updateParams(getParams)
@@ -395,7 +403,7 @@ class SolarMovie(CBaseHostClass):
         m = "++++++++++++++++++++++++++++++++"
         printDBG('%s\n%s\n%s' % (m, data, m))
         
-        getParams = {'ts':timestamp, 'id':videoUrl.meta.get('id', ''), 'update':'0'}
+        getParams = {'ts':timestamp, 'id':videoUrl.meta.get('id', ''), 'server':videoUrl.meta.get('server_id', ''), 'update':'0'}
         getParams = self._updateParams(getParams)
         
         url = self.getFullUrl('/ajax/episode/info?' + urllib.urlencode(getParams))
@@ -435,7 +443,7 @@ class SolarMovie(CBaseHostClass):
             printExc()
 
         if self.cm.isValidUrl(videoUrl) and 0 == len(urlTab):
-            urlTab = self.up.getVideoLinkExt(videoUrl)
+            urlTab = self.up.getVideoLinkExt(strwithmeta(videoUrl, {'Referer':baseUrl}))
         
         if self.cm.isValidUrl(subTrack):
             format = subTrack[-3:]

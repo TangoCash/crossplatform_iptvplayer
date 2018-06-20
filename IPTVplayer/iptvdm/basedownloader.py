@@ -54,6 +54,9 @@ class BaseDownloader:
         
     def getName(self):
         return "Base"
+        
+    def getMimeType(self):
+        return None
 
     def getStatus(self):
         return self.status

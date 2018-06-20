@@ -87,65 +87,15 @@ class VideoPenny(CBaseHostClass):
         
     def selectDomain(self):                
         self.MAIN_URL = 'http://videopenny.net/'
-        self.MAIN_CAT_TAB = [{'category':'list_series',         'title': 'Seriale',           'url':self.getFullUrl('?s=')},
-                             {'category':'list_programs',       'title': 'Programy online',   'url':self.getFullUrl('category/programy-rozrywkowe/')},
-                             {'category':'list_sort_filter',    'title': 'Filmy',             'url':self.getFullUrl('/category/filmy-pl/')},
-                             {'category':'list_sort_filter',    'title': 'Bajki',             'url':self.getFullUrl('/category/bajki/')},
-                             {'category':'list_last',           'title': 'Ostatnio dodane',   'url':self.getFullUrl('/new-header/')},
+        self.MAIN_CAT_TAB = [{'category':'list_sort_filter',    'title': 'Seriale',           'url':self.getFullUrl('/kategoria-2/seriale-pl'),           'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Seriale-tv.png')},
+                             {'category':'list_sort_filter',    'title': 'Programy online',   'url':self.getFullUrl('/kategoria-2/programy-rozrywkowe'),  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Programy-online.png')},
+                             {'category':'list_sort_filter',    'title': 'Filmy',             'url':self.getFullUrl('/category/filmy-pl/'),               'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Filmy.png')},
+                             {'category':'list_sort_filter',    'title': 'Bajki',             'url':self.getFullUrl('/category/bajki/'),                  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Bajki-tv.png')},
+                             {'category':'list_last',           'title': 'Ostatnio dodane',   'url':self.getFullUrl('/ostatnio-dodane/')},
                              
                              {'category':'search',          'title': _('Search'), 'search_item':True, },
                              {'category':'search_history',  'title': _('Search history'),             } 
                             ]
-    
-    def _listTitles(self, cItem, nextCategory, cacheTab, m1, m2, idx):
-        printDBG("VideoPenny._listTitles")
-        
-        if 0 == len(cacheTab):
-            uniqueTab = []
-            
-            sts, data = self.getPage(cItem['url'])
-            if not sts: return
-            data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2)[1]
-            
-            #if idx == 0: url = 'http://textuploader.com/d0rjd/raw'
-            #else: url = 'http://textuploader.com/d0rjr/raw'
-            #sts, data = self.cm.getPage(url)
-            #if not sts: return False 
-            #data = base64.b64decode(data)
-            
-            allItem = None
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li ', '</li>')
-            for item in data:
-                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
-                if not self.cm.isValidUrl(url): continue
-                if url in uniqueTab: continue
-                
-                title = self.cleanHtmlStr(item)
-                params = {'title':title, 'tilte_norm':title.upper(), 'url':url}
-                if 'OSTATNIO DODANE' in params['tilte_norm']:
-                    printDBG("Skip item[%s]" % params)
-                    continue
-                uniqueTab.append(url)
-                if None == allItem and params['tilte_norm'].startswith('WSZYSTKIE'):
-                    allItem = params
-                else:
-                    cacheTab.append(params)
-            cacheTab.sort(key=lambda item: item['tilte_norm'])#, reverse=True)
-            if allItem != None:
-                cacheTab.insert(0, allItem)
-                
-        for item in cacheTab:
-            params = dict(cItem)
-            params.update({'good_for_fav':True, 'title':item['title'], 'url':item['url'], 'category':nextCategory})
-            self.addDir(params)
-    
-    def listSeries(self, cItem, nextCategory):
-        printDBG("VideoPenny.listSeries")
-        self._listTitles(cItem, nextCategory, self.cacheSeries, 'menu-popularne-container', '<footer', 0)
-            
-    def listPrograms(self, cItem, nextCategory):
-        printDBG("VideoPenny.listPrograms")
-        self._listTitles(cItem, nextCategory, self.cachePrograms, 'class="sub-menu"', '</ul>', 1)
             
     def listSortFilters(self, cItem, nextCategory):
         printDBG("VideoPenny.listSortFilters")
@@ -163,7 +113,7 @@ class VideoPenny(CBaseHostClass):
             params.update({'good_for_fav':False, 'title':title, 'url':url, 'category':nextCategory})
             self.addDir(params)
                 
-    def listItems(self, cItem, search=False):
+    def listItems(self, cItem, nextCategory=None):
         printDBG("VideoPenny.listItems")
         
         uniqueTab = []
@@ -178,7 +128,6 @@ class VideoPenny(CBaseHostClass):
         
         data = self.cm.ph.getDataBeetwenMarkers(data, 'listing-content', '</section>')[1]
         data = data.split('<div id="post')
-        #data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div id="post', '<div class="clearfix">')
         for item in data:
             if 'item-head"' not in item: continue
             
@@ -187,36 +136,40 @@ class VideoPenny(CBaseHostClass):
             title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3>', '</h3>')[1])
             if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0])
             icon  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''data-lazy-src=['"]([^'^"]+?)['"]''')[0])
+            if icon == '': icon = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^'^"]+?)['"]''')[0])
             desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</p>')[1])
-            
-            if search and page == 1 and ('/seriale' in url or '/programy' in url):
-                dirUrl = url
-                if dirUrl.endswith('/'): dirUrl = dirUrl[:-1]
-                dirUrl = '/'.join(dirUrl.split('/')[:-1])
-                if dirUrl not in uniqueTab and dirUrl != cItem['url']:
-                    uniqueTab.append(dirUrl)
-                    dirsTab.append({'title':title.split('odc.')[0], 'url':dirUrl, 'icon':icon, 'desc':desc})
             
             params = dict(cItem)
             params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
-            self.addVideo(params)
-        
-        printDBG("|||||||||||||||||||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s" % uniqueTab)
-        
-        tmpList = []
-        for item in dirsTab:
-            params = dict(cItem)
-            params.update(item)
-            params.update({'good_for_fav':True, 'category':'list_items'})
-            tmpList.append(params)
-        tmpList.extend(self.currList)
-        self.currList = tmpList
+            if nextCategory != None and ('/seriale' in url or '/programy' in url) and not cItem.get('was_explored', False):
+                params['category'] = nextCategory
+                self.addDir(params)
+            else:
+                self.addVideo(params)
         
         if self.cm.isValidUrl(nextPage):
             params = dict(cItem)
             params.update({'good_for_fav':False, 'title':_('Next page'), 'url':nextPage, 'page':page+1})
             self.addDir(params)
             
+    def exploreItem(self, cItem, nextCategory):
+        printDBG("VideoPenny.exploreItem")
+        
+        params = dict(cItem)
+        self.addVideo(params)
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'breadcrumbs'), ('</div', '>'))[1]
+        data = self.cm.ph.rgetDataBeetwenNodes(data, ('</a', '>'), ('<a', '>'))[1]
+        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''\shref=['"]([^'^"]+?)['"]''')[0])
+        title = self.cleanHtmlStr(data)
+        if url != '':
+            params = dict(cItem)
+            params.update({'title':title, 'url':url, 'category':nextCategory, 'was_explored':True})
+            self.addDir(params)
+        
     def listLast(self, cItem, nextCategory):
         printDBG("VideoPenny.listLast")
         self.cacheLast = {}
@@ -230,7 +183,7 @@ class VideoPenny(CBaseHostClass):
         for section in data:
             sectionTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(section, '<h2', '</h2>')[1])
             if sectionTitle == '': sectionTitle = 'Inne'
-            section = section.split('<div class="video-item format-video">')
+            section = section.split('<div class="video-item format')
             if len(section): del section[0]
             itemsTab = []
             for item in section:
@@ -239,6 +192,7 @@ class VideoPenny(CBaseHostClass):
                 title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<h3>', '</h3>')[1])
                 if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''title=['"]([^'^"]+?)['"]''')[0])
                 icon  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''data-lazy-src=['"]([^'^"]+?)['"]''')[0])
+                if icon == '': icon = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^'^"]+?)['"]''')[0])
                 desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p>', '</p>')[1])
                 itemsTab.append({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
             
@@ -263,7 +217,7 @@ class VideoPenny(CBaseHostClass):
         
         cItem = dict(cItem)
         cItem['url'] = self.getFullUrl('page/%s/?s=%s' % (page, urllib.quote_plus(searchPattern)))
-        self.listItems(cItem, True)
+        self.listItems(cItem, 'explore_item')
     
     def getLinksForVideo(self, cItem):
         printDBG("VideoPenny.getLinksForVideo [%s]" % cItem)
@@ -272,7 +226,9 @@ class VideoPenny(CBaseHostClass):
         if not sts: return []
         
         urlTab = []
-        data = self.cm.ph.getDataBeetwenMarkers(data, 'player-embed', '</div>')[1]
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, 'player-embed', '</div>')[1]
+        tmp += '\n'.join(self.cm.ph.getAllItemsBeetwenNodes(data, ('<', '>', 'multilink'), ('</a', '>')))
+        data = tmp
         printDBG(data)
         tmp = re.compile('''['"](\s*https?://[^"^']+?)\s*['"]''').findall(data)
         printDBG(tmp)
@@ -348,18 +304,16 @@ class VideoPenny(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
-        elif category == 'list_series':
-            self.listSeries(self.currItem, 'list_sort_filter')
-        elif category == 'list_programs':
-            self.listPrograms(self.currItem, 'list_sort_filter')
         elif category == 'list_sort_filter':
             self.listSortFilters(self.currItem, 'list_items')
         elif category == 'list_items':
-            self.listItems(self.currItem)
+            self.listItems(self.currItem, 'explore_item')
         elif category == 'list_last':
             self.listLast(self.currItem, 'list_last_items')
         elif category == 'list_last_items':
             self.listLastItems(self.currItem)
+        elif category == 'explore_item':
+            self.exploreItem(self.currItem, 'list_sort_filter')
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)

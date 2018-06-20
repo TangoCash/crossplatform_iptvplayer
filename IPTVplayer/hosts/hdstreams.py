@@ -265,19 +265,20 @@ class HDStreams(CBaseHostClass):
             linksKey = cItem['url']
             
             linksTab = []
-            data = self.cm.ph.getDataBeetwenMarkers(data, '<v-tabs-items>', '</v-tabs-items>')[1]
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<v-tabs-content', '</v-tabs-content>')
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<v-tab-item', '</v-tab-item>')
+            flagsReObj = re.compile('''<i[\s>].+?</i>''', flags=re.DOTALL)
             for langItem in data:
-                langId = self.cm.ph.getSearchGroups(langItem, '''id=['"]['"]?([^'^"]+?)['"]''')[0][1:]
+                langId = self.cm.ph.getSearchGroups(langItem, '''key=["']*?([^'^"]+?)["']''')[0][1:]
                 langItem = self.cm.ph.getAllItemsBeetwenMarkers(langItem, '<v-flex', '</v-flex>')
                 for qualityItem in langItem:
-                    qualityItem = self.cm.ph.getAllItemsBeetwenMarkers(qualityItem, '<v-btn', '</v-btn>')
-                    if len(qualityItem) and 'loadStream' not in qualityItem[0]: qualityName = self.cleanHtmlStr(qualityItem[0])
+                    qualityName = self.cm.ph.getDataBeetwenMarkers(qualityItem, '<v-btn', '</v-btn>')[1]
+                    qualityItem = self.cm.ph.getAllItemsBeetwenMarkers(qualityItem, '<v-tooltip', '</v-tooltip>')
+                    if 'recaptcha' not in qualityName: qualityName = self.cleanHtmlStr(qualityName)
                     else: qualityName = ''
                     for linkItem in qualityItem:
-                        tmp = self.cm.ph.getSearchGroups(linkItem, '''loadStream\(\s*['"]([^'^"]+?)['"]\s*,\s*['"]([^'^"]+?)['"]''', 2)
+                        tmp = self.cm.ph.getSearchGroups(linkItem, '''recaptcha\(\s*['"]([^'^"]+?)['"]\s*,\s*['"]([^'^"]+?)['"],\s*['"]([^'^"]+?)['"]''', 3)
                         if '' in tmp: continue
-                        name = self.cleanHtmlStr(re.sub('''<i.+?</i>''', '', linkItem, flags=re.DOTALL))
+                        name = self.cleanHtmlStr(flagsReObj.sub('', linkItem))
                         name = '[%s][%s] %s' % (langId, qualityName, name)
                         url = strwithmeta(cItem['url'], {'links_key':linksKey, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':langId}})
                         linksTab.append({'name':name, 'url':url, 'need_resolve':1})
@@ -289,8 +290,8 @@ class HDStreams(CBaseHostClass):
                 self.addVideo(params)
         else:
             sNum = self.cm.ph.getSearchGroups(cItem['url'] + '/', 'season/([0-9]+?)[^0-9]')[0]
-            sp = re.compile('''<v\-avatar[^>]*?>''')
-            data = self.cm.ph.getDataBeetwenReMarkers(data, sp, re.compile('</v\-layout>'), False)[1]
+            data = self.cm.ph.getDataBeetwenNodes(data, ('<v-layout', '>', 'episode'), ('</v-layout', '>'))[1]
+            sp = re.compile('''<div[^>]+?avatar[^>]*?>''')
             data = sp.split(data)
             for episodeItem in data:
                 eIcon = self.cm.ph.getSearchGroups(episodeItem, '''src=['"]([^'^"]+?)['"]''')[0]
@@ -320,6 +321,19 @@ class HDStreams(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("HDStreams.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
+        if searchType == 'movies':
+            movies = 'true'
+            series = 'false'
+            keys = ['movies']
+        elif searchType == 'series':
+            movies = 'false'
+            series = 'true'
+            keys = ['seasons']
+        else:
+            movies = 'false'
+            series = 'true'
+            keys = ['movies', 'seasons']
+        
         url = self.getFullUrl('/home')
         sts, data = self.getPage(url)
         if not sts: return
@@ -332,21 +346,25 @@ class HDStreams(CBaseHostClass):
         urlParams['header']['x-requested-with'] = 'XMLHttpRequest'
         
         url = self.getFullUrl('/search')
-        query = urllib.urlencode({'q':searchPattern})
+        query = urllib.urlencode({'q':searchPattern, 'movies':movies, 'seasons':series, 'didyoumean':'true', 'actors':'false'})
         sts, data = self.getPage(url+'?'+query, urlParams)
         if not sts: return
         
         printDBG(data)
         
         try:
-            data = byteify(json.loads(data))
-            for item in data:
-                url = self.getFullUrl(item['url'])
-                icon = self.getFullIconUrl(item['src'])
-                title = self.cleanHtmlStr(item['title'])
-                params = dict(cItem)
-                params.update({'good_for_fav':True, 'category':'explore_item', 'title':title, 'url':url, 'icon':icon})
-                self.addDir(params)
+            
+            data = byteify(json.loads(data), '', True)
+            for key in keys:
+                for item in data[key]:
+                    icon  = self.getFullIconUrl(item.get('src', ''))
+                    url = self.getFullUrl(item.get('url', ''))
+                    if url == '': continue
+                    title = self.cleanHtmlStr(item.get('title', ''))
+                    desc = self.cleanHtmlStr(item.get('original_title', ''))
+                    params = dict(cItem)
+                    params.update({'good_for_fav':True, 'category':'explore_item', 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+                    self.addDir(params)
         except Exception:
             printExc()
         
@@ -388,9 +406,13 @@ class HDStreams(CBaseHostClass):
         urlParams['header']['x-csrf-token'] = self.cm.ph.getSearchGroups(data, '''<[^>]+?csrf-token[^>]+?content=['"]([^'^"]+?)['"]''')[0]
         urlParams['header']['x-xsrf-token'] = self.cm.getCookieItem(self.COOKIE_FILE, 'XSRF-TOKEN')
         urlParams['header']['x-requested-with'] = 'XMLHttpRequest'
+        urlParams['ignore_http_code_ranges'] = [(401, 401)]
         
         sts, data = self.getPage(videoUrl + '/stream', urlParams, post_data)
         if not sts: return []
+        
+        if 'captcha' in data.lower():
+            SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.')) 
         
         try:
             printDBG(data)
@@ -505,6 +527,12 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, HDStreams(), True, [])
+        
+    def getSearchTypes(self):
+        searchTypesOptions = []
+        searchTypesOptions.append((_("Movies"), "movies"))
+        searchTypesOptions.append((_("Series"), "series"))
+        return searchTypesOptions
     
     def withArticleContent(self, cItem):
         if 'video' == cItem.get('type', '') or 'explore_item' == cItem.get('category', ''):

@@ -532,6 +532,8 @@ class KinomanCO(CBaseHostClass):
         
     def getLinksForVideo(self, cItem):
         printDBG("KinomanCO.getLinksForVideo [%s]" % cItem)
+        self.tryTologin()
+        
         retTab = []
         if 1 == self.up.checkHostSupport(cItem.get('url', '')):
             videoUrl = cItem['url'].replace('youtu.be/', 'youtube.com/watch?v=')
@@ -578,6 +580,8 @@ class KinomanCO(CBaseHostClass):
         
     def getVideoLinks(self, videoUrl):
         printDBG("KinomanCO.getVideoLinks [%s]" % videoUrl)
+        self.tryTologin()
+        
         videoUrl = strwithmeta(videoUrl)
         urlTab = []
         
@@ -641,6 +645,7 @@ class KinomanCO(CBaseHostClass):
                             item['title'] = _('Answer')
                             item['input']['text'] = ''
                             params['list'].append(item)
+                            params['vk_params'] = {'invert_letters_case':True}
                 
                             ret = 0
                             retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
@@ -651,6 +656,11 @@ class KinomanCO(CBaseHostClass):
                                 self.defaultParams['header']['x-captcha-challenge'] = KinomanCO.CAPTCHA_CHALLENGE
                                 continue
                             break
+                    elif 'x-user-token' not in httpParams['header'] and '_user_token' in data:
+                        msg = _('The host %s requires registration. \nPlease fill your login and password in the host configuration. Available under blue button.' % self.getMainUrl())
+                        SetIPTVPlayerLastHostError(msg)
+                    else:
+                        SetIPTVPlayerLastHostError(_('Unknown server response: "%s"') % data)
                 else:
                     SetIPTVPlayerLastHostError(_('Network connection failed.'))
                 break
@@ -674,7 +684,7 @@ class KinomanCO(CBaseHostClass):
                 except Exception:
                     printExc()
             if directLink:
-                urlTab.append({'name':'direct_link', 'url':videoUrl})
+                urlTab.append({'name':'direct_link', 'url':strwithmeta(videoUrl, {})})
             else:
                 urlTab = self.up.getVideoLinkExt(videoUrl)
         
@@ -682,10 +692,14 @@ class KinomanCO(CBaseHostClass):
         
     def getArticleContent(self, cItem):
         printDBG("KinomanCO.getArticleContent [%s]" % cItem)
+        self.tryTologin()
         retTab = []
         
         otherInfo = {}
         
+        title = ''
+        desc = ''
+        icon = ''
         try:
             type = cItem.get('f_type', '')
             printDBG('> > > > type[%s]' % type)
@@ -722,11 +736,12 @@ class KinomanCO(CBaseHostClass):
             tmp = data['media_rate']['imdb_rate']
             if tmp != '': otherInfo['imdb_rating'] = '%s/10' % (data['media_rate']['imdb_rate'])
             
-            if title == '': title = cItem['title']
-            if desc == '':  desc = cItem.get('desc', '')
-            if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         except Exception:
             printExc()
+            
+        if title == '': title = cItem['title']
+        if desc == '':  desc = cItem.get('desc', '')
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
     
@@ -740,7 +755,7 @@ class KinomanCO(CBaseHostClass):
         self.login = config.plugins.iptvplayer.kinomanco_login.value
         self.password = config.plugins.iptvplayer.kinomanco_password.value
         
-        self.defaultParams.pop('x-user-token', None)
+        self.defaultParams['header'].pop('x-user-token', None)
         self.logginInfo = ''
         self.isVip = False
         
@@ -762,7 +777,7 @@ class KinomanCO(CBaseHostClass):
             try:
                 data = byteify(json.loads(data), '', True)
                 if not isinstance(data, str):
-                    self.defaultParams['x-user-token'] = data['token']
+                    self.defaultParams['header']['x-user-token'] = data['token']
                     self.loggedIn = True
                     logginInfo = []
                     logginInfo.append(self._('Points') + '\t' + data['points'])

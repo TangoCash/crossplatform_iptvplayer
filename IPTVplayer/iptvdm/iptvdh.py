@@ -9,7 +9,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetPluginDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetPluginDir, IsExecutable
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import enum
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 ###################################################
@@ -76,9 +76,11 @@ class DMHelper:
                      {'marker':'X-Playback-Session-Id=',           'name':'X-Playback-Session-Id'},
                      {'marker':'If-Modified-Since=','name':'If-Modified-Since'},
                      {'marker':'If-None-Match=',    'name':'If-None-Match'},
-                     {'marker':'X-Forwarded-For=',  'name':'X-Forwarded-For'}]
+                     {'marker':'X-Forwarded-For=',  'name':'X-Forwarded-For'},
+                     {'marker':'Authorization=',    'name':'Authorization'},
+                     ]
                      
-    HANDLED_HTTP_HEADER_PARAMS = ['Host', 'Accept', 'Cookie', 'Referer', 'User-Agent', 'Range', 'Orgin', 'Origin', 'X-Playback-Session-Id', 'If-Modified-Since', 'If-None-Match', 'X-Forwarded-For']
+    HANDLED_HTTP_HEADER_PARAMS = ['Host', 'Accept', 'Cookie', 'Referer', 'User-Agent', 'Range', 'Orgin', 'Origin', 'X-Playback-Session-Id', 'If-Modified-Since', 'If-None-Match', 'X-Forwarded-For', 'Authorization']
     IPTV_DOWNLOADER_PARAMS = ['iptv_wget_continue', 'iptv_wget_timeout', 'iptv_wget_waitretry']
     
     @staticmethod
@@ -96,6 +98,13 @@ class DMHelper:
     @staticmethod
     def GET_HLSDL_PATH():
         return config.plugins.iptvplayer.hlsdlpath.value
+        
+    @staticmethod
+    def GET_FFMPEG_PATH():
+        altFFMPEGPath = '/iptvplayer_rootfs/usr/bin/ffmpeg'
+        if IsExecutable(altFFMPEGPath):
+            return altFFMPEGPath
+        return "ffmpeg"
     
     @staticmethod
     def GET_RTMPDUMP_PATH():
@@ -257,6 +266,9 @@ class DMHelper:
         wgetContinue = ''
         if downloaderParams.get('iptv_wget_continue', False):
             wgetContinue = ' -c --timeout=%s --waitretry=%s ' % (downloaderParams.get('iptv_wget_timeout', 30), downloaderParams.get('iptv_wget_waitretry', 1))
+        
+        if 'start_pos' in downloaderParams:
+            wgetContinue = ' --start-pos=%s ' % downloaderParams['start_pos']
             
         cmd = DMHelper.GET_WGET_PATH() + wgetContinue + defaultHeader + ' --no-check-certificate ' + headerOptions + proxyOptions
         printDBG("getBaseWgetCmd return cmd[%s]" % cmd)

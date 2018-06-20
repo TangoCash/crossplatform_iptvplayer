@@ -42,18 +42,18 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://moovie.cc/'
+    return 'https://moovie.cc/'
 
 class MoovieCC(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'moovie.cc', 'cookie':'moovie.cc.cookie', 'cookie_type':'MozillaCookieJar'})
-        self.DEFAULT_ICON_URL = 'http://www.moovie.cc/images/logo.png'
+        CBaseHostClass.__init__(self, {'history':'moovie.cc', 'cookie':'moovie.cc.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        self.DEFAULT_ICON_URL = 'https://moovie.cc/images/logo.png'
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'http://www.moovie.cc/'
+        self.MAIN_URL = 'https://moovie.cc/'
         self.cacheLinks    = {}
         self.cacheSortOrder = []
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -311,11 +311,15 @@ class MoovieCC(CBaseHostClass):
             params.update({'good_for_fav': False, 'title':title, 'prev_title':cItem['title'], 'url':url, 'prev_url':cItem['url'], 'prev_desc':cItem.get('desc', ''), 'icon':icon, 'desc':desc})
             self.addVideo(params)
         
-        sourcesLink = self.cm.ph.getDataBeetwenMarkers(data, '<div class="streamBtn"', '</div>', caseSensitive=False)[1]
+        sourcesLink = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'streamBtn'), ('</div', '>'), caseSensitive=False)[1]
         sourcesLink = self.cm.ph.getSearchGroups(sourcesLink, '''href=['"](https?://[^'^"]+?)['"]''')[0]
         if not self.cm.isValidUrl(sourcesLink):
             printDBG("MoovieCC.exploreItem - missing link for sources")
             return
+        
+        tmp = urllib.unquote(sourcesLink)
+        tmp = self.cm.ph.getSearchGroups(tmp[1:], '''(https?://.+)''')[0]
+        if tmp != '': sourcesLink = tmp
         
         sts, data = self.getPage(sourcesLink)
         if not sts: return []

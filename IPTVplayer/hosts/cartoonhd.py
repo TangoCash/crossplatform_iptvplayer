@@ -47,7 +47,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://cartoonhd.in/'
+    return 'https://cartoonhd.io/'
 
 class CartoonHD(CBaseHostClass):
  
@@ -56,7 +56,7 @@ class CartoonHD(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None
-        self.DEFAULT_ICON_URL = 'https://cartoonhd.in/templates/cartoonhd/assets/images/logochd.png'
+        self.DEFAULT_ICON_URL = 'https://cartoonhd.io/templates/cartoonhd/assets/images/logochd.png'
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
@@ -69,7 +69,7 @@ class CartoonHD(CBaseHostClass):
         
 
     def selectDomain(self):
-        domain = 'https://cartoonhd.in/'
+        domain = 'https://cartoonhd.io/'
         try:
             params = dict(self.defaultParams)
             params['return_data'] = False
@@ -83,12 +83,15 @@ class CartoonHD(CBaseHostClass):
             printExc()
         if self.MAIN_URL == None:
             self.MAIN_URL = domain
-            
-        self.MAIN_CAT_TAB = [{'category':'new',             'title': 'New',       'url':self.getMainUrl()},
-                             {'category':'list_genres',     'title': 'Movies',    'url':self.getFullUrl('/full-movies')},
-                             {'category':'list_genres',     'title': 'TV shows',  'url':self.getFullUrl('/tv-shows')},
-                             {'category':'search',          'title': _('Search'), 'search_item':True},
-                             {'category':'search_history',  'title': _('Search history')} ]
+        
+    def listMainMenu(self, cItem):
+        if self.MAIN_URL == None: return
+        MAIN_CAT_TAB = [{'category':'new',             'title': 'Featured',  'url':self.getMainUrl()},
+                        {'category':'list_genres',     'title': 'Movies',    'url':self.getFullUrl('/full-movies')},
+                        {'category':'list_genres',     'title': 'TV shows',  'url':self.getFullUrl('/tv-shows')},
+                        {'category':'search',          'title': _('Search'), 'search_item':True},
+                        {'category':'search_history',  'title': _('Search history')} ]
+        self.listsTab(MAIN_CAT_TAB, cItem)
     
     def _getToken(self, data):
         torName = self.cm.ph.getSearchGroups(data, "var token[\s]*=([^;]+?);")[0].strip()
@@ -127,7 +130,7 @@ class CartoonHD(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<a>New</a>', '</ul>')[1]
+        data = self.cm.ph.getDataBeetwenMarkers(data, '<a>Featured</a>', '</ul>')[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:
             url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
@@ -168,7 +171,7 @@ class CartoonHD(CBaseHostClass):
                 if title != '': break
             if url.startswith('http'):
                 params = {'title':title, 'url':url, 'desc':desc, 'icon':icon}
-                if '/show/' in url and '/episode/' not in url:
+                if '/series/' in url and '/episode/' not in url:
                     params['category'] = nextCategory
                     params2 = dict(cItem)
                     params2.update(params)
@@ -338,7 +341,7 @@ class CartoonHD(CBaseHostClass):
         sts, jsUrl = self.cm.getPage(jsUrl, self.defaultParams)
         if not sts: return []
         
-        jsUrl = self.cm.ph.getSearchGroups(jsUrl, '''['"]([^'^"]*?/ajax/[^'^"]*?embed[^'^"]*?)['"]''')[0]
+        jsUrl = self.cm.ph.getSearchGroups(jsUrl.split('getEpisodeEmb', 1)[-1], '''['"]([^'^"]*?/ajax/[^'^"]+?)['"]''')[0]
         printDBG("jsUrl [%s]" % jsUrl)
         if jsUrl == '': return []
         
@@ -377,7 +380,7 @@ class CartoonHD(CBaseHostClass):
         
         #httpParams['header']['Cookie'] = '%s=%s; PHPSESSID=%s; flixy=%s;'% (elid, urllib.quote(encElid), getCookieItem('PHPSESSID'), getCookieItem('flixy'))
         for url in requestLinks:
-            post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid)}
+            post_data = {'action':type, 'idEl':elid, 'token':tor, 'elid':urllib.quote(encElid), 'nopop':''}
             sts, data = self.cm.getPage(url, httpParams, post_data)
             if not sts: continue
             printDBG('===============================================================')
@@ -485,7 +488,7 @@ class CartoonHD(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.selectDomain()
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+            self.listMainMenu({'name':'category'})
         elif category == 'new':
             self.listNewCategory(self.currItem, 'list_items')
         elif category == 'list_genres':

@@ -166,7 +166,7 @@ class WizjaTvApi(CBaseHostClass):
                         rtmp = 'rtmp://' + urlTab[0] + '/' + urlTab[1] + '?' + urlTab[3] + \
                                ' playpath=' + urlTab[2] + '?' + urlTab[3] + \
                                ' app=' + urlTab[1] + '?' + urlTab[3] + \
-                               ' swfVfy=1 flashver=WIN\\2020,0,0,306 swfUrl=http://wizja.tv/player/StrobeMediaPlayback_v3.swf live=1 token=fake pageUrl=' + cItem['url']
+                               ' swfVfy=1 flashVer=WIN\\2020,0,0,306 swfUrl=http://wizja.tv/player/StrobeMediaPlayback_v3.swf live=1 token=fake pageUrl=' + cItem['url']
                         urlsTab.append({'name':'rtmp', 'url':rtmp})
                     elif self.cm.isValidUrl(killUrl):
                         sts, tmp = self.cm.getPage(killUrl, params)
