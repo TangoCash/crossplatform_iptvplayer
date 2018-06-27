@@ -3,10 +3,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -31,8 +29,6 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 
 ###################################################
 # Config options for HOST
-###################################################
-config.plugins.iptvplayer.movieshdco_sortby = ConfigSelection(default = "date", choices = [("date", _("Lastest")), ("views", _("Most viewed")), ("duree", _("Longest")), ("rate", _("Top rated")), ("random", _("Tandom"))]) 
 
 def GetConfigList():
     optionList = []
@@ -99,8 +95,7 @@ class OipeiratesOnline(CBaseHostClass):
                 except Exception:
                     printExc()
                 
-        MAIN_CAT_TAB = [#{'category':'movies',         'mode':'movies',     'title': 'Ταινιες',      'url':'',                                 },
-                        {'category':'search',          'title': _('Search'), 'search_item':True},
+        MAIN_CAT_TAB = [{'category':'search',          'title': _('Search'), 'search_item':True},
                         {'category':'search_history',  'title': _('Search history')} ]
         self.listsTab(MAIN_CAT_TAB, cItem)
     
@@ -109,7 +104,7 @@ class OipeiratesOnline(CBaseHostClass):
         try:
             cTree = cItem['c_tree']
             for item in cTree['list']:
-                title = self.cleanHtmlStr(item['dat']) #self.cm.ph.getDataBeetwenNodes(item['dat'], ('<div', '>', 'title'), ('</div', '>'))[1]
+                title = self.cleanHtmlStr(item['dat'])
                 url   = self.getFullUrl(self.cm.ph.getSearchGroups(item['dat'], '''href=['"]([^'^"]+?)['"]''')[0])
                 if 'facebook' in url:
                     break
@@ -270,9 +265,8 @@ class OipeiratesOnline(CBaseHostClass):
                 if idx > -1:
                     idx += len(match.group(0))
                     item = linksData[prevIdx:idx]
-                else: item = linksData[prevIdx:]
-                printDBG("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$: [%s:%s]" % (prevIdx, idx))
-                printDBG(item)
+                else:
+                    item = linksData[prevIdx:]
                 
                 seasonID = item.find('<')
                 if seasonID < 0: continue
@@ -372,21 +366,6 @@ class OipeiratesOnline(CBaseHostClass):
         if t != '' and t != title: otherInfo['alternate_title'] = t
         if icon == '': icon = cItem['icon']
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
-    
-    def getFavouriteData(self, cItem):
-        printDBG('OipeiratesOnline.getFavouriteData')
-        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem['icon']}
-        return json.dumps(params) 
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('OipeiratesOnline.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -399,6 +378,7 @@ class OipeiratesOnline(CBaseHostClass):
         
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
+        self.currItem = dict(self.currItem)
         self.currItem.pop('good_for_fav', None)
         
     #MAIN MENU

@@ -97,14 +97,15 @@ class TvpVod(CBaseHostClass):
                     {'category':'search',          'title':_('Search'), 'search_item':True},
                     {'category':'search_history',  'title':_('Search history')} ]
                     
-    STREAMS_CAT_TAB = [{'icon':DEFAULT_ICON_URL, 'category':'tvp3_streams', 'title':'TVP 3',     'url':'http://tvpstream.tvp.pl/', 'icon':'http://ncplus.pl/~/media/n/npl/kanaly/logo%20na%20strony%20kanalow/tvp3.png?bc=white&w=480'},
-                       {'icon':DEFAULT_ICON_URL, 'category':'week_epg',     'title':'TVP SPORT', 'url':STREAMS_URL_TEMPLATE,       'icon':'https://upload.wikimedia.org/wikipedia/commons/9/9d/TVP_Sport_HD_Logo.png'},
+    STREAMS_CAT_TAB = [{'category':'tvp3_streams',     'title':'TVP 3',                   'url':'http://tvpstream.tvp.pl/',       'icon':'http://ncplus.pl/~/media/n/npl/kanaly/logo%20na%20strony%20kanalow/tvp3.png?bc=white&w=480'},
+                       {'category':'week_epg',         'title':'TVP SPORT',               'url':STREAMS_URL_TEMPLATE,             'icon':'https://upload.wikimedia.org/wikipedia/commons/9/9d/TVP_Sport_HD_Logo.png'},
+                       {'category':'tvpsport_streams', 'title':'Transmisje sport.tvp.pl', 'url':'http://sport.tvp.pl/transmisje', 'icon':'https://upload.wikimedia.org/wikipedia/commons/9/9d/TVP_Sport_HD_Logo.png'},
                       ]
     
     def __init__(self):
         printDBG("TvpVod.__init__")
         CBaseHostClass.__init__(self, {'history':'TvpVod', 'cookie':'tvpvod.cookie', 'cookie_type':'MozillaCookieJar', 'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.tvpVodProxyEnable.value})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':TvpVod.HTTP_HEADERS}
+        self.defaultParams = {'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':TvpVod.HTTP_HEADERS}
         self.loggedIn = None
         self.fixUrlMap = {'nadobre.tvp.pl':        'http://vod.tvp.pl/8514270/na-dobre-i-na-zle',
                           'mjakmilosc.tvp.pl':     'http://vod.tvp.pl/1654521/m-jak-milosc',
@@ -272,6 +273,40 @@ class TvpVod(CBaseHostClass):
                 params.update({'title':title, 'url':'http://tvpstream.tvp.pl/sess/tvplayer.php?object_id=%s&autoplay=true' % id, 'icon':icon, 'desc':desc})
                 self.addVideo(params)
                 
+    def listTVPSportStreams(self, cItem, nextCategory):
+        printDBG("TvpVod.listTVPSportStreams")
+        sts, data = self._getPage(cItem['url'], self.defaultParams)
+        if not sts: return
+        cUrl = self.cm.getBaseUrl(data.meta['url'])
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'epg-broadcasts'), ('</section', '>'), False)[1]
+        data = re.compile('''<div[^>]*?class=['"]date['"][^>]*?>''').split(data)
+        for idx in range(1, len(data), 1):
+            dateTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data[idx], '<span', '</span>')[1])
+            subItems = []
+            tmp = re.compile('''<div[^>]+?class=['"]item(?:\s*playing)?['"][^>]*?>''').split(data[idx])
+            for i in range(1, len(tmp), 1):
+                time = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp[i], ('<span', '>', 'time'), ('</span', '>'), False)[1])
+                desc = []
+                t = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp[i], ('<div', '>', 'category'), ('</div', '>'), False)[1])
+                if t != '': desc.append(t)
+                t = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp[i], ('<div', '>', 'meta'), ('</div', '>'), False)[1])
+                if t != '': desc.append(t)
+                desc = '[/br]'.join(desc)
+                t = self.cm.ph.getDataBeetwenNodes(tmp[i], ('<div', '>', 'title'), ('</div', '>'), False)[1]
+                url = self._getFullUrl(self.cm.ph.getSearchGroups(t, '''<a[^>]+?href=['"]([^'^"]+?)['"]''')[0], cUrl)
+                title = '%s - %s' % (time, self.cleanHtmlStr(t))
+                
+                params = dict(cItem)
+                params.update({'good_for_fav':False, 'title':title, 'url':url, 'desc':desc})
+                if url == '': params['type'] = 'article'
+                else: params['type'] = 'video'
+                subItems.append(params)
+            if len(subItems):
+                params = dict(cItem)
+                params.update({'category':nextCategory, 'good_for_fav':True, 'title':dateTitle, 'sub_items':subItems})
+                self.addDir(params)
+        
     def listWeekEPG(self, cItem, nextCategory):
         printDBG("TvpVod.listWeekEPG")
         urlTemplate = cItem['url']
@@ -607,10 +642,14 @@ class TvpVod(CBaseHostClass):
     def getObjectID(self, url):
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: return ''
-        asset_id = self.cm.ph.getSearchGroups(data, 'object_id=([0-9]+?)[^0-9]')[0]
+        asset_id = self.cm.ph.getSearchGroups(data, '''id=['"]tvplayer\-[0-9]+\-([0-9]+)''')[0]
+        
+        if asset_id == '': asset_id = self.cm.ph.getSearchGroups(data, 'object_id=([0-9]+?)[^0-9]')[0]
         if asset_id == '': asset_id = self.cm.ph.getSearchGroups(data, 'class="playerContainer"[^>]+?data-id="([0-9]+?)"')[0]
-        if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, 'data-video-id="([0-9]+?)"')[0]
+        if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, 'data\-video-\id="([0-9]+?)"')[0]
         if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, "object_id:'([0-9]+?)'")[0]
+        if '' == asset_id: asset_id = self.cm.ph.getSearchGroups(data, 'data\-object\-id="([0-9]+?)"')[0]
+        
         return asset_id
                 
     def getLinksForVideo(self, cItem):
@@ -806,9 +845,9 @@ class TvpVod(CBaseHostClass):
         category = self.currItem.get("category", '')
         printDBG( "TvpVod.handleService: ---------> name[%s], category[%s] " % (name, category) )
         searchPattern = self.currItem.get("search_pattern", searchPattern)
-        self.currList = [] 
-        self.currItem.pop('good_for_fav', None)
+        self.currList = []
         currItem = dict(self.currItem)
+        currItem.pop('good_for_fav', None)
         
         if None != name and  self.currItem.get('desc', '').startswith('Użytkownik'):
             currItem.pop('desc', None)
@@ -824,6 +863,11 @@ class TvpVod(CBaseHostClass):
             self.listWeekEPG(currItem, 'epg_items')
         elif category == 'epg_items':
             self.listEPGItems(currItem)
+            
+        elif category == 'tvpsport_streams':
+            self.listTVPSportStreams(currItem, 'sub_items')
+        elif category == 'sub_items':
+            self.currList = currItem.get('sub_items', [])
     # TVP SPORT
         elif category == 'tvp_sport':    
             self.listTVPSportCategories(currItem, 'tvp_sport_list_items')

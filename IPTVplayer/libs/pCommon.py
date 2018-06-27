@@ -39,6 +39,15 @@ def DecodeGzipped(data):
     f = gzip.GzipFile(fileobj=buf)
     return f.read()
 
+def EncodeGzipped(data):
+    f = StringIO()
+    gzf = gzip.GzipFile(mode="wb", fileobj=f, compresslevel=1)
+    gzf.write(data)
+    gzf.close()
+    encoded = f.getvalue()
+    f.close()
+    return encoded
+
 class NoRedirection(urllib2.HTTPRedirectHandler):
     def http_error_302(self, req, fp, code, msg, headers):
         infourl = urllib.addinfourl(fp, headers, req.get_full_url())

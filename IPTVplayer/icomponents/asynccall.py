@@ -263,10 +263,13 @@ class iptv_execute(object):
     #def __del__(self):
     #    printDBG("iptv_execute.__del__ ---------------------------------")
 
-def iptv_js_execute(jscode):
+def iptv_js_execute(jscode, params={}):
     sts, tmpPath = CreateTmpFile('.iptv_js.js', jscode)
     if sts:
-        cmd =  GetDukPath() + ' ' + tmpPath + ' 2> /dev/null'
+        cmd =  GetDukPath()
+        if 'timeout_sec' in params:
+            cmd += ' -t %s ' % params['timeout_sec']
+        cmd += ' ' + tmpPath + ' 2> /dev/null'
         printDBG("iptv_js_execute cmd[%s]" % cmd)
         ret = iptv_execute()( cmd )
         

@@ -358,8 +358,8 @@ class YesMovies(CBaseHostClass):
         
         #rm(self.COOKIE_FILE)
         #cookie = self.cm.getCookieHeader(self.COOKIE_FILE)
-        
-        if serverId in ['12', '13', '14', '15']:
+        printDBG('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $$$$$$$$$$$$$$$$$$$$$$ ' + serverId)
+        if serverId in ['12', '13', '14', '15', '16']:
             url = 'ajax/movie_embed/' + episodeId
             url = self.getFullUrl( url )
             sts, data = self.getPage(url)

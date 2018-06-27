@@ -131,7 +131,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2018.06.11"
+    infoversion = "2018.06.24"
     inforemote  = "0.0.0"
     currList = []
     SEARCH_proc = ''
@@ -234,11 +234,11 @@ class Host:
            valTab.append(CDisplayListItem('Kamery Toya GO', 'https://go.toya.net.pl/25', CDisplayListItem.TYPE_CATEGORY, ['https://go.toya.net.pl/25'], 'toyago', 'https://go.toya.net.pl/public/images/top_menu/logo-4.png?t=1494325022', None)) 
            valTab.append(CDisplayListItem('Podkarpacie TV', 'http://podkarpacielive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://podkarpacielive.tv'], 'podkarpacie', 'http://podkarpacielive.tv/wp-content/themes/podkarpackielivetv/images/logo.png', None)) 
            valTab.append(CDisplayListItem('Żary TV', 'http://www.telewizjazary.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC29dc_mBUWW4mz5h754v88w/live'], 'zary', 'http://www.telewizjazary.pl/assets/wysiwig/images/logo/TVR_logo.png', None))
-           valTab.append(CDisplayListItem('TRT PL', 'http://www.trt.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://www.trt.pl/'], 'trt', 'http://www.trt.pl/images/logo-new.png', None))
+           #valTab.append(CDisplayListItem('TRT PL', 'http://www.trt.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://www.trt.pl/'], 'trt', 'http://www.trt.pl/images/logo-new.png', None))
            valTab.append(CDisplayListItem('Toruń TV', 'http://www.tvtorun.net/', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvtorun.net/'], 'toruntv', 'http://www.tvtorun.net/public/img/new/logo.png', None))
            valTab.append(CDisplayListItem('Lech TV', 'http://lech.tv/live', CDisplayListItem.TYPE_CATEGORY, ['http://lech.tv/program'], 'lechtv', 'http://lech.tv/graphics_new/all/lechtv_logo_top.png', None))
            valTab.append(CDisplayListItem('Kamery WLKP24', 'http://wlkp24.info/kamery/', CDisplayListItem.TYPE_CATEGORY, ['http://wlkp24.info/kamery/'], 'wlkp24', 'http://archiwum.wlkp24.info/static/img/squarelogo400.jpg', None)) 
-           valTab.append(CDisplayListItem('BG-Gledai TV', 'http://www.bg-gledai.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.bg-gledai.tv'], 'gledai', 'http://www.bg-gledai.tv/img/newlogo.png', None)) 
+           #valTab.append(CDisplayListItem('BG-Gledai TV', 'http://www.bg-gledai.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.bg-gledai.tv'], 'gledai', 'http://www.bg-gledai.tv/img/newlogo.png', None)) 
            valTab.append(CDisplayListItem('Zabrze TV', 'Zabrze TV', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCyQL0IjtptnQ9PxmAfH3fKQ/live'], 'zabrze', 'http://tvzabrze.pl/assets/images/logo.png', None))
            valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/kamerki/'], 'lookcam', 'http://lookcam.com/static/images/lookcam.png', None)) 
            valTab.append(CDisplayListItem('Fokus TV', 'http://www.fokus.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.fokus.tv'], 'fokus', 'http://www.fokus.tv/assets/gfx/logo-new.png', None)) 
@@ -254,7 +254,7 @@ class Host:
            valTab.append(CDisplayListItem('Tawizja TV', 'http://tawizja.pl/na-%C5%BCywo', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://tawizja.pl/na-%C5%BCywo', 1)], 'tawizja', 'http://bestfestiwal.pl/foto/linki/TaWizja.JPG', None)) 
            #valTab.append(CDisplayListItem('Stream - OKLIVETV', 'http://oklivetv.com', CDisplayListItem.TYPE_CATEGORY, ['http://oklivetv.com/genre/?orderby=title'], 'oklivetv', 'http://oklivetv.com/wp-content/uploads/2015/01/logo2.png', None)) 
            valTab.append(CDisplayListItem('Kamery Worldcam.live', 'https://worldcam.live/pl/list', CDisplayListItem.TYPE_CATEGORY, ['https://worldcam.live/pl/list'], 'worldcam', 'https://worldcam.live/img/logo-wcam.png', None)) 
-           valTab.append(CDisplayListItem('LTV9 Łotwa', 'https://ltv.lsm.lv', CDisplayListItem.TYPE_CATEGORY, ['https://ltv.lsm.lv/lv/tieshraide/visiemltv.lv/live.1480/'], 'ltv', 'https://ltv.lsm.lv/public/assets/design/logo.png', None)) 
+           #valTab.append(CDisplayListItem('LTV9 Łotwa', 'https://ltv.lsm.lv', CDisplayListItem.TYPE_CATEGORY, ['https://ltv.lsm.lv/lv/tieshraide/visiemltv.lv/live.1480/'], 'ltv', 'https://ltv.lsm.lv/public/assets/design/logo.png', None)) 
            valTab.append(CDisplayListItem('Kamery Animallive.tv', 'http://animallive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://animallive.tv/pl/kamery-online.html'], 'animallive', 'https://pbs.twimg.com/profile_images/935924816082866177/oYFAlqKG_400x400.jpg', None)) 
            valTab.append(CDisplayListItem('Kamery San Diego ZOO', 'http://zoo.sandiegozoo.org', CDisplayListItem.TYPE_CATEGORY, ['http://zoo.sandiegozoo.org/content/video-more'], 'sandiegozoo', 'http://zoo.sandiegozoo.org/sites/default/files/SanDiegoZooLogo256x37.png', None)) 
            valTab.append(CDisplayListItem('Milanos', 'https://milanos.pl', CDisplayListItem.TYPE_CATEGORY, ['https://milanos.pl'], 'milanos', 'http://www.userlogos.org/files/logos/zolw_podroznik/milanos.png', None)) 
@@ -676,11 +676,11 @@ class Host:
             valTab.append(CDisplayListItem('Rosja - EuropaPlus', 'http://www.europaplus.ru/europaplustv', CDisplayListItem.TYPE_CATEGORY, ['http://www.europaplus.ru/europaplustv'], 'europaplus', 'http://www.europaplus.ru/template/2012/img/logo.png', None))                
 
             valTab.append(CDisplayListItem('Rosja - NTV', 'http://www.ntv.ru/#air', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.ntv.ru/#air', 1)], '', 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/NTV_logo.svg/480px-NTV_logo.svg.png', None)) 
-            valTab.append(CDisplayListItem('Rosja - Россия 1', 'http://live.russia.tv/index/index/channel_id/1', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/1', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-1.png', None)) 
-            valTab.append(CDisplayListItem('Rosja - Россия 24', 'http://live.russia.tv/index/index/channel_id/3', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/3', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-3.png', None)) 
-            valTab.append(CDisplayListItem('Rosja - Россия K', 'http://live.russia.tv/index/index/channel_id/4', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/4', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-4.png', None)) 
-            valTab.append(CDisplayListItem('Rosja - РТР-Планета', 'http://live.russia.tv/index/index/channel_id/82', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/82', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-82.png', None)) 
-            valTab.append(CDisplayListItem('Rosja - Москва 24', 'http://live.russia.tv/index/index/channel_id/76', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/76', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-76.png', None)) 
+            #valTab.append(CDisplayListItem('Rosja - Россия 1', 'http://live.russia.tv/index/index/channel_id/1', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/1', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-1.png', None)) 
+            #valTab.append(CDisplayListItem('Rosja - Россия 24', 'http://live.russia.tv/index/index/channel_id/3', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/3', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-3.png', None)) 
+            #valTab.append(CDisplayListItem('Rosja - Россия K', 'http://live.russia.tv/index/index/channel_id/4', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/4', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-4.png', None)) 
+            #valTab.append(CDisplayListItem('Rosja - РТР-Планета', 'http://live.russia.tv/index/index/channel_id/82', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/82', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-82.png', None)) 
+            #valTab.append(CDisplayListItem('Rosja - Москва 24', 'http://live.russia.tv/index/index/channel_id/76', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://live.russia.tv/index/index/channel_id/76', 1)], '', 'http://live.russia.tv/i/logo/ch-logo-76.png', None)) 
 
 
             return valTab

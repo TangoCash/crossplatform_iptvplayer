@@ -213,9 +213,19 @@ class WorldFree4u(CBaseHostClass):
                         url = strwithmeta(url, {'iptv_proto':'m3u8', 'Referer':cItem['url'], 'Origin':urlparser.getDomain(cItem['url'], False), 'User-Agent':self.USER_AGENT})
                         tmpTab = getDirectM3U8Playlist(url, checkExt=True, checkContent=True)
                         urlTab.extend(tmpTab)
-                
+        
         if 1 == self.up.checkHostSupport(url) and 0 == len(urlTab):
             urlTab = self.up.getVideoLinkExt(url)
+        else:
+            tmpUrlTab = []
+            for item in urlTab:
+                tmp = []
+                if 1 == self.up.checkHostSupport(item['url']):
+                    tmp = self.up.getVideoLinkExt(item['url'])
+                    tmpUrlTab.extend(tmp)
+                else:
+                    tmpUrlTab.append(item)
+            urlTab = tmpUrlTab
         
         return urlTab
     

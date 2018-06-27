@@ -259,6 +259,15 @@ class AlltubeTV(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return 
+        
+        if 'episode-list' in data:
+            tmp = self.cm.ph.getDataBeetwenNodes(data, ('<h2', '>', 'headline'), ('</h2', '>'), False)[1]
+            tmp = self.cm.ph.getSearchGroups(tmp, '''<a[^>]+?href=['"]([^'^"^#]+?)['"]''')[0]
+            if tmp != '':
+                tmp = self.getFullUrl(tmp)
+                sts, tmp = self.getPage(tmp)
+                if sts: data = tmp 
+        
         seriesTitle =  self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(data, '<div class="col-xs-12 col-sm-9">', '</h3>', False)[1] )
         if '' == seriesTitle: seriesTitle = cItem['title']    
         

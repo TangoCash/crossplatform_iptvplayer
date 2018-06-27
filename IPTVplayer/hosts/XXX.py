@@ -41,7 +41,6 @@ config.plugins.iptvplayer.xxxsortmfc = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xxxsortall = ConfigYesNo(default = True)
 config.plugins.iptvplayer.camsoda = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
 config.plugins.iptvplayer.xhamstertag = ConfigYesNo(default = False)
-#config.plugins.iptvplayer.beegtag = ConfigYesNo(default = False)
 config.plugins.iptvplayer.bonga = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
 config.plugins.iptvplayer.cam4 = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
 config.plugins.iptvplayer.fotka = ConfigSelection(default="0", choices = [("0",_("https")), ("1",_("rtmp"))])
@@ -62,7 +61,6 @@ def GetConfigList():
     optionList.append( getConfigListEntry( "Camsoda stream :", config.plugins.iptvplayer.camsoda) )
     optionList.append( getConfigListEntry( "Fotka.pl stream :", config.plugins.iptvplayer.fotka) )
     optionList.append( getConfigListEntry( "Dodaj tagi do XHAMSTER :", config.plugins.iptvplayer.xhamstertag) )
-    #optionList.append( getConfigListEntry( "Dodaj tagi do BEEG :", config.plugins.iptvplayer.beegtag) )
     optionList.append( getConfigListEntry( "Wyświetlaj Profile w ZBIORNIK MINI :", config.plugins.iptvplayer.xxxzbiornik) )
     optionList.append( getConfigListEntry( "Wyświetlaj ZMIANY W WERSJI :", config.plugins.iptvplayer.xxxupdate) )
     optionList.append( getConfigListEntry( "Odtwarzaj UHD :", config.plugins.iptvplayer.xxx4k) )
@@ -162,7 +160,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "2018.06.15.1"
+    XXXversion = "2018.06.23.1"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -362,7 +360,7 @@ class Host:
            #valTab.append(CDisplayListItem('LIVEJASMIN',     'http://new.livejasmin.com', CDisplayListItem.TYPE_CATEGORY, ['http://new.livejasmin.com/en/girl/free+chat?selectedFilters=12'],'LIVEJASMIN', 'http://livejasmins.fr/livejasmin-france.png', None)) 
            valTab.append(CDisplayListItem('BONGACAMS',     'https://pl.bongacams.com/', CDisplayListItem.TYPE_CATEGORY, ['https://pl.bongacams.com/'],'BONGACAMS', 'http://i.bongacams.com/images/bongacams_logo3_header.png', None)) 
            valTab.append(CDisplayListItem('RAMPANT',     'https://www.rampant.tv', CDisplayListItem.TYPE_CATEGORY, ['https://www.rampant.tv/channels'],'RAMPANT', 'https://www.rampant.tv/new-images/rampant_logo.png', None)) 
-           valTab.append(CDisplayListItem('SHOWUP   - live cams',       'showup.tv',          CDisplayListItem.TYPE_CATEGORY, ['http://showup.tv'],                     'showup',  'http://mamstartup.pl/i/articles/3619_newl.jpg', None)) 
+           #valTab.append(CDisplayListItem('SHOWUP   - live cams',       'showup.tv',          CDisplayListItem.TYPE_CATEGORY, ['http://showup.tv'],                     'showup',  'http://mamstartup.pl/i/articles/3619_newl.jpg', None)) 
            valTab.append(CDisplayListItem('ZBIORNIK - live cams',       'zbiornik.tv',       CDisplayListItem.TYPE_CATEGORY, ['http://zbiornik.com/live/'],            'zbiornik','http://static.zbiornik.com/images/zbiornikBig.png', None)) 
            valTab.append(CDisplayListItem('CAMSODA',       'http://www.camsoda.com',       CDisplayListItem.TYPE_CATEGORY, ['http://www.camsoda.com/api/v1/browse/online'],            'CAMSODA','https://www.sodacdn.com/assets/img/camsoda-logo-160x50.png', None)) 
            valTab.append(CDisplayListItem('STREAMATE',       'https://streamate.com',       CDisplayListItem.TYPE_CATEGORY, ['https://streamate.com'],            'STREAMATE','https://m2.nsimg.net/3.0/auto/skin/sm/assets/ffe71-1453326178-logo.png', None)) 
@@ -742,13 +740,13 @@ class Host:
            except:
               printDBG( 'Host listsItems query error url: '+url )
               return valTab
-           #printDBG( 'Host listsItems data: '+data )
+           printDBG( 'Host listsItems data: '+data )
            nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<div class="footer-pagination"', '</div>', False)[1]
            data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'videoid=', 'boxVideo')
            for item in data:
               phTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
               phUrl = self.cm.ph.getSearchGroups(item, '''data-video_url=['"]([^"^']+?)['"]''', 1, True)[0] 
-              phImage = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
+              phImage = self.cm.ph.getSearchGroups(item, '''data-thumb=['"]([^"^']+?)['"]''', 1, True)[0] 
               phTime = self.cm.ph.getSearchGroups(item, '''duration">([^>]+?)<''', 1, True)[0] 
               valTab.append(CDisplayListItem(phTitle,'['+phTime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            match = re.findall('href="(.*?)"', nextPage, re.S)
@@ -1921,27 +1919,52 @@ class Host:
             printDBG( 'Host listsItems begin name='+name ) 
             self.MAIN_URL = 'https://streamate.com' 
             COOKIEFILE = os_path.join(GetCookieDir(), 'streamate.cookie')
-            host = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36'
-            page = 1
-            url = 'https://streamate.com/api/search/list?skin_search_kids=0&exact=1000&page_number={}&downboost_paid=true'.format(page)
-            header = {'User-Agent': host, 'Accept':'application/json','Accept-Language':'en,en-US;q=0.7,en;q=0.3','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'} 
-            query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
+            query_data = { 'url': url,  'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
             try:
                 data = self.cm.getURLRequestData(query_data)
             except Exception as e:
                 printExc()
                 return valTab 
             printDBG( 'Host listsItems data: '+data )
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="cats__content">', 'class="recents__list">', False)[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li>', '</li>')
+            for item in data:
+                Title = self._cleanHtmlStr(item).split(' ')[1]
+                Title = self.cm.ph.getDataBeetwenMarkers(item, '</span>', '</a>', False)[1]
+                Title = str(Title).strip()
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
+                if Url.startswith('/'): Url = 'https://streamate.com' + Url 
+                valTab.append(CDisplayListItem(decodeHtml(Title),decodeHtml(Title),CDisplayListItem.TYPE_CATEGORY, [Url],'STREAMATE-clips', '', None)) 
+            return valTab 
+        if 'STREAMATE-clips' == name:
+            printDBG( 'Host listsItems begin name='+name ) 
+            self.MAIN_URL = 'https://streamate.com' 
+            COOKIEFILE = os_path.join(GetCookieDir(), 'streamate.cookie')
+            query_data = { 'url': url,  'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
             try:
-                result = simplejson.loads(data)
-                for item in result['Results']:
-                    if item['LiveStatus'] != 'offline':
-                        if item['InExclusiveShow'] is False and item['GoldShow'] is False:
-                            Name = str(item['Nickname']) #.lower()
-                            Image = 'http://m2.nsimg.net/biopic/original4x3/'+str(item['PerformerId'])
-                            age = str(item['Age'])
-                            valTab.append(CDisplayListItem(Name, Name+'  [Age:'+age+']', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Name, 1)], 0, Image, None)) 
-            except Exception: printExc()
+                data = self.cm.getURLRequestData(query_data)
+            except Exception as e:
+                printExc()
+                return valTab 
+            printDBG( 'Host listsItems data: '+data )
+            next = self.cm.ph.getDataBeetwenMarkers(data, 'class="pagination">', 'Next', False)[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li class="js-dynamicsearch" data-status="online"', '</figure>')
+            for item in data:
+                phTitle = self.cm.ph.getSearchGroups(item, '''data-name=['"]([^"^']+?)['"]''', 1, True)[0] 
+                phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
+                phImage = self.cm.ph.getSearchGroups(item, '''data-src=['"]([^"^']+?)['"]''', 1, True)[0] 
+                phImage = self.cm.ph.getSearchGroups(item, '''data-thumbid=['"]([^"^']+?)['"]''', 1, True)[0] 
+                age = self.cm.ph.getSearchGroups(item, '''"year">([^>]+?)<''', 1, True)[0].strip()
+                if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
+                if phImage.startswith('//'): phImage = 'http:' + phImage
+                phImage = 'http://m2.nsimg.net/biopic/original4x3/' + phImage
+                valTab.append(CDisplayListItem(decodeHtml(phTitle), decodeHtml(phTitle)+'  [Age:'+age+']', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phTitle, 1)], 0, phImage, None)) 
+            if next:
+                next = re.compile('''href=['"]([^'^"]+?)['"]''').findall(next) 
+                if next:
+                    next = next[-1]
+                    if next.startswith('/'): next = 'https://streamate.com' + next
+                    valTab.append(CDisplayListItem('Next', 'Page : '+next, CDisplayListItem.TYPE_CATEGORY, [next], name, '', None)) 
             return valTab 
 
         if 'NAKED' == name:
@@ -2475,47 +2498,50 @@ class Host:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'https://www.rampant.tv' 
            COOKIEFILE = os_path.join(GetCookieDir(), 'rampant.cookie')
-           self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
-           sts, data = self.getPage(url, 'rampant.cookie', 'rampant.tv', self.defaultParams)
-           if not sts: return valTab
-           #printDBG( 'Host listsItems data: '+str(data) )
-           data2 = self.cm.ph.getAllItemsBeetwenMarkers(data, '<channel', '</channel>')
-           #printDBG( 'Host2 getResolvedURL data: '+str(data) )
-           for item in data2:
-              try:
-                 phTitle = self.cm.ph.getSearchGroups(item, '''title="([^"]+?)"''', 1, True)[0] 
-                 serwery = self.cm.ph.getSearchGroups(item, '''servers="([^"]+?)"''', 1, True)[0] 
-                 appli = self.cm.ph.getSearchGroups(item, '''application="([^"]+?)"''', 1, True)[0] 
-                 Stremname = self.cm.ph.getSearchGroups(item, '''streamName="([^"]+?)"''', 1, True)[0] 
-                 mbr = self.cm.ph.getSearchGroups(item, '''mbr="([^"]+?)"''', 1, True)[0] 
-                 phImage = self.cm.ph.getSearchGroups(item, '''logo="([^"]+?)"''', 1, True)[0].replace('{SIZE}', '80x65')
-                 if phImage.startswith('//'): phImage = 'http:' + phImage
-                 live = self.cm.ph.getSearchGroups(item, '''live="([^"]+?)"''', 1, True)[0] 
-                 printDBG( 'Host phTitle: '+phTitle )
-                 printDBG( 'Host serwery: '+serwery )
-                 printDBG( 'Host appli: '+appli )
-                 printDBG( 'Host Stremname: '+Stremname )
-                 printDBG( 'Host mbr: '+str(mbr) )
-                 printDBG( 'Host phImage: '+phImage )
-                 printDBG( 'Host live: '+str(live) )
-                 uri = serwery.split(',')[0]
-                 if mbr<>'0': Stremname=Stremname+mbr
-                 flashVer = 'flashVer=WIN 25,0,0,127 '
-                 swfurl = 'https://static.rampant.tv/swf/player.swf'
-                 if live <> '0':
-                    Url = 'http://publish.thewebstream.co:1935/%s/%s/playlist.m3u8' % (appli, Stremname)
-                    Url = urlparser.decorateUrl(Url, {'User-Agent': self.USER_AGENT, 'Referer': 'https://www.rampant.tv'})
-                    if self.cm.isValidUrl(Url): 
-                       tmp = getDirectM3U8Playlist(Url)
-                       for item in tmp:
-                          #printDBG( 'Host listsItems valtab: '  +str(item))
-                          if item['bitrate'] != 'unknown':
-                             valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, phImage, None)) 
-                    if Stremname=='passionxxx': 
-                       Url = 'rtmp://publish.thewebstream.co:1935/%s/_definst_/rampanttv_%s swfUrl=%s' % (appli, Stremname, swfurl)
-                       valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, phImage, None)) 
-              except Exception:
-                 printExc() 
+           url = 'http://api.rampant.tv/player_schedule2.php?type=2&affid=726&bustCache=20130708&json'
+           host = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+           header = {'User-Agent': host, 'Accept':'application/json','Accept-Language':'en,en-US;q=0.7,en;q=0.3','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'} 
+           query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
+           try:
+              data = self.cm.getURLRequestData(query_data)
+           except Exception as e:
+              printExc()
+              msg = _("Last error:\n%s" % str(e))
+              GetIPTVNotify().push('%s' % msg, 'error', 20)
+              return valTab
+           #printDBG( 'data: '+data )
+           try:
+              result = byteify(simplejson.loads(data))
+              if result:
+                 for item in result["stream"]["channel"]: 
+                    #printDBG( 'item: '+str(item) )
+                    streamName = str(item["@attributes"]["streamName"])
+                    application = str(item["@attributes"]["application"])
+                    performername = str(item["@attributes"]["performername"])
+                    title = str(item["@attributes"]["title"])
+                    mbr = str(item["@attributes"]["mbr"])
+                    phImage = str(item["@attributes"]["logo"]).replace('{SIZE}', '80x65')
+                    if phImage.startswith('//'): phImage = 'http:' + phImage
+                    live = '0'
+                    try:
+                       live = str(item["@attributes"]["live"])
+                    except Exception:
+                       printExc()
+                    if live <> '0':
+                       if mbr<>'0': streamName=streamName+mbr
+                       if 'passionxxx' in streamName:   
+                          phUrl = 'http://publish.thewebstream.co:1935/%s/_definst_/rampanttv_%s/playlist.m3u8' % (application, streamName)
+                       else:
+                          phUrl = 'http://publish.thewebstream.co:1935/%s/%s/playlist.m3u8' % (application, streamName)
+                       phUrl = urlparser.decorateUrl(phUrl, {'User-Agent': host, 'Referer': 'https://iptv.firestormmedia.tv/iframes/firecall-responsive'})
+                       if self.cm.isValidUrl(phUrl): 
+                          tmp = getDirectM3U8Playlist(phUrl)
+                          for item in tmp:
+                             #printDBG( 'Host listsItems valtab: '  +str(item))
+                             if item['bitrate'] != 'unknown':
+                                valTab.append(CDisplayListItem(title,performername,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 0)], 0, phImage, None))
+           except Exception:
+              printExc()
            return valTab 
 
         if 'BONGACAMS' == name:
@@ -6490,11 +6516,9 @@ class Host:
                  return videoUrl[-1]
 
         if parser == 'https://streamate.com':
-            url = "https://streamate.com/ajax/config/?name={}&sakey=&sk=streamate.com&userid=0&version=2.3.1&ajax=1".format(url)
             COOKIEFILE = os_path.join(GetCookieDir(), 'streamate.cookie')
-            host = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Mobile Safari/537.36'
-            header = {'User-Agent': host, 'Accept':'application/json','Accept-Language':'en,en-US;q=0.7,en;q=0.3','X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'} 
-            query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
+            url = 'https://streamate.com/blacklabel/hybrid/?name={}&lang=en&manifestUrlRoot=https://sea1c-ls.naiadsystems.com/sea1c-edge-ls/80/live/s:'.format(url)
+            query_data = { 'url': url, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
             try:
                 data = self.cm.getURLRequestData(query_data)
             except Exception as e:
@@ -6502,62 +6526,29 @@ class Host:
                 printDBG( 'Host listsItems query error url:'+url )
                 return ''
             printDBG( 'Host listsItems data: '+data )
-            libsPath = GetPluginDir('libs/')
-            import sys
-            sys.path.insert(1, libsPath)
-            import websocket
+            url =  self.cm.ph.getSearchGroups(data, '''data-manifesturl=['"]([^"^']+?)['"]''')[0] 
+            header = {'Referer': 'https://streamate.com', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+            query_data = { 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': False, 'load_cookie': True, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
             try:
-                model_info = simplejson.loads(data)
-                if model_info['stream']['serverId'] != '0':
-                    URL = model_info['stream']['nodeHost'] + "/socket.io/?performerid=" + str(
-                        model_info['performer']['id']) + "&sserver=" + model_info['stream']['serverId'] + "&streamid=" + \
-                        model_info['stream']['streamId'] + "&sakey=&sessiontype=preview&perfdiscountid=0&minduration=0&goldshowid=0&version=7&referrer=hybrid.client.2.3.1%2Favchat.swf&usertype=false&EIO=3&transport=websocket"
-                    printDBG( 'Host listsItems URL: '+URL )
-                    URL = URL.replace('wss:','ws:')
-                    ws = websocket.create_connection(URL)
-                    i = 0
-                    while i < 5:
-                        result = ws.recv()
-                        printDBG( 'Host listsItems result: '+result )
-
-                        i = i + 1
-                        if "roomid" in result:
-                            result = simplejson.loads(result[2:])[1]
-                            roomInfo = result['data'][22]
-                            videourl = ('https:' + urllib.quote(
-                                '//sea1b-ls.naiadsystems.com/sea1b-hub-api/8101/videourl') + '?' + urllib.quote(
-                                'payload') + '=' + urllib.quote('{"puserid":"' + str(model_info['performer']['id']) + '","roomid":"' + roomInfo[
-                                    'roomid'] + '","showtype":1,"nginx":1}'))
-                            printDBG( 'Host listsItems videourl: '+videourl )
-                            query_data = { 'url': videourl, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
-                            try:
-                                data = self.cm.getURLRequestData(query_data)
-                            except Exception as e:
-                                printExc()
-                                return ''
-                            printDBG( 'Host listsItems data: '+data )
-                            videourl = self.cm.ph.getSearchGroups(data, '''url":['"]([^"^']+?)['"]''')[0] 
-                            query_data = { 'url': videourl, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True }
-                            try:
-                                data = self.cm.getURLRequestData(query_data)
-                            except Exception as e:
-                                printExc()
-                                return ''
-                            printDBG( 'Host listsItems data: '+data )
-                            videoinfo = simplejson.loads(data)
-                            videoUrl = videoinfo['formats']['mp4-hls']['manifest']
-                            videoUrl = urlparser.decorateUrl(videoUrl, {'Referer': 'https://streamate.com', 'User-Agent': host, 'iptv_livestream': True}) 
-                            if '.m3u8' in videoUrl:
-                                if self.cm.isValidUrl(videoUrl): 
-                                    tmp = getDirectM3U8Playlist(videoUrl)
-                                    for item in tmp:
-                                        printDBG( 'Host listsItems valtab: '  +str(item))
-                                        return item['url']
-                            return videoUrl #urlparser.decorateUrl(videoUrl, {'Referer': url, 'iptv_livestream': True, 'User-Agent': host}) 
-                else: return ''
-            except:
+                data = self.cm.getURLRequestData(query_data)
+            except Exception as e:
                 printExc()
-
+                printDBG( 'Host listsItems query error url:'+url )
+                return ''
+            printDBG( 'Host listsItems data2: '+data )
+            try:
+                videoinfo = simplejson.loads(data)
+                videoUrl = videoinfo['formats']['mp4-hls']['manifest']
+                videoUrl = urlparser.decorateUrl(videoUrl, {'Referer': 'https://streamate.com', 'iptv_livestream': True}) 
+                if '.m3u8' in videoUrl:
+                    if self.cm.isValidUrl(videoUrl): 
+                        tmp = getDirectM3U8Playlist(videoUrl)
+                        for item in tmp:
+                            printDBG( 'Host listsItems valtab: '  +str(item))
+                            return item['url']
+                return videoUrl
+            except Exception as e:
+                printExc()
             return ''
 ##########################################################################################################################
         query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}

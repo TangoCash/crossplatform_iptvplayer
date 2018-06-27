@@ -13,6 +13,7 @@ from Plugins.Extensions.IPTVPlayer.libs.teledunet         import  TeledunetParse
 from Plugins.Extensions.IPTVPlayer.libs.urlparser         import urlparser
 from Plugins.Extensions.IPTVPlayer.libs.filmonapi         import FilmOnComApi, GetConfigList as FilmOn_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.videostar         import VideoStarApi, GetConfigList as VideoStar_GetConfigList
+from Plugins.Extensions.IPTVPlayer.libs.webcamera         import WebCameraApi #, GetConfigList as WebCamera_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.livesports        import LiveSportsApi, GetConfigList as LiveSports_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.bilasportpw       import BilaSportPwApi, GetConfigList as BilaSportPw_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.canlitvliveio     import CanlitvliveIoApi
@@ -58,7 +59,6 @@ from hashlib import md5
 # E2 GUI COMMPONENTS 
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
@@ -144,7 +144,7 @@ class HasBahCa(CBaseHostClass):
                         {'alias_id':'iptv_matzgpl',            'name': 'm3u',                 'title': 'Kanały IPTV_matzgPL',               'url': 'http://matzg2.cba.pl/Lista_matzgPL.m3u',                             'icon': 'http://matzg2.cba.pl/Iptv_matzgPL.png'}, \
                         {'alias_id':'prognoza.pogody.tv',      'name': 'prognoza.pogody.tv',  'title': 'prognoza.pogody.tv',                'url': 'http://prognoza.pogody.tv',                                          'icon': 'http://s2.manifo.com/usr/a/A17f/37/manager/pogoda-w-chorwacji-2013.png'}, \
                         {'alias_id':'meteo.pl',                'name': 'meteo.pl',            'title': 'Pogoda PL - meteorogramy',          'url': 'http://meteo.pl/',                                                   'icon': 'http://matzg2.cba.pl/pogoda_logo.png'}, \
-                        {'alias_id':'webcamera.pl',            'name': 'webcamera.pl',        'title': 'https://webcamera.pl/',             'url': 'https://www.webcamera.pl/',                                          'icon': 'https://www.webcamera.pl/img/logo80x80.png'}, \
+                        {'alias_id':'webcamera.pl',            'name': 'webcamera.pl',        'title': 'https://webcamera.pl/',             'url': 'https://www.webcamera.pl/',                                          'icon': 'http://static.webcamera.pl/webcamera/img/loader-min.png'}, \
                         {'alias_id':'skylinewebcams.com',      'name': 'skylinewebcams.com',  'title': 'SkyLineWebCams.com',                'url': 'https://www.skylinewebcams.com/',                                    'icon': 'https://cdn.skylinewebcams.com/skylinewebcams.png'}, \
                         {'alias_id':'livespotting.tv',         'name': 'livespotting.tv',     'title': 'Livespotting.tv',                   'url': 'http://livespotting.tv/',                                            'icon': 'http://livespotting.tv/img/ls_logo.png'}, \
                         {'alias_id':'inne_matzg',              'name': 'm3u',                 'title': 'Różne Kanały IPTV_matzg',           'url': 'http://matzg2.cba.pl/inne_matzg.m3u',                                'icon': 'http://matzg2.cba.pl/iptv.png'}, \
@@ -181,6 +181,7 @@ class HasBahCa(CBaseHostClass):
         
         self.filmOnApi            = None
         self.videoStarApi         = None
+        self.webCameraApi         = None
         self.wagasWorldApi        = None
         self.ustvnowApi           = None
         self.yooanimeComApi       = None
@@ -503,177 +504,16 @@ class HasBahCa(CBaseHostClass):
         
     def getWebCamera(self, cItem):
         printDBG("getWebCamera start cItem[%s]" % cItem)
-        baseMobileUrl = 'https://www.webcamera.mobi/'
-        baseUrl = 'https://www.webcamera.pl/'
-        self.webCameraParams = {'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': GetCookieDir('webcamerapl')}
-        self.webCameraParams['header'] = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:21.0) Gecko/20100101 Firefox/21.0', 'Referer':baseUrl}
-        
-        getPageParams = dict(self.webCameraParams)
-        getPageParams['header'] = dict(self.webCameraParams['header'])
-        
-        def _getFullUrl(url, mobile=False):
-            if mobile: 
-                base = baseMobileUrl
-            else:
-                base = baseUrl
+        if None == self.webCameraApi: self.webCameraApi = WebCameraApi()
+        tmpList = self.webCameraApi.getList(cItem)
+        for item in tmpList:
+            if 'video' == item['type']: self.addVideo(item) 
+            elif 'audio' == item['type']: self.addAudio(item) 
+            else: self.addDir(item)
             
-            if self.cm.isValidUrl(url):
-                if mobile:
-                    url = url.replace(self.up.getDomain(baseUrl), self.up.getDomain(baseMobileUrl))
-                else:
-                    url = url.replace(self.up.getDomain(baseMobileUrl), self.up.getDomain(baseUrl))
-                return url
-            if url.startswith('//'):
-                return 'http:' + url
-            elif url.startswith('/'):
-                return base[:-1] + url
-            elif len(url):
-                return base + url
-            return url
-        
-        catKey = 'webcamera_category'
-        category = cItem.get(catKey, '')
-            
-        if category == '':
-            sts, data = self.cm.getPage(baseUrl, getPageParams)
-            if not sts: return
-            cUrl = data.meta['url']
-            
-            tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'rodo'), ('</body', '>'), False)[1]
-            if tmp != '':
-                msg = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp, ('<div', '>', 'text'), ('</div', '>'))[1])
-                ret = self.sessionEx.waitForFinishOpen(MessageBox, text=msg, type=MessageBox.TYPE_YESNO, default=True)
-                if ret[0]:
-                    sts, tmp = self.cm.ph.getDataBeetwenNodes(tmp, ('<form', '>', 'post'), ('</form', '>'))
-                    if not sts: return False
-                    actionUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''action=['"]([^'^"]+?)['"]''')[0], cUrl)
-                    if actionUrl == '': actionUrl = cUrl
-                    tmpTab = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<input', '>')
-                    tmpTab.extend(self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<button', '>'))
-                    post_data = {}
-                    for item in tmpTab:
-                        name  = self.cm.ph.getSearchGroups(item, '''name=['"]([^'^"]+?)['"]''')[0]
-                        value = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
-                        post_data[name] = value
-                    sts, data = self.cm.getPage(actionUrl, getPageParams, post_data)
-                    if not sts: return
-            
-            params = dict(cItem)
-            params.update({'title':'TV', 'url':strwithmeta(_getFullUrl('tv'), {'iframe':True})})
-            self.addVideo(params)
-            params = dict(cItem)
-            params.update({'title':'Polecane kamery', 'url':baseUrl, catKey:'list_videos'})
-            self.addDir(params)
-            params = dict(cItem)
-            params.update({'title':'Ostatnio dodane', catKey:'list_videos', 'url':_getFullUrl('ostatniododane')})
-            self.addDir(params)
-            
-            
-            self.webcameraSubCats = {}
-            
-            data = self.cm.ph.getDataBeetwenNodes(data, ('<nav', '>'), ('</nav', '>'))[1]
-            data = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('</ul', '>'), ('<li', '>', 'has-childre'), False)
-            for item in data:
-                catUrl   = _getFullUrl( self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0] )
-                if catUrl == '' or '#' in catUrl: continue
-                catTitle = self.cleanHtmlStr( self.cm.ph.getDataBeetwenMarkers(item, '<a', '</a>')[1] )
-                catIcon  = _getFullUrl( 'images/logo_mobile.png' )
-                
-                subCats = []
-                item = self.cm.ph.getAllItemsBeetwenMarkers(item.split('<ul', 1)[-1], '<li', '</li>')
-                for it in item:
-                    url = _getFullUrl( self.cm.ph.getSearchGroups(it, """href=['"]([^'^"]+?)['"]""")[0] )
-                    if 'kategoria' not in url: continue
-                    subCats.append({'title':self._cleanHtmlStr(it), 'url':url, 'icon':catIcon, catKey:'list_videos'})
-                
-                params = dict(cItem)
-                params.update({'title':catTitle, 'url':catUrl, 'icon':catIcon})
-                if len(subCats):
-                    self.webcameraSubCats[catUrl] = subCats
-                    params[catKey] = 'sub_cat'
-                else:
-                    params[catKey] = 'list_videos'
-                self.addDir(params)
-        elif category == 'sub_cat':
-            tab = self.webcameraSubCats.get(cItem['url'], [])
-            for item in tab:
-                params = dict(cItem)
-                params.update(item)
-                self.addDir(params)
-        
-        if category == 'list_videos':
-            page = cItem.get('page', 1)
-            if page > 1: getPageParams['header']['X-Requested-With'] = 'XMLHttpRequest'
-            sts, data = self.cm.getPage(cItem['url'], getPageParams)
-            if not sts: return
-            
-            if page == 1:
-                tmp = self.cm.ph.getSearchGroups(data, '''(<div[^>]+?inline\-camera\-listing[^>]+?>)''')[0]
-                printDBG(">>-- %s" % tmp)
-                tmp = re.compile('''data\-([^=^'^"^\s]+?)\s*=\s*['"]([^'^"]+?)['"]''').findall(tmp)
-                cItem = dict(cItem)
-                cItem['more_params'] = {}
-                for item in tmp:
-                    cItem['more_params'][item[0]] = item[1]
-                cItem['more_url'] = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?/ajax/[^'^"]+?)['"]''')[0]
-            else:
-                try:
-                    data = byteify(json.loads(data), '', True)['html']
-                except Exception:
-                    printExc()
-                    return
-            
-            data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'inlinecam'), ('</div', '>'))
-            #printDBG(data)
-            vidCount = 0
-            for item in data:
-                url = self.cm.ph.getSearchGroups(item, """href=['"]([^'^"]+?)['"]""")[0]
-                if '' != url:
-                    title = self._cleanHtmlStr(item)
-                    icon  = self.cm.ph.getSearchGroups(item, """data\-src=['"]([^'^"]+?)['"]""")[0]
-                    if icon == '': icon  = self.cm.ph.getSearchGroups(item, """src=['"]([^'^"]+?\.jpg[^'^"]*?)['"]""")[0]
-                    params = dict(cItem)
-                    params.update({'title':title, 'url':_getFullUrl(url), 'icon':_getFullUrl(icon)})
-                    self.addVideo(params)
-                    vidCount += 1
-            
-            # check if next page is needed
-            if vidCount > 0:
-                urlPrams = dict(cItem['more_params'])
-                urlPrams['page'] = page + 1
-                try: urlPrams['cameras'] = page * int(urlPrams['limit']) - 1
-                except Exception: printExc()
-                try: urlPrams['columns'] = page * (int(urlPrams['limit']) + 1)
-                except Exception: printExc()
-                
-                #urlPrams['cameras'] = '14'
-                #urlPrams['columns'] = '12'
-                
-                url = _getFullUrl(cItem['more_url'])
-                url += '?' + urllib.urlencode(urlPrams)
-                getPageParams['header']['X-Requested-With'] = 'XMLHttpRequest'
-                sts, data = self.cm.getPage(url, getPageParams)
-                if not sts: return
-                printDBG(data)
-                if data.startswith('{') and '"last":true' not in data: 
-                    params = dict(cItem)
-                    params.update({'title':_('Next page'), 'url':url, 'page':page+1})
-                    self.addDir(params)
-            
-    def getWebCameraLink(self, videoUrl):
+    def getWebCameraLink(self, cItem):
         printDBG("getWebCameraLink start")
-        videoUrl = strwithmeta(videoUrl)
-        if videoUrl.meta.get('iframe', False):
-            sts, data = self.cm.getPage(videoUrl, self.webCameraParams)
-            if not sts: return []
-            videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?embed[^"^']+?)['"]''', 1, True)[0]
-        
-        if 'youtube' in videoUrl and 'v=' not in videoUrl:
-            sts, data = self.cm.getPage(videoUrl, self.webCameraParams)
-            if not sts: return []
-            videoUrl = self.cm.ph.getSearchGroups(data, '''<link[^>]+?rel=['"]canonical['"][^>]+?href=['"]([^'^"]+?)['"]''')[0]
-        
-        return self.up.getVideoLinkExt(videoUrl)
+        return self.webCameraApi.getVideoLink(cItem)
     
     #############################################################
     def getVideostarList(self, cItem):
@@ -1115,7 +955,7 @@ class IPTVHost(CHostBase):
         elif name == 'edem.tv':                    urlList = self.host.getEdemTvLink(cItem)
         elif name == 'skylinewebcams.com':         urlList = self.host.getWkylinewebcamsComLink(cItem)
         elif name == 'live-stream.tv':             urlList = self.host.getLiveStreamTvLink(cItem)
-        elif name == "webcamera.pl":               urlList = self.host.getWebCameraLink(url)
+        elif name == "webcamera.pl":               urlList = self.host.getWebCameraLink(cItem)
         elif name == "prognoza.pogody.tv":         urlList = self.host.prognozaPogodyLink(url)
             
         if isinstance(urlList, list):

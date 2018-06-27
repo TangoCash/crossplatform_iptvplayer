@@ -23,7 +23,7 @@
     </extension>
 </addon>
 
-<addon id="plugin.video.IPTVplayer" version="2018.06.20.01" name="IPTVplayer" provider-name="j00zek">
+<addon id="plugin.video.IPTVplayer" version="2018.06.25.02" name="IPTVplayer" provider-name="j00zek">
     <requires>
         <import addon="xbmc.python" version="2.25.0"/>
         <import addon="script.module.simplejson"    version="3.3.0"/>

@@ -3,11 +3,9 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify, rm, GetPluginDir, GetCacheSubDir, ReadTextFile, WriteTextFile
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -27,6 +25,8 @@ try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
 ###################################################
 
 
@@ -40,26 +40,27 @@ from Screens.MessageBox import MessageBox
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.mrpiracy_loginmode = ConfigSelection(default = "simple", choices = [("simple", _("Simple (e-mail, password)")),("advance", _("Advance (cookie item)"))]) 
 config.plugins.iptvplayer.mrpiracy_login     = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.mrpiracy_password  = ConfigText(default = "", fixed_size = False)
 
-config.plugins.iptvplayer.mrpiracy_cookiename  = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.mrpiracy_cookievalue = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.mrpiracy_username    = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.mrpiracy_userid      = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.mrpiracy_linkcache = ConfigYesNo(default = True)
+config.plugins.iptvplayer.mrpiracy_bypassrecaptcha = ConfigSelection(default = "None", choices = [("None",        _("None")),
+                                                                                                 ("9kw.eu",       "https://9kw.eu/"),
+                                                                                                 ("2captcha.com", "http://2captcha.com/")])
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Login mode"), config.plugins.iptvplayer.mrpiracy_loginmode))
-    if config.plugins.iptvplayer.mrpiracy_loginmode.value == 'simple':
-        optionList.append(getConfigListEntry('    ' + _("e-mail"), config.plugins.iptvplayer.mrpiracy_login))
-        optionList.append(getConfigListEntry('    ' + _("Password"), config.plugins.iptvplayer.mrpiracy_password))
-    else:
-        optionList.append(getConfigListEntry('    ' + _("Secure cookie name"), config.plugins.iptvplayer.mrpiracy_cookiename))
-        optionList.append(getConfigListEntry('    ' + _("Secure cookie value"), config.plugins.iptvplayer.mrpiracy_cookievalue))
-        optionList.append(getConfigListEntry('    ' + _("Name"), config.plugins.iptvplayer.mrpiracy_username))
-        optionList.append(getConfigListEntry('    ' + _("ID"), config.plugins.iptvplayer.mrpiracy_userid))
+    optionList.append(getConfigListEntry(_("e-mail"), config.plugins.iptvplayer.mrpiracy_login))
+    optionList.append(getConfigListEntry(_("Password"), config.plugins.iptvplayer.mrpiracy_password))
+    
+    optionList.append(getConfigListEntry(_("Use links cache"), config.plugins.iptvplayer.mrpiracy_linkcache))
+    optionList.append(getConfigListEntry(_("Captcha solving service"), config.plugins.iptvplayer.mrpiracy_bypassrecaptcha))
+    if config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '9kw.eu':
+        optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_9kweu))
+    elif config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '2captcha.com':
+        optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_2captcha))
     return optionList
 ###################################################
 
@@ -67,15 +68,16 @@ def gettytul():
     return 'http://mrpiracy.site/'
 
 class MRPiracyGQ(CBaseHostClass):
- 
+    LINKS_CACHE = {}
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'mrpiracy.gq', 'cookie':'mrpiracygq.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.DEFAULT_ICON_URL = 'https://pbs.twimg.com/profile_images/790277002544766976/w_TjhbiK.jpg'
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:43.0) Gecko/20100101 Firefox/43.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
-        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'} )
         self.MAIN_URL = None
+        
         self.cacheLinks    = {}
         self.cacheFilters  = {}
         self.cacheFiltersKeys = []
@@ -90,6 +92,10 @@ class MRPiracyGQ(CBaseHostClass):
         self.password = ''
         
         self.loggedIn = False
+
+        self.API = base64.b64decode('aHR0cDovL21wYXBpLm1sLw==')
+        self.API_SITE = base64.b64decode('aHR0cDovL21wYXBpLm1sL2FwaS8=')
+        self.SITE = base64.b64decode('aHR0cDovL21ycGlyYWN5LmdxLw==')
         
     def selectDomain(self):
         domain = None
@@ -361,16 +367,21 @@ class MRPiracyGQ(CBaseHostClass):
         SetIPTVPlayerLastHostError(errorMsg)
         
         token = self.cm.ph.getSearchGroups(data, '''var\s+form_data\s*=\s*['"]([^'^"]+?)['"]''')[0]
-        linksData = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a id="sv', '</a>')
-        linksData.extend(self.cm.ph.getAllItemsBeetwenMarkers(data, '<span id="sv', '</span>'))
+        jscode = []
+        jscode.append(self.cm.ph.getDataBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)[1])
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'server'), ('</script', '>'))[1]
+        jscode.append(self.cm.ph.getDataBeetwenNodes(tmp, ('<script', '>'), ('</script', '>'), False)[1])
+        jscode = '\n'.join(jscode)
+        
+        linksData = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'buttonSv'), ('</div', '>'))
+        dataObj = re.compile('''\sdata\-([^=]+?)=['"]([^'^"]+?)['"]''')
         for item in linksData:
-            playerData = self.cm.ph.getDataBeetwenMarkers(item, 'player(', ')', False)[1]
-            playerData = re.sub('''["'\s]''', '', playerData).split(',')
-            if len(playerData) != 2: continue
+            playerData = dict(dataObj.findall(item))
             name = self.cm.ph.getSearchGroups(item, '''src=["']([^"^']+?)["']''')[0].split('/')[-1].replace('.png', '').title()
-            playerData.append(token)
-            playerData.append(cItem['url'])
-            urlTab.append({'name':name, 'url':'|'.join(playerData), 'need_resolve':1})
+            playerData['ref_url'] = cItem['url']
+            url = '>' + '%s' % playerData
+            playerData['jscode'] = jscode
+            urlTab.append({'name':name, 'url':strwithmeta(url, playerData), 'need_resolve':1})
         
         if self.cm.isValidUrl(trailerUrl):
             urlTab.append({'name':_('Trailer'), 'url':trailerUrl, 'need_resolve':1})
@@ -381,6 +392,7 @@ class MRPiracyGQ(CBaseHostClass):
         
     def getVideoLinks(self, videoUrl):
         printDBG("MRPiracyGQ.getVideoLinks [%s]" % videoUrl)
+        errorMsgTab = []
         urlTab = []
         
         # mark requested link as used one
@@ -391,81 +403,102 @@ class MRPiracyGQ(CBaseHostClass):
                         if not self.cacheLinks[key][idx]['name'].startswith('*'):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
-        
+
         if self.cm.isValidUrl(videoUrl):
             return self.up.getVideoLinkExt(videoUrl)
-        
-        playerData = videoUrl.split('|')
-        url = playerData[-1]
-        
-        if not self.cm.isValidUrl(url) or len(playerData) != 4:
-            return []
-        
-        if 'filme.php' in url:
-            type = 'filme'
-        elif 'series.php' in url:
-            type = 'serie'
-        else:
-            type = 'serie'
-        
-        sts, data = self.getPage(url)
-        if not sts: return urlTab
-        
-        token = self.cm.ph.getSearchGroups(data, '''var\s+[^=^\(^\)^\{^\}]+?=\s*['"]([0-9a-fA-F]+?)['"]''')[0]
-        data  = self.cm.ph.getDataBeetwenMarkers(data, 'player(', '</script>')[1]
-        data  = self.cm.ph.getDataBeetwenMarkers(data, '<script', '</script>', False)[1]
-        data  = self.cm.ph.getDataBeetwenMarkers(data, '[', ']', False)[1]
-        data  = re.compile('"([^"]*?)"').findall(data)
-        
-        uriTmp  = [] 
-        canBeAdded = False
+
+        playerData = strwithmeta(videoUrl).meta
+        linkId = ''
+        imdbId = ''
         try:
-            for item in data:
-                item = item.decode('string_escape').encode('utf-8')
-                if '_player_' in item:
-                    canBeAdded = True
-                if canBeAdded: uriTmp.append(item)
+            tmp = []
+            for it in ['playertype', 'episodio', 'id']:
+                tmp.append(playerData.get(it, ''))
+            imdbId = self.cm.ph.getSearchGroups(playerData['ref_url'], '''imdb=(tt[0-9]+)''')[0]
+            tmp.insert(0, imdbId)
+            linkId = '_'.join(tmp)
         except Exception:
-            uriTmp = []
             printExc()
         
-        if len(uriTmp) >= 3:
-            url = self.getFullUrl(uriTmp[0] + playerData[1] + uriTmp[1] + playerData[0] + uriTmp[2] + token)
+        printDBG(">>> linkId[%s]" % linkId)
+        hostUrl = MRPiracyGQ.LINKS_CACHE.get(linkId, '')
+        if hostUrl == '' and config.plugins.iptvplayer.mrpiracy_linkcache.value:
+            hostUrl = ReadTextFile(GetCacheSubDir('mrpiracy', linkId))[1]
+        
+        if hostUrl == '':
+            try:
+                jscode = playerData.pop('jscode', '')
+                jscode += '''var iptv_fake_element={hide:function(){},show:function(){},addClass:function(){},removeClass:function(){}};playertype="iptv_player_data";var iptv_player_data=''' + json.dumps(playerData) + ''';$=function(){return 1==arguments.length&&arguments[0].endsWith(playertype)?{data:function(a){return iptv_player_data[a]}}:iptv_fake_element},$.ajax=function(){print(JSON.stringify(arguments[0]))},''' + playerData['callback'] + '''(iptv_player_data.sitekey);'''
+                ret = iptv_js_execute(jscode)
+                data = ret['data'].strip()
+                data = byteify(json.loads(data))
+                
+                url = self.getFullUrl(data['url'])
+                post_data = data['data']
+                urlParams = dict(self.defaultParams)
+                urlParams['header'] = dict(self.AJAX_HEADER)
+                urlParams['header']['Referer'] = playerData['ref_url']
+
+                if 'sitekey' in playerData:
+                    errorMsgTab = [_('Link protected with google recaptcha v2.')]
+                    recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
+                    recaptcha.HTTP_HEADER['Referer'] = playerData['ref_url']
+                    recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
+                    token = recaptcha.processCaptcha(playerData['sitekey'])
+                    if token == '':
+                        recaptcha = None
+                        if config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '9kw.eu':
+                            recaptcha = UnCaptchaReCaptcha_9kw()
+                        elif config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '2captcha.com':
+                            recaptcha = UnCaptchaReCaptcha_2captcha()
+                        
+                        if recaptcha != None:
+                            token = recaptcha.processCaptcha(playerData['sitekey'], playerData['ref_url'])
+                        else:
+                            errorMsgTab.append(_('You can use \"%s\" or \"%s\" services to workaround this protection.') % ("http://2captcha.com/", "https://9kw.eu/", )) 
+                            errorMsgTab.append(_('Go to the host configuration available under blue button.'))
+                    
+                    printDBG('> token "%s" ' % token)
+                    post_data['token'] = token
+                    
+                sts, data = self.getPage(url, urlParams, post_data)
+                printDBG("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                printDBG(data)
+                printDBG("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                tmp = re.compile('''['"](https?://[^'^"]+?)['"]''').findall(data)
+                for item in tmp:
+                    if 1 == self.up.checkHostSupport(item):
+                        hostUrl = item
+                
+                if hostUrl == '':
+                    url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, ignoreCase=True)[0])
+                    if url != '':
+                        urlParams = dict(self.defaultParams)
+                        urlParams['header'] = dict(urlParams['header'])
+                        urlParams['header']['Referer'] = playerData['ref_url']
+                        sts, data = self.getPage(url, urlParams)
+                        hostUrl = self.cm.ph.getSearchGroups(data, '''location\.href=['"]([^'^"]+?)['"]''')[0]
+            except Exception:
+                printExc()
+    
+        if self.cm.isValidUrl(hostUrl):
+            if linkId != '':
+                if config.plugins.iptvplayer.mrpiracy_linkcache.value and linkId not in MRPiracyGQ.LINKS_CACHE:
+                    WriteTextFile(GetCacheSubDir('mrpiracy', linkId), hostUrl)
+                MRPiracyGQ.LINKS_CACHE[linkId] = hostUrl
+            
+            urlTab = self.up.getVideoLinkExt(hostUrl)
+
+        if 0 == len(urlTab):
+            SetIPTVPlayerLastHostError('\n'.join(errorMsgTab)) 
         else:
-            url = self.getFullUrl('%s_player_include_welele.php?imdb=%s&p=%s&token=%s' % (type, playerData[1], playerData[0], token))
-        
-        sts, data = self.getPage(url)
-        if not sts: return urlTab
-        
-        SetIPTVPlayerLastHostError(self.cleanHtmlStr(data))
-        
-        printDBG("+++++++++++++++++++++++++")
-        printDBG(data)
-        printDBG("+++++++++++++++++++++++++")
-        
-        subTrack = self.cm.ph.getSearchGroups(data, '''subs\:([^'^"]+?\.srt)''')[0]
-        if subTrack == '': subTrack = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?/subs/[^'^"]*?\.srt)['"]''')[0]
-        subTrack = self.getFullUrl(subTrack)
-        
-        url = self.cm.ph.getSearchGroups(data, '''src=["']([^"^']+?)["']''')[0]
-        if url == '': url = self.cm.ph.getSearchGroups(data, '''['"]?link['"]?\s*:\s*['"]([^'^"]+?)['"]''')[0]
-        url = self.getFullUrl(url)
-        
-        if self.up.getDomain(url) in self.getMainUrl():
-            sts, data = self.getPage(url)
-            if not sts: return urlTab
-            videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''href=["']([^"^']+?)["']''')[0])
-        else:
-            videoUrl = url
-        
-        urlTab = self.up.getVideoLinkExt(videoUrl)
-        if self.cm.isValidUrl(subTrack):
-            format = subTrack[-3:]
-            for idx in range(len(urlTab)):
-                urlTab[idx]['url'] = strwithmeta(urlTab[idx]['url'])
-                if 'external_sub_tracks' not in urlTab[idx]['url'].meta: urlTab[idx]['url'].meta['external_sub_tracks'] = []
-                urlTab[idx]['url'].meta['external_sub_tracks'].append({'title':'', 'url':subTrack, 'lang':'pt', 'format':format})
-        
+            subUrl = 'https://cdn.mrpiracy.xyz/subs/%s.srt' % imdbId
+            sts, data = self.getPage(subUrl)
+            if sts and '00:'in data:
+                for idx in range(len(urlTab)):
+                    urlTab[idx]['url'] = strwithmeta(urlTab[idx]['url'])
+                    if 'external_sub_tracks' not in urlTab[idx]['url'].meta: urlTab[idx]['url'].meta['external_sub_tracks'] = []
+                    urlTab[idx]['url'].meta['external_sub_tracks'].append({'title':'', 'url':subUrl, 'lang':'pt', 'format':'srt'})
         return urlTab
     
     def getFavouriteData(self, cItem):
@@ -549,53 +582,39 @@ class MRPiracyGQ(CBaseHostClass):
     def tryTologin(self):
         printDBG('tryTologin start')
         connFailed = _('Connection to server failed!')
+
+        sts, data = self.getPage(self.getMainUrl())
+        if not sts: return False, connFailed 
+
+        if 'logout.php' in data:
+            return True, 'OK'
+
+        login  = config.plugins.iptvplayer.mrpiracy_login.value
+        passwd = config.plugins.iptvplayer.mrpiracy_password.value
         
-        # try to log on using user and password fields
-        if 'simple' == config.plugins.iptvplayer.mrpiracy_loginmode.value:
-            sts, data = self.getPage(self.getMainUrl())
-            if not sts: return False, connFailed 
-            
-            if 'logout.php' in data:
-                return True, 'OK'
-                
-            login  = config.plugins.iptvplayer.mrpiracy_login.value
-            passwd = config.plugins.iptvplayer.mrpiracy_password.value
-            
-            post_data = {'email':login, 'password':passwd, 'lembrar_senha':'lembrar'}
-            
-            sitekey = self.cm.ph.getSearchGroups(data, 'fallback\?k=([^"]+?)"')[0]
-            if sitekey != '':
-                recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
-                recaptcha.HTTP_HEADER['Referer'] = self.getMainUrl()
-                recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
-                token = recaptcha.processCaptcha(sitekey)
-                if token == '':
-                    return False, 'NOT OK'
-                post_data.update({'g-recaptcha-response':token, 'g-recaptcha-response2':token, 'url':'/'})
-            
-            data  = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>', False)[1]
-            url   = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
-            
-            params = dict(self.defaultParams)
-            params['header'] = dict(self.HEADER)
-            params['header']['Referer'] = self.getMainUrl()
-            
-            # login
-            sts, data = self.cm.getPage(url, params, post_data)
-            if not sts: return False, connFailed
-        else:
-            cookie = {}
-            try: cookie[config.plugins.iptvplayer.mrpiracy_cookiename.value] = urllib.unquote(config.plugins.iptvplayer.mrpiracy_cookievalue.value)
-            except Exception: cookie[config.plugins.iptvplayer.mrpiracy_cookiename.value] = config.plugins.iptvplayer.mrpiracy_cookievalue.value
-            cookie['nome'] = config.plugins.iptvplayer.mrpiracy_username.value
-            cookie['id_utilizador'] = config.plugins.iptvplayer.mrpiracy_userid.value
-            cookie['admin'] = config.plugins.iptvplayer.mrpiracy_userid.value
-            self.defaultParams['cookie_items'] = cookie
-            
-            #rm(self.COOKIE_FILE)
-            sts, data = self.getPage(self.getMainUrl())
-            if not sts: return False, connFailed 
-        
+        post_data = {'email':login, 'password':passwd, 'lembrar_senha':'lembrar'}
+
+        sitekey = self.cm.ph.getSearchGroups(data, 'fallback\?k=([^"]+?)"')[0]
+        if sitekey != '':
+            recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
+            recaptcha.HTTP_HEADER['Referer'] = self.getMainUrl()
+            recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
+            token = recaptcha.processCaptcha(sitekey)
+            if token == '':
+                return False, 'NOT OK'
+            post_data.update({'g-recaptcha-response':token, 'g-recaptcha-response2':token, 'url':'/'})
+
+        data  = self.cm.ph.getDataBeetwenMarkers(data, '<form', '</form>', False)[1]
+        url   = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
+
+        params = dict(self.defaultParams)
+        params['header'] = dict(self.HEADER)
+        params['header']['Referer'] = self.getMainUrl()
+
+        # login
+        sts, data = self.cm.getPage(url, params, post_data)
+        if not sts: return False, connFailed
+
         if 'logout.php' in data:
             return True, 'OK'
         else:
@@ -607,44 +626,20 @@ class MRPiracyGQ(CBaseHostClass):
         if self.MAIN_URL == None:
             self.selectDomain()
         
-        if ('simple' != config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-            (self.cookiename != config.plugins.iptvplayer.mrpiracy_cookiename.value or \
-             self.cookievalue != config.plugins.iptvplayer.mrpiracy_cookievalue.value or \
-             self.username != config.plugins.iptvplayer.mrpiracy_username.value or \
-             self.userid != config.plugins.iptvplayer.mrpiracy_userid.value) and \
-           '' != config.plugins.iptvplayer.mrpiracy_cookiename.value.strip() and \
-           '' != config.plugins.iptvplayer.mrpiracy_cookievalue.value.strip() and \
-           '' != config.plugins.iptvplayer.mrpiracy_username.value.strip() and \
-           '' != config.plugins.iptvplayer.mrpiracy_userid.value.strip()) or \
-           ('simple' == config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-            (self.login != config.plugins.iptvplayer.mrpiracy_login.value or \
+        if (self.login != config.plugins.iptvplayer.mrpiracy_login.value or \
              self.password != config.plugins.iptvplayer.mrpiracy_password.value) and \
             '' != config.plugins.iptvplayer.mrpiracy_login.value.strip() and \
-            '' != config.plugins.iptvplayer.mrpiracy_password.value.strip()):
+            '' != config.plugins.iptvplayer.mrpiracy_password.value.strip():
            
             self.loggedIn, msg = self.tryTologin()
             if not self.loggedIn:
-                if 'simple' == config.plugins.iptvplayer.mrpiracy_loginmode.value:
-                    userName = config.plugins.iptvplayer.mrpiracy_login.value
-                else:
-                    userName = config.plugins.iptvplayer.mrpiracy_username.value
+                userName = config.plugins.iptvplayer.mrpiracy_login.value
                 self.sessionEx.open(MessageBox, 'Login failed for user "%s".' % userName, type = MessageBox.TYPE_INFO, timeout = 10 )
-            elif 'simple' != config.plugins.iptvplayer.mrpiracy_loginmode.value:
-                self.cookiename  = config.plugins.iptvplayer.mrpiracy_cookiename.value
-                self.cookievalue = config.plugins.iptvplayer.mrpiracy_cookievalue.value 
-                self.username    = config.plugins.iptvplayer.mrpiracy_username.value 
-                self.userid      = config.plugins.iptvplayer.mrpiracy_userid.value
             else:
                 self.loogin   = config.plugins.iptvplayer.mrpiracy_login.value
                 self.password = config.plugins.iptvplayer.mrpiracy_password.value
-        elif ('simple' != config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-           ('' == config.plugins.iptvplayer.mrpiracy_cookiename.value.strip() or \
-           '' == config.plugins.iptvplayer.mrpiracy_cookievalue.value.strip() or \
-           '' == config.plugins.iptvplayer.mrpiracy_username.value.strip() or \
-           '' == config.plugins.iptvplayer.mrpiracy_userid.value.strip())) or \
-           ('simple' == config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-            ('' == config.plugins.iptvplayer.mrpiracy_login.value.strip() or \
-            '' == config.plugins.iptvplayer.mrpiracy_password.value.strip())):
+        elif ('' == config.plugins.iptvplayer.mrpiracy_login.value.strip() or \
+              '' == config.plugins.iptvplayer.mrpiracy_password.value.strip()):
            self.sessionEx.open(MessageBox, 'Access to this service requires login.\nPlease register on the site \"%s\". Then log in and then put your login data in the host configuration under blue button.' % self.getMainUrl(), type=MessageBox.TYPE_INFO, timeout=20 )
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
@@ -658,11 +653,7 @@ class MRPiracyGQ(CBaseHostClass):
         
     #MAIN MENU
         if name == None:
-            if 'simple' == config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-               (config.plugins.iptvplayer.mrpiracy_login.value == '' or config.plugins.iptvplayer.mrpiracy_password.value == ''):
-                rm(self.COOKIE_FILE)
-            elif 'simple' != config.plugins.iptvplayer.mrpiracy_loginmode.value and \
-               (self.cookiename == '' or self.cookievalue == '' or self.username == '' or self.userid == ''):
+            if (config.plugins.iptvplayer.mrpiracy_login.value == '' or config.plugins.iptvplayer.mrpiracy_password.value == ''):
                 rm(self.COOKIE_FILE)
             self.cacheLinks = {}
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
