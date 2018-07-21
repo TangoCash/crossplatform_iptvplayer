@@ -50,6 +50,30 @@ def PrevDay(dt):
     return (dt - datetime.timedelta(days=1))
 
 ###################################################
+def UsePyCurl():
+    return config.plugins.iptvplayer.usepycurl.value
+
+def GetIconsHash():
+    iconsHashFile = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/icons/PlayerSelector/hash.txt')
+    sts, data = ReadTextFile(iconsHashFile)
+    if sts: return data.strip()
+    else: return ''
+
+def SetIconsHash(value):
+    iconsHashFile = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/icons/PlayerSelector/hash.txt')
+    return WriteTextFile(iconsHashFile, value)
+
+def GetGraphicsHash():
+    graphicsHashFile = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/icons/hash.txt')
+    sts, data = ReadTextFile(graphicsHashFile)
+    if sts: return data.strip()
+    else: return ''
+
+def SetGraphicsHash(value):
+    graphicsHashFile = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/icons/hash.txt')
+    return WriteTextFile(graphicsHashFile, value)
+
+###################################################
 def GetNice(pid=None):
     nice = 0
     if None == pid:
