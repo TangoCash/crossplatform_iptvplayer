@@ -1,7 +1,6 @@
 #!/bin/bash
-. /DuckboxDisk/j00zek-NP/activePaths.config
 
-publicGitRoot=$GITroot/crossplatform_iptvplayer
+publicGitRoot=$(pwd)
 daemonDir=$publicGitRoot/IPTVdaemon
 KaddonDir=$publicGitRoot/addon4KODI/neutrinoIPTV
 NpluginDir=$publicGitRoot/addon4neutrino/neutrinoIPTV
