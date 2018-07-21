@@ -48,10 +48,10 @@ def gettytul():
 class Gledalica(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'gledalica.com', 'cookie':'gledalica.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'gledalica.com', 'cookie':'gledalica.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.gledalica.com/'
-        self.DEFAULT_ICON_URL = 'http://gledalica.co/wp-content/uploads/2017/09/gledalica.png'
+        self.DEFAULT_ICON_URL = 'http://cdn-thumbshot.pearltrees.com/ec/c9/ecc93fbd8a258ceb455d61382ffde798-pearlsquare.jpg'
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
@@ -321,19 +321,34 @@ class Gledalica(CBaseHostClass):
         
         self.cacheLinks = {}
         
-        sts, data = self.getPage(cItem['url'])
-        if not sts: return
+        params = dict(self.defaultParams)
+        params['header'] = dict(params['header'])
         
-        cUrl = data.meta['url']
-        self.setMainUrl(cUrl)
+        cUrl = cItem['url']
+        url = cItem['url']
         
         retTab = []
+        tries = 0
+        while tries < 2:
+            tries += 1
+            
+            params['header']['Referer'] = cUrl
+            sts, data = self.getPage(url, params)
+            if not sts: return []
+            
+            cUrl = data.meta['url']
+            self.setMainUrl(cUrl)
+            url = self.cm.ph.getSearchGroups(data, '''href=['"]([^"^']+?back\.php[^"^']*?)['"]''', 1, True)[0]
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '>')
-        for item in data:
-            url = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
-            if 1 != self.up.checkHostSupport(url): continue 
-            retTab.append({'name':self.up.getHostName(url), 'url':strwithmeta(url, {'Referer':cUrl}), 'need_resolve':1})
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '>')
+            for item in data:
+                if 'display:none' in item.lower().replace(' ', ''): continue
+                playerUrl = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
+                if 1 != self.up.checkHostSupport(playerUrl): continue 
+                retTab.append({'name':self.up.getHostName(playerUrl), 'url':strwithmeta(playerUrl, {'Referer':cUrl}), 'need_resolve':1})
+            
+            if url == '':
+                break
         
         if len(retTab):
             self.cacheLinks[cacheKey] = retTab

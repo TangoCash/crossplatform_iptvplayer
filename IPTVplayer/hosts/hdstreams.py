@@ -3,15 +3,13 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetPluginDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetPluginDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
-
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
 ###################################################
 
 ###################################################
@@ -44,9 +42,21 @@ from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapp
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.hdstreams_linkcache = ConfigYesNo(default = True)
+config.plugins.iptvplayer.hdstreams_bypassrecaptcha = ConfigSelection(default = "None", choices = [("None",        _("None")),
+                                                                                                 ("9kw.eu",       "https://9kw.eu/"),
+                                                                                                 ("2captcha.com", "http://2captcha.com/")])
 
 def GetConfigList():
     optionList = []
+    #optionList.append(getConfigListEntry(_("Use links cache"), config.plugins.iptvplayer.hdstreams_linkcache))
+    #optionList.append(getConfigListEntry(_("Captcha solving service"), config.plugins.iptvplayer.hdstreams_bypassrecaptcha))
+    #if config.plugins.iptvplayer.hdstreams_bypassrecaptcha.value == '9kw.eu':
+    #    optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_9kweu))
+    #elif config.plugins.iptvplayer.hdstreams_bypassrecaptcha.value == '2captcha.com':
+    #    optionList.append(getConfigListEntry(_("%s API KEY") % '    ', config.plugins.iptvplayer.api_key_2captcha))
     return optionList
 ###################################################
 
@@ -58,7 +68,7 @@ class HDStreams(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'new-hd-streams.org', 'cookie':'hd-streams.org.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
-        self.USER_AGENT = 'Mozilla/5.0'
+        self.USER_AGENT = 'Mozilla / 5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebkit / 538.1 (KHTML, podobnie jak Gecko) SamsungBrowser / 1.1 TV Safari / 538.1'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
@@ -280,7 +290,7 @@ class HDStreams(CBaseHostClass):
                         if '' in tmp: continue
                         name = self.cleanHtmlStr(flagsReObj.sub('', linkItem))
                         name = '[%s][%s] %s' % (langId, qualityName, name)
-                        url = strwithmeta(cItem['url'], {'links_key':linksKey, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':langId}})
+                        url = strwithmeta(cItem['url'], {'links_key':linksKey, 'link_data':tmp, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':langId}})
                         linksTab.append({'name':name, 'url':url, 'need_resolve':1})
             
             if len(linksTab):
@@ -309,7 +319,7 @@ class HDStreams(CBaseHostClass):
                     if '' in tmp: tmp = self.cm.ph.getSearchGroups(linkItem, '''loadEpisodeStream\(\s*['"]([^'^"]+?)['"]\s*,\s*['"]([^'^"]+?)['"]''', 2)
                     if '' in tmp: continue
                     name = self.cleanHtmlStr(linkItem)
-                    url = strwithmeta(cItem['url'], {'links_key':linksKey, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':'de'}}) #langId
+                    url = strwithmeta(cItem['url'], {'links_key':linksKey, 'link_data':tmp, 'post_data':{'e':tmp[0], 'h':tmp[1], 'lang':'de'}}) #langId
                     linksTab.append({'name':name, 'url':url, 'need_resolve':1})
                 
                 if len(linksTab):
@@ -389,6 +399,8 @@ class HDStreams(CBaseHostClass):
         linksKey = meta.get('links_key', '')
         post_data = meta.get('post_data', {})
         
+        printDBG('++++ meta[%s]' % meta)
+        
         for idx in range(len(self.cacheLinks[linksKey])):
             if self.cacheLinks[linksKey][idx]['url'].meta['links_key'] == linksKey:
                 tmp_post = self.cacheLinks[linksKey][idx]['url'].meta.get('post_data', {})
@@ -400,6 +412,11 @@ class HDStreams(CBaseHostClass):
         sts, data = self.getPage(videoUrl)
         if not sts: return []
         
+        recaptcha = self.cm.ph.getSearchGroups(data, '''source\.recaptcha\s*?=\s*?(false|true)''')[0]
+        printDBG(">> recaptcha[%s]" % recaptcha)
+        if recaptcha == 'true':
+            SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.')) 
+        
         urlParams = dict(self.defaultParams)
         urlParams['header'] = dict(self.AJAX_HEADER)
         urlParams['header']['Referer'] = videoUrl
@@ -408,6 +425,8 @@ class HDStreams(CBaseHostClass):
         urlParams['header']['x-requested-with'] = 'XMLHttpRequest'
         urlParams['ignore_http_code_ranges'] = [(401, 401)]
         
+        post_data = dict(post_data)
+        post_data.update({"q":"","grecaptcha":""})
         sts, data = self.getPage(videoUrl + '/stream', urlParams, post_data)
         if not sts: return []
         
@@ -416,16 +435,37 @@ class HDStreams(CBaseHostClass):
         
         try:
             printDBG(data)
-            tmp = byteify(json.loads(data))['s']
-            if '{' not in tmp: tmp = base64.b64decode(tmp)
-            tmp = byteify(json.loads(tmp))
-            printDBG(tmp)
+            mainData = byteify(json.loads(data))
+            
+            # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            tmp = mainData.get('d', '') + mainData.get('c', '') + mainData.get('iv', '') + mainData.get('f', '') + mainData.get('h', '') + mainData.get('b', '')
+            printDBG("tmp: " + tmp)
+            tmp = byteify(json.loads(base64.b64decode(tmp)))
+            
             ciphertext = base64.b64decode(tmp['ct'][::-1])
             iv = unhexlify(tmp['iv'])
             salt = unhexlify(tmp['s'])
             b = urlParams['header']['x-csrf-token'] #urlParams['header']['User-Agent']
-            tmp = self.cryptoJS_AES_decrypt(ciphertext, base64.b64encode(b), salt)
+            b = base64.b64encode(b[::-1])
+            printDBG("b: " + b)
+            tmp = self.cryptoJS_AES_decrypt(ciphertext, b, salt)
             printDBG(tmp)
+            
+            tmp = byteify(json.loads(base64.b64decode(tmp)))
+            ciphertext = base64.b64decode(tmp['ct'][::-1])
+            iv = unhexlify(tmp['iv'])
+            salt = unhexlify(tmp['s'])
+            b = ''
+            a = urlParams['header']['x-csrf-token']
+            for idx in range(len(a)-1, 0, -2):
+                b += a[idx]
+            if mainData.get('e', None): b += '1'
+            else: b += '0'
+            printDBG("b: " + b)
+            tmp = self.cryptoJS_AES_decrypt(ciphertext, b, salt)
+            printDBG(tmp)
+            # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            
             tmp = byteify(json.loads(tmp))
             videoUrl = tmp
         except Exception:

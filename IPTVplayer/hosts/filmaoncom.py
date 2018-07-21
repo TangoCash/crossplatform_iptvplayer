@@ -58,7 +58,7 @@ class FilmaonCom(CBaseHostClass):
         
         self.cacheLinks    = {}
         self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        
+    
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
         origBaseUrl = baseUrl
@@ -68,10 +68,11 @@ class FilmaonCom(CBaseHostClass):
             else: return urlparse.urljoin(baseUrl, url)
         addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-        
-    def setMainUrl(self, url):
-        if self.cm.isValidUrl(url):
-            self.MAIN_URL = self.cm.getBaseUrl(url)
+    
+    def getFullIconUrl(self, url, baseUrl=None):
+        url = CBaseHostClass.getFullIconUrl(self, url, baseUrl)
+        if url != '': url = strwithmeta(url, {'Referer':self.getMainUrl()})
+        return url
     
     def listMainMenu(self, cItem, nextCategory1, nextCategory2):
         printDBG("InteriaTv.listMainMenu")

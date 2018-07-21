@@ -2,7 +2,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
@@ -82,6 +82,14 @@ class TreeTv(CBaseHostClass):
         self.login    = ''
         self.password = ''
         
+    def getPage(self, url, params={}, post_data=None):
+        sts, data = self.cm.getPage(url, params, post_data)
+        if sts:
+            if 'lawfilter' in self.cm.meta['url']:
+                msg = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'message'), ('</div', '>'), False)[1])
+                if msg != '': GetIPTVNotify().push(msg, 'info', 10)
+        return sts, data
+    
     def getStr(self, item, key):
         if key not in item: return ''
         if item[key] == None: return ''
@@ -90,8 +98,9 @@ class TreeTv(CBaseHostClass):
     def fillFilters(self, cItem):
         self.cacheFilters = {}
         self.filtersTab = []
-        sts, data = self.cm.getPage(cItem['url']) # it seems that series and movies have same filters
+        sts, data = self.getPage(cItem['url']) # it seems that series and movies have same filters
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         def addFilter(data, key, addAny, titleBase, type=0):
             self.cacheFilters[key] = []
@@ -113,7 +122,7 @@ class TreeTv(CBaseHostClass):
         if len(self.cacheFilters.get('production', [])): self.filtersTab.append('production')
         
         # genres -> janrs
-        sts, tmpData = self.cm.getPage(self.getFullUrl('default/index/janrs?_=' + str(time.time())))
+        sts, tmpData = self.getPage(self.getFullUrl('default/index/janrs?_=' + str(time.time())))
         if sts:
             tmpData = self.cm.ph.getAllItemsBeetwenMarkers(tmpData, '<a ', '</a>', withMarkers=True)
             addFilter(tmpData, 'genres', True, '', 2)
@@ -179,8 +188,9 @@ class TreeTv(CBaseHostClass):
         params['header'] = dict(params['header'])
         params['header']['Referer'] = self.MAIN_URL
         
-        sts, data = self.cm.getPage(self.getFullUrl(baseUrl), params)
+        sts, data = self.getPage(self.getFullUrl(baseUrl), params)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         if 'class="next"' in data:
             nextPage = True
@@ -211,8 +221,9 @@ class TreeTv(CBaseHostClass):
         
     def exploreItem(self, cItem):
         printDBG("TreeTv.exploreItem")
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         data = re.sub("<!--[\s\S]*?-->", "", data)
         
         # trailer
@@ -247,8 +258,9 @@ class TreeTv(CBaseHostClass):
         printDBG("TreeTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
         baseUrl = self.getFullUrl('search?usersearch={0}&filter=name'.format(urllib.quote_plus(searchPattern)))
-        sts, data = self.cm.getPage(baseUrl)
+        sts, data = self.getPage(baseUrl)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
 
         cItem = dict(cItem)
         cItem['url'] = baseUrl
@@ -280,18 +292,19 @@ class TreeTv(CBaseHostClass):
                     self.cacheLinks[idx]['name'] = '*' + self.cacheLinks[idx]['name']
                 break
                 
-        #sts, data = self.cm.getPage('http://tree.tv/film/index/imprint', self.defaultParams, {'result':self.defaultParams['cookie_items']['mycook']})
+        #sts, data = self.getPage('http://tree.tv/film/index/imprint', self.defaultParams, {'result':self.defaultParams['cookie_items']['mycook']})
         
         params = dict(self.defaultParams)
         params['header'] = dict(self.AJAX_HEADER)
         params['header']['Referer'] = str('http://tree.tv/')
         params['raw_post_data'] = True
         
-        sts, data = self.cm.getPage('http://tree.tv/film/index/imprint', params, 'result=' + self.defaultParams['cookie_items']['mycook'] + '&components%5B0%5D%5Bkey%5D=user_agent&components%5B0%5D%5Bvalue%5D=Mozilla%2F5.0+(Windows+NT+6.1%3B+WOW64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F52.0.2743.116+Safari%2F537.36&components%5B1%5D%5Bkey%5D=language&components%5B1%5D%5Bvalue%5D=&components%5B2%5D%5Bkey%5D=color_depth&components%5B2%5D%5Bvalue%5D=24&components%5B3%5D%5Bkey%5D=pixel_ratio&components%5B3%5D%5Bvalue%5D=1&components%5B4%5D%5Bkey%5D=hardware_concurrency&components%5B4%5D%5Bvalue%5D=unknown&components%5B5%5D%5Bkey%5D=resolution&components%5B5%5D%5Bvalue%5D%5B%5D=1920&components%5B5%5D%5Bvalue%5D%5B%5D=1080&components%5B6%5D%5Bkey%5D=available_resolution&components%5B6%5D%5Bvalue%5D%5B%5D=1920&components%5B6%5D%5Bvalue%5D%5B%5D=1040&components%5B7%5D%5Bkey%5D=timezone_offset&components%5B7%5D%5Bvalue%5D=-60&components%5B8%5D%5Bkey%5D=session_storage&components%5B8%5D%5Bvalue%5D=1&components%5B9%5D%5Bkey%5D=local_storage&components%5B9%5D%5Bvalue%5D=1&components%5B10%5D%5Bkey%5D=indexed_db&components%5B10%5D%5Bvalue%5D=1&components%5B11%5D%5Bkey%5D=cpu_class&components%5B11%5D%5Bvalue%5D=unknown&components%5B12%5D%5Bkey%5D=navigator_platform&components%5B12%5D%5Bvalue%5D=unknown&components%5B13%5D%5Bkey%5D=do_not_track&components%5B13%5D%5Bvalue%5D=1&components%5B14%5D%5Bkey%5D=regular_plugins&components%5B14%5D%5Bvalue%5D%5B%5D=&components%5B15%5D%5Bkey%5D=canvas&components%5B15%5D%5Bvalue%5D=&components%5B16%5D%5Bkey%5D=webgl&components%5B16%5D%5Bvalue%5D=&components%5B17%5D%5Bkey%5D=adblock&components%5B17%5D%5Bvalue%5D=false&components%5B18%5D%5Bkey%5D=has_lied_languages&components%5B18%5D%5Bvalue%5D=false&components%5B19%5D%5Bkey%5D=has_lied_resolution&components%5B19%5D%5Bvalue%5D=false&components%5B20%5D%5Bkey%5D=has_lied_os&components%5B20%5D%5Bvalue%5D=false&components%5B21%5D%5Bkey%5D=has_lied_browser&components%5B21%5D%5Bvalue%5D=true&components%5B22%5D%5Bkey%5D=touch_support&components%5B22%5D%5Bvalue%5D%5B%5D=0&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B23%5D%5Bkey%5D=js_fonts&components%5B23%5D%5Bvalue%5D%5B%5D=Arial')
+        sts, data = self.getPage(self.getFullUrl('/film/index/imprint'), params, 'result=' + self.defaultParams['cookie_items']['mycook'] + '&components%5B0%5D%5Bkey%5D=user_agent&components%5B0%5D%5Bvalue%5D=Mozilla%2F5.0+(Windows+NT+6.1%3B+WOW64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F52.0.2743.116+Safari%2F537.36&components%5B1%5D%5Bkey%5D=language&components%5B1%5D%5Bvalue%5D=&components%5B2%5D%5Bkey%5D=color_depth&components%5B2%5D%5Bvalue%5D=24&components%5B3%5D%5Bkey%5D=pixel_ratio&components%5B3%5D%5Bvalue%5D=1&components%5B4%5D%5Bkey%5D=hardware_concurrency&components%5B4%5D%5Bvalue%5D=unknown&components%5B5%5D%5Bkey%5D=resolution&components%5B5%5D%5Bvalue%5D%5B%5D=1920&components%5B5%5D%5Bvalue%5D%5B%5D=1080&components%5B6%5D%5Bkey%5D=available_resolution&components%5B6%5D%5Bvalue%5D%5B%5D=1920&components%5B6%5D%5Bvalue%5D%5B%5D=1040&components%5B7%5D%5Bkey%5D=timezone_offset&components%5B7%5D%5Bvalue%5D=-60&components%5B8%5D%5Bkey%5D=session_storage&components%5B8%5D%5Bvalue%5D=1&components%5B9%5D%5Bkey%5D=local_storage&components%5B9%5D%5Bvalue%5D=1&components%5B10%5D%5Bkey%5D=indexed_db&components%5B10%5D%5Bvalue%5D=1&components%5B11%5D%5Bkey%5D=cpu_class&components%5B11%5D%5Bvalue%5D=unknown&components%5B12%5D%5Bkey%5D=navigator_platform&components%5B12%5D%5Bvalue%5D=unknown&components%5B13%5D%5Bkey%5D=do_not_track&components%5B13%5D%5Bvalue%5D=1&components%5B14%5D%5Bkey%5D=regular_plugins&components%5B14%5D%5Bvalue%5D%5B%5D=&components%5B15%5D%5Bkey%5D=canvas&components%5B15%5D%5Bvalue%5D=&components%5B16%5D%5Bkey%5D=webgl&components%5B16%5D%5Bvalue%5D=&components%5B17%5D%5Bkey%5D=adblock&components%5B17%5D%5Bvalue%5D=false&components%5B18%5D%5Bkey%5D=has_lied_languages&components%5B18%5D%5Bvalue%5D=false&components%5B19%5D%5Bkey%5D=has_lied_resolution&components%5B19%5D%5Bvalue%5D=false&components%5B20%5D%5Bkey%5D=has_lied_os&components%5B20%5D%5Bvalue%5D=false&components%5B21%5D%5Bkey%5D=has_lied_browser&components%5B21%5D%5Bvalue%5D=true&components%5B22%5D%5Bkey%5D=touch_support&components%5B22%5D%5Bvalue%5D%5B%5D=0&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B23%5D%5Bkey%5D=js_fonts&components%5B23%5D%5Bvalue%5D%5B%5D=Arial')
         params['header']['Referer'] = str(videoUrl)
-        sts, data = self.cm.getPage('http://tree.tv/film/index/imprint', params, 'result=' + self.defaultParams['cookie_items']['mycook'] + '&components%5B0%5D%5Bkey%5D=user_agent&components%5B0%5D%5Bvalue%5D=Mozilla%2F5.0+(Windows+NT+6.1%3B+WOW64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F52.0.2743.116+Safari%2F537.36&components%5B1%5D%5Bkey%5D=language&components%5B1%5D%5Bvalue%5D=&components%5B2%5D%5Bkey%5D=color_depth&components%5B2%5D%5Bvalue%5D=24&components%5B3%5D%5Bkey%5D=pixel_ratio&components%5B3%5D%5Bvalue%5D=1&components%5B4%5D%5Bkey%5D=hardware_concurrency&components%5B4%5D%5Bvalue%5D=unknown&components%5B5%5D%5Bkey%5D=resolution&components%5B5%5D%5Bvalue%5D%5B%5D=1920&components%5B5%5D%5Bvalue%5D%5B%5D=1080&components%5B6%5D%5Bkey%5D=available_resolution&components%5B6%5D%5Bvalue%5D%5B%5D=1920&components%5B6%5D%5Bvalue%5D%5B%5D=1040&components%5B7%5D%5Bkey%5D=timezone_offset&components%5B7%5D%5Bvalue%5D=-60&components%5B8%5D%5Bkey%5D=session_storage&components%5B8%5D%5Bvalue%5D=1&components%5B9%5D%5Bkey%5D=local_storage&components%5B9%5D%5Bvalue%5D=1&components%5B10%5D%5Bkey%5D=indexed_db&components%5B10%5D%5Bvalue%5D=1&components%5B11%5D%5Bkey%5D=cpu_class&components%5B11%5D%5Bvalue%5D=unknown&components%5B12%5D%5Bkey%5D=navigator_platform&components%5B12%5D%5Bvalue%5D=unknown&components%5B13%5D%5Bkey%5D=do_not_track&components%5B13%5D%5Bvalue%5D=1&components%5B14%5D%5Bkey%5D=regular_plugins&components%5B14%5D%5Bvalue%5D%5B%5D=&components%5B15%5D%5Bkey%5D=canvas&components%5B15%5D%5Bvalue%5D=&components%5B16%5D%5Bkey%5D=webgl&components%5B16%5D%5Bvalue%5D=&components%5B17%5D%5Bkey%5D=adblock&components%5B17%5D%5Bvalue%5D=false&components%5B18%5D%5Bkey%5D=has_lied_languages&components%5B18%5D%5Bvalue%5D=false&components%5B19%5D%5Bkey%5D=has_lied_resolution&components%5B19%5D%5Bvalue%5D=false&components%5B20%5D%5Bkey%5D=has_lied_os&components%5B20%5D%5Bvalue%5D=false&components%5B21%5D%5Bkey%5D=has_lied_browser&components%5B21%5D%5Bvalue%5D=true&components%5B22%5D%5Bkey%5D=touch_support&components%5B22%5D%5Bvalue%5D%5B%5D=0&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B23%5D%5Bkey%5D=js_fonts&components%5B23%5D%5Bvalue%5D%5B%5D=Arial')
+        sts, data = self.getPage(self.getFullUrl('/film/index/imprint'), params, 'result=' + self.defaultParams['cookie_items']['mycook'] + '&components%5B0%5D%5Bkey%5D=user_agent&components%5B0%5D%5Bvalue%5D=Mozilla%2F5.0+(Windows+NT+6.1%3B+WOW64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F52.0.2743.116+Safari%2F537.36&components%5B1%5D%5Bkey%5D=language&components%5B1%5D%5Bvalue%5D=&components%5B2%5D%5Bkey%5D=color_depth&components%5B2%5D%5Bvalue%5D=24&components%5B3%5D%5Bkey%5D=pixel_ratio&components%5B3%5D%5Bvalue%5D=1&components%5B4%5D%5Bkey%5D=hardware_concurrency&components%5B4%5D%5Bvalue%5D=unknown&components%5B5%5D%5Bkey%5D=resolution&components%5B5%5D%5Bvalue%5D%5B%5D=1920&components%5B5%5D%5Bvalue%5D%5B%5D=1080&components%5B6%5D%5Bkey%5D=available_resolution&components%5B6%5D%5Bvalue%5D%5B%5D=1920&components%5B6%5D%5Bvalue%5D%5B%5D=1040&components%5B7%5D%5Bkey%5D=timezone_offset&components%5B7%5D%5Bvalue%5D=-60&components%5B8%5D%5Bkey%5D=session_storage&components%5B8%5D%5Bvalue%5D=1&components%5B9%5D%5Bkey%5D=local_storage&components%5B9%5D%5Bvalue%5D=1&components%5B10%5D%5Bkey%5D=indexed_db&components%5B10%5D%5Bvalue%5D=1&components%5B11%5D%5Bkey%5D=cpu_class&components%5B11%5D%5Bvalue%5D=unknown&components%5B12%5D%5Bkey%5D=navigator_platform&components%5B12%5D%5Bvalue%5D=unknown&components%5B13%5D%5Bkey%5D=do_not_track&components%5B13%5D%5Bvalue%5D=1&components%5B14%5D%5Bkey%5D=regular_plugins&components%5B14%5D%5Bvalue%5D%5B%5D=&components%5B15%5D%5Bkey%5D=canvas&components%5B15%5D%5Bvalue%5D=&components%5B16%5D%5Bkey%5D=webgl&components%5B16%5D%5Bvalue%5D=&components%5B17%5D%5Bkey%5D=adblock&components%5B17%5D%5Bvalue%5D=false&components%5B18%5D%5Bkey%5D=has_lied_languages&components%5B18%5D%5Bvalue%5D=false&components%5B19%5D%5Bkey%5D=has_lied_resolution&components%5B19%5D%5Bvalue%5D=false&components%5B20%5D%5Bkey%5D=has_lied_os&components%5B20%5D%5Bvalue%5D=false&components%5B21%5D%5Bkey%5D=has_lied_browser&components%5B21%5D%5Bvalue%5D=true&components%5B22%5D%5Bkey%5D=touch_support&components%5B22%5D%5Bvalue%5D%5B%5D=0&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B22%5D%5Bvalue%5D%5B%5D=false&components%5B23%5D%5Bkey%5D=js_fonts&components%5B23%5D%5Bvalue%5D%5B%5D=Arial')
+        if sts: self.setMainUrl(self.cm.meta['url'])
         
-        sts, data = self.cm.getPage(videoUrl, self.defaultParams)
+        sts, data = self.getPage(videoUrl, self.defaultParams)
         if not sts: return []
         data = re.sub("<!--[\s\S]*?-->", "", data)
         
@@ -304,7 +317,7 @@ class TreeTv(CBaseHostClass):
         params['header'] = dict(params['header'])
         params['header']['Referer'] = str(videoUrl)
         
-        sts, data = self.cm.getPage(url, params)
+        sts, data = self.getPage(url, params)
         if not sts: return []
         
         printDBG(data)
@@ -336,7 +349,7 @@ class TreeTv(CBaseHostClass):
                     clientKey = math.fmod(numClient, playerKeyParams['p']);
                 
                     post_data = {'key':int(clientKey)}
-                    sts, data = self.cm.getPage(tmpurl, params, post_data)
+                    sts, data = self.getPage(tmpurl, params, post_data)
                     if not sts: return []
                     printDBG("++++++++++++++")
                     printDBG(data)
@@ -360,7 +373,7 @@ class TreeTv(CBaseHostClass):
             return []
         
         post_data = {'file':fileId, 'source':source, 'skc':skc}
-        sts, data = self.cm.getPage(sourceUrl, params, post_data)
+        sts, data = self.getPage(sourceUrl, params, post_data)
         if not sts: return []
         
         printDBG('url[%s]' % url)
@@ -426,7 +439,7 @@ class TreeTv(CBaseHostClass):
         loginUrl = self.getFullUrl('users/index/auth')
         
         rm(self.COOKIE_FILE)
-        sts, data = self.cm.getPage(loginUrl, self.defaultParams)
+        sts, data = self.getPage(loginUrl, self.defaultParams)
         if not sts: return False, connFailed 
         
         post_data = {"mail":login, "pass":password, "social":"0"}
@@ -436,11 +449,11 @@ class TreeTv(CBaseHostClass):
         params.update({'header':HEADER})
         
         # login
-        sts, data = self.cm.getPage(loginUrl, params, post_data)
+        sts, data = self.getPage(loginUrl, params, post_data)
         if not sts: return False, connFailed
         
         # check if logged
-        sts, data = self.cm.getPage(self.MAIN_URL, self.defaultParams)
+        sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
         if not sts: return False, connFailed 
         
         if '"ok"' in data:

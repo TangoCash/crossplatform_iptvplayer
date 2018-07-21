@@ -6,8 +6,8 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute, IsMainThread
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir, rm, UsePyCurl
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute, IsMainThread, IsThreadTerminated, SetThreadKillable
 ###################################################
 # FOREIGN import
 ###################################################
@@ -368,8 +368,8 @@ class CParsingHelper:
             if numNodes > 0 and len(itemsTab) == numNodes:
                 break
         return itemsTab
-        
-    @staticmethod    
+
+    @staticmethod
     def removeDoubles(data, pattern):
         while -1 < data.find(pattern+pattern) and '' != pattern:
             data = data.replace(pattern+pattern, pattern)
@@ -483,6 +483,38 @@ class common:
         self.useProxy = useProxy
         self.geolocation = {}
         self.useMozillaCookieJar = useMozillaCookieJar
+        self.metadataFromLastRequest = {}
+        
+        self.curlSession = None
+        self.pyCurlAvailable = None
+        self.pyCurl = None
+    
+    @property
+    def meta(self):
+        return self.metadataFromLastRequest
+    
+    def usePyCurl(self):
+        bRet = False
+        if UsePyCurl():
+            if self.pyCurlAvailable == None:
+                try:
+                    import pycurl
+                    #test = pycurl.SSLVERSION_TLSv1_3
+                    verInfo = pycurl.version_info()
+                    printDBG("usePyCurl VERSION: %s" % [verInfo])
+                    # #define CURL_VERSION_ASYNCHDNS    (1<<7)
+                    # we need to have ASYNC DNS to be able "cancel"
+                    # request
+                    if verInfo[4] & (1<<7):
+                        self.pyCurlAvailable = True
+                        self.pyCurl = pycurl
+                    else:
+                        self.pyCurlAvailable = False
+                except Exception:
+                    self.pyCurlAvailable = False
+                    printExc()
+            bRet = self.pyCurlAvailable
+        return bRet
         
     def getCountryCode(self, lower=True):
         if 'countryCode' not in self.geolocation:
@@ -494,10 +526,32 @@ class common:
                     printExc()
         return self.geolocation.get('countryCode', '').lower()
         
+    def _pyCurlLoadCookie(self, cookiefile, ignoreDiscard=True, ignoreExpires=False):
+        cj = cookielib.MozillaCookieJar()
+        f = open(cookiefile)
+        lines = f.readlines()
+        f.close()
+        for idx in range(len(lines)):
+            lineNeedFix = False
+            fields = lines[idx].split('\t')
+            if len(fields) < 5: continue
+            if fields[0].startswith('#HttpOnly_'):
+                fields[0] = fields[0][10:]
+                lineNeedFix = True
+            if fields[4] == '0':
+                fields[4] = ''
+                lineNeedFix = True
+            if lineNeedFix: 
+                lines[idx] = '\t'.join(fields)
+        cj._really_load(StringIO(''.join(lines)), cookiefile, ignore_discard=ignoreDiscard, ignore_expires=ignoreExpires)
+        return cj
+        
     def clearCookie(self, cookiefile, leaveNames=[], removeNames=None, ignore_discard = True):
         try:
             toRemove = []
-            if not self.useMozillaCookieJar:
+            if self.usePyCurl():
+                cj = self._pyCurlLoadCookie(cookiefile, ignoreDiscard, ignoreExpires)
+            elif not self.useMozillaCookieJar:
                 cj = cookielib.LWPCookieJar()
             else:
                 cj = cookielib.MozillaCookieJar()
@@ -514,59 +568,324 @@ class common:
         return True
         
     def getCookieItem(self, cookiefile, item):
-        ret = self.getCookieItems(cookiefile)
-        return ret.get(item, '')
+        cookiesDict = self.getCookieItems(cookiefile)
+        return cookiesDict.get(item, '')
         
-    def getCookieItems(self, cookiefile, ignoreDiscard=True):
-        ret = {}
+    def getCookieItems(self, cookiefile, ignoreDiscard=True, ignoreExpires=False):
+        cookiesDict = {}
         try:
-            if not self.useMozillaCookieJar:
+            if self.usePyCurl():
+                cj = self._pyCurlLoadCookie(cookiefile, ignoreDiscard, ignoreExpires)
+            elif not self.useMozillaCookieJar:
                 cj = cookielib.LWPCookieJar()
+                cj.load(cookiefile, ignore_discard = ignoreDiscard)
             else:
                 cj = cookielib.MozillaCookieJar()
-            cj.load(cookiefile, ignore_discard = ignoreDiscard)
+                cj.load(cookiefile, ignore_discard = ignoreDiscard)
             for cookie in cj:
-                ret[cookie.name] = cookie.value
+                cookiesDict[cookie.name] = cookie.value
         except Exception:
             printExc()
-        return ret
+        return cookiesDict
         
-    def getCookieHeader(self, cookiefile, allowedNames=[], unquote=True):
+    def getCookieHeader(self, cookiefile, allowedNames=[], unquote=True, ignoreDiscard=True, ignoreExpires=False):
         ret = ''
         try:
-            if not self.useMozillaCookieJar:
-                cj = cookielib.LWPCookieJar()
-            else:
-                cj = cookielib.MozillaCookieJar()
-            cj.load(cookiefile, ignore_discard = True)
-            for cookie in cj:
-                if 0 < len(allowedNames) and cookie.name not in allowedNames: continue
-                value = cookie.value
+            cookiesDict = self.getCookieItems(cookiefile, ignoreDiscard, ignoreExpires)
+            for name in cookiesDict:
+                if 0 < len(allowedNames) and name not in allowedNames: continue
+                value = cookiesDict[name]
                 if unquote: value = urllib.unquote(value)
-                ret += '%s=%s; ' % (cookie.name, value)
+                ret += '%s=%s; ' % (name, value)
         except Exception:
             printExc()
         return ret
 
-    def html_entity_decode_char(self, m):
-        ent = m.group(1)
-        if ent.startswith('x'):
-            return unichr(int(ent[1:],16))
-        try:
-            return unichr(int(ent))
-        except Exception:
-            if ent in htmlentitydefs.name2codepoint:
-                return unichr(htmlentitydefs.name2codepoint[ent])
-            else:
-                return ent
+    def getPageWithPyCurl(self, url, params = {}, post_data = None):
+        if IsMainThread():
+            msg1 = _('It is not allowed to call getURLRequestData from main thread.')
+            msg2 = _('You should never perform block I/O operations in the __init__.')
+            GetIPTVNotify().push('\s'.join([msg1, msg2]), 'error', 40)
+            raise Exception("Wrong usage!")
+        
+        pycurl = self.pyCurl
+        # by default we will work in return_data mode
+        if 'return_data' not in params:
+            params['return_data'] = True
+        
+        self.metadataFromLastRequest = {}
+        metadata = self.metadataFromLastRequest
+        out_data = None
+        sts = False
+        
+        buffer = StringIO()
+        checkFromFirstBytes = params.get('check_first_bytes', [])
+        fileHandler = None
+        firstAttempt = [True]
+        
+        responseHeaders = {}
+        def _headerFunction(headerLine):
+            if ':' not in headerLine:
+                return
 
-    def html_entity_decode(self, string):
-        string = string.decode('UTF-8')
-        s = re.compile("&#?(\w+?);").sub(self.html_entity_decode_char, string)
-        return s.encode('UTF-8')
+            name, value = headerLine.split(':', 1)
+
+            name = name.strip()
+            value = value.strip()
+
+            name = name.lower()
+            responseHeaders[name] = value
+
+        def _bodyFunction(toWriteData):
+            # we started receiving body data so all headers are available
+            # so we can check it if needed
+            if firstAttempt[0]:
+                firstAttempt[0] = False
+                if 'check_maintype' in params and \
+                    params['check_maintype'] != responseHeaders.get('content-type', '').split('/', 1)[0]:
+                    printDBG('wrong maintype: %s' % responseHeaders.get('content-type', ''))
+                    return 0
+                
+                if 'check_subtypes' in params:
+                    contentSubType = responseHeaders.get('content-type', '').split('/', 1)[-1]
+                    try:
+                        valid = False
+                        for subType in params['check_subtypes']:
+                            if subType == contentSubType:
+                                valid = True
+                                break
+                        if not valid:
+                            printDBG('wrong type: %s' % responseHeaders.get('content-type', ''))
+                            return 0
+                    except Exception:
+                        printExc()
+                        return 0 # wrong params?
+ 
+            # if we should check start body data 
+            if len(checkFromFirstBytes):
+                buffer.write(toWriteData)
+                toWriteData = None
+                valid = False
+                value = buffer.getvalue()
+                for toCheck in checkFromFirstBytes:
+                    if len(toCheck) <= len(value):
+                        if value.startswith(toCheck):
+                            valid = True
+                            # valid no need to check anymore
+                            del checkFromFirstBytes[:]
+                            break
+                    elif toCheck.startswith(value):
+                        # it could be valid - we need to wait for more data
+                        valid = True
+                if not valid:
+                    printDBG('wrong body')
+                    return 0
+            
+            if fileHandler != None and 0 == len(checkFromFirstBytes):
+                # all check were done so, we can start write data to file
+                try:
+                    if fileHandler.tell() == 0 and buffer.tell() > 0:
+                        fileHandler.write(buffer.getvalue())
+                    
+                    if toWriteData != None:
+                        fileHandler.write(toWriteData)
+                except Exception:
+                    printExc()
+                    return 0 # wrong file handle
+                
+            if  toWriteData != None and params['return_data']:
+                buffer.write(toWriteData)
+            
+        def _terminateFunction(download_t, download_d, upload_t, upload_d):
+            if IsThreadTerminated():
+                printDBG(">> _terminateFunction")
+                return True # anything else then None will cause pycurl perform cancel
+        
+        try:
+            timeout = params.get('timeout', None)
+            
+            if 'host' in params:
+                host = params['host']
+            else:
+                host = self.HOST
+
+            if 'header' in params:
+                headers = params['header']
+            elif None != self.HEADER:
+                headers = self.HEADER
+            else:
+                headers = { 'User-Agent' : host }
+                
+            if 'User-Agent' not in headers:
+                headers['User-Agent'] = host
+            
+            printDBG('pCommon - getPageWithPyCurl() -> params: ' + str(params))
+            printDBG('pCommon - getPageWithPyCurl() -> headers: ' + str(headers)) 
+            
+            if 'save_to_file' in params:
+                fileHandler = file(params['save_to_file'], "wb")
+            
+            # we can not kill thread when we are in any function of pycurl
+            SetThreadKillable(False)
+            
+            if None == self.curlSession:
+                curlSession = pycurl.Curl()
+            else:
+                # use previous session to be able to reuse connection
+                curlSession = self.curlSession
+                self.curlSession = None
+                curlSession.reset()
+            
+            customHeaders = []
+            for key in headers:
+                lKey = key.lower()
+                if lKey == 'user-agent': curlSession.setopt(pycurl.USERAGENT, headers[key])
+                elif lKey == 'cookie': curlSession.setopt(pycurl.COOKIE, headers[key])
+                elif lKey == 'referer': curlSession.setopt(pycurl.REFERER, headers[key])
+                else: customHeaders.append('%s: %s' % (key, headers[key]))
+            if len(customHeaders):
+                curlSession.setopt(pycurl.HTTPHEADER, customHeaders)
+            
+            curlSession.setopt(pycurl.ACCEPT_ENCODING, "") # enable all supported built-in compressions
+            #sslProto = params.get('ssl_protocol', None)
+            #ssl.PROTOCOL_TLSv1_2
+            #curlSession.setopt(pycurl.SSLVERSION, pycurl.SSLVERSION_TLSv1_0) # TLS v1.0 or later 
+            
+            if 'use_cookie' not in params and 'cookiefile' in params and ('load_cookie' in params or 'save_cookie' in params):
+                params['use_cookie'] = True
+                
+            if params.get('use_cookie', False):
+                cookiesStr = ''
+                for cookieKey in params.get('cookie_items', {}).keys():
+                    printDBG("cookie_item[%s=%s]" % (cookieKey, params['cookie_items'][cookieKey]))
+                    cookiesStr += '%s=%s; ' % (cookieKey, params['cookie_items'][cookieKey])
+                
+                if cookiesStr != '':
+                    curlSession.setopt(pycurl.COOKIE, cookiesStr) #'Set-Cookie: foo=baar') #
+            
+                if params.get('load_cookie', False):
+                    curlSession.setopt(pycurl.COOKIEFILE, params.get('cookiefile', ''))
+                
+                if params.get('save_cookie', False):
+                    curlSession.setopt(pycurl.COOKIEJAR, params.get('cookiefile', ''))
+                    
+            if timeout != None:
+                curlSession.setopt(pycurl.CONNECTTIMEOUT, timeout) # in seconds - connection timeout
+                curlSession.setopt(pycurl.LOW_SPEED_TIME, timeout) # in seconds
+                curlSession.setopt(pycurl.LOW_SPEED_LIMIT, 10) # in bytes
+                # set maximum time the request is allowed to take
+                #curlSession.setopt(pycurl.TIMEOUT, 300) # in seconds
+            
+            if not params.get('no_redirection', False):
+                curlSession.setopt(pycurl.FOLLOWLOCATION, 1)
+                curlSession.setopt(pycurl.UNRESTRICTED_AUTH, 1)
+                curlSession.setopt(pycurl.MAXREDIRS, 5)
+            
+            # debug 
+            #curlSession.setopt(pycurl.VERBOSE, 1)
+            #curlSession.setopt(pycurl.DEBUGFUNCTION, debug_fun)
+            
+            if not IsHttpsCertValidationEnabled():
+                curlSession.setopt(pycurl.SSL_VERIFYHOST, 0)
+                curlSession.setopt(pycurl.SSL_VERIFYPEER, 0)
+            
+            #proxy support
+            if self.useProxy:
+                http_proxy = self.proxyURL
+            else:
+                http_proxy = ''
+            #proxy from parameters (if available) overwrite default one
+            if 'http_proxy' in params:
+                http_proxy = params['http_proxy']
+            if '' != http_proxy:
+                printDBG('getPageWithPyCurl USE PROXY')
+                curlSession.setopt(pycurl.PROXY, http_proxy)
+            
+            pageUrl = url
+            proxy_gateway = params.get('proxy_gateway', '')
+            if proxy_gateway != '':
+                pageUrl = proxy_gateway.format(urllib.quote_plus(pageUrl, ''))
+            printDBG("pageUrl: [%s]" % pageUrl)
+            
+            curlSession.setopt(pycurl.URL, pageUrl)
+            
+            if None != post_data:
+                printDBG('pCommon - getPageWithPyCurl() -> post data: ' + str(post_data))
+                if params.get('raw_post_data', False):
+                    curlSession.setopt(pycurl.POSTFIELDS, post_data)
+                elif params.get('multipart_post_data', False):
+                    printDBG("multipart_post_data NOT SUPPORTED")
+                    dataPost = post_data
+                    curlSession.setopt(pycurl.HTTPPOST, post_data)
+                    #curlSession.setopt(pycurl.CUSTOMREQUEST, "PUT")
+                else:
+                    curlSession.setopt(pycurl.POSTFIELDS, urllib.urlencode(post_data))
+            
+            curlSession.setopt(pycurl.WRITEDATA, buffer)
+            curlSession.setopt(pycurl.HEADERFUNCTION, _headerFunction)
+            if fileHandler:
+                curlSession.setopt(pycurl.WRITEFUNCTION, _bodyFunction)
+
+            curlSession.setopt(pycurl.NOPROGRESS, False)
+            curlSession.setopt(pycurl.PROGRESSFUNCTION, _terminateFunction)
+            curlSession.setopt(pycurl.NOSIGNAL, 1)
+
+            if not IsThreadTerminated():
+                curlSession.perform()
+                
+                metadata['url'] = curlSession.getinfo(pycurl.EFFECTIVE_URL)
+                metadata['status_code'] = curlSession.getinfo(pycurl.HTTP_CODE)
+                metadata['size_download'] = curlSession.getinfo(pycurl.SIZE_DOWNLOAD)
+                
+                # reset will cause lost all cookies, so we force to saved them in the file
+                if params.get('use_cookie', False) and params.get('save_cookie', False):
+                    curlSession.setopt(pycurl.COOKIELIST , 'FLUSH')
+                
+                curlSession.reset()
+                # to be re-used in next request
+                self.curlSession = curlSession 
+                
+                # we should not use pycurl anymore
+                SetThreadKillable(True)
+                
+                if 'content-type' in responseHeaders:
+                    metadata['content-type'] = responseHeaders['content-type']
+                
+                if params['return_data']:
+                    out_data = buffer.getvalue()
+                else:
+                    out_data = ""
+                
+                out_data, metadata = self.handleCharset(params, out_data, metadata)
+                if metadata['status_code'] != 200:
+                    ignoreCodeRanges = params.get('ignore_http_code_ranges', [(404, 404), (500, 500)])
+                    for ignoreCodeRange in ignoreCodeRanges:
+                        if metadata['status_code'] >= ignoreCodeRange[0] and metadata['status_code'] <= ignoreCodeRange[1]:
+                            sts = True
+                            break
+                else:
+                    sts = True
+
+            if fileHandler:
+                fileHandler.close()
+        except Exception:
+            printExc()
+        
+        SetThreadKillable(True)
+        
+        printDBG('pCommon - getPageWithPyCurl() return -> \nsts: %s\nmetadata: %s\n' % (sts, metadata))
+        if params.get('with_metadata', False):
+            out_data = strwithmeta(out_data, metadata)
+            
+        return sts, out_data
     
     def getPage(self, url, addParams = {}, post_data = None):
         ''' wraps getURLRequestData '''
+        
+        # if curl should be used and can be used
+        if addParams.get('return_data', True) and self.usePyCurl():
+            return self.getPageWithPyCurl(url, addParams, post_data)
+        
         try:
             addParams['url'] = url
             if 'return_data' not in addParams:
@@ -574,9 +893,27 @@ class common:
             response = self.getURLRequestData(addParams, post_data)
             status = True
         except urllib2.HTTPError, e:
-            printExc()
-            response = e
-            status = False
+            try:
+                printExc()
+                status = False
+                response = e
+                if addParams.get('return_data', False):
+                    self.metadataFromLastRequest = {}
+                    metadata = self.metadataFromLastRequest
+                    metadata['url'] = e.fp.geturl()
+                    metadata['status_code'] = e.code
+                    if 'Content-Type' in e.fp.info():
+                        metadata['content-type'] = e.fp.info()['Content-Type']
+                    
+                    data = e.fp.read()
+                    if e.fp.info().get('Content-Encoding', '') == 'gzip':
+                        data = DecodeGzipped(data)
+                    
+                    data, metadata = self.handleCharset(addParams, data, metadata)
+                    response = strwithmeta(data, metadata)
+                    e.fp.close()
+            except Exception:
+                printExc()
         except urllib2.URLError, e:
             if 'TLSV1_ALERT_PROTOCOL_VERSION' in str(e) and 'ssl_protocol' not in addParams:
                 try:
@@ -667,10 +1004,8 @@ class common:
                 current += 1
                 doRefresh = False
                 try:
-                    domain = self.getBaseUrl(data.fp.geturl())
-                    verData = data.fp.read() 
-                    if data.fp.info().get('Content-Encoding', '') == 'gzip':
-                        verData = DecodeGzipped(verData)
+                    domain = self.getBaseUrl(data.meta['url'])
+                    verData = data
                     printDBG("------------------")
                     printDBG(verData)
                     printDBG("------------------")
@@ -696,7 +1031,7 @@ class common:
                         
                         url = self.ph.getSearchGroups(tmp, 'action="([^"]+?)"')[0]
                         if url != '': url = _getFullUrl( url )
-                        else: url = data.fp.geturl()
+                        else: url = data.meta['url']
                         actionType = self.ph.getSearchGroups(tmp, 'method="([^"]+?)"', 1, True)[0].lower()
                         post_data2 = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
                         #post_data2['id'] = id
@@ -716,11 +1051,11 @@ class common:
                             post_data2 = None
                             
                         sts, data = self.getPage(url, params2, post_data2)
-                        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        printDBG("+++++++++++++")
                         printDBG(sts)
-                        printDBG("------------------------------------------------------------------")
+                        printDBG("-------------")
                         printDBG(data)
-                        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                        printDBG("++++++++++++++")
                     else:
                         dat = self.ph.getAllItemsBeetwenNodes(verData, ('<script', '>'), ('</script', '>'), False)
                         for item in dat:
@@ -767,19 +1102,44 @@ class common:
             else:
                 break
         return sts, data
+    
+    def saveWebFileWithPyCurl(self, file_path, url, add_params = {}, post_data = None):
+        bRet = False
+        downDataSize = 0
         
+        add_params['with_metadata'] = True
+        add_params['save_to_file'] = file_path
+        if 'maintype' in add_params:
+            add_params['check_maintype'] = add_params.pop('maintype')
+        if 'subtypes' in add_params:
+            add_params['check_subtypes'] = add_params.pop('subtypes')
+        
+        sts, data = self.getPageWithPyCurl(url, add_params, post_data)
+        if sts:
+            downDataSize = data.meta['size_download']
+        else:
+            rm(file_path)
+        return {'sts': sts, 'fsize': downDataSize}
+    
     def saveWebFile(self, file_path, url, addParams = {}, post_data = None):
+        addParams = dict(addParams)
+        
+        outParams, postData = self.getParamsFromUrlWithMeta(url)
+        addParams.update(outParams)
+        if 'header' not in addParams and 'host' not in addParams:
+            host = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
+            header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+            addParams['header'] = header
+        addParams['return_data'] = False
+        
+        # if curl should and can be used
+        if self.usePyCurl():
+            return self.saveWebFileWithPyCurl(file_path, url, addParams, post_data)
+    
         bRet = False
         downDataSize = 0
         dictRet = {}
         try:
-            outParams, postData = self.getParamsFromUrlWithMeta(url)
-            addParams.update(outParams)
-            if 'header' not in addParams and 'host' not in addParams:
-                host = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
-                header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-                addParams['header'] = header
-            addParams['return_data'] = False
             sts, downHandler = self.getPage(url, addParams, post_data)
 
             if addParams.get('ignore_content_length', False):
@@ -859,8 +1219,8 @@ class common:
         if IsMainThread():
             msg1 = _('It is not allowed to call getURLRequestData from main thread.')
             msg2 = _('You should never perform block I/O operations in the __init__.')
-            msg3 = _('In next release exception will be thrown instead of this message!')
-            GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 40)
+            GetIPTVNotify().push('\s'.join([msg1, msg2]), 'error', 40)
+            raise Exception("Wrong usage!")
         
         if not self.useMozillaCookieJar:
             cj = cookielib.LWPCookieJar()
@@ -870,7 +1230,8 @@ class common:
         req      = None
         out_data = None
         opener   = None
-        metadata = None
+        self.metadataFromLastRequest = {}
+        metadata = self.metadataFromLastRequest
         
         timeout = params.get('timeout', None)
         
@@ -889,8 +1250,6 @@ class common:
         if 'User-Agent' not in headers:
             headers['User-Agent'] = host
         
-        metadata = {}
-
         printDBG('pCommon - getURLRequestData() -> params: ' + str(params))
         printDBG('pCommon - getURLRequestData() -> headers: ' + str(headers)) 
 
@@ -1043,37 +1402,52 @@ class common:
                 SetTmpCookieDir()
                 raise e
         
-        if params.get('return_data', False) and params.get('convert_charset', True) :
-            encoding = ''
-            if 'content-type' in metadata:
-                encoding = self.ph.getSearchGroups(metadata['content-type'], '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
-            
-            if encoding == '' and params.get('search_charset', False):
-                encoding = self.ph.getSearchGroups(out_data, '''(<meta[^>]+?Content-Type[^>]+?>)''', ignoreCase=True)[0]
-                encoding = self.ph.getSearchGroups(encoding, '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
-            
-            if encoding not in ['', 'UTF-8']:
-                printDBG(">> encoding[%s]" % encoding)
-                try:
-                    out_data = out_data.decode(encoding).encode('UTF-8')
-                except Exception:
-                    printExc()
-                metadata['orig_charset'] = encoding
-        
+        out_data, metadata = self.handleCharset(params, out_data, metadata)
         if params.get('with_metadata', False) and params.get('return_data', False):
             out_data = strwithmeta(out_data, metadata)
         
         return out_data 
+        
+    def handleCharset(self, params, data, metadata):
+        try:
+            if params.get('return_data', False) and params.get('convert_charset', True) :
+                encoding = ''
+                if 'content-type' in metadata:
+                    encoding = self.ph.getSearchGroups(metadata['content-type'], '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
+                
+                if encoding == '' and params.get('search_charset', False):
+                    encoding = self.ph.getSearchGroups(data, '''(<meta[^>]+?Content-Type[^>]+?>)''', ignoreCase=True)[0]
+                    encoding = self.ph.getSearchGroups(encoding, '''charset=([A-Za-z0-9\-]+)''', 1, True)[0].strip().upper()
+                if encoding not in ['', 'UTF-8']:
+                    printDBG(">> encoding[%s]" % encoding)
+                    try:
+                        data = data.decode(encoding).encode('UTF-8')
+                    except Exception:
+                        printExc()
+                    metadata['orig_charset'] = encoding
+        except Exception:
+            printExc()
+        return data, metadata
 
     def urlEncodeNonAscii(self, b):
         return re.sub('[\x80-\xFF]', lambda c: '%%%02x' % ord(c.group(0)), b)
 
     def iriToUri(self, iri):
-        parts = urlparse(iri.decode('utf-8'))
-        return urlunparse(
-            part.encode('idna') if parti==1 else self.urlEncodeNonAscii(part.encode('utf-8'))
-            for parti, part in enumerate(parts)
-        )
+        try:
+            parts = urlparse(iri.decode('utf-8'))
+            encodedParts = []
+            for parti, part in enumerate(parts):
+                newPart = part
+                try:
+                    if parti == 1: newPart = part.encode('idna')
+                    else: newPart = self.urlEncodeNonAscii(part.encode('utf-8'))
+                except Exception:
+                    printExc()
+                encodedParts.append(newPart)
+            return urlunparse(encodedParts)
+        except Exception:
+            printExc()
+        return iri
 
     def makeABCList(self, tab = ['0 - 9']):
         strTab = list(tab)

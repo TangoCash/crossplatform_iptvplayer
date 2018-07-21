@@ -39,7 +39,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://iitv.pl/'
+    return 'http://iitvx.pl/'
 
 class IITVPL(CBaseHostClass):
  
@@ -51,8 +51,8 @@ class IITVPL(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL = 'http://iitv.pl/'
-        self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/img/logo.png'
+        self.MAIN_URL = 'http://iitvx.pl/'
+        self.DEFAULT_ICON_URL = self.MAIN_URL + 'assets/img/logo-iitvx.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_abc',           'title': 'Lista ABC',                       'url':self.MAIN_URL,  'icon':self.DEFAULT_ICON_URL},
                              {'category':'list_series2',       'title': 'Popularne seriale',               'url':self.MAIN_URL,  'icon':self.DEFAULT_ICON_URL},

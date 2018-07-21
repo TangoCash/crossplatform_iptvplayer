@@ -54,7 +54,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://ww1.planet-streaming.com/'
+    return 'http://ww4.planet-streaming.com/'
 
 class PlanetStreaming(CBaseHostClass):
  
@@ -99,7 +99,7 @@ class PlanetStreaming(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        domains = ['http://ww1.planet-streaming.com/']
+        domains = ['http://ww4.planet-streaming.com/']
         domain = config.plugins.iptvplayer.planetstreaming_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
@@ -118,8 +118,8 @@ class PlanetStreaming(CBaseHostClass):
                 break
                 
         if self.MAIN_URL == None:
-            self.MAIN_MOVIES_URL = 'http://ww1.planet-streaming.com/'
-            self.MAIN_SERIES_URL = 'http://ww1.serie-streaminghd.com/'
+            self.MAIN_MOVIES_URL = 'http://ww4.planet-streaming.com/'
+            self.MAIN_SERIES_URL = 'http://ww4.serie-streaminghd.com/'
             self.MAIN_URL = self.MAIN_MOVIES_URL
         try:
             urlParams = dict(self.defaultParams)

@@ -9,7 +9,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetSkinsList, GetHostsList, GetEnabledHostsList, \
                                                           IsHostEnabled, IsExecutable, CFakeMoviePlayerOption, GetAvailableIconSize, \
-                                                          IsWebInterfaceModuleAvailable
+                                                          IsWebInterfaceModuleAvailable, SetIconsHash, SetGraphicsHash
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, IPTVPlayerNeedInit
 from Plugins.Extensions.IPTVPlayer.icomponents.configbase import COLORS_DEFINITONS
 ###################################################
@@ -17,7 +17,6 @@ from Plugins.Extensions.IPTVPlayer.icomponents.configbase import COLORS_DEFINITO
 ###################################################
 # FOREIGN import
 ###################################################
-from Screens.Screen import Screen
 
 from Components.config import config, ConfigSubsection, ConfigSelection, ConfigDirectory, ConfigYesNo, ConfigOnOff, Config, ConfigInteger, ConfigSubList, ConfigText, getConfigListEntry, configfile
 from Tools.Directories import resolveFilename, fileExists, SCOPE_PLUGINS
@@ -69,6 +68,8 @@ config.plugins.iptvplayer.remove_diabled_hosts = ConfigYesNo(default = False)
 config.plugins.iptvplayer.IPTVWebIterface = ConfigYesNo(default = False)
 config.plugins.iptvplayer.plugin_autostart = ConfigYesNo(default = False)
 config.plugins.iptvplayer.plugin_autostart_method = ConfigSelection(default = "wizard", choices = [("wizard", "wizard"),("infobar", "infobar")])
+
+config.plugins.iptvplayer.preferredupdateserver = ConfigSelection(default = "", choices = [("", _("Default")),("1", "http://iptvplayer.vline.pl/"), ("2", _("http://www.iptvplayer.gitlab.io/"))])
 
 def GetMoviePlayerName(player):
     map = {"auto":_("auto"), "mini": _("internal"), "standard":_("standard"), 'exteplayer': _("external eplayer3"), 'extgstplayer': _("external gstplayer")}
@@ -195,6 +196,7 @@ config.plugins.iptvplayer.search_history_size  = ConfigInteger(50, (0, 1000000))
 config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (1, 1000000))
 
 config.plugins.iptvplayer.watched_item_color = ConfigSelection(default = "#808080", choices = COLORS_DEFINITONS)
+config.plugins.iptvplayer.usepycurl = ConfigYesNo(default = False)
 
 ###################################################
 
@@ -227,6 +229,7 @@ def IsUpdateNeededForHostsChangesCommit(enabledHostsListOld, enabledHostsList=No
     if hostsFromFolder == None: 
         hostsFromFolder = GetHostsList(fromList=False, fromHostFolder=True)
 
+    bRet = False
     if config.plugins.iptvplayer.remove_diabled_hosts.value and enabledHostsList != enabledHostsListOld:
         hostsFromList = GetHostsList(fromList=True, fromHostFolder=False)
         diffDisabledHostsList = set(enabledHostsListOld).difference(set(enabledHostsList))
@@ -236,12 +239,17 @@ def IsUpdateNeededForHostsChangesCommit(enabledHostsListOld, enabledHostsList=No
                 if hostItem in diffDisabledHostsList:
                     if hostItem in hostsFromFolder:
                         # standard host has been disabled but it is still in folder
-                        return True
+                        bRet = True
+                        break
                 else:
                     if hostItem not in hostsFromFolder:
                         # standard host has been enabled but it is not in folder
-                        return True
-    return False
+                        bRet = True
+                        break
+    if bRet:
+        SetGraphicsHash("")
+        SetIconsHash("")
+    return bRet
 
 ###################################################
 

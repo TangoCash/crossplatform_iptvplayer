@@ -217,7 +217,7 @@ class IPTVExtMoviePlayer(Screen):
                     <widget name="logoIcon"           position="140,30"        size="160,40"    zPosition="4"             transparent="1" alphatest="blend" />
                     <widget name="playbackInfoBaner"  position="0,0"           size="1280,177"  zPosition="2" pixmap="%s" />
                     <widget name="progressBar"        position="220,86"        size="840,7"     zPosition="5" pixmap="%s" transparent="1" borderWidth="1" borderColor="#888888" />
-                    <widget name="bufferingCBar"      position="220,86"        size="840,7"     zPosition="5" pixmap="%s" transparent="1" borderWidth="1" borderColor="#888888" />
+                    <widget name="bufferingCBar"      position="220,86"        size="840,7"     zPosition="4" pixmap="%s" transparent="1" borderWidth="1" borderColor="#888888" />
                     <widget name="bufferingBar"       position="220,86"        size="840,7"     zPosition="3" pixmap="%s" borderWidth="1" borderColor="#888888" />
                     <widget name="statusIcon"         position="150,70"        size="40,40"     zPosition="4"             transparent="1" alphatest="blend" />
                     <widget name="loopIcon"           position="150,110"       size="40,40"     zPosition="4"             transparent="1" alphatest="blend" />

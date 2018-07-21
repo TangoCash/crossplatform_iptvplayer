@@ -103,12 +103,15 @@ class BilaSportPwApi(CBaseHostClass):
         else:
             scriptUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?\.js)['"]''', 1, True)[0])
         
-        hlsUrl = re.compile('''(https?://[^'^"]+?\.m3u8(?:\?[^'^"]+?)?)['"]''', re.IGNORECASE).findall(data)[-1]
-        hlsTab = getDirectM3U8Playlist(hlsUrl, checkContent=True, sortWithMaxBitrate=9000000)
-        for idx in range(len(hlsTab)):
-            hlsTab[idx]['need_resolve'] = 1
-            hlsTab[idx]['url'] = strwithmeta(hlsTab[idx]['url'], {'name':cItem['name'], 'Referer':url, 'priv_script_url':scriptUrl})
-        
+        hlsTab = []
+        hlsUrl = re.compile('''(https?://[^'^"]+?\.m3u8(?:\?[^'^"]+?)?)['"]''', re.IGNORECASE).findall(data)
+        if len(hlsUrl):
+            hlsUrl = hlsUrl[-1]
+            hlsTab = getDirectM3U8Playlist(hlsUrl, checkContent=True, sortWithMaxBitrate=9000000)
+            for idx in range(len(hlsTab)):
+                hlsTab[idx]['need_resolve'] = 1
+                hlsTab[idx]['url'] = strwithmeta(hlsTab[idx]['url'], {'name':cItem['name'], 'Referer':url, 'priv_script_url':scriptUrl})
+            
         return hlsTab
         
     def getResolvedVideoLink(self, videoUrl):

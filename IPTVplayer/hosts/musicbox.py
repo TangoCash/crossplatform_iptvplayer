@@ -39,35 +39,11 @@ def GetConfigList():
         optionList.append(getConfigListEntry(" Last.fm login:", config.plugins.iptvplayer.MusicBox_login))
     return optionList
 
-
 def gettytul():
     return 'Music-Box'
 
 
 class MusicBox(CBaseHostClass):
-    SERVICE_MENU_TABLE = {
-        1: "Itunes - Top songs by country",
-        2: "Itunes - Top albums by country",
-#        3: "Dezzer - Top Tracks",
-        4: "Beatport - Top 100",
-#        5: "Official Charts UK",
-        6: "Bilboard - The Hot 100",
-        7: "Bilboard - 200",
-#        8: "Bilboard - Heatseekers Songs",
-        9: "Bilboard - Heatseekers Albums",
-        10: "Bilboard - Hot Pop Songs",
-        11: "Bilboard - Hot Country Songs",
-        12: "Bilboard - Hot Country Albums",
-        13: "Bilboard - Hot Rock Songs",
-        14: "Bilboard - Hot Rock Albums",
-        15: "Bilboard - Hot R&B/Hip-Hop Songs",
-        16: "Bilboard - Hot R&B/Hip-Hop Albums",
-        17: "Bilboard - Hot Dance/Electronic Songs",
-        18: "Bilboard - Hot Dance/Electronic Albums",
-        19: "Bilboard - Hot Latin Songs",
-        20: "Bilboard - Hot Latin Albums",
-        21: "Last.fm - Moja lista",
-    }
 
     def __init__(self):
         CBaseHostClass.__init__(self)
@@ -75,14 +51,36 @@ class MusicBox(CBaseHostClass):
         self.ytp = YouTubeParser()
         self.lastfm_username = config.plugins.iptvplayer.MusicBox_login.value
         self.usePremiumAccount = config.plugins.iptvplayer.MusicBox_premium.value
-
-    def setTable(self):
-        return self.SERVICE_MENU_TABLE
-
-    def listsMainMenu(self, table):
-        for num, val in table.items():
-            params = {'name': 'main-menu', 'category': val, 'title': val, 'icon': ''}
-            self.addDir(params)
+        
+        self.DEFAULT_ICON_URL = 'http://www.darmowe-na-telefon.pl/uploads/tapeta_240x320_muzyka_23.jpg'
+        self.BILLBOARD_URL = 'https://www.billboard.com/charts/'
+        self.SERVICE_MENU_TABLE = [{'category':'itunes',    'title':"Itunes - Top songs by country",  'item':'song',  'url':'http://www.geonames.org/flags/x/'},
+                                   {'category':'itunes',    'title':"Itunes - Top albums by country", 'item':'album', 'url':'http://www.geonames.org/flags/x/'},
+                                   {'category':'beatport',  'title':"Beatport - Top 100",                             'url':'https://pro.beatport.com/top-100'},
+                                   
+                                   {'category':'billboard_charts', 'title':"Bilboard - The Hot 100",                         'url':self.BILLBOARD_URL + 'hot-100'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - 200",                                 'url':self.BILLBOARD_URL + 'billboard-200'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Heatseekers Songs",                   'url':self.BILLBOARD_URL + 'heatseekers-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Heatseekers Albums",                  'url':self.BILLBOARD_URL + 'heatseekers-albums'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot Pop Songs",                       'url':self.BILLBOARD_URL + 'pop-songs'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot Country Songs",                   'url':self.BILLBOARD_URL + 'country-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Hot Country Albums",                  'url':self.BILLBOARD_URL + 'country-albums'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot Rock Songs",                      'url':self.BILLBOARD_URL + 'rock-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Hot Rock Albums",                     'url':self.BILLBOARD_URL + 'rock-albums'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot R&B/Hip-Hop Songs",               'url':self.BILLBOARD_URL + 'r-b-hip-hop-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Hot R&B/Hip-Hop Albums",              'url':self.BILLBOARD_URL + 'r-b-hip-hop-albums'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot Dance/Electronic Songs",          'url':self.BILLBOARD_URL + 'dance-electronic-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Hot Dance/Electronic Albums",         'url':self.BILLBOARD_URL + 'dance-electronic-albums'},
+                                   {'category':'billboard_charts', 'title':"Bilboard - Hot Latin Songs",                     'url':self.BILLBOARD_URL + 'latin-songs'},
+                                   {'category':'billboard_albums', 'title':"Bilboard - Hot Latin Albums",                    'url':self.BILLBOARD_URL + 'latin-albums'},
+                                   
+                                   {'category':'lastfm', 'title':"Last.fm - Moja lista"},
+                                   ]
+    
+    def listsMainMenu(self):
+        for item in self.SERVICE_MENU_TABLE:
+            item['name'] = 'main-menu'
+            self.addDir(item)
 
 ###############################################################################
 # Itunes
@@ -97,10 +95,10 @@ class MusicBox(CBaseHostClass):
                 icon = 'http://www.geonames.org/flags/x/' + country_code[x] + '.gif'
                 desc = title
                 if mode == 'song':
-                    params = {'name': 'Itunes_track_charts', 'title': title, 'page': url, 'icon': icon, 'plot': desc}
+                    params = {'good_for_fav':True, 'name': 'Itunes_track_charts', 'title': title, 'page': url, 'icon': icon, 'desc': desc}
                     self.addDir(params)
                 elif mode == 'album':
-                    params = {'name': 'Itunes_album_charts', 'title': title, 'page': url, 'icon': icon, 'plot': desc}
+                    params = {'good_for_fav':True, 'good_for_fav':True, 'name': 'Itunes_album_charts', 'title': title, 'page': url, 'icon': icon, 'desc': desc}
                     self.addDir(params)
 
     def Itunes_track_charts(self, url):
@@ -120,7 +118,7 @@ class MusicBox(CBaseHostClass):
                     iconimage = ''
                 plot = ''
                 search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                params = {'title': str(x + 1) + '. ' + artist + '- ' + track_name, 'page': search_string, 'icon': iconimage, 'plot': plot}
+                params = {'good_for_fav':True, 'title': str(x + 1) + '. ' + artist + '- ' + track_name, 'page': search_string, 'icon': iconimage, 'desc': plot}
                 self.addVideo(params)
         except Exception:
             printExc()  # wypisz co poszło nie tak
@@ -141,8 +139,7 @@ class MusicBox(CBaseHostClass):
                     iconimage = item['im:image'][2]['label']
                 except Exception:
                     iconimage = ''
-                plot = ''
-                params = {'name': 'Itunes_list_album_tracks','title': str(x + 1) + '. ' + artist + '- ' + album_name, 'page': idx, 'album': album_name, 'country': country, 'icon': iconimage, 'plot': plot}
+                params = {'good_for_fav':True, 'name': 'Itunes_list_album_tracks','title': str(x + 1) + '. ' + artist + '- ' + album_name, 'page': idx, 'album': album_name, 'country': country, 'icon': iconimage}
                 self.addDir(params)
         except Exception:
             printExc()  # wypisz co poszło nie tak
@@ -161,9 +158,8 @@ class MusicBox(CBaseHostClass):
                     iconimage = item['artworkUrl100']
                 except Exception:
                     iconimage = ''
-                plot = ''
                 search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                params = {'title': artist + '- ' + track_name, 'page': search_string, 'icon': iconimage, 'plot': plot}
+                params = {'good_for_fav':True, 'title': artist + '- ' + track_name, 'page': search_string, 'icon': iconimage}
                 self.addVideo(params)
         except Exception:
             printExc()
@@ -173,89 +169,84 @@ class MusicBox(CBaseHostClass):
 
     def Beatport_top100(self, url):
         sts, data = self.cm.getPage(url)
-        if not sts:
-            return
-        match = re.findall('<li class="bucket-item track">.*?<img.*?data-src="(.*?)".*?>.*?</a>.*?<div class="buk-track-num">(.+?)</div>.*?<p class="buk-track-title">.*?<a.*?>.*?<span class="buk-track-primary-title">(.*?)</span>.*?<span class="buk-track-remixed">(.*?)</span>.*?</a>.*?</p>.*?<p class="buk-track-artists">(.*?)</p>.*?<p class="buk-track-remixers">(.*?)</p>.*?</li>', data, re.DOTALL)
-        if len(match) > 0:
-            for i in range(len(match)):
-                try:
-                    track_number = match[i][1]
-                    title_primary = (re.sub('\s+', ' ', (re.sub('<[^>]*>', '', match[i][2])))).replace("&amp;", "&").replace("&#39;", "'")
-                    remixed = '(' + (re.sub('\s+', ' ', (re.sub('<[^>]*>', '', match[i][3])))).replace("&amp;", "&").replace("&#39;", "'") + ')'
-                    track_name = title_primary + ' ' + remixed
-                    artist = re.sub('<[^>]*>', '', match[i][4])
-                    artist = re.sub('\s+', ' ', artist.strip())
-                    artist = artist.replace("&amp;", "&").replace("&#39;", "'")
-                    iconimage = match[i][0].replace('/95x95/', '/300x300/')
-                    search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                    params = {'title': track_number + '. ' + artist + '- ' + track_name, 'page': search_string, 'icon': iconimage, 'plot': ''}
-                    self.addVideo(params)
-                except Exception:
-                    pass
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'bucket-item'), ('</ul', '>'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+        for item in data:
+            track_number = self.cm.ph.getSearchGroups(item, '''position=['"]([^'^"]+?)['"]''')[0]
+            title_primary = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'primary-title'), ('</span', '>'), False)[1])
+            remixed = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'remixed'), ('</span', '>'), False)[1])
+            track_name = title_primary + ' ' + remixed
+            artist = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<p', '>', 'track-artists'), ('</p', '>'), False)[1] )
+            icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''<img[^>]+?data\-src=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
+            search_string = urllib.quote(artist + ' ' + track_name + ' music video')
+            params = {'good_for_fav':True, 'title': track_number + '. ' + artist + '- ' + track_name, 'page': search_string, 'icon': icon}
+            self.addVideo(params)
+
 ###############################################################################
 # Bilboard
 ###############################################################################
 
     def Billboard_charts(self, url):
         sts, data = self.cm.getPage(url, {'header': HEADER})
-        if not sts:
-            return
-        try:
-            data = byteify(json.loads(data))['query']['results']['item']
-            for x in range(0, len(data)):
-                item = data[x]
-                name = item['title']
-                artist = item['artist']
-                track_name = item['chart_item_title']
-                search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                params = {'title': name + ' - ' + artist, 'page': search_string, 'icon': '', 'plot': ''}
-                self.addVideo(params)
-        except Exception:
-            printExc()  # wypisz co poszło nie tak
+        if not sts:  return
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>', 'chart-row'), ('</article', '>'))
+        for item in data:
+            name = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'song'), ('</h', '>'), False)[1])
+            artist = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'artist'), ('</', '>'), False)[1])
+            icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''url\(([^\)]+?\.(?:jpg|png|jpeg)(?:\?[^\)]*?)?)\)''')[0], self.cm.meta['url'])
+            if icon == '': icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''imagesrc=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
+            
+            track_name = name
+            search_string = urllib.quote(artist + ' ' + track_name + ' music video')
+            params = {'good_for_fav':True, 'title': name + ' - ' + artist, 'page': search_string, 'icon': icon}
+            self.addVideo(params)
 
     def Billboard_chartsalbums(self, url):
-        sts, data1 = self.cm.getPage(url, {'header': HEADER})
-        if not sts:
-            return
-        try:
-            data = byteify(json.loads(data1))['query']['results']['item']
-            for x in range(0, len(data)):
-                item = data[x]
-                name = item['title']
-                artist = item['artist']
-                album_name = item['chart_item_title']
-                params = {'name': 'List_album_tracks','title': name + ' - ' + artist, 'page': 0, 'artist': artist, 'album': album_name, 'icon': '', 'plot': ''}
-                self.addDir(params)
-        except Exception:
-            printExc()  # wypisz co poszło nie tak
+        sts, data = self.cm.getPage(url, {'header': HEADER})
+        if not sts:  return
+        
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>', 'chart-row'), ('</article', '>'))
+        for item in data:
+            name = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'song'), ('</h', '>'), False)[1])
+            artist = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'artist'), ('</', '>'), False)[1])
+            icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''url\(([^\)]+?\.(?:jpg|png|jpeg)(?:\?[^\)]*?)?)\)''')[0], self.cm.meta['url'])
+            if icon == '': icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''imagesrc=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
+            
+            album_name = name
+            params = {'good_for_fav':True, 'name': 'List_album_tracks','title': name + ' - ' + artist, 'page': 0, 'artist': artist, 'album': album_name, 'icon':icon}
+            self.addDir(params)
+
 ###############################################################################
 # Szukanie tytułu z albumow
 ###############################################################################
 
-    def List_album_tracks(self, url, artist, album):
+    def List_album_tracks(self, url, artist, album, albumIcon):
         if url != 0:
             sts, data = self.cm.getPage('http://ws.audioscrobbler.com/2.0/?method=album.getInfo&mbid='+url+'&api_key=' + audioscrobbler_api_key + '&format=json', {'header': HEADER})
-            if not sts:
-                return
+            if not sts: return
         else:
             sts, data = self.cm.getPage('http://ws.audioscrobbler.com/2.0/?method=album.getInfo&artist='+urllib.quote(artist)+'&album='+urllib.quote(album)+'&api_key=' + audioscrobbler_api_key + '&format=json', {'header': HEADER})
-            if not sts:
-                return
+            if not sts: return
         try:
-            data = byteify(json.loads(data))['album']['tracks']['track']
+            data = byteify(json.loads(data))
+            try:
+                albumIcon = self.cm.getFullUrl(data['album']['image'][-1]['#text'], self.cm.meta['url'])
+            except Exception:
+                printExc()
+
+            data = data['album']['tracks']['track']
             for x in range(0, len(data)):
                 item = data[x]
                 artist = item['artist']['name']
                 track_name = item['name']
-                try:
-                    iconimage = item['album']['image'][3]['#text']
-                except Exception:
-                    iconimage = ''
                 search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                params = {'title': track_name + ' - ' + artist, 'page': search_string, 'icon': iconimage, 'plot': ''}
+                params = {'good_for_fav':True, 'title': track_name + ' - ' + artist, 'page': search_string, 'icon': albumIcon}
                 self.addVideo(params)
         except Exception:
-                        printExc()  # wypisz co poszło nie tak
+            printExc()
 
 ###############################################################################
 # Moja playlista z Last.fm
@@ -299,7 +290,7 @@ class MusicBox(CBaseHostClass):
                 except Exception:
                     iconimage = ''
                 search_string = urllib.quote(artist + ' ' + track_name + ' music video')
-                params = {'title': track_name + ' - ' + artist, 'page': search_string, 'icon': iconimage, 'plot': ''}
+                params = {'title': track_name + ' - ' + artist, 'page': search_string, 'icon': iconimage}
                 self.addVideo(params)
         except Exception:
             printExc()  # wypisz co poszło nie tak
@@ -307,20 +298,21 @@ class MusicBox(CBaseHostClass):
 ###############################################################################
 # Szukanie linku do materiału na youtube
 ###############################################################################
-
-    def Search_videoclip(self, url):
-        sts, data = self.cm.getPage("https://www.googleapis.com/youtube/v3/search?part=id%2Csnippet&q=" + url + "&type=Music&maxResults=1&key=" + youtube_api_key)
-        if not sts:
-            return []
+    def getLinksForVideo(self, cItem):
+        printDBG("getLinksForVideo cItem[%s]" % cItem)
+        
+        sts, data = self.cm.getPage("https://www.googleapis.com/youtube/v3/search?part=id%2Csnippet&q=" + cItem.get('page', '') + "&type=Music&maxResults=1&key=" + youtube_api_key)
+        if not sts: return []
         match = re.compile('"videoId": "([^"]+?)"').findall(data)
         videoUrls = []
         for item in match:
             video_path = "https://www.youtube.com/watch?v=" + item
-            videoUrls = self.getLinksForVideo(video_path)
+            videoUrls = self._getLinksForVideo(video_path)
+        
         return videoUrls
 
-    def getLinksForVideo(self, url):
-        printDBG("getLinksForVideo url[%s]" % url)
+    def _getLinksForVideo(self, url):
+        printDBG("_getLinksForVideo url[%s]" % url)
         ytformats = config.plugins.iptvplayer.ytformat.value
         maxRes    = int(config.plugins.iptvplayer.ytDefaultformat.value) * 1.1
         dash      = config.plugins.iptvplayer.ytShowDash.value
@@ -343,18 +335,10 @@ class MusicBox(CBaseHostClass):
         for item in dashTab:
             videoUrls.append({'name': _("[dash] ") + item['format'] + ' | ' + item['ext'] , 'url':item['url']})
         return videoUrls
+    
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('handleService start')
-        if 0 == refresh:
-            if len(self.currList) <= index:
-                printDBG("handleService wrong index: %s, len(self.currList): %d" % (index, len(self.currList)))
-                return
-            if -1 == index:
-                # use default value
-                self.currItem = {"name": None}
-                printDBG("handleService for first self.category")
-            else:
-                self.currItem = self.currList[index]
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
 
         name = self.currItem.get("name", '')
         title    = self.currItem.get("title", '')
@@ -371,75 +355,19 @@ class MusicBox(CBaseHostClass):
 
     #MAIN MENU
         if name is None:
-            self.listsMainMenu(self.SERVICE_MENU_TABLE)
+            self.listsMainMenu()
     #LISTA
-    #  "Itunes - Top songs by country"
-        elif category == self.setTable()[1]:
-            self.Itunes_countries_menu('http://www.geonames.org/flags/x/', 'song')
-    #  "Itunes - Top albums by country"
-        elif category == self.setTable()[2]:
-            self.Itunes_countries_menu('http://www.geonames.org/flags/x/', 'album')
-    #  "Beatport - Top 100"
-        elif category == self.setTable()[4]:
-            self.Beatport_top100('https://pro.beatport.com/top-100')
-    #  "Bilboard - The Hot 100"
-        elif category == self.setTable()[6]:
-            item = 'hot-100'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item +'%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - 200"
-        elif category == self.setTable()[7]:
-            item = 'billboard-200'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,200)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item +'%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Heatseekers Albums"
-        elif category == self.setTable()[9]:
-            item = 'heatseekers-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,200)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item +'%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Pop Songs"
-        elif category == self.setTable()[10]:
-            item = 'pop-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Country Songs"
-        elif category == self.setTable()[11]:
-            item = 'country-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Country Albums"
-        elif category == self.setTable()[12]:
-            item = 'country-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Rock Songs"
-        elif category == self.setTable()[13]:
-            item = 'rock-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Rock Albums"
-        elif category == self.setTable()[14]:
-            item = 'rock-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot R&B/Hip-Hop Songs"
-        elif category == self.setTable()[15]:
-            item = 'r-b-hip-hop-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot R&B/Hip-Hop Albums"
-        elif category == self.setTable()[16]:
-            item = 'r-b-hip-hop-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Dance/Electronic Songs"
-        elif category == self.setTable()[17]:
-            item = 'dance-electronic-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Dance/Electronic Albums"
-        elif category == self.setTable()[18]:
-            item = 'dance-electronic-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Latin Songs"
-        elif category == self.setTable()[19]:
-            item = 'latin-songs'
-            self.Billboard_charts('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-    #  "Bilboard - Hot Latin Albums"
-        elif category == self.setTable()[20]:
-            item = 'latin-albums'
-            self.Billboard_chartsalbums('http://query.yahooapis.com/v1/public/yql?q=SELECT+*+FROM+feed(1,100)+WHERE+url=%22http://www.billboard.com/rss/charts/' + item + '%22&format=json&diagnostics=true&callback=')
-        elif category == self.setTable()[21]:
+        elif category == 'itunes':
+            self.Itunes_countries_menu(self.currItem['url'], self.currItem['item'])
+        elif category == 'beatport':
+            self.Beatport_top100(self.currItem['url'])
+        elif category == 'billboard_charts':
+            self.Billboard_charts(self.currItem['url'])
+        elif category == 'billboard_albums':
+            self.Billboard_chartsalbums(self.currItem['url'])
+        elif category == 'lastfm':
             self.Lastfmlist()
+
     ###########
         elif name == 'Itunes_track_charts':
             self.Itunes_track_charts(page)
@@ -448,66 +376,13 @@ class MusicBox(CBaseHostClass):
         elif name == 'Itunes_list_album_tracks':
             self.Itunes_list_album_tracks(page, album, country)
         elif name == 'List_album_tracks':
-            self.List_album_tracks(page, artist, album)
+            self.List_album_tracks(page, artist, album, icon)
         elif name == 'Lastfmlist_track':
             self.Lastfmlist_track(artist)
-
+        
+        CBaseHostClass.endHandleService(self, index, refresh)
 
 class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, MusicBox(), False)
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value=[GetLogoDir('musicboxlogo.png')])
-
-    def getLinksForVideo(self, Index=0, selItem=None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        urlList = self.host.Search_videoclip(self.host.currList[Index].get('page', ''))
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-        return RetHost(RetHost.OK, value=retlist)
-
-    def getResolvedURL(self, url):
-#        if url != None and url != '':
-        if url is not None and url is not '':
-            ret = self.host.up.getVideoLink(url)
-            list = []
-            if ret:
-                list.append(ret)
-            return RetHost(RetHost.OK, value=list)
-        return RetHost(RetHost.NOT_IMPLEMENTED, value=[])
-
-    def convertList(self, cList):
-        hostList = []
-
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-
-            if cItem['type'] == 'category':
-                type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-                page = cItem.get('page', '')
-                if '' != page:
-                    hostLinks.append(CUrlItem("Link", page, 1))
-
-            title = cItem.get('title', '')
-            description = cItem.get('plot', '')
-            icon = cItem.get('icon', '')
-
-            hostItem = CDisplayListItem(name=title,
-                                        description=description,
-                                        type=type,
-                                        urlItems=hostLinks,
-                                        urlSeparateRequest=1,
-                                        iconimage=icon)
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
-

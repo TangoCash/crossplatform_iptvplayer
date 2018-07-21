@@ -1,354 +1,247 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CDisplayListItem, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, remove_html_markup, GetLogoDir
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
+import time
 import re
+import urllib
+import base64
+try:    import json
+except Exception: import simplejson as json
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+###################################################
 
+
+###################################################
+# E2 GUI COMMPONENTS 
+###################################################
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
 # Config options for HOST
-###################################################
 
 def GetConfigList():
-    return []
+    optionList = []
+    return optionList
 ###################################################
-
 
 def gettytul():
     return 'http://wgrane.pl/'
 
-class Wgrane:
-    MAINURL = 'http://www.wgrane.pl'
-    CAT_URL = MAINURL + '/categories.html'
-    VID_URL = MAINURL + '/watch.html?category=%s&sort=%s&page=%s'
-    SEARCH_URL = MAINURL + '/szukaj/'
+class WgranePL(CBaseHostClass):
 
-    SERVICE_MENU_TABLE = {
-        1: "Kategorie",
-        2: "Wyszukaj",
-        3: "Historia wyszukiwania"
-    }
-    
-    SORT_FILTERS_TABLE = [{'title':'Ostatnio dodane',         'sort':''        },
-                          {'title':'Najczęściej oglądane',    'sort':'views'   },
-                          {'title':'Najwyżej oceniane',       'sort':'points'  },
-                          {'title':'Najczęściej komentowane', 'sort':'comments'},
-                          {'title':'Ostatnio oglądane',       'sort':'recent'  }]
- 
     def __init__(self):
-        self.up = urlparser.urlparser()
-        self.cm = common()
-        self.history = CSearchHistoryHelper('Wgrane')
-        # temporary data
-        self.currList = []
-        self.currItem = {}
-
-    def getCurrList(self):
-        return self.currList
-
-    def setCurrList(self, list):
-        self.currList = list
+        CBaseHostClass.__init__(self, {'history':'wgrane.pl.online', 'cookie':'wgrane.pl.cookie'})#, 'min_py_ver':(2,7,9)
         
-    def getCurrItem(self):
-        return self.currItem
-
-    def setCurrItem(self, item):
-        self.currItem = item
-
-    def addDir(self, params):
-        params['type'] = 'category'
-        self.currList.append(params)
-        return
+        self.USER_AGENT = 'Mozilla/5.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
+        self.AJAX_HEADER = dict(self.HEADER)
+        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-    def playVideo(self, params):
-        params['type'] = 'video'
-        self.currList.append(params)
-        return
+        self.MAIN_URL = 'http://www.wgrane.pl/'
+        self.DEFAULT_ICON_URL = 'https://i.ytimg.com/vi/HpTrVOZVNhA/maxresdefault.jpg'
         
-    def setTable(self):
-        return self.SERVICE_MENU_TABLE
-
-    def listsMainMenu(self, table):
-        for num, val in table.items():
-            params = {'name': 'main-menu', 'title': val, 'category': val}
-            self.addDir(params)
-            
-    def listCategories(self, url, cat):
-        printDBG("listCategories for url[%s] cat[%s]" % (url, cat))
-        # add all item
-        params = {'category': cat, 'title': '--Wszystkie--' , 'cat_id': ''}
-        self.addDir(params)
-
-        sts, data = self.cm.getPage(url)
-        if not sts: return
-        sts, data = CParsingHelper.getDataBeetwenMarkers(data, "<div class='window_title'>", "<div class='footer'>")
-        if not sts: return False
-        data = data.split("<div class='list_title'>")
-        if len(data) > 1:
-            del data[0]
-            for item in data:
-                # cat_id: match.group(2) & title: match.group(1) & img: self.MAINURL + match.group(3)
-                match = re.search("<b>([^<]+?)</b></a></div><a href='[^']*?category=([0-9]+?)'><img[^>]*?src='([^']+?)'", item)
-                if not match: continue
-                # plot
-                printDBG('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA: [%s]' % match.group(2))
-                plot = CParsingHelper.removeDoubles(remove_html_markup(item, ' ').replace(match.group(1), ''), ' ')
-                params = {'category': cat, 'title': match.group(1) , 'cat_id': match.group(2) , 'icon': self.MAINURL + "/" + match.group(3), 'plot':plot}
-                self.addDir(params)
-                
-    def listFilters(self, table, cat, cat_id, icon):
-        printDBG("listFilters for cat[%s] cat_id[%s]" % (cat, cat_id))
-        for item in table:
-            item['category'] = cat
-            item['cat_id'] = cat_id
-            item['icon'] = icon
-            self.addDir(item)
-            
-                    
-    def listVideos(self, baseUrl, cat, cat_id, sort, page, search_pattern = ''):
-        url = baseUrl % (cat_id, sort, page)
-        printDBG("listVideos for url[%s]" % url)
-
-        sts, data = self.cm.getPage(url)
-        if not sts: return
-        
-        nextPage = False
-        if -1 < data.find("class='black'>&raquo;</a>"):
-            nextPage = True
-
-        sts, data = CParsingHelper.getDataBeetwenMarkers(data, "<div class='window_title'>", "<div class='footer'>")
-        if not sts: return False
-        data = data.split("<div class='list' style='width: 173px;'>")
-        if len(data) > 1:
-            del data[0]
-            for item in data:
-                # vid_hash & img
-                match = re.search("href='([0-9a-fA-F]{32})'[^>]*?><img[^>]*?src='([^']+?)'", item)
-                if not match: continue
-                vid_hash = match.group(1)
-                img = self.MAINURL + "/" + match.group(2)
-                if not match: continue
-                # title
-                match = re.search("<div class='list_title'><a href='%s'>([^<]+?)</a></div>" % vid_hash, item)
-                if not match: continue
-                title = match.group(1)
-                # plot
-                plot = CParsingHelper.removeDoubles(remove_html_markup(item, ' ').replace(title, ''), ' ')
-            
-                params = { 'title': title, 'url': self.MAINURL + "/" +vid_hash, 'icon': img, 'plot': plot}
-                if 'Rozmiar:' in item:
-                    continue
-                else:
-                    self.playVideo(params)
-            
-        if nextPage:
-            params = {'title': "Następna strona", 'category': cat, 'cat_id':cat_id, 'sort':sort, 'page':str(int(page)+1), 'search_pattern':search_pattern}
-            self.addDir(params)
-        
-    def getSearchResult(self, baseUrl, cat, page):
-        printDBG("getSearchResult for url[%s] page[%s]" % (baseUrl, page))
-        
-        if 1 < int(page) != '1': url = baseUrl + page
-        else: url = baseUrl
-        sts, data = self.cm.getPage(url)
-        if not sts: return
-        
-        nextPage = False
-        if -1 < data.find("class='pagination_next'"):
-            nextPage = True
-
-        sts, data = self.getDataBeetwenMarkers(data, '<td valign="top">', '<div class="menu_dol">', withMarkers = False)
-        if not sts: return
-      
-        data = data.split('<td valign="top">')
-        for item in data:
-            # url & title
-            match = re.search('<div class="video_title">[^<]*?<a href="([^"]+?)">([^<]+?)</a>', item)
-            if match: 
-                url = match.group(1)
-                title = match.group(2)
-            else: continue
-            # img
-            match = re.search('src="([^"]+?)"', item)
-            if match: img = match.group(1)
-            else: img = ''
-            # plot
-            match = re.search('<div class="video_details">(.+?)</td>', item, re.DOTALL)
-            if match: plot = remove_html_markup(match.group(1)) #.replace("</div>", " ")
-            else: plot = ''
-            
-            params = { 'title': title, 'url': url, 'icon': img, 'plot': plot}
-            if 'Rozmiar:' in item:
-                continue
+        self.defaultParams = {'with_metadata':True, 'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.cacheFilters = {}
+        self.cacheLinks = {}
+    
+    def setMainUrl(self, url):
+        if self.cm.isValidUrl(url):
+            self.MAIN_URL = self.cm.getBaseUrl(url)
+    
+    def getFullUrl(self, url, baseUrl=None):
+        url = url.replace('&amp;', '&')
+        return CBaseHostClass.getFullUrl(self, url, baseUrl)
+    
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}:
+            addParams = dict(self.defaultParams)
+        def _getFullUrl(url):
+            if self.cm.isValidUrl(url):
+                return url
             else:
-                self.playVideo(params)
-            
-        if nextPage:
-            params = {'title': "Następna strona", 'url': baseUrl, 'category': cat, 'page':str(int(page)+1)}
-            self.addDir(params)
-                
-    def listsHistory(self):
-        list = self.history.getHistoryList()
-        for item in list:
-            params = { 'name': 'history', 'category': 'Wyszukaj', 'title': item, 'plot': 'Szukaj: "%s"' % item}
+                return urljoin(baseUrl, url)
+        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+    
+    def listMainMenu(self, cItem):
+        printDBG("WgranePL.listMainMenu")
+
+
+        MAIN_CAT_TAB = [{'category':'list_sort',       'title': 'Przeglądaj pliki',    'url':self.getFullUrl('/watch.html') },
+                        {'category':'categories',      'title': 'Kategorie',           'url':self.getFullUrl('/categories.html') },
+                        {'category':'search',          'title': _('Search'), 'search_item':True},
+                        {'category':'search_history',  'title': _('Search history')} ]
+        self.listsTab(MAIN_CAT_TAB, cItem)
+    
+    def listCategories(self, cItem, nextCategory):
+        printDBG("WgranePL.listCategories")
+        page = cItem.get('page', 1)
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'window_title'), ('<div', '>', 'footer'), False)[1]
+
+        data = re.compile('''<div[^>]+?class=['"]list['"][^>]*?>''').split(data)
+        if len(data): del data[0]
+
+        for item in data:
+            url  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''\shref=['"]([^"^']+?)['"]''')[0] )
+            if url == '': continue
+            icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0] )
+            tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<div', '</div>')
+            if len(tmp):
+                title = self.cleanHtmlStr(tmp[0])
+                desc = []
+                for it in tmp[1:]:
+                    it = self.cleanHtmlStr( it )
+                    if it != '': desc.append(it)
+                desc = '[/br]'.join(desc)
+            else:
+                if title == '': title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''\stitle=['"]([^"^']+?)['"]''')[0] )
+                desc = self.cleanHtmlStr(item)
+            if title == '': self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''\salt=['"]([^"^']+?)['"]''')[0] )
+
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
             self.addDir(params)
 
-    def getHostingTable(self, url):
-        printDBG("getHostingTable for url[%s]" % url)
+    def listSort(self, cItem, nextCategory):
+        printDBG("WgranePL.listSort")
+
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'window_menu'), ('</ul', '>'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        for item in data:
+            title = self.cleanHtmlStr(item)
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
+            self.addDir(params)
+
+    def listItems(self, cItem, nextCategory):
+        printDBG("WgranePL.listItems")
+        page = cItem.get('page', 1)
         
-        directUrl = self.up.getVideoLink(url)
-        if directUrl:
-            return [{'name': self.up.getHostName(url), 'url': directUrl}]
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'window_title'), ('<div', '>', 'footer'), False)[1]
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pages'), ('</div', '>'), False)[1]
+        nextPage = self.cm.ph.getSearchGroups(nextPage, '''<a[^>]+?href=['"]([^'^"]+?)['"][^>]*?>\s*&raquo;\s*<''')[0]
+        
+        descObj = re.compile('''<br\s*?/>''', re.I)
+        data = re.compile('''<div[^>]+?class=['"]list['"][^>]*?>''').split(data)
+        for item in data:
+            url  = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''\shref=['"]([^"^'^\:]+?)['"]''')[0] )
+            if url == '': continue
+            if 'playlist=' in url:
+                icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0] )
+                continue # playlists not supported now
+            else:
+                icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']*?video_picture[^"^']+?)['"]''')[0] )
+                if icon == '': continue
+
+            title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'list_title'), ('</div', '>'), False)[1] )
+            if title == '': title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''\stitle=['"]([^"^']+?)['"]''')[0] )
+            if title == '': self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''\salt=['"]([^"^']+?)['"]''')[0] )
+
+            desc = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'list_detail'), ('</div', '>'), False)[1]
+            desc = self.cleanHtmlStr( descObj.sub('[/br]', desc) )
+
+            params = dict(cItem)
+            params.update({'good_for_fav': True, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            if 'playlist=' in url:
+                params.update({'category':nextCategory})
+                self.addDir(params)
+            elif 'PlaylistItemAdd' in item:
+                self.addVideo(params) # how to know if this is audio or video item?
+            else:
+                self.addPicture(params)
+        
+        if nextPage != '':
+            params = dict(cItem)
+            params.update({'title':_("Next page"), 'url':self.getFullUrl(nextPage), 'page':page+1})
+            self.addDir(params)
+
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("WgranePL.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        cItem = dict(cItem)
+        cItem['url'] = self.getFullUrl('/watch.html?search=') + urllib.quote_plus(searchPattern)
+        cItem['category'] = 'list_items'
+        self.listItems(cItem, 'list_playlist')
+    
+    def getLinksForVideo(self, cItem):
+        printDBG("WgranePL.getLinksForVideo [%s]" % cItem)
+        urlTab = []
+        
+        if 'picture' == cItem['type']:
+            icon = ''
+            sts, data = self.getPage(cItem['url'])
+            if sts:
+                data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'FileContent'), ('<div', '>', 'ajaxWaitLinks'), False)[1]
+                icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^"^']*?download.php[^"^']+?)['"]''')[0] )
+            if icon == '': icon = cItem.get('icon', '')
+            if icon != '':
+                urlTab = [{'name':'link', 'url':icon, 'need_resolve':0}]
         else:
-            return []
+            urlTab = self.up.getVideoLinkExt(cItem['url'])
+        return urlTab
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
-        if 0 == refresh:
-            if len(self.currList) <= index:
-                printDBG( "handleService wrong index: %s, len(self.currList): %d" % (index, len(self.currList)) )
-                return
-            if -1 == index:
-                # use default value
-                self.currItem = { "name": None }
-                printDBG( "handleService for first self.category" )
-            else:
-                self.currItem = self.currList[index]
+        
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
 
         name     = self.currItem.get("name", '')
-        title    = self.currItem.get("title", '')
         category = self.currItem.get("category", '')
-        page     = self.currItem.get("page", '1')
-        icon     = self.currItem.get("icon", '')
-        url      = self.currItem.get("url", '')
-        cat_id   = self.currItem.get("cat_id", '')
-        sort     = self.currItem.get("sort", '')
-        search_pattern = self.currItem.get("search_pattern", '') 
-        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        mode     = self.currItem.get("mode", '')
+        
+        printDBG( "handleService: || name[%s], category[%s] " % (name, category) )
         self.currList = []
+        self.currItem = dict(self.currItem)
+        self.currItem.pop('good_for_fav', None)
         
     #MAIN MENU
         if name == None:
-            self.listsMainMenu(self.SERVICE_MENU_TABLE)
-    #KATEGORIE
-        elif category == "Kategorie":
-            self.listCategories(self.CAT_URL, 'add_filter')
-        elif category == "add_filter":
-            self.listFilters(self.SORT_FILTERS_TABLE, "video_category", cat_id, icon)
-        elif category == "video_category":
-            self.listVideos(self.VID_URL, category, cat_id, sort, page)
-    #WYSZUKAJ
-        elif category == "Wyszukaj":
-            pattern = searchPattern.replace(" ", "+")
-            self.listVideos(self.VID_URL + "&search=" + pattern, "search_next", '', '', page, pattern)
-        elif category == "search_next":
-            pattern = search_pattern
-            self.listVideos(self.VID_URL + "&search=" + pattern, "search_next", '', '', page, pattern)
-    #HISTORIA WYSZUKIWANIA
-        elif category == "Historia wyszukiwania":
-            self.listsHistory()
-
+            self.listMainMenu({'name':'category'})
+        elif category == 'main':
+            self.listMainItems(self.currItem, 'list_items')
+        elif category == 'categories':
+            self.listCategories(self.currItem, 'list_sort')
+        elif category == 'list_sort':
+            self.listSort(self.currItem, 'list_items')
+        elif category == 'list_items':
+            self.listItems(self.currItem, 'list_playlist')
+        elif category == 'list_playlist':
+            self.listPlaylist(self.currItem)
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
+        else:
+            printExc()
+        
+        CBaseHostClass.endHandleService(self, index, refresh)
 
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, Wgrane(), True)
-
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('wgranelogo.png')])
-
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        
-        if self.host.currList[Index]["type"] != 'video':
-            printDBG( "ERROR getLinksForVideo - current item has wrong type" )
-            return RetHost(RetHost.ERROR, value = [])
-
-        retlist = []
-        urlList = self.host.getHostingTable(self.host.currList[Index]["url"])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], 0))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        urlTab = []
-        #url = self.host.up.getVideoLink( url )
-        #if isinstance(url, basestring) and url.startswith('http'):
-        #    urlTab.append(url)
-
-        return RetHost(RetHost.OK, value = urlTab)
-
-    def converItem(self, cItem):
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if cItem['type'] == 'category':
-            if cItem['title'] == 'Wyszukaj':
-                type = CDisplayListItem.TYPE_SEARCH
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-        elif 'picture' == cItem['type']:
-            type = CDisplayListItem.TYPE_PICTURE
-        
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_PICTURE]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  clean_html( cItem.get('title', '') )
-        description =  clean_html( cItem.get('plot', '') )
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end convertList
-
-    def getSearchItemInx(self):
-        # Find 'Wyszukaj' item
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'Wyszukaj':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                self.host.history.addHistoryItem( pattern)
-                self.searchPattern = pattern
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-        return
+        CHostBase.__init__(self, WgranePL(), True, favouriteTypes=[]) 

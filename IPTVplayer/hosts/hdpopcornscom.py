@@ -37,7 +37,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://hdpopcorns.com/'
+    return 'http://hdpopcorns.co/'
 
 class HDPopcornsCom(CBaseHostClass):
  
@@ -49,7 +49,7 @@ class HDPopcornsCom(CBaseHostClass):
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://hdpopcorns.com/'
+        self.MAIN_URL = 'http://hdpopcorns.co/'
         self.DEFAULT_ICON_URL = 'http://7428.net/wp-content/uploads/2014/07/Movie-Time-Ticket-Vector.jpg' 
         
         self.MAIN_CAT_TAB = [{'category':'list_items',        'title': _('Categories'),           'url':self.getMainUrl()           },
@@ -84,6 +84,7 @@ class HDPopcornsCom(CBaseHostClass):
         self.cacheFilters = {}
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         def addFilter(data, key, addAny, titleBase, marker):
             self.cacheFilters[key] = []
@@ -162,6 +163,7 @@ class HDPopcornsCom(CBaseHostClass):
         
         sts, data = self.getPage(baseUrl, params, post_data)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         nextPage = self.cm.ph.getSearchGroups(data, 'var\s+?mts_ajax_loadposts\s*=\s*([^;]+?);')[0].strip()
         try:
@@ -190,6 +192,7 @@ class HDPopcornsCom(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])
         cItem = dict(cItem)
@@ -325,6 +328,7 @@ class HDPopcornsCom(CBaseHostClass):
         
         sts, data = self.getPage(url)
         if not sts: return retTab
+        self.setMainUrl(self.cm.meta['url'])
         
         desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2>Synopsis</h2>', '</p>', False)[1])
         

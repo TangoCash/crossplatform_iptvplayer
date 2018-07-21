@@ -68,6 +68,8 @@ class HDKinoMir(CBaseHostClass):
                             ]
         
         self.encoding = ''
+        
+
     
     def getPage(self, url, params={}, post_data=None):
         sts,data = self.cm.getPage(url, params, post_data)
@@ -206,7 +208,7 @@ class HDKinoMir(CBaseHostClass):
             nextPage = True
         
         m1 = '<div class="filmposters">'
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '<center>', False)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'filmposters'), ('<div', '>', 'center'), False)[1]
         data = data.split(m1)
         
         if len(data): data[-1] = data[-1].split('<div class="navigation">')[0]

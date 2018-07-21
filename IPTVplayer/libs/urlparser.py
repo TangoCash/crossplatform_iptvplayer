@@ -53,7 +53,7 @@ import base64
 import math
 
 from xml.etree import cElementTree
-from random import random, randint, randrange
+from random import random, randint, randrange, choice as random_choice
 from urlparse import urlparse, urlunparse, parse_qs
 from binascii import hexlify, unhexlify, a2b_hex
 from hashlib import md5, sha256
@@ -483,6 +483,7 @@ class urlparser:
                        'soundcloud.com':       self.pp.parserSOUNDCLOUDCOM  ,
                        'vcstream.to':          self.pp.parserVCSTREAMTO     ,
                        'vidcloud.icu':         self.pp.parserVIDCLOUDICU    ,
+                       'uploaduj.net':         self.pp.parserUPLOADUJNET    ,
                        #https://oneload.co/4gdkrp4hieoe TODO
                        #'billionuploads.com':   self.pp.parserBILLIONUPLOADS ,
                        
@@ -519,7 +520,7 @@ class urlparser:
         host  = self.getHostName(url)
         
         # quick fix
-        if host == 'facebook.com' and 'likebox.php' in url:
+        if host == 'facebook.com' and 'likebox.php' in url or 'like.php' in url:
             return 0
         
         ret = 0
@@ -1111,8 +1112,9 @@ class pageParser:
         return False
         
     def _parserUNIVERSAL_A(self, baseUrl, embedUrl, _findLinks, _preProcessing=None, httpHeader={}, params={}):
-        refUrl = strwithmeta(baseUrl).meta.get('Referer', baseUrl)
-        HTTP_HEADER = { 'User-Agent':"Mozilla/5.0", 'Referer':refUrl }
+        HTTP_HEADER = { 'User-Agent':"Mozilla/5.0"}
+        if 'Referer' in strwithmeta(baseUrl).meta:
+            HTTP_HEADER['Referer'] = strwithmeta(baseUrl).meta['Referer']
         HTTP_HEADER.update(httpHeader)
         
         if 'embed' not in baseUrl and '{0}' in embedUrl:
@@ -1369,7 +1371,10 @@ class pageParser:
 
     def parserWGRANE(self,url):
         # extract video hash from given url
-        sts, data = self.cm.getPage(url)
+        HTTP_HEADER = self.getDefaultHeader(browser='chrome')
+        paramsUrl = {'with_metadata':True, 'header':HTTP_HEADER}
+        
+        sts, data = self.cm.getPage(url, paramsUrl)
         if not sts: return False
         agree = ''
         if 'controversial_content_agree' in data: agree = 'controversial_content_agree'
@@ -1377,10 +1382,27 @@ class pageParser:
         if '' != agree:
             vidHash = re.search("([0-9a-fA-F]{32})$", url)
             if not vidHash: return False
-            params = {'use_cookie': True, 'load_cookie':False, 'save_cookie':False} 
+            paramsUrl.update( {'use_cookie': True, 'load_cookie':False, 'save_cookie':False} )
             url = "http://www.wgrane.pl/index.html?%s=%s" % (agree, vidHash.group(1))
-            sts, data = self.cm.getPage(url, params)
+            sts, data = self.cm.getPage(url, paramsUrl)
             if not sts: return False
+        
+        cUrl = data.meta['url']
+        videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^'^"]*?embedlocal[^'^"]*?)['"]''', ignoreCase=True)[0]
+        if videoUrl != '':
+            videoUrl = self.cm.getFullUrl(videoUrl, self.cm.getBaseUrl(cUrl))
+            paramsUrl['header']['Referer'] = cUrl
+            sts, tmp = self.cm.getPage(videoUrl, paramsUrl)
+            if sts: 
+                urlTab = []
+                tmp = self.cm.ph.getDataBeetwenReMarkers(tmp, re.compile('''['"]?urls['"]?\s*\:\s*\['''), re.compile('\]'))[1].split('}')
+                for item in tmp:
+                    name = self.cm.ph.getSearchGroups(item, '''['"]?name['"]?\s*\:\s*['"]([^'^"]+?)['"]''')[0]
+                    url = self.cm.ph.getSearchGroups(item, '''['"]?url['"]?\s*\:\s*['"]([^'^"]+?)['"]''')[0]
+                    if url == '': continue 
+                    url = self.cm.getFullUrl(url, self.cm.getBaseUrl(cUrl)) 
+                    urlTab.append({'name':name, 'url':url})
+                if len(urlTab): return urlTab
 
         tmp = re.search('''["'](http[^"^']+?/video/[^"^']+?\.mp4[^"^']*?)["']''', data)
         if tmp: return tmp.group(1)
@@ -2229,8 +2251,8 @@ class pageParser:
             RAND = re.search('name="rand" value="(.+?)">', link)
             table = self.captcha.textCaptcha(link)
             value = table[0][0] + table [1][0] + table [2][0] + table [3][0]
-            code = self.cm.html_entity_decode(value)
-            print ('captcha-code :' + code)
+            code = clean_html(value)
+            printDBG('captcha-code :' + code)
             if ID and RAND > 0:
                 postdata = {'rand' : RAND.group(1), 'id' : ID.group(1), 'method_free' : 'Continue to Video', 'op' : 'download2', 'referer' : url, 'down_direct' : '1', 'code' : code, 'method_premium' : '' }
                 query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': True, 'return_data': True }
@@ -2240,14 +2262,9 @@ class pageParser:
                 HS = re.search('image<>(.+?)<>(.+?)<>(.+?)<>file<>', data)
                 if PL and HS > 0:
                     linkVideo = 'http://' + PL.group(4) + '.' + PL.group(3) + '.' + PL.group(2) + '.' + PL.group(1) + ':' + HS.group(3) + '/d/' + HS.group(2) + '/video.' + HS.group(1)
-                    print ('linkVideo :' + linkVideo)
+                    printDBG('linkVideo :' + linkVideo)
                     return linkVideo
-                else:
-                    return False
-            else:
-                return False
-        else:
-            return False
+        return False
 
     def parserSCS(self,url):
         query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
@@ -7275,7 +7292,11 @@ class pageParser:
             #'<font color="red">', '</font>'
             urlTab = []
             items = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source ', '>', False, False)
-            if 0 == len(items): items = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''var\s+sources\s*=\s*\['''), re.compile('''\]'''), False)[1].split('},')
+            if 0 == len(items):
+                sts, items = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''var\s+sources\s*=\s*\['''), re.compile('''\]'''), False)
+                if not sts: sts, items = self.cm.ph.getDataBeetwenMarkers(data, 'sources', ']', False)
+                items = items.split('},')
+            
             printDBG(items)
             for item in items:
                 item = item.replace('\/', '/')
@@ -10092,6 +10113,31 @@ class pageParser:
                 url = strwithmeta(url.replace('\\/', '/'), {'Referer':cUrl})
                 urlsTab.append({'name':name, 'url':url})
         return urlsTab
+        
+    def parserUPLOADUJNET(self, baseUrl):
+        printDBG("parserUPLOADUJNET baseUrl[%r]" % baseUrl)
+        baseUrl = strwithmeta(baseUrl)
+        cUrl = baseUrl
+        HTTP_HEADER= self.getDefaultHeader(browser='chrome')
+        HTTP_HEADER['Referer'] = baseUrl.meta.get('Referer', baseUrl)
+        
+        urlParams = {'with_metadata':True, 'header':HTTP_HEADER}
+        sts, data = self.cm.getPage(baseUrl, urlParams)
+        if not sts: return False
+        cUrl = data.meta['url']
+        
+        url = self.cm.getFullUrl('/api/preview/request/', self.cm.getBaseUrl(cUrl))
+        HTTP_HEADER['Referer'] = cUrl
+        
+        hash = ''.join([random_choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") for i in range(20)])
+        sts, data = self.cm.getPage(url, urlParams, {'hash':hash, 'url':cUrl})
+        if not sts: return False
+        
+        printDBG(data)
+        data = byteify(json.loads(data))
+        if self.cm.isValidUrl( data['clientUrl'] ):
+            return strwithmeta(data['clientUrl'], {'Referer':cUrl, 'User-Agent':HTTP_HEADER['User-Agent']})
+        return False
         
     def parserSOUNDCLOUDCOM(self, baseUrl):
         printDBG("parserCLOUDSTREAMUS baseUrl[%r]" % baseUrl)

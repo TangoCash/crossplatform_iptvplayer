@@ -245,13 +245,14 @@ class IconMenager:
         else:
             self.checkSpace -= 1
         file_path = "%s%s" % (path, filename)
-        params = {'maintype': 'image'}
+        params = {} #{'maintype': 'image'}
         if config.plugins.iptvplayer.allowedcoverformats.value != 'all':
-            params['subtypes'] = config.plugins.iptvplayer.allowedcoverformats.value.split(',')
+            subtypes = config.plugins.iptvplayer.allowedcoverformats.value.split(',')
+            #params['subtypes'] = subtypes
             params['check_first_bytes'] = []
-            if 'jpeg' in params['subtypes']: params['check_first_bytes'].extend(['\xFF\xD8','\xFF\xD9'])
-            if 'png' in params['subtypes']: params['check_first_bytes'].append('\x89\x50\x4E\x47')
-            if 'gif' in params['subtypes']: params['check_first_bytes'].extend(['GIF87a','GIF89a'])
+            if 'jpeg' in subtypes: params['check_first_bytes'].extend(['\xFF\xD8','\xFF\xD9'])
+            if 'png' in subtypes: params['check_first_bytes'].append('\x89\x50\x4E\x47')
+            if 'gif' in subtypes: params['check_first_bytes'].extend(['GIF87a','GIF89a'])
         else:
             params['check_first_bytes'] = ['\xFF\xD8', '\xFF\xD9', '\x89\x50\x4E\x47','GIF87a','GIF89a']
         

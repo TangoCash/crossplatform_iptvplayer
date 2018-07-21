@@ -334,9 +334,18 @@ class CartoonHD(CBaseHostClass):
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
+        printDBG(">> url: %s" % self.cm.meta['url'])
         
-        jsUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]*?videojs-f[^'^"]*?)['"]''')[0])
-        if not self.cm.isValidUrl(jsUrl): return []
+        jsUrl = ''
+        tmp = re.compile('''<script[^>]+?src=['"]([^'^"]*?videojs[^'^"^/]*?\.js(?:\?v=[0-9\.]+?)?)['"]''', re.I).findall(data)
+        printDBG("TMP JS: %s" % tmp)
+        for item in tmp:
+            if '.min.' in item.rsplit('/', 1)[-1]: continue
+            jsUrl = self.getFullUrl(item)
+        
+        if not self.cm.isValidUrl(jsUrl):
+            printDBG(">>>>>>\n%s\n" % data)
+            return []
         
         sts, jsUrl = self.cm.getPage(jsUrl, self.defaultParams)
         if not sts: return []

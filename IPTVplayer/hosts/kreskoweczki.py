@@ -70,8 +70,9 @@ class KreskoweczkiPL(CBaseHostClass):
         self.needProxy = None
         
     def getPage(self, url, params={}, post_data=None):
-        HTTP_HEADER= dict(self.HEADER)
-        params.update({'header':HTTP_HEADER})
+        if 'header' not in params:
+            HTTP_HEADER= dict(self.HEADER)
+            params.update({'header':HTTP_HEADER})
         
         sts, data = self.cm.getPage(url, params, post_data)
         if sts and None == data:
@@ -220,13 +221,16 @@ class KreskoweczkiPL(CBaseHostClass):
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '</iframe>', caseSensitive=False)
         for item in tmp:
             videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"', ignoreCase=True)[0])
+            if videoUrl == '': videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, "src='([^']+?)'", ignoreCase=True)[0])
             if 1 != self.up.checkHostSupport(videoUrl): continue 
             urlTab.extend( self.up.getVideoLinkExt(videoUrl) )
             
         if 0 == len(urlTab):
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="playerholder">', '</div>', caseSensitive=False)
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'playerholder'), ('</div', '>'), caseSensitive=False)
+            printDBG(tmp)
             for item in tmp:
                 videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"', ignoreCase=True)[0])
+                if videoUrl == '': videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(item, "href='([^']+?)'", ignoreCase=True)[0])
                 if 1 != self.up.checkHostSupport(videoUrl): continue 
                 urlTab.extend( self.up.getVideoLinkExt(videoUrl) )
         

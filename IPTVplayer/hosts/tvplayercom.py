@@ -357,7 +357,7 @@ class TVPlayer(CBaseHostClass):
             httpParams['header']['Content-Type'] = 'application/x-www-form-urlencoded'
             httpParams['header']['Referer'] = url
             sts, data = self.cm.getPage(actionUrl, httpParams, post_data)
-            if sts and '/account/logout' in data:
+            if sts and '/account/channels' in data:
                 printDBG('tryTologin OK')
                 self.loggedIn = True
             else:

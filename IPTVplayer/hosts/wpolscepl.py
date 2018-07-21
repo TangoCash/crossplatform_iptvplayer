@@ -51,7 +51,7 @@ class WPolscePL(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'wpolsce.pl', 'cookie':'wpolsce.pl.cookie', 'cookie_type':'MozillaCookieJar'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://wpolsce.pl/'
-        self.DEFAULT_ICON_URL = 'https://media.wplm.pl/pictures/830x600/path/2017/06/12/825/360/4dc5ebb93785466e9fe3541853925328.png'
+        self.DEFAULT_ICON_URL = 'http://satkurier.pl/uploads/52818.jpg'
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
@@ -186,9 +186,15 @@ class WPolscePL(CBaseHostClass):
                     if item.get('is_current_live', False) and liveItem == None: liveItem = params
                     else: self.addVideo(params)
             
-            if liveItem != None:                
+            if liveItem != None:
                 liveItem['type'] = 'video'
                 self.currList.insert(0, liveItem)
+            else:
+                url = data['main_video']['video_url']
+                if self.cm.isValidUrl(url) and onlyLiveItems:
+                    params = dict(cItem)
+                    params.update({'good_for_fav':False, 'type':'video', 'title':'Na żywo', 'url':url, 'icon':'', 'desc':''})
+                    self.currList.insert(0, params)
         except Exception:
             printExc()
         
@@ -260,6 +266,9 @@ class WPolscePL(CBaseHostClass):
             
     def getLinksForVideo(self, cItem):
         printDBG("WPolscePL.getLinksForVideo [%s]" % cItem)
+        
+        if 1 == self.up.checkHostSupport(cItem['url']): 
+            return self.up.getVideoLinkExt(cItem['url'])
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return

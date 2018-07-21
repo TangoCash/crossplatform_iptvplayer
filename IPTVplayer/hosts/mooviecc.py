@@ -42,18 +42,18 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://moovie.cc/'
+    return 'https://moovie.cc/'
 
 class MoovieCC(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'moovie.cc', 'cookie':'moovie.cc.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
-        self.DEFAULT_ICON_URL = 'http://moovie.cc/images/logo.png'
+        self.DEFAULT_ICON_URL = 'https://moovie.cc/images/logo.png'
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'http://moovie.cc/'
+        self.MAIN_URL = 'https://moovie.cc/'
         self.cacheLinks    = {}
         self.cacheSortOrder = []
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}

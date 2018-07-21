@@ -89,10 +89,11 @@ class MoonwalkParser():
         
         sts, data = self.cm.getPage(scriptUrl, params)
         if sts:
+            jscode.insert(0, '''window=this;var document={};function setTimeout(e,t){}window.document=document,location={},Object.defineProperty(location,"href",{get:function(){return""},set:function(e){}}),window.location=location,document.on=function(){return document},document.constructor=document.on,document.ready=document.on,document.off=document.on,document.bind=document.on;var element=function(e){this.getElementsByTagName=function(){return elem=new element(""),[elem]},this.attributes={},this.expando=function(){return new element("")},this.firstChild={nodeType:3},this.cloneNode=function(){return new element("")},this.appendChild=function(){return new element("")},this.lastChild=function(){return new element("")},this.setAttribute=function(){this.attributes[arguments[0]]={expando:1}},this.getAttribute=function(){return new element("")},Object.defineProperty(this,"style",{get:function(){return{display:"",animation:""}},set:function(e){}})};document.documentElement=new element(""),document.nodeType=9,document.body=document,document.createDocumentFragment=function(){return new element("")},document.getElementById=function(e){return new element(e)},document.createElement=document.getElementById,document.getElementsByTagName=document.getElementById;\n''' + data)
             item = "iptv.call = %s;iptv['call']();" % self._getFunctionCode(data.split('getVideoManifests:', 1)[-1])
             jscode.append(item)
             
-        ret = iptv_js_execute( '\n'.join(jscode) )
+        ret = iptv_js_execute( '\n'.join(jscode), {'timeout_sec':10} )
         if ret['sts'] and 0 == ret['code']:
             printDBG(ret['data'])
             try:

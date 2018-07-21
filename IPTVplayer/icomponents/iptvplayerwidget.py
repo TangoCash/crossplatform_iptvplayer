@@ -49,7 +49,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           SortHostsList, GetHostsOrderList, CSearchHistoryHelper, IsExecutable, \
                                                           CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
                                                           GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, ClearTmpCookieDir, \
-                                                          GetEnabledHostsList, SaveHostsOrderList
+                                                          GetEnabledHostsList, SaveHostsOrderList, GetUpdateServerUri
 from Plugins.Extensions.IPTVPlayer.itools.iptvhostgroups import IPTVHostsGroups
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import IPTVPlayerBufferingWidget
@@ -634,25 +634,26 @@ class IPTVPlayerWidget(Screen):
         TextMSG = ''
         if ret:
             if ret[1] == "info": #information about plugin
-                TextMSG  = _("Main developer, architect, coordinator: ") + "\n\t- samsamsam [specjalnie dla Asi]\n"
+                TextMSG  = _("Lead programmer: ") + "\n\t- samsamsam\n"
+                TextMSG += _("E-mail: ") + "\n\t- iptvplayere2@gmail.com\n"
+                TextMSG += _("www: ") + "\n\t- http://iptvplayer.vline.pl/" + '\n\t- http://www.iptvplayer.gitlab.io/\n'
                 TextMSG += _("Developers: ") 
-                developersTab = [{'nick':'zdzislaw22', 'mail':''},
-                                 {'nick':'mamrot',     'mail':''},
-                                 {'nick':'MarcinO',    'mail':''},
-                                 {'nick':'skalita',    'mail':''},
-                                 {'nick':'atilaks',    'mail':''},
-                                 {'nick':'huball',     'mail':''},
-                                 {'nick':'matzg',      'mail':''},
-                                 {'nick':'tomashj291', 'mail':''},
-                                 {'nick':'a4tech',     'mail':''},
+                developersTab = [{'nick':'zdzislaw22',},
+                                 {'nick':'mamrot',    },
+                                 {'nick':'MarcinO',   },
+                                 {'nick':'skalita',   },
+                                 {'nick':'atilaks',   },
+                                 {'nick':'huball',    },
+                                 {'nick':'matzg',     },
+                                 {'nick':'tomashj291',},
+                                 {'nick':'a4tech',    },
                                 ]
                 # present alphabetically, the order does not mean validity
                 sortedList = sorted(developersTab, key=lambda k: k['nick'].upper())
                 for item in sortedList:
                     TextMSG += "\n\t- {0}, ".format(item['nick'])
-                TextMSG += "\n"
-                TextMSG += _("Testers: ") + "\n\t- ??\n"
-                TextMSG += _("Webpages: ") + "\n\t- http://iptvplayer.vline.pl/\n" #, \n\t- http://iptvplayer.pl/
+                TextMSG = TextMSG[:-2]
+                TextMSG += "\n\tand others\n"
                 self.session.open(MessageBox, TextMSG, type = MessageBox.TYPE_INFO )
             elif ret[1] == "IPTVDM":
                 self.runIPTVDM()
@@ -950,7 +951,7 @@ class IPTVPlayerWidget(Screen):
     
     def showArticleContent(self, ret):
         printDBG("showArticleContent")
-        self.setStatusTex("")            
+        self.setStatusTex("")
         self["list"].show()
 
         artItem = None
@@ -1026,7 +1027,7 @@ class IPTVPlayerWidget(Screen):
         self.askUpdateAvailable(self.selectHost)
     
     def __requestCheckUpdate(self):
-        lastVerUrl = 'http://iptvplayer.vline.pl/download/update2/lastversion.php' #'http://iptvplayer.pl/download/update2/lastversion.php'
+        lastVerUrl = GetUpdateServerUri('lastversion.php')
         if config.plugins.iptvplayer.autoCheckForUpdate.value:
             self.checkUpdateTimer.start(self.checkUpdateTimer_interval, True)
             if IsExecutable( DMHelper.GET_WGET_PATH() ):

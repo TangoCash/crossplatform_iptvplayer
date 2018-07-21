@@ -86,11 +86,18 @@ class IPTVArticleRichVisualizer(Screen):
         # calculate num of rich desc items and pages
         #############################################
         self.richDesc = {'items_count': 0, 'pages_count': 0, 'page': 0, 'avalable_params':[] }
-        for item in ArticleContent.RICH_DESC_PARAMS:
-            if item in artItem.richDescParams:
-                self.richDesc['items_count'] += 1
-                self.richDesc['avalable_params'].append(item)
-        # yes I know, len(self.richDesc['avalable_params']) == self.richDesc['items_count']
+        try:
+            if 'custom_items_list' in artItem.richDescParams:
+                self.richDesc['custom_items_list'] = artItem.richDescParams['custom_items_list']
+                self.richDesc['items_count'] = len(self.richDesc['custom_items_list'])
+            else:
+                for item in ArticleContent.RICH_DESC_PARAMS:
+                    if item in artItem.richDescParams:
+                        self.richDesc['items_count'] += 1
+                        self.richDesc['avalable_params'].append(item)
+                # yes I know, len(self.richDesc['avalable_params']) == self.richDesc['items_count']
+        except Exception:
+            printExc()
         
         self.richDesc['pages_count'] = self.richDesc['items_count'] / self.MAX_RICH_DESC_ROW_NUM
         if self.richDesc['items_count'] % self.MAX_RICH_DESC_ROW_NUM > 0:
@@ -293,16 +300,31 @@ class IPTVArticleRichVisualizer(Screen):
         if firstIdx >= self.richDesc['items_count']: return
         
         printDBG("IPTVArticleRichVisualizer.setRichDesc firstIdx[%d]" % firstIdx)
-        params = self.richDesc['avalable_params'][firstIdx:]
-        for idx in range(self.richDesc['rows_count']):
-            if idx < len(params):
-                label = _(ArticleContent.RICH_DESC_LABELS[params[idx]]) # we call _() to translate label
-                text  = self.artItem.richDescParams[params[idx]]
+        try:
+            if 'custom_items_list' in self.richDesc:
+                params = self.richDesc['custom_items_list'][firstIdx:]
+                for idx in range(self.richDesc['rows_count']):
+                    if idx < len(params):
+                        label = str(params[idx][0])
+                        text  = str(params[idx][1])
+                    else:
+                        label = " "
+                        text  = " "
+                    self["dsc_label_{0}".format(idx+1)].setText(label)
+                    self["dsc_text_{0}".format(idx+1)].setText(text)
             else:
-                label = " "
-                text  = " "
-            self["dsc_label_{0}".format(idx+1)].setText(label)
-            self["dsc_text_{0}".format(idx+1)].setText(text)
+                params = self.richDesc['avalable_params'][firstIdx:]
+                for idx in range(self.richDesc['rows_count']):
+                    if idx < len(params):
+                        label = _(ArticleContent.RICH_DESC_LABELS[params[idx]]) # we call _() to translate label
+                        text  = self.artItem.richDescParams[params[idx]]
+                    else:
+                        label = " "
+                        text  = " "
+                    self["dsc_label_{0}".format(idx+1)].setText(label)
+                    self["dsc_text_{0}".format(idx+1)].setText(text)
+        except Exception:
+            printExc()
             
     def newPage(self, page):
         if page != self.richDesc['page'] and 'page_item_start_x' in self.richDesc and 'page_item_start_y' in self.richDesc:

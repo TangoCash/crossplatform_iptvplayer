@@ -163,7 +163,7 @@ class FilmeHD(CBaseHostClass):
             params.update({'good_for_fav': False, 'title':'%s : %s' % (cItem['title'], title), 'url':url})
             self.addVideo(params)
             
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'banner-top-mobile'), ('<div', '>', 'hidden-ipad'), False)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'banner-top-mobile'), ('<div', '>', 'comments-loader'), False)[1]
         data = re.compile('''(<div[^>]+?tabpanel[^>]+?>)''').split(data)
         
         titlesTab = []

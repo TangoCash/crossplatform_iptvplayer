@@ -63,9 +63,11 @@ class MaxtvGO(CBaseHostClass):
         
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_CAT_TAB = [{'category':'list_items',        'title': 'MaxTVGo',             'url':self.getFullUrl('/index.php')},
+        self.MAIN_CAT_TAB = [{'category':'list_items',        'title': 'MaxTVGo',             'url':self.getFullUrl('/api/videos.php?action=find')},
                              {'category':'list_yt_channel',   'title': 'Max Kolonko - MaxTV', 'url':'https://www.youtube.com/user/Media2000Corp/videos' },
                              {'category':'list_yt_channel',   'title': 'MaxTVNews',           'url':'https://www.youtube.com/user/MaxTVTUBE/videos'},
+                             {'category':'search',          'title': _('Search'), 'search_item':True, },
+                             {'category':'search_history',  'title': _('Search history'),             } 
                             ]
         self.ytp = YouTubeParser()
         self.loggedIn = None
@@ -98,37 +100,33 @@ class MaxtvGO(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         
-        article = self.getArticleContent(cItem, data)
-        if len(article):
-            title = article[0]['title']
-            icon = article[0]['images'][0]['url']
-            params = dict(cItem)
-            params.update({'good_for_fav':True, 'title':title, 'icon':icon})
-            self.addVideo(params)
+        try:
+            data = byteify(json.loads(data))
+            if data.get('error') != None:
+                SetIPTVPlayerLastHostError(str(data['error']['message']))
+            for item in data['data']:
+                sTitle = self.cleanHtmlStr(item['name'])
+                subItems = []
+                for it in item['videos']:
+                    title = self.cleanHtmlStr(it['title'])
+                    icon = self.getFullIconUrl(it['image'])
+                    url = self.getFullUrl('index.php?film=') + it['code']
+                    params = dict(cItem)
+                    params.update({'type':'video', 'good_for_fav':True, 'title':title, 'url':url, 'icon':icon})
+                    subItems.append(params)
+                
+                if len(subItems):
+                    params = dict(cItem)
+                    params.update({'category':nextCategory, 'good_for_fav':False, 'title':sTitle, 'sub_items':subItems})
+                    self.addDir(params)
+            
+        except Exception:
+            printExc()
         
-        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
-        catsTitle = '' 
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'slajder_film'), ('<div', '>', 'chat_round'))[1]
-        data = re.compile('(<h3[^>]*?>[^>]*?</[^>]*?>)').split(data)
-        for catData in data:
-            if catData.startswith('<h3'): catsTitle = self.cleanHtmlStr(catData)
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(catData, '<a', '</a>')
-            for item in tmp:
-                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
-                icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
-                icon  = strwithmeta(icon, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT, 'Referer':cItem['url']})
-                title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^'^"]+?)['"]''')[0])
-                if title == '': title = catsTitle + ' ' + self.cleanHtmlStr(icon.split('/')[-1].split('.', 1)[0].replace('small', ''))
-                # 'category':nextCategory,
-                params = dict(cItem)
-                params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon})
-                self.addVideo(params)
-            
-        if self.loggedIn != True and 0 == len(self.currList):
-            msg = _('The host %s requires registration. \nPlease fill your login and password in the host configuration. Available under blue button.' % self.getMainUrl())
-            GetIPTVNotify().push(msg, 'error', 10)
-            SetIPTVPlayerLastHostError(msg)
-            
+            if self.loggedIn != True and 0 == len(self.currList):
+                msg = _('The host %s requires registration. \nPlease fill your login and password in the host configuration. Available under blue button.' % self.getMainUrl())
+                GetIPTVNotify().push(msg, 'error', 10)
+        
     def listYTChannel(self, cItem):
         printDBG('MaxtvGO.getVideos cItem[%s]' % (cItem))
         
@@ -175,6 +173,14 @@ class MaxtvGO(CBaseHostClass):
                 printDBG("Unknown source: [%s]" % item)
         
         return retTab
+        
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        printDBG("MaxtvGO.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        self.tryTologin()
+        
+        cItem = dict(cItem)
+        cItem['url'] = self.getFullUrl('/api/videos.php?action=find&fullText=') + urllib.quote_plus(searchPattern)
+        self.listItems(cItem, 'sub_items')
     
     def tryTologin(self):
         printDBG('tryTologin start')
@@ -296,11 +302,11 @@ class MaxtvGO(CBaseHostClass):
         elif category == 'list_filters':
             self.listFilters(self.currItem, 'list_items')
         elif category == 'list_items':
-            self.listItems(self.currItem, 'explore_item')
+            self.listItems(self.currItem, 'sub_items')
         elif category == 'list_yt_channel':
             self.listYTChannel(self.currItem)
-        elif category == 'explore_item':
-            self.exploreItem(self.currItem, 'list_episodes')
+        elif category == 'sub_items':
+            self.currList = self.currItem.get('sub_items', [])
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)

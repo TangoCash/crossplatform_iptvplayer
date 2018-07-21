@@ -140,16 +140,25 @@ class Sovdub(CBaseHostClass):
         if not sts: return
         desc = self.cm.ph.getDataBeetwenMarkers(data, '<div class="full-news-content">', '</a></div>', False)[1]
         desc = self.cleanHtmlStr(desc).replace('  ', '')
-        url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=["']([^"^']+?)['"]''', 1, True)[0]
-        url = url.replace('amp;', '')
-        url = self.getFullUrl(url)
+        
+        hasLinks = False
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<iframe', '>'),  ('</iframe', '>'), caseSensitive=False)
+        for item in data:
+            url = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=["']([^"^']+?)['"]''', 1, True)[0]
+            url = url.replace('amp;', '')
+            url = self.getFullUrl(url)
+            if 'money.' not in url and 1  == self.up.checkHostSupport(url):
+                hasLinks = True
+            
         if self.cm.isValidUrl(url):
             params = dict(cItem)
             params['desc'] = desc
-            params['url'] = url
-            params.update({'desc': desc, 'url': url})
-            self.addVideo(params)
-            
+            params.update({'desc': desc})
+            if hasLinks:
+                self.addVideo(params)
+            else:
+                self.addArticle(params)
+        
     def listSearchResult(self, cItem, searchPattern, searchType):
         #searchPattern = 'Колонна'
         
@@ -182,7 +191,17 @@ class Sovdub(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("Sovdub.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        urlTab.append({'name': 'Main url', 'url': cItem['url'], 'need_resolve': 1})
+
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return []
+
+        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<iframe', '>'),  ('</iframe', '>'), caseSensitive=False)
+        for item in data:
+            url = self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=["']([^"^']+?)['"]''', 1, True)[0]
+            url = url.replace('amp;', '')
+            url = self.getFullUrl(url)
+            if 'money.' not in url:
+                urlTab.append({'name':self.cleanHtmlStr(item), 'url':url, 'need_resolve': 1})
         return urlTab
 
     def getVideoLinks(self, videoUrl):
