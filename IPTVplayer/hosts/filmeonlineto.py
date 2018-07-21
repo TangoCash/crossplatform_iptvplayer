@@ -171,9 +171,9 @@ class FilmeOnlineTo(CBaseHostClass):
             self.cacheFiltersKeys.append(key)
         
         printDBG(self.cacheFilters)
-        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG("++++++")
         printDBG(self.cacheFiltersKeys)
-        printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG("++++++")
         
     def listFilters(self, cItem, nextCategory):
         printDBG("FilmeOnlineTo.listFilters")
@@ -381,7 +381,7 @@ class FilmeOnlineTo(CBaseHostClass):
             
             params = dict(videoUrl.meta.get('params', {}))
             if params.get('tip', '') == 'embed':
-                url = '/ajax/movie_embed.php?eid=%s&lid=undefined&ts%s&up=0&mid=%s&gid=%s&epNr=%s&type=%s&server=NaN&epIndex=%s&so=%s&srvr=NaN' % (params['id'], data.get('ts', ''), movieData['id'], movieData['gid'], params['epNr'], movieData['type'], params['index'], params['so'])
+                url = '/ajax/movie_embed.php?eid=%s&lid=undefined&ts=%s&up=0&mid=%s&gid=%s&epNr=%s&type=%s&server=%s&epIndex=%s&so=%s&srvr=%s' % (params['id'], data.get('ts', ''), movieData['id'], movieData['gid'], params['epNr'], movieData['type'], params.get('server', 'NaN'), params['index'], params['so'], params.get('srvr', 'NaN'))
                 sts, data = self.getPage(self.getFullUrl(url), urlParams)
                 if not sts: return
                 data = byteify(json.loads(data), '', True)

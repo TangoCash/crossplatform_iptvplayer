@@ -63,16 +63,10 @@ class IceFilms(CBaseHostClass):
         
     def selectDomain(self):
         for domain in ['http://www.icefilms.info/', 'https://icefilms.unblocked.at/']:
-            try:
-                sts, response = self.cm.getPage(domain, {'return_data':False})
-                redirectUrl = response.geturl()
-                response.close()
-                sts, data = self.cm.getPage(redirectUrl)
-                if 'donate.php' in data:
-                    self.MAIN_URL = self.up.getDomain(redirectUrl, False)
+            sts, data = self.cm.getPage(domain)
+            if sts and  'donate.php' in data:
+                if self.setMainUrl(self.cm.meta['url']):
                     break
-            except Exception:
-                printExc()
         
         if self.MAIN_URL == None:
             self.MAIN_URL = 'http://www.icefilms.info/'
@@ -90,7 +84,7 @@ class IceFilms(CBaseHostClass):
         
     def getPage(self, url, addParams = {}, post_data = None):
         proxy = config.plugins.iptvplayer.icefilmsinfo_proxy.value
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> " + proxy)
+        printDBG(">> " + proxy)
         if proxy != 'None':
             if proxy == 'proxy_1':
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
@@ -159,16 +153,10 @@ class IceFilms(CBaseHostClass):
             
     def listRandom(self, cItem, nextCategory):
         printDBG("IceFilms.listRandom")
-        try:
-            sts, response = self.getPage(cItem['url'], {'return_data':False})
-            url = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return
-            
-        sts, data = self.getPage(url)
+        
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
+        url = self.cm.meta['url']
         
         tmp  = self.cm.ph.getDataBeetwenMarkers(data, '<title>', '</span>', False)[1]
         mainDesc = self.cleanHtmlStr(tmp)

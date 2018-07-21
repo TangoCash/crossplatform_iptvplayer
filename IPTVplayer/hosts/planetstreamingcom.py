@@ -121,14 +121,6 @@ class PlanetStreaming(CBaseHostClass):
             self.MAIN_MOVIES_URL = 'http://ww4.planet-streaming.com/'
             self.MAIN_SERIES_URL = 'http://ww4.serie-streaminghd.com/'
             self.MAIN_URL = self.MAIN_MOVIES_URL
-        try:
-            urlParams = dict(self.defaultParams)
-            urlParams['return_data'] = False
-            sts, response = self.getPage(self.MAIN_URL, urlParams)
-            url = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
     
     def listMainMenu(self, cItem):
         printDBG("PlanetStreaming.listMainMenu")

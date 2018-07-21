@@ -17,6 +17,7 @@ from Plugins.Extensions.IPTVPlayer.icomponents.configbase import COLORS_DEFINITO
 ###################################################
 # FOREIGN import
 ###################################################
+from Screens.Screen import Screen
 
 from Components.config import config, ConfigSubsection, ConfigSelection, ConfigDirectory, ConfigYesNo, ConfigOnOff, Config, ConfigInteger, ConfigSubList, ConfigText, getConfigListEntry, configfile
 from Tools.Directories import resolveFilename, fileExists, SCOPE_PLUGINS

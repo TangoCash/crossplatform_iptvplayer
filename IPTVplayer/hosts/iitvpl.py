@@ -245,12 +245,8 @@ class IITVPL(CBaseHostClass):
                 elif self.up.checkHostSupport(uri): videoUrl = uri
         
         if 1 != self.up.checkHostSupport(videoUrl):
-            try:
-                sts, response = self.cm.getPage(videoUrl, {'return_data':False})
-                videoUrl = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
+            self.cm.getPage(videoUrl, {'max_data_size':0})
+            videoUrl = self.cm.meta.get('url', videoUrl)
         
         if videoUrl.startswith('http://') or videoUrl.startswith('https://'):
             return self.up.getVideoLinkExt(videoUrl)

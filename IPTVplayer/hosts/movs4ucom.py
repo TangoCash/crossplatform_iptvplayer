@@ -357,19 +357,10 @@ class Movs4uCOM(CBaseHostClass):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
         
-        try:
-            httpParams = dict(self.defaultParams)
-            httpParams['return_data'] = False
-            
-            sts, response = self.cm.getPage(videoUrl, httpParams)
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return []
+        sts, data = self.cm.getPage(videoUrl, self.defaultParams)
+        videoUrl = self.cm.meta.get('url', videoUrl)
         
         if self.up.getDomain(self.getMainUrl()) in videoUrl or self.up.getDomain(videoUrl) == self.up.getDomain(orginUrl):
-            sts, data = self.getPage(videoUrl)
             if not sts: return []
             
             found = False

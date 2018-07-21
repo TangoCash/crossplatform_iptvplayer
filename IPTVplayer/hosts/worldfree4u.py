@@ -167,26 +167,16 @@ class WorldFree4u(CBaseHostClass):
         params = dict(self.defaultParams)
         params['header'] = dict(params['header'])
         params['header']['Referer'] = cItem['url']
-        params['return_data'] = False
         
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''<div[^>]+?movieFrame[^>]+?>'''), re.compile('''</div>'''))[1]
         url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
         if self.cm.isValidUrl(url):
-            try:
-                sts, response = self.getPage(url, params)
-                url = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
+            sts, data = self.getPage(url, params)
+            if not sts: return []
             
+            url = self.cm.meta['url']
             if 1 != self.up.checkHostSupport(url):
-                params['return_data'] = True
-                
-                sts, data = self.getPage(url)
-                if not sts: return []
-                
                 printDBG(data)
-                
                 linksCandidates = []
                 tmp = self.cm.ph.getDataBeetwenMarkers(data, 'sources:', ']')[1]
                 linksCandidates = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '{', '}', False, False)
@@ -218,13 +208,18 @@ class WorldFree4u(CBaseHostClass):
             urlTab = self.up.getVideoLinkExt(url)
         else:
             tmpUrlTab = []
+            params['max_data_size'] = 0
             for item in urlTab:
                 tmp = []
                 if 1 == self.up.checkHostSupport(item['url']):
-                    tmp = self.up.getVideoLinkExt(item['url'])
-                    tmpUrlTab.extend(tmp)
-                else:
-                    tmpUrlTab.append(item)
+                    sts = self.getPage(item['url'], params)[0]
+                    if not sts: continue
+                    contentType = self.cm.meta.get('content-type', '').lower()
+                    if 'video' not in contentType and 'mpegurl' not in contentType and 'application' not in contentType:
+                        tmp = self.up.getVideoLinkExt(item['url'])
+                        tmpUrlTab.extend(tmp)
+                        continue
+                tmpUrlTab.append(item)
             urlTab = tmpUrlTab
         
         return urlTab

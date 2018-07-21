@@ -101,7 +101,7 @@ class IPTVHost(IHost):
                return RetHost(RetHost.OK, value = list)
             else:
                printDBG( "getResolvedURL end" )
-               return RetHost(RetHost.NOT_IMPLEMENTED, value = [])                
+               return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
         else:
             printDBG( "getResolvedURL end" )
             return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
@@ -148,17 +148,18 @@ class Host:
 
     def listsItems(self, Index, url, name = ''):
         printDBG( 'Host listsItems begin' )
+        DEFAULT_ICON_URL = 'http://www.citymac.com/sites/tdcurran/images/user/Apple-TV-Programming/apple-trailers.jpg'
         valTab = []
         if name == 'main-menu':
            printDBG( 'Host listsItems begin name='+name )
-           #valTab.append(CDisplayListItem("Newest (HD-1080p)",  "Newest (HD-1080p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_1080p.xml'],  'appletrailers-movies', '', None)) 
-           #valTab.append(CDisplayListItem("Current (HD-1080p)", "Current (HD-1080p)", CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_1080p.xml'], 'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Newest (HD-720p)",   "Newest (HD-720p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_720p.xml'],   'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Current (HD-720p)",  "Current (HD-720p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_720p.xml'],  'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Newest (HD-480p)",   "Newest (HD-480p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_480p.xml'],   'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Current (HD-480p)",  "Current (HD-480p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_480p.xml'],  'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Newest (SD)",        "Newest (SD)",        CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest.xml'],        'appletrailers-movies', '', None)) 
-           valTab.append(CDisplayListItem("Current (SD)",       "Current (SD)",       CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current.xml'],       'appletrailers-movies', '', None)) 
+           #valTab.append(CDisplayListItem("Newest (HD-1080p)",  "Newest (HD-1080p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_1080p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           #valTab.append(CDisplayListItem("Current (HD-1080p)", "Current (HD-1080p)", CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_1080p.xml'], 'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Newest (HD-720p)",   "Newest (HD-720p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_720p.xml'],   'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Current (HD-720p)",  "Current (HD-720p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_720p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Newest (HD-480p)",   "Newest (HD-480p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_480p.xml'],   'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Current (HD-480p)",  "Current (HD-480p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_480p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Newest (SD)",        "Newest (SD)",        CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest.xml'],        'appletrailers-movies', DEFAULT_ICON_URL, None)) 
+           valTab.append(CDisplayListItem("Current (SD)",       "Current (SD)",       CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current.xml'],       'appletrailers-movies', DEFAULT_ICON_URL, None)) 
            printDBG( 'Host listsItems end' )
            return valTab
         
@@ -166,13 +167,8 @@ class Host:
         if 'appletrailers-movies' == name:
            printDBG( 'Host listsItems begin name='+name )
            self.MAIN_URL = 'http://trailers.apple.com' 
-           query_data = { 'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True }
-           try:
-              data = self.cm.getURLRequestData(query_data)
-           except Exception:
-              printDBG( 'Host listsItems query error' )
-              printDBG( 'Host listsItems query error url:'+url )
-              return valTab
+           sts, data = self.cm.getPage(url)
+           if not sts: return valTab
            printDBG( 'Host listsItems data: '+data )
            phMovies = re.findall('<movieinfo.*?<title>(.*?)</title>.*?<runtime>(.*?)</runtime>.*?<location>(.*?)</location>.*?<large filesize=".*?">(.*?)</large>', data, re.S)
            if phMovies:

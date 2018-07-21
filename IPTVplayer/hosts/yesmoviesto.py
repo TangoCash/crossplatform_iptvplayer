@@ -107,23 +107,11 @@ class YesMovies(CBaseHostClass):
         for domain in domains:
             sts, data = self.getPage(domain)
             if sts and 'movie/filter' in data:
-                self.MAIN_URL = domain
+                self.setMainUrl(self.cm.meta['url'])
                 break
-            
-            if self.MAIN_URL != None:
-                break
-                
+        
         if self.MAIN_URL == None:
             self.MAIN_URL = 'https://yesmovies.to/'
-            
-        try:
-            urlParams = dict(self.defaultParams)
-            urlParams['return_data'] = False
-            sts, response = self.getPage(self.MAIN_URL, urlParams)
-            url = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
         
     def listMainMenu(self, cItem):
         if self.MAIN_URL == None: return

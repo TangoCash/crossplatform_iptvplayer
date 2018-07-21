@@ -47,14 +47,9 @@ class Spryciarze(CBaseHostClass):
         self.catTree = []
         self.currList = []
         
-        query_data = {'url': self.MAIN_CATEGORIES_URL, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
+        sts, data = self.cm.getPage(self.MAIN_CATEGORIES_URL)
+        if not sts: return
         
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG('Spryciarze.getMainCategory getURLRequestData except')
-            return
-           
         # clear punks
         printDBG('Before clear')
         pos = data.find('<div class="content_prawo">')
@@ -103,14 +98,9 @@ class Spryciarze(CBaseHostClass):
         self.catTree = []
         self.currList = []
         
-        query_data = {'url': item['url'], 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
+        sts, data = self.cm.getPage(item['url'])
+        if not sts: return
         
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG('Spryciarze.getMainCategory getURLRequestData except')
-            return
-            
         # clear punks
         printDBG('Before clear')
         pos = data.find('<div class="content_prawo">')
@@ -210,12 +200,8 @@ class Spryciarze(CBaseHostClass):
         
         SEARCH_URL = self.MAIN_URL + 'szukaj/' + pattern + '/page:1/sort:score?sq=' + pattern
         
-        query_data = {'url': SEARCH_URL, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG('getVideoList getURLRequestData except')
-            return
+        sts, data = self.cm.getPage(SEARCH_URL)
+        if not sts: return
         
         match = re.compile('<h3>Wideoporadniki \(([0-9]+?)\)</h3>').findall(data)
         if 0 == len(match): return
@@ -251,12 +237,8 @@ class Spryciarze(CBaseHostClass):
         if None == url or 0 == len(url):
             return
         
-        query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            printDBG('getVideoList getURLRequestData except')
-            return
+        sts, data = self.cm.getPage(url)
+        if not sts: return
         
         # clear punks
         pos = data.find('<div class="content_prawo">')

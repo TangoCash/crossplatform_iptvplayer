@@ -379,20 +379,11 @@ class MuziCsillangCC(CBaseHostClass):
                         if not self.cacheLinks[key][idx]['name'].startswith('*'):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
-                        
-        try:
-            httpParams = dict(self.defaultParams)
-            httpParams['return_data'] = False
-            
-            sts, response = self.cm.getPage(videoUrl, httpParams)
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return []
+
+        sts, data = self.cm.getPage(videoUrl, self.defaultParams)
+        videoUrl = self.cm.meta.get('url', videoUrl)
         
         if 1 != self.up.checkHostSupport(videoUrl):
-            sts, data = self.getPage(videoUrl)
             if not sts: return []
             
             printDBG(data)

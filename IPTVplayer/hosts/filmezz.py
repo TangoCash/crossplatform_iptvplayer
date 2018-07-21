@@ -289,16 +289,11 @@ class FilmezzEU(CBaseHostClass):
         url = videoUrl
         post_data = None
         while True:
-            try:
-                httpParams = dict(self.defaultParams)
-                httpParams['return_data'] = False
-                
-                sts, response = self.cm.getPage(url, httpParams, post_data)
-                videoUrl = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
-                return []
+            httpParams = dict(self.defaultParams)
+            httpParams['max_data_size'] = 0
+            self.cm.getPage(url, httpParams, post_data)
+            if 'url' in self.cm.meta: videoUrl = self.cm.meta['url']
+            else: return []
             
             if self.up.getDomain(self.getMainUrl()) in videoUrl:
                 sts, data = self.getPage(videoUrl)

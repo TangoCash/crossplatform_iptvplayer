@@ -213,18 +213,14 @@ class TvGryPL(CBaseHostClass):
             params = dict(self.defaultParams)
             params['header'] = dict(params['header'])
             params['header']['Range'] = "bytes=0-"
-            params['return_data'] = False
+            params['max_data_size'] = 0
             params['header'].pop('Accept', None)
             for item in [('/500_', 'MOB'), ('/750_', 'SD'), ('/1280_', 'HD')]:
                 if item[0] in urlIDS: continue
-                try:
-                    url = urlTemplate.format(item[0])
-                    sts, response = self.cm.getPage(url, params)
-                    if 'mp4' in response.info().get('Content-Type', '').lower():
-                        urlTab.append({'name':item[1], 'url':strwithmeta(url, {"Range": "bytes=0-"}), 'q':item[1], 'need_resolve':0})
-                    response.close()
-                except Exception:
-                    printExc()
+                url = urlTemplate.format(item[0])
+                sts = self.cm.getPage(url, params)[0]
+                if sts and 'mp4' in self.cm.meta.get('content-type', '').lower():
+                    urlTab.append({'name':item[1], 'url':strwithmeta(url, {"Range": "bytes=0-"}), 'q':item[1], 'need_resolve':0})
         
         if 1 < len(urlTab):
             map = {'MOB':0, 'SD':1, 'HD':2, 'FHD':3}

@@ -347,21 +347,13 @@ class KissCartoonMe(CBaseHostClass):
         params = dict(self.defaultParams)
         params['header'] = dict(params['header'] )
         params['header'] ['Referer'] = referer
-        params['return_data'] = False
         
-        try:
-            sts, response = self.getPage(videoUrl, params)
-            videoUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return urlTab
-        
+        sts, data = self.getPage(videoUrl, params)
+        videoUrl = self.cm.meta.get('url', videoUrl)
+
         if 'kisscartoon' not in self.up.getDomain(videoUrl):
             return self.up.getVideoLinkExt(videoUrl)
         
-        params.update({'return_data':True})
-        sts, data = self.getPage(videoUrl, params) 
         if not sts: return urlTab
         
         try:

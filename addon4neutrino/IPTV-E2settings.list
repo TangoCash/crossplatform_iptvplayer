@@ -177,7 +177,6 @@ config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(defa
 config.plugins.iptvplayer.onetvodDefaultformat = ConfigSelection(default = "9999", choices = [("0", "bitrate: najgorszy"), ("200", "bitrate: 200p"), ("450", "bitrate: 450p"),("900", "bitrate: 900"),("1800", "bitrate: 1800"), ("9999", "bitrate: najlepszy")])
 config.plugins.iptvplayer.onetvodUseDF = ConfigYesNo(default = True)
 config.plugins.iptvplayer.proxyOnet = ConfigYesNo(default = False)
-config.plugins.iptvplayer.CartoonME_language = ConfigSelection(default = "en", choices = [("en", _("English")), ("es", _("Spanish"))])
 config.plugins.iptvplayer.itv_use_x_forwarded_for = ConfigYesNo(default = False)
 config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)

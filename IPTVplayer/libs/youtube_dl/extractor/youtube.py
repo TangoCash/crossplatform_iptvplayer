@@ -327,16 +327,6 @@ class InfoExtractor(object):
         self._ready = False
         self.set_downloader(downloader)
 
-    @classmethod
-    def suitable(cls, url):
-        """Receives a URL and returns True if suitable for this IE."""
-        return re.match(cls._VALID_URL, url) is not None
-
-    @classmethod
-    def working(cls):
-        """Getter method for _WORKING."""
-        return cls._WORKING
-
     def initialize(self):
         """Initializes an instance (authentication, etc)."""
         if not self._ready:
@@ -363,102 +353,14 @@ class InfoExtractor(object):
     @property
     def IE_NAME(self):
         return type(self).__name__[:-2]
-
-    def _request_webpage(self, url_or_request, video_id, note=None, errnote=None):
-        """ Returns the response handle """
-        if note is None:
-            self.report_download_webpage(video_id)
-        elif note is not False:
-            printDBG(u'%s: %s' % (video_id, note))
-        sts, response = self.cm.getPage(url_or_request, {'return_data':False})
-        if sts:
-            return response
-        else:
-            raise ExtractorError('ERROR _request_webpage')
-
-    def _download_webpage_handle(self, url_or_request, video_id, note=None, errnote=None):
-        """ Returns a tuple (page content as string, URL handle) """
-        urlh = self._request_webpage(url_or_request, video_id, note, errnote)
-        content_type = urlh.headers.get('Content-Type', '')
-        m = re.match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+\s*;\s*charset=(.+)', content_type)
-        if m:
-            encoding = m.group(1)
-        else:
-            encoding = 'utf-8'
-        webpage_bytes = urlh.read()
-
-        try:
-            url = url_or_request.get_full_url()
-        except AttributeError:
-            url = url_or_request
-        #printDBG(u'Dumping request to ' + url)
-        #dump = base64.b64encode(webpage_bytes).decode('ascii')
-        #printDBG(dump)
-        content = webpage_bytes.decode(encoding, 'replace')
-        return (content, urlh)
-        
-    def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams.get('return_data', False):
-            addParams = dict(addParams)
-            addParams['return_data'] = False
-            try:
-                sts, response = self.cm.getPage(baseUrl, addParams, post_data)
-                content_type = response.headers.get('Content-Type', '')
-                m = re.match(r'[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+\s*;\s*charset=(.+)', content_type)
-                if m: encoding = m.group(1)
-                else: encoding = 'utf-8'
-                data = response.read()
-                response.close()
-                data = data.decode(encoding, 'replace')
-                return sts, data
-            except Exception:
-                printExc()
-                return False, None
-        else:
-            return self.cm.getPage(baseUrl, addParams, post_data)
-
-    def _download_webpage(self, url_or_request, video_id, note=None, errnote=None):
-        """ Returns the data of the page as a string """
-        return self._download_webpage_handle(url_or_request, video_id, note, errnote)[0]
-
+    
     def to_screen(self, msg):
         """Print msg to screen, prefixing it with '[ie_name]'"""
         printDBG(u'[%s] %s' % (self.IE_NAME, msg))
 
-    def report_extraction(self, id_or_name):
-        """Report information extraction."""
-        printDBG(u'%s: Extracting information' % id_or_name)
-
-    def report_download_webpage(self, video_id):
-        """Report webpage download."""
-        printDBG(u'%s: Downloading webpage' % video_id)
-
     def report_age_confirmation(self):
         """Report attempt to confirm age."""
         printDBG(u'Confirming age')
-
-    #Methods for following #608
-    #They set the correct value of the '_type' key
-    def video_result(self, video_info):
-        """Returns a video"""
-        video_info['_type'] = 'video'
-        return video_info
-    def url_result(self, url, ie=None):
-        """Returns a url that points to a page that should be processed"""
-        #TODO: ie should be the class used for getting the info
-        video_info = {'_type': 'url',
-                      'url': url,
-                      'ie_key': ie}
-        return video_info
-    def playlist_result(self, entries, playlist_id=None, playlist_title=None):
-        """Returns a playlist"""
-        video_info = {'_type': 'playlist',
-                      'entries': entries}
-        if playlist_id:
-            video_info['id'] = playlist_id
-        if playlist_title:
-            video_info['title'] = playlist_title
-        return video_info
 
 class SearchInfoExtractor(InfoExtractor):
     """
@@ -470,10 +372,6 @@ class SearchInfoExtractor(InfoExtractor):
     @classmethod
     def _make_valid_url(cls):
         return r'%s(?P<prefix>|[1-9][0-9]*|all):(?P<query>[\s\S]+)' % cls._SEARCH_KEY
-
-    @classmethod
-    def suitable(cls, url):
-        return re.match(cls._make_valid_url(), url) is not None
 
     def _real_extract(self, query):
         mobj = re.match(self._make_valid_url(), query)
@@ -703,12 +601,6 @@ class YoutubeIE(InfoExtractor):
         '248': 'DASH Video',
     }
     IE_NAME = u'youtube'
-
-    @classmethod
-    def suitable(cls, url):
-        """Receives a URL and returns True if suitable for this IE."""
-        if YoutubePlaylistIE.suitable(url): return False
-        return re.match(cls._VALID_URL, url, re.VERBOSE) is not None
 
     def __init__(self, params={}):
         proxyURL = params.get('proxyURL', '')
@@ -998,14 +890,14 @@ class YoutubeIE(InfoExtractor):
                                                   'sts':'1588',
                                                   })
             video_info_url = videoInfoBase + data
-            sts, video_info = self.getPage(video_info_url, videoInfoparams)
+            sts, video_info = self.cm.getPage(video_info_url, videoInfoparams)
             if not sts: raise ExtractorError('Faile to get "%s"' % video_info_url)
         else:
             age_gate = False
             for el_type in ['&el=detailpage', '&el=embedded', '&el=vevo', '']:
                 #https
                 video_info_url = videoInfoBase + ('%s&ps=default&eurl=&gl=US&hl=en'% ( el_type))
-                sts, video_info = self.getPage(video_info_url, videoInfoparams)
+                sts, video_info = self.cm.getPage(video_info_url, videoInfoparams)
                 if not sts: continue
                 if '&token=' in video_info:
                     break
@@ -1185,7 +1077,7 @@ class YoutubeIE(InfoExtractor):
             urls = filter(lambda l: l and not l.startswith('#'),
                             lines)
             return urls
-        manifest = self._download_webpage(manifest_url, video_id, u'Downloading formats manifest')
+        sts, manifest = self.cm.getPage(manifest_url)
         formats_urls = _get_urls(manifest)
         for format_url in formats_urls:
             itag = self._search_regex(r'itag/(\d+?)/', format_url, 'itag')

@@ -346,16 +346,11 @@ class GamatoTV(CBaseHostClass):
                         break
         
         if 1 != self.up.checkHostSupport(videoUrl):
-            try:
-                httpParams = dict(self.defaultParams)
-                httpParams['return_data'] = False
-                
-                sts, response = self.cm.getPage(videoUrl, httpParams)
-                videoUrl = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
-                return []
+            httpParams = dict(self.defaultParams)
+            httpParams['max_data_size'] = 0
+            self.cm.getPage(url, httpParams, post_data)
+            if 'url' in self.cm.meta: videoUrl = self.cm.meta['url']
+            else: return []
             
             if self.up.getDomain(self.getMainUrl()) in videoUrl or self.up.getDomain(videoUrl) == self.up.getDomain(orginUrl):
                 sts, data = self.getPage(videoUrl)

@@ -377,8 +377,7 @@ class PutlockerTvTo(CBaseHostClass):
         sts, data = self.getPage(url, params)
         if not sts: return []
         
-        m = "++++++++++++++++++++++++++++++++"
-        printDBG('%s\n%s\n%s' % (m, data, m))
+        printDBG('+++++\n%s\n+++++' % (data))
         
         getParams = {'ts':timestamp, 'id':videoUrl.meta.get('id', ''), 'server':videoUrl.meta.get('server_id', ''), 'update':'0'}
         getParams = self._updateParams(getParams)
@@ -390,6 +389,9 @@ class PutlockerTvTo(CBaseHostClass):
         videoUrl = ''
         subTrack = ''
         try:
+            printDBG('+++++\n%s\n+++++' % (data))
+            if data[0] not in '[{':
+                data = data[data.find('{'):]
             data = byteify(json.loads(data))
             printDBG(data)
             subTrack = data.get('subtitle', '')

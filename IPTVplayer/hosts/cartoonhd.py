@@ -70,17 +70,11 @@ class CartoonHD(CBaseHostClass):
 
     def selectDomain(self):
         domain = 'https://cartoonhd.io/'
-        try:
-            params = dict(self.defaultParams)
-            params['return_data'] = False
-            sts, response = self.cm.getPage(domain, params)
-            url = response.geturl()
-            domain = self.up.getDomain(url, False)
-            self.MAIN_URL  = domain
-            domain = self.up.getDomain(url, True)
-            if not sts: return
-        except Exception:
-            printExc()
+        params = dict(self.defaultParams)
+        params['max_data_size'] = False
+        self.cm.getPage(domain, params)
+        if 'url' in self.cm.meta: self.setMainUrl(self.cm.meta['url'])
+
         if self.MAIN_URL == None:
             self.MAIN_URL = domain
         
@@ -144,17 +138,16 @@ class CartoonHD(CBaseHostClass):
         printDBG("CartoonHD.listItems")
         page = cItem.get('page', 1)
         
-        url = cItem['url'] + '/' + cItem.get('sort_by', '') + '/' + str(page)
+        if page == 1: url = cItem['url'] + '/' + cItem.get('sort_by', '') + '/' + str(page)
+        else: url = cItem['url']
         
         params = dict(self.defaultParams)
         params['header'] = self.AJAX_HEADER
         sts, data = self.cm.getPage(url, params)
         if not sts: return
         
-        nextPage = self.cm.ph.getDataBeetwenMarkers(data, '<label for="pagenav">', '</form>', False)[1]
-        if '/{0}"'.format(page+1) in nextPage:
-            nextPage = True
-        else: nextPage = False
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'next-page-button'), ('</a', '>'))[1]
+        nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(nextPage, '''href=["']([^"^']+?)['"]''')[0])
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="flipBox"', '</main>', True)[1]
         data = data.split('</section>')
@@ -179,9 +172,9 @@ class CartoonHD(CBaseHostClass):
                 else:
                     self.addVideo(params)
         
-        if nextPage:
+        if nextPage != '':
             params = dict(cItem)
-            params.update({'title':_("Next page"), 'page':page+1})
+            params.update({'title':_("Next page"), 'url':nextPage, 'page':page+1})
             self.addDir(params)
         
     def listSeasons(self, cItem, nextCategory):
@@ -240,9 +233,9 @@ class CartoonHD(CBaseHostClass):
         try:
             jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCg0KZnVuY3Rpb24gdHlwZU9mKCBvYmogKSB7DQogIHJldHVybiAoe30pLnRvU3RyaW5nLmNhbGwoIG9iaiApLm1hdGNoKC9ccyhcdyspLylbMV0udG9Mb3dlckNhc2UoKTsNCn0NCg0KZnVuY3Rpb24galF1ZXJ5UmVzdWx0T2JqKCl7DQogICAgcmV0dXJuIGpRdWVyeVJlc3VsdE9iajsNCn0NCmpRdWVyeVJlc3VsdE9iai5ibHVyID0gZnVuY3Rpb24oKXt9Ow0KDQpmdW5jdGlvbiBqUXVlcnlBdXRvY29tcGxldGVPYmooKXsNCiAgICBhcmd1bWVudHNbMV0uZXh0cmFQYXJhbXNbJ3VybCddID0gYXJndW1lbnRzWzBdOw0KICAgIHByaW50KEpTT04uc3RyaW5naWZ5KGFyZ3VtZW50c1sxXS5leHRyYVBhcmFtcykpOw0KICAgIHJldHVybiBqUXVlcnk7DQp9DQoNCmZ1bmN0aW9uIGpRdWVyeSgpew0KICAgIGlmICggdHlwZU9mKCBhcmd1bWVudHNbMF0gKSA9PSAnZnVuY3Rpb24nICkgew0KICAgICAgICBhcmd1bWVudHNbMF0oKTsNCiAgICB9IA0KICAgIA0KICAgIHJldHVybiBqUXVlcnk7DQp9DQoNCmpRdWVyeS5yZXN1bHQgPSBqUXVlcnlSZXN1bHRPYmo7DQpqUXVlcnkuaHRtbCA9IHt9Ow0KalF1ZXJ5LmJsdXIgPSBmdW5jdGlvbigpe307DQoNCmpRdWVyeS5hdXRvY29tcGxldGUgPSBqUXVlcnlBdXRvY29tcGxldGVPYmo7DQpqUXVlcnkuYWpheFNldHVwID0gZnVuY3Rpb24oKXt9Ow0KalF1ZXJ5LnJlYWR5ID0galF1ZXJ5Ow==''')                  
             jscode += '%s %s' % (vars, jsdata) 
-            printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
+            printDBG("++++  CODE  ++++")
             printDBG(jscode)
-            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG("++++++++++++++++")
             ret = iptv_js_execute( jscode )
             if ret['sts'] and 0 == ret['code']:
                 decoded = ret['data'].strip()
@@ -337,7 +330,7 @@ class CartoonHD(CBaseHostClass):
         printDBG(">> url: %s" % self.cm.meta['url'])
         
         jsUrl = ''
-        tmp = re.compile('''<script[^>]+?src=['"]([^'^"]*?videojs[^'^"^/]*?\.js(?:\?v=[0-9\.]+?)?)['"]''', re.I).findall(data)
+        tmp = re.compile('''<script[^>]+?src=['"]([^'^"]*?videojs[^'^"^/]*?\.js(?:\?[^'^"]*?v=[0-9\.]+?)?)['"]''', re.I).findall(data)
         printDBG("TMP JS: %s" % tmp)
         for item in tmp:
             if '.min.' in item.rsplit('/', 1)[-1]: continue

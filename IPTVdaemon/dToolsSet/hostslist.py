@@ -2,7 +2,6 @@
 HostsList=[ 
 	("3player", "tv3.ie3player"),
 	("3sktv", "3sk.tv"),
-	("9cartoonme", "9cartoon.me"),
 	("akoam", "ar.akoam.net"),
 	("allboxtv", "allbox.tv"),
 	("alltubetv", "alltube.pl"),
@@ -125,7 +124,7 @@ HostsList=[
 	("serialeco", "seriale.co"),
 	("serialnet", "serialnet.pl"),
 	("serienstreamto", "serienstream.to"),
-	("seriesonline", "series9.co"),
+	("seriesonline", "series9.io"),
 	("serijeonline", "serije.online"),
 	("shoutcast", "shoutcast.com"),
 	("skstream", "skstream.info"),

@@ -672,15 +672,12 @@ class KinomanCO(CBaseHostClass):
         if self.cm.isValidUrl(videoUrl):
             if 0 == self.up.checkHostSupport(videoUrl):
                 params = dict(self.defaultParams)
-                params.update({'return_data':False})
+                params.update({'max_data_size':0})
+                sts = self.cm.getPage(videoUrl, params)[0]
                 try:
-                    sts, response = self.cm.getPage(videoUrl, params)
-                    videoUrl = response.geturl()
-                    type = response.info().type.lower()
-                    printDBG("type [%s]" % type)
-                    if 'video' in type:
+                    videoUrl = self.cm.meta['url']
+                    if 'video' in self.cm.meta['content-type']:
                         directLink = True
-                    response.close()
                 except Exception:
                     printExc()
             if directLink:

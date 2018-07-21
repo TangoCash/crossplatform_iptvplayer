@@ -300,18 +300,11 @@ class Laola1TV(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("Laola1TV.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        baseUrl = cItem['url']
-        try:
-            sts, response = self.cm.getPage(baseUrl, {'return_data':False})
-            baseUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return []
-            
-        sts, data = self.cm.getPage(baseUrl)
+
+        sts, data = self.cm.getPage(cItem['url'])
         if not sts: return []
-        
+        baseUrl = self.cm.meta['url']
+
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoplayer"', '</script>')[1]
         printDBG(data)
         getParams = {}

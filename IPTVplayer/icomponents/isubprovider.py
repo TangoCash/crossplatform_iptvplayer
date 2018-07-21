@@ -279,17 +279,6 @@ class CBaseSubProviderClass:
     def getMainUrl(self):
         return self.MAIN_URL
         
-    #def getFullUrl(self, url):
-    #    if url.startswith('//'):
-    #        url = 'http:' + url
-    #    elif url.startswith('://'):
-    #        url = 'http' + url
-    #    elif url.startswith('/'):
-    #        url = self.getMainUrl() + url[1:]
-    #    elif 0 < len(url) and '://' not in url:
-    #        url =  self.getMainUrl() + url
-    #    return url
-        
     def getFullUrl(self, url, currUrl=None):
         if url.startswith('./'):
             url = url[1:]
@@ -473,12 +462,12 @@ class CBaseSubProviderClass:
         if tmpDIR == '':
             tmpDIR = GetTmpDir(self.TMP_DIR_NAME)
         
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(">>")
         printDBG(fileName)
         printDBG(tmpFile)
         printDBG(tmpArchFile)
         printDBG(tmpDIR)
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(">>")
 
         if not self.writeFile(tmpArchFile, data):
             return None
@@ -491,23 +480,21 @@ class CBaseSubProviderClass:
     def downloadFileData(self, url, params={}, post_data=None):
         printDBG('CBaseSubProviderClass.downloadFileData url[%s]' % url)
         urlParams = dict(params)
-        urlParams['return_data'] = False
-        try:
-            fileSize = self.getMaxFileSize()
-            sts, response = self.cm.getPage(url, urlParams, post_data)
-            fileName = response.info().get('Content-Disposition', '')
+        urlParams['max_data_size'] = self.getMaxFileSize()
+
+        sts, data = self.cm.getPage(url, urlParams, post_data)
+        if sts:
+            fileName = self.cm.meta.get('content-disposition', '')
             if fileName != '':
                 tmpFileName = self.cm.ph.getSearchGroups(fileName.lower(), '''filename=['"]([^'^"]+?)['"]''')[0]
                 if tmpFileName != '': 
                     printDBG("downloadFileData: replace fileName[%s] with [%s]" % (fileName, tmpFileName))
                     fileName = tmpFileName
             else:
-                fileName = urllib.unquote(response.geturl().split('/')[-1])
-            data = response.read(fileSize)
-            response.close()
+                fileName = urllib.unquote(self.cm.meta['url'].split('/')[-1])
+            
             return data, fileName
-        except Exception:
-            printExc()
+
         return None, ''
         
     def writeFile(self, filePath, data):

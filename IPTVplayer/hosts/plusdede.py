@@ -430,14 +430,10 @@ class PlusDEDE(CBaseHostClass):
         videoUrl  = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''href=['"]([^'^"]+?)['"]''')[0])
         if self.cm.isValidUrl(videoUrl):
             params = dict(self.defaultParams)
-            params['return_data'] = False
-            try:
-                sts, response = self.getPage(videoUrl, params)
-                videoUrl = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> videoUrl[%s]" % videoUrl)
+            params['max_data_size'] = 0
+            self.getPage(videoUrl, params)
+            videoUrl = self.cm.meta.get('url', videoUrl)
+        printDBG(">> videoUrl[%s]" % videoUrl)
         urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         

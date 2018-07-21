@@ -65,7 +65,7 @@ class Sport365LiveApi:
         
     def getPage(self, url, params={}, post_data=None):
         sts, data = self.cm.getPage(url, params, post_data)
-        if sts and params.get('return_data', False):
+        if sts:
             printDBG("-------------------------------------------------------")
             printDBG("url: %s" % url)
             printDBG(data)
@@ -118,22 +118,13 @@ class Sport365LiveApi:
         params = dict(self.http_params)
         params['cookiefile'] = COOKIE_FILE
         params['header'] = dict(params['header'])
-        params['return_data'] = False
-        baseUrl = self.MAIN_URL
-        try:
-            sts, response = self.getPage(baseUrl, params)
-            baseUrl = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return
         
-        params['return_data'] = True
         sts, data = self.getPage(self.MAIN_URL, params)
         if not sts: return 
         
+        baseUrl = self.cm.meta['url']
+        
         sessionCookie = self.cm.getCookieHeader(COOKIE_FILE)
-        params['return_data'] = True
         params['header']['Referer'] = baseUrl
         
         awrapperUrls = re.compile('''['"]([^"^']*?/awrapper/[^'^"]*?)["']''').findall(data)
@@ -141,7 +132,7 @@ class Sport365LiveApi:
         D = datetime.now()
         timeMarker = '{0}{1}{2}{3}'.format(D.year-1900, D.month-1, D.day, D.hour)
         jscUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?jsc\.mgid[^'^"]*?)['"]''')[0]
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> [%s]" % jscUrl)
+        printDBG(">> [%s]" % jscUrl)
         if jscUrl.endswith('t='): jscUrl += timeMarker
         adUrl = self.cm.ph.getSearchGroups(data, '''['"]([^'^"]*?\.adshell\.[^'^"]*?)['"]''')[0] 
         
@@ -243,9 +234,6 @@ class Sport365LiveApi:
                 linkTitle = self.cleanHtmlStr(link)
                 if '{' in linkTitle: continue
                 linkData  = self.cm.ph.getSearchGroups(link, '''onClick=[^(]*?\(([^)]+?)\)''')[0].split(',')[0].replace('"', '').replace("'", '').strip()
-                #printDBG("=========================================================")
-                #printDBG(linkData)
-                #printDBG("=========================================================")
                 if linkData != '':
                     params = dict(cItem)
                     params.update({'type':'video', 'link_data':linkData, 'event_id':eventId, 'desc':desc, 'title':sourceTitle + ' ' + linkTitle})
@@ -291,10 +279,6 @@ class Sport365LiveApi:
                 try:
                     jscode = base64.b64decode('''dmFyIGRvY3VtZW50ID0ge307DQp2YXIgd2luZG93ID0gdGhpczsNCmRvY3VtZW50LndyaXRlID0gZnVuY3Rpb24oKXt9Ow0Kd2luZG93LmF0b2IgPSBmdW5jdGlvbigpe3JldHVybiAiIjt9Ow0KDQpmdW5jdGlvbiBkZWNyeXB0KCl7DQogICAgdmFyIHRleHQgPSBKU09OLnN0cmluZ2lmeSh7YWVzOmFyZ3VtZW50c1sxXX0pOw0KICAgIHByaW50KHRleHQpOw0KICAgIHJldHVybiAiIjsNCn0NCg0KdmFyIENyeXB0b0pTID0ge307DQpDcnlwdG9KUy5BRVMgPSB7fTsNCkNyeXB0b0pTLkFFUy5kZWNyeXB0ID0gZGVjcnlwdDsNCkNyeXB0b0pTLmVuYyA9IHt9Ow0KQ3J5cHRvSlMuZW5jLlV0ZjggPSAidXRmLTgiOw0K''')                   
                     jscode = '%s %s %s' % (jscode, tmpData, jsData)
-                    
-                    printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
-                    printDBG(jscode)
-                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
                     ret = iptv_js_execute( jscode )
                     if ret['sts'] and 0 == ret['code']:
                         decoded = ret['data'].strip()

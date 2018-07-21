@@ -183,18 +183,12 @@ class DMHelper:
     def getRemoteContentInfoByUrllib(url, addParams = {}):
         remoteContentInfo = {}
         addParams = DMHelper.downloaderParams2UrllibParams(addParams)
-        addParams['return_data'] = False
+        addParams['max_data_size'] = 0
         
         cm = common()
         # only request
-        sts,response = cm.getPage(url, addParams)
-        if sts:
-            tmpInfo = response.info()
-            remoteContentInfo = {'Content-Length': tmpInfo.get('Content-Length', -1), 'Content-Type': tmpInfo.get('Content-Type', '')}
-        if response:
-            try: response.close()
-            except Exception: pass
-
+        sts = cm.getPage(url, addParams)[0]
+        if sts: remoteContentInfo = {'Content-Length': cm.meta.get('content-length', -1), 'Content-Type': cm.meta.get('content-type', '')}
         printDBG("getRemoteContentInfoByUrllib: [%r]" % remoteContentInfo)
         return sts,remoteContentInfo
 

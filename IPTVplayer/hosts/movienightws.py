@@ -45,7 +45,7 @@ def gettytul():
 class MoviesNight(CBaseHostClass):
     MAIN_URL    = 'http://movienight.ws/'
     SRCH_URL    = MAIN_URL + '?s='
-    DEFAULT_ICON_URL = 'http://movienight.ws/wp-content/uploads/2015/09/movineight-logo-160.png'
+    DEFAULT_ICON_URL = 'http://movienight.ws/wp-content/uploads/2017/07/movineight-logo-125-2.png'
     
     MAIN_CAT_TAB = [{'category':'list_items',     'title': _('Latest movies'),                          'url':MAIN_URL,             'icon':DEFAULT_ICON_URL},
                     {'category':'movies_genres',  'title': _('Movies genres'),   'filter':'genres',     'url':MAIN_URL,             'icon':DEFAULT_ICON_URL},
@@ -218,11 +218,10 @@ class MoviesNight(CBaseHostClass):
         sts, data = self.cm.getPage(url)
         if not sts: return []
         
-        videoUrl = self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="(http[^"]+?)"', 1, True)[0]
-        if '' != videoUrl:
-            urlTab = self.up.getVideoLinkExt(videoUrl)
-        for idx in range(len(urlTab)):
-            urlTab[idx]['need_resolve'] = 0
+        data = re.compile('<iframe[^>]+?src="(https?://[^"]+?)"', re.I).findall(data)
+        for videoUrl in data:
+            urlTab.extend(self.up.getVideoLinkExt(videoUrl))
+
         return urlTab
         
     def getFavouriteData(self, cItem):

@@ -218,18 +218,9 @@ class BBCiPlayer(CBaseHostClass):
     def listCatFilters(self, cItem, nextCategory):
         printDBG("BBCiPlayer.listCatFilters")
         
-        httpParams = dict(self.defaultParams)
-        httpParams['return_data'] = False
-        try:
-            sts, response = self.cm.getPage(cItem['url'], httpParams)
-            baseUrl  = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
-            return
-        
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
+        baseUrl = self.cm.meta['url']
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="filters">', '</ul>', withMarkers=False)[1]
         if '' != data:
@@ -251,18 +242,9 @@ class BBCiPlayer(CBaseHostClass):
         printDBG("BBCiPlayer.listCategory")
         
         if not cItem.get('is_sub_cat', False):
-            httpParams = dict(self.defaultParams)
-            httpParams['return_data'] = False
-            try:
-                sts, response = self.cm.getPage(cItem['url'], httpParams)
-                baseUrl  = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
-                return
-                
             sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
             if not sts: return
+            baseUrl = self.cm.meta['url']
             
             data = self.cm.ph.getDataBeetwenMarkers(data, '<ul id="tleo-switcher"', '</ul>', withMarkers=False)[1]
             if data != '':

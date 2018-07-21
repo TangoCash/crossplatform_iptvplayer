@@ -1,7 +1,6 @@
 HostsList={ 
       {id="3player", title="tv3.ie3player", type="py"},
       {id="3sktv", title="3sk.tv", type="py"},
-      {id="9cartoonme", title="9cartoon.me", type="py"},
       {id="akoam", title="ar.akoam.net", type="py"},
       {id="allboxtv", title="allbox.tv", type="py"},
       {id="alltubetv", title="alltube.pl", type="py"},
@@ -124,7 +123,7 @@ HostsList={
       {id="serialeco", title="seriale.co", type="py"},
       {id="serialnet", title="serialnet.pl", type="py"},
       {id="serienstreamto", title="serienstream.to", type="py"},
-      {id="seriesonline", title="series9.co", type="py"},
+      {id="seriesonline", title="series9.io", type="py"},
       {id="serijeonline", title="serije.online", type="py"},
       {id="shoutcast", title="shoutcast.com", type="py"},
       {id="skstream", title="skstream.info", type="py"},

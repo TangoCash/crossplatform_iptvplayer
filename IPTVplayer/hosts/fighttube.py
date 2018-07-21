@@ -82,12 +82,9 @@ class FightTube:
 
     def listsMainMenu(self):
         FightTube.printDBG('listsMainMenu start')
-        query_data = {'url': self.MAINURL, 'return_data': True}
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            FightTube.printDBG('listsMainMenu exception')
-            return
+        
+        sts, data = self.cm.getPage(self.MAINURL)
+        if not sts: return
     
         sts, data = CParsingHelper.getDataBeetwenMarkers(data, 'Kategorie video', '</ul>', False)
         if not sts:
@@ -105,12 +102,9 @@ class FightTube:
         
     def getMovieTab(self, url):
         FightTube.printDBG('getMovieTab start')
-        query_data = { 'url': url, 'return_data': True }
-        try:
-            data = self.cm.getURLRequestData(query_data)
-        except Exception:
-            FightTube.printDBG('getMovieTab exception')
-            return            
+        sts, data = self.cm.getPage(url)
+        if not sts: return
+        
         # get next page url
         nexPageUrl = ''
         sts, tmp = CParsingHelper.getDataBeetwenMarkers(data, "<nav class='pagination'>", "</nav>", False)

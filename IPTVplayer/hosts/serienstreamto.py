@@ -297,20 +297,16 @@ class SerienStreamTo(CBaseHostClass):
             if 1 != self.up.checkHostSupport(videoUrl):
                 params = dict(self.defaultParams)
                 try:
-                    params['return_data'] = False
+                    params['max_data_size'] = 0
                     params['no_redirection'] = True
                     tries = 0
                     tmpUrl = videoUrl
                     while tries < 3:
-                        sts, response = self.getPage(videoUrl, params)
+                        sts, data = self.getPage(videoUrl, params)
                         printDBG("+++++++++++")
-                        printDBG(response.info())
+                        printDBG(self.cm.meta)
                         printDBG("+++++++++++")
-                        url = ''
-                        for key in response.info():
-                            if key.upper() == 'LOCATION':
-                                url = response.info()[key]
-                        response.close()
+                        url = self.cm.meta.get('location', '')
                         if not self.cm.isValidUrl(url):
                             break
                         videoUrl = url

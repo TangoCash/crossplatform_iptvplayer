@@ -90,13 +90,9 @@ class SKStream(CBaseHostClass):
     def selectDomain(self):
         self.MAIN_URL = 'http://www.skstream.info/'
         params = dict(self.defaultParams)
-        params['return_data'] = False
-        try:
-            sts, response = self.getPage(self.MAIN_URL, params)
-            self.MAIN_URL = response.geturl()
-            response.close()
-        except Exception:
-            printExc()
+        params['max_data_size'] = 0
+        sts = self.getPage(self.MAIN_URL, params)[0]
+        if sts: self.setMainUrl(self.cm.meta['url'])
         printDBG("selectDomain [%s]" % self.MAIN_URL)
         
     def listMainMenu(self, cItem):
@@ -304,15 +300,13 @@ class SKStream(CBaseHostClass):
                     attempt = 0
                     params['header'] = dict(params['header'])
                     params['header']['Referer'] = videoUrl.meta['Referer']
-                    params['return_data'] = False
+                    params['max_data_size'] = 1024*1024*1024
                     post_data = None
                     while attempt < maxAttempt:
                         attempt += 1
-                        sts, response = self.getPage(url, params, post_data)
-                        url = response.geturl()
+                        sts, data = self.getPage(url, params, post_data)
+                        url = self.cm.meta['url']
                         if 'dl-protect.co' in self.up.getDomain(url):
-                            data = response.read(1024*1024*1024)
-                            response.close()
                             
                             # get JS player script code from confirmation page
                             sts, tmpData = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
@@ -330,8 +324,6 @@ class SKStream(CBaseHostClass):
                             break
                         else:
                             if 1 != self.up.checkHostSupport(url):
-                                data = response.read(1024*1024*1024)
-                                response.close()
                                 
                                 scriptUrl = self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?QapTcha.jquery[^"^']*?\.js)['"]''', 1, True)[0]
                                 if scriptUrl != '' and not self.cm.isValidUrl(scriptUrl):
@@ -371,9 +363,6 @@ class SKStream(CBaseHostClass):
                                 if self.cm.isValidUrl(url):
                                     continue
                                 break
-                            else:
-                                response.close()
-                                break                            
                 except Exception:
                     printExc()
                     continue

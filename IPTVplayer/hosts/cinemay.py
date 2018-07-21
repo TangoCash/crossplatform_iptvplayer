@@ -316,17 +316,13 @@ class Cinemay(CBaseHostClass):
                 printExc()
         
         if 0 and 1 != self.up.checkHostSupport(videoUrl):
-            try:
-                params = dict(self.defaultParams)
-                params['header'] = dict(params['header'])
-                params['header']['Referer'] = videoUrl.meta.get('Referer', '')
-                params['return_data'] = False
-                sts, response = self.getPage(videoUrl, params)
-                videoUrl = response.geturl()
-                response.close()
-            except Exception:
-                printExc()
-        
+            params = dict(self.defaultParams)
+            params['header'] = dict(params['header'])
+            params['header']['Referer'] = videoUrl.meta.get('Referer', '')
+            params['max_data_size'] = 0
+            self.getPage(videoUrl, params)
+            videoUrl = self.cm.meta.get('url', '')
+
         urlTab = self.up.getVideoLinkExt(videoUrl)
         
         return urlTab

@@ -78,7 +78,6 @@ class AllBoxTV(CBaseHostClass):
                              {'category':'list_series_az',     'title': _('TV series'),       'url':self.getFullUrl('/seriale-online')},
                              {'category':'list_cartoons_az',   'title': _('Cartoons'),        'url':self.getFullUrl('/bajki-online')},
                              {'category':'list_filters',       'title': _('Ranking'),         'url':self.getFullUrl('/filmy-online,wszystkie,top')},
-                             {'category':'list_live_channels', 'title': _('Live TV'),         'url':self.getFullUrl('/get_tv')},
                              
                              {'category':'search',           'title': _('Search'),          'search_item':True}, 
                              {'category':'search_history',   'title': _('Search history')},
@@ -344,74 +343,6 @@ class AllBoxTV(CBaseHostClass):
             url = strwithmeta(url, {'PROGRAM-ID': item['program-id']})
         return need_resolve, url
         
-    def listM3u(self, cItem, nextCategory):
-        printDBG("AllBoxTV.listM3u [%s]" % cItem)
-        baseUrl = cItem['url']
-        
-        if not self.cm.isValidUrl(baseUrl): return
-        
-        sts, data = self.cm.getPage(baseUrl)
-        if not sts: return
-        
-        printDBG(data)
-    
-        data = ParseM3u(data)
-        groups = {}
-        for item in data:
-            params = dict(cItem)
-            group = item.get('group-title', '')
-            url = item['uri']
-            icon = self._getM3uIcon(item, cItem)
-            
-            if item['f_type'] == 'inf':
-                if group == '':
-                    need_resolve, url = self._getM3uPlayableUrl(baseUrl, url, item)
-                    params.update( {'good_for_fav':True, 'title':item['title'], 'category':'m3u_item', 'url':url, 'desc':item.get('tvg-name', ''), 'icon':icon, 'need_resolve':need_resolve} )
-                    self.addVideo(params)
-                else:
-                    if group not in groups:
-                        groupIcon = item.get('group-logo', '')
-                        if not self.cm.isValidUrl(groupIcon): groupIcon = item.get('group-art', '')
-                        if not self.cm.isValidUrl(groupIcon): groupIcon = icon
-                        groups[group] = []
-                        params.update( {'good_for_fav':False, 'title':group, 'category':nextCategory, 'f_group':group, 'url':baseUrl, 'desc':'', 'icon':groupIcon} )
-                        if 'parent-code' in item: params.update({'pin_locked':True, 'pin_code':item['parent-code']})
-                        self.addDir(params)
-                    groups[group].append(item)
-            elif item['f_type'] == 'import' and self.cm.isValidUrl(url):
-                params.update( {'good_for_fav':True, 'title':item['title'], 'path':url, 'desc':'', 'icon':icon} )
-                self.addDir(params)
-        
-        if groups != {}:
-            for idx in range(len(self.currList)):
-                if 'f_group' in self.currList[idx]:
-                    self.currList[idx]['f_group_items'] = groups.get(self.currList[idx]['f_group'], [])
-        
-    def listM3uGroups(self, cItem):
-        printDBG("AllBoxTV.listM3uGroups [%s]" % cItem)
-        baseUrl = cItem['url']
-        data = cItem['f_group_items']
-        for item in data:
-            params = dict(cItem)
-            url = item['uri']
-            icon = self._getM3uIcon(item, cItem)
-            need_resolve, url = self._getM3uPlayableUrl(baseUrl, url, item)
-            params.update( {'good_for_fav':True, 'title':item['title'], 'category':'m3u_item', 'url':url, 'desc':item.get('tvg-name', ''), 'icon':icon, 'need_resolve':need_resolve} )
-            self.addVideo(params)
-    
-    def listChannels(self, cItem):
-        printDBG("AllBoxTV.listChannels")
-        
-        sts, data = self.getPage(cItem['url'])
-        if not sts: return
-        
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'your_url'), ('<div', '>'))[1]
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<textarea', '>'), ('</textarea', '>'), False)[1].strip()
-        
-        cItem = dict(cItem)
-        cItem['url'] = data
-        self.listM3u(cItem, 'list_m3u_groups')
-        
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("AllBoxTV.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
@@ -448,12 +379,6 @@ class AllBoxTV(CBaseHostClass):
             return self.up.getVideoLinkExt(videoUrl)
         elif cItem.get('direct_link') == True:
             return [{'name':'trailer', 'url':cItem['url'], 'need_resolve':0}]
-            
-        if 'm3u_item' == cItem.get('category', ''):
-            videoUrl = cItem['url']
-            if videoUrl.split('?')[0].endswith('.m3u8'):
-                return getDirectM3U8Playlist(videoUrl)
-            return [{'name':'direct', 'url':videoUrl, 'need_resolve':0}]
         
         cacheKey = cItem['url']
         cacheTab = self.cacheLinks.get(cacheKey, [])
@@ -501,9 +426,13 @@ class AllBoxTV(CBaseHostClass):
         if 1 != self.up.checkHostSupport(videoUrl):
             sts, data = self.getPage(videoUrl)
             if not sts: return []
+            printDBG(data)
             
             tmp = self.cm.ph.getDataBeetwenNodes(data, ('<iframe', '>', 'video-player'), ('</iframe', '>'))[1]
-            videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]).replace('&amp;', '&')
+            videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+            if '' == videoUrl: videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?data\-source=['"]([^"^']+?)['"]''', 1, True)[0])
+            if '' == videoUrl: videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''['"](https?://[^"^']+?)['"]''', 1, True)[0])
+            videoUrl = videoUrl.replace('&amp;', '&')
             if videoUrl == '':
                 dataKey = self.cm.ph.getSearchGroups(data, '''data\-key=['"]([^'^"]+?)['"]''')[0]
                 if dataKey != '':
@@ -513,10 +442,9 @@ class AllBoxTV(CBaseHostClass):
                         params = dict(self.defaultParams)
                         params['header'] = dict(params['header'])
                         params['header']['Referer'] = baseUrl
-                        params['return_data'] = False
-                        sts, response = self.getPage(self.getFullUrl(dataKey['url']), params)
-                        url = response.geturl()
-                        response.close()
+                        params['max_data_size'] = 0
+                        self.getPage(self.getFullUrl(dataKey['url']), params)
+                        url = self.cm.meta['url']
                         printDBG("++++++++++++++++++++++++++> " + url)
                         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
                         return [{'name':'', 'url':strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT}), 'need_resolve':0}]
@@ -631,12 +559,8 @@ class AllBoxTV(CBaseHostClass):
             self.exploreItem(self.currItem, 'list_episodes')
         elif category == 'list_episodes':
             self.listEpisodes(self.currItem)
-        elif category == 'list_live_channels':
-            self.listChannels(self.currItem)
         elif category == 'm3u':
             self.listM3u(self.currItem, 'list_m3u_groups')
-        elif category == 'list_m3u_groups':
-            self.listM3uGroups(self.currItem)
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)

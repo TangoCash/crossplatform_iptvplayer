@@ -3,27 +3,17 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -78,6 +68,7 @@ class StreamingHDFun(CBaseHostClass):
         
         MAIN_CAT_TAB = [{'category':'sub_menu',       'title': 'Film',             'url':self.getMainUrl()}, 
                         {'category':'sub_menu',       'title': 'Serie Tv',         'url':self.getFullUrl('/serietv/')}, 
+                        {'category':'sub_menu',       'title': 'Anime',            'url':self.getFullUrl('/anime/')}, 
                         {'category':'top',            'title': 'TOP IMDb',         'url':self.getFullUrl('/top-imdb/')}, 
                         {'category':'search',         'title': _('Search'),        'search_item':True}, 
                         {'category':'search_history', 'title': _('Search history')},]
@@ -90,24 +81,13 @@ class StreamingHDFun(CBaseHostClass):
         cUrl = data.meta['url']
         self.setMainUrl(cUrl)
         
-        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'menu-menu-sidebar'), ('</ul', '>'), False)[1]
-        data = tmp + self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'menu-menu'), ('</ul', '>'), False)[1][2:4]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
-        for item in data:
-            url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0]
-            if '/serietv/' in cUrl:
-                if '/serietv/' not in url:
-                    continue
-            elif '/serietv/' not in cUrl:
-                if '/serietv/' in url:
-                    continue
-            params =  {'name':'category', 'type':'category', 'category':nextCategory2, 'title':self.cleanHtmlStr(item), 'url':self.getFullUrl(url)}
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'head-main-nav'), ('</div', '>'), False)[1]
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(tmp, ('<a', '</a>', '/piu-'), ('</li', '>'))
+        for item in tmp:
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0])
+            title = self.cleanHtmlStr(item)
+            params =  {'name':'category', 'type':'category', 'category':nextCategory2, 'title':title, 'url':url}
             self.addDir(params)
-            
-        if 0 == len(self.currList): return
-        sts, data = self.getPage(self.currList[0]['url'])
-        if not sts: return
-        self.setMainUrl(data.meta['url'])
         
         tmp = [self.cm.ph.getDataBeetwenNodes(data, ('<nav', '>', 'genres'), ('</nav', '>'), False)[1]]
         tmp.append(self.cm.ph.getDataBeetwenNodes(data, ('<nav', '>', 'releases'), ('</nav', '>'), False)[1])

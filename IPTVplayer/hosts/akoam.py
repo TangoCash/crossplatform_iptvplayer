@@ -69,15 +69,11 @@ class AkoAm(CBaseHostClass):
                 else: return urlparse.urljoin(baseUrl, url)
             addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
             sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-            if sts and addParams.get('return_data', True) and 'class="loading"' in data:
+            if sts and 'class="loading"' in data:
                 GetIPTVSleep().Sleep(5)
                 continue
             break
         return sts, data
-        
-    def setMainUrl(self, url):
-        if self.cm.isValidUrl(url):
-            self.MAIN_URL = self.cm.getBaseUrl(url)
     
     def listMainMenu(self, cItem, nextCategory):
         printDBG("AkoAm.listMainMenu")
@@ -288,16 +284,18 @@ class AkoAm(CBaseHostClass):
         if 1 != self.up.checkHostSupport(baseUrl):  
             paramsUrl = {'header':dict(self.HTTP_HEADER)}
             paramsUrl['header']['Referer'] = baseUrl.meta.get('Referer', self.getMainUrl())
-            paramsUrl['return_data'] = False
+            paramsUrl['max_data_size'] = 0
             try:
-                sts, response = self.getPage(baseUrl, paramsUrl)
-                cUrl = response.geturl()
-                if 'Set-Cookie' in response.info():
-                    data = self.cm.ph.getDataBeetwenMarkers(response.info()['Set-Cookie'], 'golink=', ';', False)[1]
-                    response.close()
+                self.cm.clearCookie(self.COOKIE_FILE, removeNames=['golink'])
+                self.getPage(baseUrl, paramsUrl)
+                cUrl = self.cm.meta['url']
+                data = self.cm.getCookieItems(self.COOKIE_FILE)
+                if 'golink' in data:
+                    data = data['golink']
                     printDBG(data)
                     data = urllib.unquote(data)
                     data = byteify(json.loads(data))
+                    printDBG(data)
                     baseUrl = data['route']
                     
                     paramsUrl = dict(self.defaultParams)
