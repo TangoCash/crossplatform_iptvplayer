@@ -1,6 +1,10 @@
 ﻿-- IPTV 4 neutrino
 -- @j00zek 2016.10.29
-require "j00zeks.fileExists"
+-- require "j00zeks.fileExists"
+function fileExists(name)
+   local f=io.open(name,"r")
+   if f~=nil then io.close(f) return true else return false end
+end
 
 -- inits
 local n = neutrino()
