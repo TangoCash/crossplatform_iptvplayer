@@ -48,7 +48,7 @@ def gettytul():
 class TfarjoCom(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'tfarjo.com', 'cookie':'tfarjo.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'tfarjo.com', 'cookie':'tfarjo.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://www.tfarjo.com/'
         self.DEFAULT_ICON_URL = 'http://www.tfarjo.com/assets/theme/img/tfarjo-logo.png'

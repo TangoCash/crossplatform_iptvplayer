@@ -31,7 +31,7 @@ def gettytul():
 class BajkiPoPolskuCOM(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'bajkipopolsku.com', 'cookie':'bajkipopolsku.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'bajkipopolsku.com', 'cookie':'bajkipopolsku.com.cookie'})
         self.DEFAULT_ICON_URL = 'http://bajkipopolsku.com/wp-content/uploads/2015/04/bajkipopolsku-logo2.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://bajkipopolsku.com/'

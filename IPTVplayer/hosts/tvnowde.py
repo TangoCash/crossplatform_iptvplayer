@@ -62,7 +62,7 @@ def gettytul():
 class TVNowDE(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'movs4u.com', 'cookie':'movs4u.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'movs4u.com', 'cookie':'movs4u.com.cookie'})
         self.DEFAULT_ICON_URL = 'https://www.tvnow.de/styles/modules/header/tvnow.png'
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}

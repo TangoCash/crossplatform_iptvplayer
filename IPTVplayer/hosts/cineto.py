@@ -48,7 +48,7 @@ def gettytul():
 class CineTO(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'cine.to', 'cookie':'cine.to.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'cine.to', 'cookie':'cine.to.cookie'})
         self.DEFAULT_ICON_URL = 'https://cine.to/opengraph.jpg'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://cine.to/'

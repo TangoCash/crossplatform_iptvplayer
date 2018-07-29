@@ -48,7 +48,7 @@ def gettytul():
 class OroroTV(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'ororo.tv', 'cookie':'ororo.tv.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'ororo.tv', 'cookie':'ororo.tv.cookie'})
         self.DEFAULT_ICON_URL = 'http://www.yourkodi.com/wp-content/uploads/2016/02/ororo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://ororo.tv/'

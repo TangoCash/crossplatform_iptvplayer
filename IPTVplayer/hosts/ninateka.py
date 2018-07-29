@@ -36,7 +36,7 @@ def gettytul():
 
 class Ninateka(CBaseHostClass):
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'ninateka', 'cookie':'ninateka.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'ninateka', 'cookie':'ninateka.cookie'})
         self.DEFAULT_ICON_URL = 'http://ninateka.pl/Content/images/ninateka_logo.png'
         
         self.menuHTML = ''

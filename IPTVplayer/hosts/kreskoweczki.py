@@ -48,7 +48,7 @@ def gettytul():
 class KreskoweczkiPL(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'  KreskoweczkiPL.tv', 'cookie':'kreskoweczkipl.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'  KreskoweczkiPL.tv', 'cookie':'kreskoweczkipl.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.abcCache = {}
         

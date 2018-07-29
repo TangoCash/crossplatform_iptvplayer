@@ -67,7 +67,7 @@ def gettytul():
 class HDStreams(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'new-hd-streams.org', 'cookie':'hd-streams.org.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'new-hd-streams.org', 'cookie':'hd-streams.org.cookie'})
         self.USER_AGENT = 'Mozilla / 5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebkit / 538.1 (KHTML, podobnie jak Gecko) SamsungBrowser / 1.1 TV Safari / 538.1'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

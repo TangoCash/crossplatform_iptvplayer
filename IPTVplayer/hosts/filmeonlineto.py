@@ -56,7 +56,7 @@ def gettytul():
 class FilmeOnlineTo(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'filme-online.to.tv', 'cookie':'filme-online.to.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'filme-online.to.tv', 'cookie':'filme-online.to.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://filme-online.to/assets/images/filme-online-logo4e.png'

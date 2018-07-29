@@ -30,7 +30,7 @@ class Spryciarze(CBaseHostClass):
     SEARCH_RES_PER_PAGE = 30
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'spryciarze.org', 'cookie':'spryciarze.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'spryciarze.org', 'cookie':'spryciarze.cookie'})
         self.catTree = []
         self.currList = []
         

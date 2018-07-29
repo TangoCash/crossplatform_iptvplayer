@@ -59,7 +59,7 @@ def gettytul():
 class YesMovies(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'yesmovies.to', 'cookie':'yesmovies.to.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'yesmovies.to', 'cookie':'yesmovies.to.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://cdn.yescdn.ru/images/logo.png'

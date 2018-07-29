@@ -48,7 +48,7 @@ def gettytul():
 class CimaClubCom(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'cimaclub.com', 'cookie':'cimaclub.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'cimaclub.com', 'cookie':'cimaclub.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://cimaclub.com/'
         self.DEFAULT_ICON_URL = 'https://i.pinimg.com/originals/f2/67/05/f267052cb0ba96d70dd21e41a20a522e.jpg'

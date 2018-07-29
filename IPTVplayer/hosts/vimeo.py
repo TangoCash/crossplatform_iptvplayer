@@ -48,7 +48,7 @@ def gettytul():
 class VimeoCom(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'vimeo.com', 'cookie':'vimeo.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'vimeo.com', 'cookie':'vimeo.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://vimeo.com/'
         self.DEFAULT_ICON_URL = 'https://avemariaradio.net/wp-content/uploads/2017/03/vimeo_logo_header.jpg'

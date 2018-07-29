@@ -50,7 +50,7 @@ def gettytul():
 class MuziCsillangCC(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'mozicsillag.cc', 'cookie':'mozicsillag.cc.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'mozicsillag.cc', 'cookie':'mozicsillag.cc.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

@@ -52,7 +52,7 @@ def gettytul():
 class EuroSportPlayer(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'eurosportplayer.com', 'cookie':'eurosportplayer.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'eurosportplayer.com', 'cookie':'eurosportplayer.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
         self.MAIN_URL = 'https://www.eurosportplayer.com/'
         self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.eurosportplayer.png.pagespeed.ic.xB5vsEn8I9.png'

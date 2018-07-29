@@ -43,21 +43,20 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://filmovizija.tv/'
+    return 'https://filmovizija.fun/'
 
 class FilmovizijaStudio(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'  filmovizija.studio', 'cookie':'filmovizijastudio.cookie', 'cookie_type':'MozillaCookieJar'})
-        self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_movies':[], 'new_episodes':[]}
+        CBaseHostClass.__init__(self, {'history':'  filmovizija.studio', 'cookie':'filmovizijastudio.cookie'})
         
         self.USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/37.0.2062.120 Chrome/37.0.2062.120 Safari/537.36'
         self.HEADER = {'User-Agent': self.USER_AGENT,  'Accept-Encoding':'gzip, deflate', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL       = 'http://www.filmovizija.tv/'
+        self.MAIN_URL       = 'https://www.filmovizija.fun/'
         self.MOV_SEARCH_URL = self.getFullUrl('search1.php?ser=506&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords=')
         self.SER_SEARCH_URL = self.getFullUrl('search1.php?ser=528&subs=&lks=1&rfrom=0&rto=0&gfrom=0&gto=0&gns=&btn=&keywords=')
         
@@ -78,6 +77,7 @@ class FilmovizijaStudio(CBaseHostClass):
         self.cacheSeasons = []
         self.needProxy = None
         self.cacheLinks = {}
+        self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_movies':[], 'new_episodes':[]}
         
     def isNeedProxy(self):
         if self.needProxy == None:
@@ -138,11 +138,6 @@ class FilmovizijaStudio(CBaseHostClass):
             cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
             return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
         
-    def cleanHtmlStr(self, data):
-        data = data.replace('&nbsp;', ' ')
-        data = data.replace('&nbsp', ' ')
-        return CBaseHostClass.cleanHtmlStr(data)
-        
     def replacewhitespace(self, data):
         data = data.replace(' ', '%20')
         return CBaseHostClass.cleanHtmlStr(data)
@@ -162,6 +157,7 @@ class FilmovizijaStudio(CBaseHostClass):
         self.cacheFilters = {'movies':[], 'top_movies':[], 'series':[], 'new_movies':[], 'new_episodes':[]}
         sts, data = self.getPage(self.MAIN_URL)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         for cat in  [('top_movies',    '>Top Movies</a>',    '</ul>'), \
                      ('series',        '>Series</a>',        'divider'), \
                      ('new_movies',    '>New Movies</a>',    '</ul>'), \
@@ -173,8 +169,6 @@ class FilmovizijaStudio(CBaseHostClass):
                 url = self.cm.ph.getSearchGroups(item, '''href=['"](http[^'^"^>]+?)[>'"]''')[0]
                 if '' == url: continue
                 self.cacheFilters[cat[0]].append({'title':self.cleanHtmlStr(item.split('</i>')[-1]), 'url':self._getFullUrl(url)})
-                
-                
         
     def listCategories(self, cItem, nextCategory):
         printDBG("FilmovizijaStudio.listCategories")
@@ -191,6 +185,7 @@ class FilmovizijaStudio(CBaseHostClass):
         printDBG("FilmovizijaStudio.listYears")
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         tab = []
         data = self.cm.ph.getDataBeetwenMarkers(data, 'godine', '<script', False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>')
@@ -207,6 +202,7 @@ class FilmovizijaStudio(CBaseHostClass):
         printDBG("FilmovizijaStudio.listMovieCats")
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         tab = []
         data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'cbp-rfgrid-c'), ('</ul', '>'), False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
@@ -227,6 +223,7 @@ class FilmovizijaStudio(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url']) 
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         tmp = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'pagination'), ('</ul', '>'), False)[1]
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a ', '</a>')
@@ -281,6 +278,7 @@ class FilmovizijaStudio(CBaseHostClass):
             
         sts, data = self.getPage(url) 
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         desc = self.cm.ph.getDataBeetwenMarkers(data, '<div id="epload">', '<script>', False)[1]
         icon = self._urlWithCookie( self.cm.ph.getSearchGroups(desc, '''src=['"]*(http[^'^"^>]+?)[>'"]''')[0] )
@@ -320,18 +318,19 @@ class FilmovizijaStudio(CBaseHostClass):
         
     def getLinksForVideo(self, cItem):
         printDBG("FilmovizijaStudio.getLinksForVideo [%s]" % cItem)
-        urlTab = [] #{'name':'', 'url':cItem['url'], 'need_resolve':1}]
+        urlTab = []
         
         if len(self.cacheLinks.get(cItem['url'], [])):
             return self.cacheLinks[cItem['url']]
         
         sts, data = self.getPage(cItem['url']) 
         if not sts: return []
+        self.setMainUrl(self.cm.meta['url'])
         
         tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('id\^\="page"'), re.compile('show\(\)'))[1].split('</script>')[0]
-        printDBG("==========================================")
+        printDBG("======")
         printDBG(tmp)
-        printDBG("==========================================")
+        printDBG("======")
         tmp = tmp.replace('\r', '\n').split('\n')
         tmp2 = []
         for item in tmp:
@@ -345,7 +344,7 @@ class FilmovizijaStudio(CBaseHostClass):
         for item in tmp2:
             name = item.strip()
             attrib = self.cm.ph.getSearchGroups(tmp, '''var %s =[^;]+?attr\(['"]([^'^"]+?)['"]''' % name)[0]
-            printDBG(">>>>>>>>>>>>>>>>>>>>> name[%s] attrib[%s]" % (name, attrib))
+            printDBG(">> name[%s] attrib[%s]" % (name, attrib))
             pageAttribs.append({'name':name, 'attrib':attrib})
         
         # main links
@@ -367,7 +366,7 @@ class FilmovizijaStudio(CBaseHostClass):
                 urlHref  = attribs['href']
                 
                 urlName  = self.cleanHtmlStr( item )
-                printDBG('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ' + item)
+                printDBG('>> ' + item)
                 if urlClass == 'direct':
                     if not urlId.startswith('http'):
                         urlTab.append({'name':urlName, 'url':'id=' + urlId, 'need_resolve':1})
@@ -423,9 +422,10 @@ class FilmovizijaStudio(CBaseHostClass):
             if not sts: return []
             printDBG(data)
             videoUrl = data
-            
-            
-        if 'filmovizija.' in videoUrl:
+        
+        tries = 0
+        while tries < 3 and 'filmovizija.' in videoUrl:
+            tries += 1
             sts, data = self.getPage(videoUrl)
             if not sts: return []
             printDBG(data)
@@ -448,8 +448,9 @@ class FilmovizijaStudio(CBaseHostClass):
             
             if 0 == len(urlTab):
                 videoUrl = self._getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"', 1, True)[0])
+                if videoUrl == '': videoUrl = self._getFullUrl(self.cm.ph.getSearchGroups(data, '\.load\(\s*?"([^"]+?)"', 1, True)[0])
             
-        if videoUrl.startswith('http'):
+        if videoUrl != '':
             urlTab.extend(self.up.getVideoLinkExt(videoUrl))
         return urlTab
         

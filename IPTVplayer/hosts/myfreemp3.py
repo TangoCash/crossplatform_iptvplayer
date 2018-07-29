@@ -48,7 +48,7 @@ def gettytul():
 class MyFreeMp3(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'my-free-mp3.net', 'cookie':'my-free-mp3.net.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'my-free-mp3.net', 'cookie':'my-free-mp3.net.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://my-free-mp3.net/'
         self.DEFAULT_ICON_URL = 'https://my-free-mp3.net/img/logo.png'
@@ -79,10 +79,33 @@ class MyFreeMp3(CBaseHostClass):
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("MyFreeMp3.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        sts, data = self.getPage(self.getMainUrl())
+        if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
-        url = self.getFullUrl('/api/search.php?callback=jQuery213030719905102895273_1514979351220')
-        post_data = {'q':searchPattern, 'sort':'2', 'count':'300', 'performer_only':'0'}
-        sts, data = self.getPage(url, post_data=post_data)
+        url = self.getFullUrl('/api/search.php?callback=jQuery2130550300194200308_1532280982151')
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<select', '>', 'sort'), ('</select', '>'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<option', '</option>')
+        for item in data:
+            sort = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
+            params = dict(cItem)
+            params.update({'category':'list_items', 'url':url})
+            params['post_data'] =  {'q':searchPattern} #'sort':'2', 'count':'300', 'performer_only':'0'
+            if sort == '':
+                params['title'] = _('Default')
+            else:
+                params['title'] = self.cleanHtmlStr(item)
+                params['post_data'].update({'sort':sort})
+            self.addDir(params)
+        
+    def listItems(self, cItem):
+        printDBG("MyFreeMp3.listItems")
+        page = cItem.get('page', 0)
+        
+        post_data = dict(cItem['post_data'])
+        post_data['page'] = page
+        
+        sts, data = self.getPage(cItem['url'], post_data=post_data)
         if not sts: return
         
         m1 = data.find('(')
@@ -110,7 +133,8 @@ class MyFreeMp3(CBaseHostClass):
                         icons.sort(reverse=True)
                         icon = icons[0][1]
                     except Exception:
-                        printExc()
+                        pass
+                        #printExc()
                     params = dict(cItem)
                     params.update({'good_for_fav':True, 'title':title, 'desc':desc, 'icon':icon, 'priv_data':item})
                     self.addAudio(params)
@@ -118,6 +142,11 @@ class MyFreeMp3(CBaseHostClass):
                     printExc()
         except Exception:
             printExc()
+        
+        if len(self.currList):
+            params = dict(cItem)
+            params.update({'post_data':post_data, 'page':page + 1, 'title':_('Next page')})
+            self.addDir(params)
         
     def getLinksForVideo(self, cItem):
         printDBG("MyFreeMp3.getLinksForVideo [%s]" % cItem)
@@ -165,6 +194,8 @@ class MyFreeMp3(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listMainMenu({'name':'category'})
+        elif category == 'list_items':
+            self.listItems(self.currItem)
     #SEARCH
         elif category in ["search", "search_next_page"]:
             cItem = dict(self.currItem)

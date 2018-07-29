@@ -44,7 +44,7 @@ def gettytul():
 class GamatoMovies(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'GamatoMovies.tv', 'cookie':'gamatomoviescom.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'GamatoMovies.tv', 'cookie':'gamatomoviescom.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}

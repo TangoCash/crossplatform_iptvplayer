@@ -48,7 +48,7 @@ def gettytul():
 class MovieRulzSX(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'movierulz.sx', 'cookie':'movierulz.sx.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'movierulz.sx', 'cookie':'movierulz.sx.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://movierulz.be/'
         self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.movierulz.png.pagespeed.ic.em3U-ZIgpV.png'

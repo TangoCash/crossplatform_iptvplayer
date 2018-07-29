@@ -57,7 +57,7 @@ def gettytul():
 class MeczykiPL(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'meczykipl', 'cookie':'meczykipl.cookie', 'cookie_type':'MozillaCookieJar'}) #, 'min_py_ver':(2,7,9)
+        CBaseHostClass.__init__(self, {'history':'meczykipl', 'cookie':'meczykipl.cookie'})
         self.USER_AGENT = 'Mozilla/5.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

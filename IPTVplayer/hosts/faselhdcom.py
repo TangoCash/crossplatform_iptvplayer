@@ -48,7 +48,7 @@ def gettytul():
 class FaselhdCOM(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'faselhd.com', 'cookie':'faselhd.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'faselhd.com', 'cookie':'faselhd.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.faselhd.com/'
         self.DEFAULT_ICON_URL = self.getFullUrl('https://i2.wp.com/www.faselhd.com/wp-content/themes/adbreak/images/logo.png')

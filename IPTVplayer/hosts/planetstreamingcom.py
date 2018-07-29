@@ -59,7 +59,7 @@ def gettytul():
 class PlanetStreaming(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'planet-streaming.com', 'cookie':'planet-streaming.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'planet-streaming.com', 'cookie':'planet-streaming.com.cookie'})
         
         self.DEFAULT_ICON_URL = 'http://cdn-thumbshot.pearltrees.com/4d/72/4d725324089e9adab59eee4aa32f548f-pearlsquare.jpg'
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT':'1', 'Accept': 'text/html'}

@@ -47,7 +47,7 @@ def gettytul():
 class ClassicCinemaOnline(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'classiccinemaonline.com', 'cookie':'classiccinemaonline.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'classiccinemaonline.com', 'cookie':'classiccinemaonline.com.cookie'})
         self.DEFAULT_ICON_URL = 'http://www.classiccinemaonline.com/templates/rt_metropolis/images/logo/dark/logo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://www.classiccinemaonline.com/'

@@ -50,7 +50,7 @@ def gettytul():
 class ITV(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'itv.com', 'cookie':'itv.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'itv.com', 'cookie':'itv.com.cookie'})
         self.DEFAULT_ICON_URL = 'https://upload.wikimedia.org/wikipedia/en/thumb/9/92/ITV_logo_2013.svg/800px-ITV_logo_2013.svg.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5376e Safari/8536.25'

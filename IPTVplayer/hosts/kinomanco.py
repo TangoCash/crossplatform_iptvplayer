@@ -59,7 +59,7 @@ class KinomanCO(CBaseHostClass):
     CAPTCHA_HASHKEY=''
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'kinoman.co', 'cookie':'kinoman.co.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'kinoman.co', 'cookie':'kinoman.co.cookie'})
         self.DEFAULT_ICON_URL = 'http://i2.wp.com/vodnews.pl/wp-content/uploads/2016/12/film-1594734_1920.jpg?resize=780%2C405' #'http://g1.pcworld.pl/news/thumbnails/2/7/274244_adaptiveresize_370x208.jpg'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':'https://www.kinoman.co', 'Origin':'https://www.kinoman.co', 'x-captcha-challenge':KinomanCO.CAPTCHA_CHALLENGE, 'x-captcha-hashkey':KinomanCO.CAPTCHA_HASHKEY}

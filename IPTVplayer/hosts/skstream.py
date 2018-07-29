@@ -54,7 +54,7 @@ def gettytul():
 class SKStream(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'skstream.co', 'cookie':'skstream.co.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'skstream.co', 'cookie':'skstream.co.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

@@ -58,7 +58,7 @@ def gettytul():
 class PutlockerTvTo(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'yesmovies.to', 'cookie':'yesmovies.to.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'yesmovies.to', 'cookie':'yesmovies.to.cookie'})
         
         self.DEFAULT_ICON_URL = 'https://blog.malwarebytes.com/wp-content/uploads/2014/10/photodune-4471691-on-behalf-of-the-spring-green-icon-s-837x506.jpg'
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT':'1', 'Accept': 'text/html'}

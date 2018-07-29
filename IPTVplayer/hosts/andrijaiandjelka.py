@@ -42,7 +42,7 @@ def gettytul():
 class AndrijaIAndjelka(CBaseHostClass):
 
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'andrija-i-andjelka.com', 'cookie':'andrija-i-andjelka.com.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'andrija-i-andjelka.com', 'cookie':'andrija-i-andjelka.com.cookie'})
         
         self.USER_AGENT = 'Mozilla/5.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}

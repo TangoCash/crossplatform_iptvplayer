@@ -44,7 +44,7 @@ def gettytul():
 class FilmixCO(CBaseHostClass):
 
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'filmix.co', 'cookie':'filmix.co.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'filmix.co', 'cookie':'filmix.co.cookie'})
         
         self.USER_AGENT = 'Mozilla/5.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}

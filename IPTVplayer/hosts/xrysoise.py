@@ -58,7 +58,7 @@ class XrysoiSE(CBaseHostClass):
                     {'category':'search_history',  'title': _('Search history')} ]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'XrysoiSE.tv', 'cookie':'XrysoiSEtv.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'XrysoiSE.tv', 'cookie':'XrysoiSEtv.cookie'})
         self.DEFAULT_ICON_URL = self.MAIN_URL + 'wp-content/uploads/2015/03/logo-GM.png'
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = {}

@@ -49,7 +49,7 @@ def gettytul():
 class RadiostacjaPl(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'radiostacja.pl', 'cookie':'radiostacja.pl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'radiostacja.pl', 'cookie':'radiostacja.pl.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://www.radiostacja.pl/'
         self.DEFAULT_ICON_URL = 'http://is3.mzstatic.com/image/thumb/Purple122/v4/82/c4/6f/82c46f38-3532-e414-530e-33e5d0be2614/source/392x696bb.jpg'

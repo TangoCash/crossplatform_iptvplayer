@@ -48,7 +48,7 @@ def gettytul():
 class ArteTV(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'arte.tv', 'cookie':'arte.tv.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'arte.tv', 'cookie':'arte.tv.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.arte.tv/'
         self.DEFAULT_ICON_URL = 'https://i.pinimg.com/originals/3c/e6/54/3ce6543cf583480fa6d0e233384f336e.jpg'

@@ -49,7 +49,7 @@ def gettytul():
 class InteriaTv(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'interia.tv', 'cookie':'interia.tv.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'interia.tv', 'cookie':'interia.tv.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://interia.tv/'
         self.DEFAULT_ICON_URL = 'http://static.wirtualnemedia.pl/media/top/interia-2015logohaslo-655.png'

@@ -141,6 +141,7 @@ class Sovdub(CBaseHostClass):
         desc = self.cm.ph.getDataBeetwenMarkers(data, '<div class="full-news-content">', '</a></div>', False)[1]
         desc = self.cleanHtmlStr(desc).replace('  ', '')
         
+        url = ''
         hasLinks = False
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<iframe', '>'),  ('</iframe', '>'), caseSensitive=False)
         for item in data:

@@ -55,7 +55,7 @@ class PlusDEDE(CBaseHostClass):
     password = None
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'plusdede.com', 'cookie':'plusdede.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'plusdede.com', 'cookie':'plusdede.com.cookie'})
         self.DEFAULT_ICON_URL = 'https://img15.androidappsapk.co/300/f/d/3/com.joramun.plusdede.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.plusdede.com/'

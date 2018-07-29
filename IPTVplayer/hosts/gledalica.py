@@ -48,7 +48,7 @@ def gettytul():
 class Gledalica(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'gledalica.com', 'cookie':'gledalica.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'gledalica.com', 'cookie':'gledalica.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.gledalica.com/'
         self.DEFAULT_ICON_URL = 'http://cdn-thumbshot.pearltrees.com/ec/c9/ecc93fbd8a258ceb455d61382ffde798-pearlsquare.jpg'

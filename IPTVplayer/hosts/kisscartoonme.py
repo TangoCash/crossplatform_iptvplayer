@@ -71,7 +71,7 @@ class KissCartoonMe(CBaseHostClass):
                    {'title':_('New cartoon'),        'sort_by':'Newest'}]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'kisscartoon.io', 'cookie':'kisscartoonme.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'kisscartoon.io', 'cookie':'kisscartoonme.cookie'})
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheHome = {}
         self.cache = {}

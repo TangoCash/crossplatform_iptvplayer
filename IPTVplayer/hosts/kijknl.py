@@ -49,7 +49,7 @@ def gettytul():
 class KijkNL(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'kijk.nl.uk', 'cookie':'kijk.nl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'kijk.nl.uk', 'cookie':'kijk.nl.cookie'})
         self.DEFAULT_ICON_URL = 'http://is2.mzstatic.com/image/thumb/Purple128/v4/81/1d/19/811d19eb-3de6-1456-ab00-f68204e7dae4/source/1200x630bb.jpg'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://www.kijk.nl/'

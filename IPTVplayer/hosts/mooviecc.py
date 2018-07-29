@@ -47,7 +47,7 @@ def gettytul():
 class MoovieCC(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'moovie.cc', 'cookie':'moovie.cc.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'moovie.cc', 'cookie':'moovie.cc.cookie'})
         self.DEFAULT_ICON_URL = 'https://moovie.cc/images/logo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}

@@ -54,7 +54,7 @@ def gettytul():
 class LosMovies(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'LosMovies.tv', 'cookie':'LosMovies.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'LosMovies.tv', 'cookie':'LosMovies.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.losmovies.png.pagespeed.ic.JtaWsQ6YWz.jpg'

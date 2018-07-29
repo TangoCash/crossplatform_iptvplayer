@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 HostsList=[ 
+	("123movieshd", "123movieshd.sc"),
 	("3player", "tv3.ie3player"),
 	("3sktv", "3sk.tv"),
 	("akoam", "ar.akoam.net"),
@@ -48,7 +49,7 @@ HostsList=[
 	("filmeonlineto", "filme-online.to"),
 	("filmezz", "filmezz.eu"),
 	("filmixco", "filmix.co"),
-	("filmovizijastudio", "filmovizija.tv"),
+	("filmovizijastudio", "filmovizija.fun"),
 	("filmpalast", "filmpalast.to"),
 	("filmstreamhdit", "filmstreamhd.it"),
 	("filmstreamvkcom", "voir.filmstreamvk.la"),
@@ -159,6 +160,7 @@ HostsList=[
 	("videopenny", "videopenny.net"),
 	("vimeo", "vimeo.com"),
 	("vodpl", "vod.pl"),
+	("watchcartoononline", "watchcartoononline.com"),
 	("watchwrestling", "watchwrestling.nl"),
 	("watchwrestlinguno", "watchwrestling.uno"),
 	("webstream", "streams player"),

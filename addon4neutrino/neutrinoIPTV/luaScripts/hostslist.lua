@@ -1,4 +1,5 @@
 HostsList={ 
+      {id="123movieshd", title="123movieshd.sc", type="py"},
       {id="3player", title="tv3.ie3player", type="py"},
       {id="3sktv", title="3sk.tv", type="py"},
       {id="akoam", title="ar.akoam.net", type="py"},
@@ -47,7 +48,7 @@ HostsList={
       {id="filmeonlineto", title="filme-online.to", type="py"},
       {id="filmezz", title="filmezz.eu", type="py"},
       {id="filmixco", title="filmix.co", type="py"},
-      {id="filmovizijastudio", title="filmovizija.tv", type="py"},
+      {id="filmovizijastudio", title="filmovizija.fun", type="py"},
       {id="filmpalast", title="filmpalast.to", type="py"},
       {id="filmstreamhdit", title="filmstreamhd.it", type="py"},
       {id="filmstreamvkcom", title="voir.filmstreamvk.la", type="py"},
@@ -158,6 +159,7 @@ HostsList={
       {id="videopenny", title="videopenny.net", type="py"},
       {id="vimeo", title="vimeo.com", type="py"},
       {id="vodpl", title="vod.pl", type="py"},
+      {id="watchcartoononline", title="watchcartoononline.com", type="py"},
       {id="watchwrestling", title="watchwrestling.nl", type="py"},
       {id="watchwrestlinguno", title="watchwrestling.uno", type="py"},
       {id="webstream", title="streams player", type="py"},

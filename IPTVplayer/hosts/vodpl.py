@@ -56,7 +56,7 @@ class VODPL(CBaseHostClass):
         proxyUrl = config.plugins.iptvplayer.proxyurl.value
         useProxy = config.plugins.iptvplayer.proxyOnet.value
     
-        CBaseHostClass.__init__(self, {'proxyURL':proxyUrl, 'useProxy':useProxy, 'history':'vod.pl', 'cookie':'vod.pl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'proxyURL':proxyUrl, 'useProxy':useProxy, 'history':'vod.pl', 'cookie':'vod.pl.cookie'})
         self.DEFAULT_ICON_URL = 'https://ocdn.eu/static/ucs/ZTc7MDA_/3981e069a1f7f560017885aaad40ea1a/assets/img/logo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}

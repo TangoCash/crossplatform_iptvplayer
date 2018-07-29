@@ -48,7 +48,7 @@ def gettytul():
 class AkoAm(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'ako.am', 'cookie':'ako.am.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'ako.am', 'cookie':'ako.am.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://ar.akoam.net/'
         self.DEFAULT_ICON_URL = self.getFullIconUrl('/scripts/site/img/main_logo.png')

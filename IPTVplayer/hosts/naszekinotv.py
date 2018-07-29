@@ -55,7 +55,7 @@ def gettytul():
 class NaszeKinoTv(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'nasze-kino.tv.com', 'cookie':'nasze-kino.tv.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'nasze-kino.tv.com', 'cookie':'nasze-kino.tv.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://www.nasze-kino.tv/'
         self.DEFAULT_ICON_URL = 'https://raw.githubusercontent.com/podpis/kodi/master/zips/plugin.video.naszekinotv/icon.png'

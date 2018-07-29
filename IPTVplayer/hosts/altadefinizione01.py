@@ -42,7 +42,7 @@ def gettytul():
 class Altadefinizione(CBaseHostClass):
 
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'altadefinizione01.zone', 'cookie':'altadefinizione01.zone.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'altadefinizione01.zone', 'cookie':'altadefinizione01.zone.cookie'})
         
         self.USER_AGENT = 'Mozilla/5.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}

@@ -53,7 +53,7 @@ def gettytul():
 class MaxtvGO(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'maxtvgo.com', 'cookie':'maxtvgo.com.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'maxtvgo.com', 'cookie':'maxtvgo.com.cookie'})
         self.DEFAULT_ICON_URL = 'https://maxtvgo.com/images/logo_37.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://maxtvgo.com/'

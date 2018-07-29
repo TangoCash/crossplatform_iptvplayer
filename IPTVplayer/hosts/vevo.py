@@ -51,7 +51,7 @@ def gettytul():
 class VevoCom(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'vevo.com', 'cookie':'vevo.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'vevo.com', 'cookie':'vevo.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
         self.MAIN_URL = 'https://vevo.com/'
         self.API_URL  = 'https://veil.vevoprd.com/graphql'

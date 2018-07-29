@@ -33,7 +33,7 @@ def gettytul():
 class SerialeCO(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'seriale.co', 'cookie':'seriale.co.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'seriale.co', 'cookie':'seriale.co.cookie'})
         self.DEFAULT_ICON_URL = 'https://www.alekinoplus.pl/images/2015/sierpien/kino-mowi/km-seriale-logo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://seriale.co/'

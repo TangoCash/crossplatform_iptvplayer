@@ -1938,7 +1938,7 @@ class IPTVExtMoviePlayer(Screen):
         #if 'gstplayer' == self.player: 
         #    self.console_stdoutAvail_conn = eConnectCallback(self.console.stdoutAvail, self.eplayer3DataAvailable2 ) # work around to catch EOF event after seeking, pause .etc
         printDBG("->||||||| onStart cmd[%s]" % cmd)
-        self.console.execute( E2PrioFix( cmd ) )
+        self.console.execute( E2PrioFix( cmd, 1 ) )
         self['statusIcon'].setPixmap( self.playback['statusIcons']['Play'] ) # sulge for test
         self['loopIcon'].setPixmap( self.playback['loopIcons']['Off'] )
         self['logoIcon'].setPixmap( self.playback['logoIcon'] )

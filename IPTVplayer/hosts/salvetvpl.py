@@ -35,7 +35,7 @@ def gettytul():
 class SalvetvPL(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'salvetv.pl', 'cookie':'salvetv.pl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'salvetv.pl', 'cookie':'salvetv.pl.cookie'})
         self.MAIN_URL = 'http://www.salvetv.pl/'
         self.DEFAULT_ICON_URL = self.getFullIconUrl('/content/medium/pieczatka.jpg')
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT':'1', 'Accept': 'text/html'}

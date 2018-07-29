@@ -55,7 +55,7 @@ def gettytul():
 class Tata(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'tata.to', 'cookie':'tata.to.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'tata.to', 'cookie':'tata.to.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B334b Safari/531.21.10'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

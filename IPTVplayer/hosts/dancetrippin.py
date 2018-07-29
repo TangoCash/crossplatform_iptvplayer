@@ -43,7 +43,7 @@ def gettytul():
 class DancetrippinTV(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'DancetrippinTV.tv', 'cookie':'kinomantv.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'DancetrippinTV.tv', 'cookie':'kinomantv.cookie'})
         self.defaultParams = {'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}

@@ -160,7 +160,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "2018.07.16.0"
+    XXXversion = "2018.07.22.2"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -289,7 +289,7 @@ class Host:
            valTab.append(CDisplayListItem('XNXX',           'www.xnxx.com',       CDisplayListItem.TYPE_CATEGORY, ['http://www.xnxx.com'],                  'xnxx',    'http://www.naughtyalysha.com/tgp/xnxx/xnxx-porn-recip.jpg', None)) 
            valTab.append(CDisplayListItem('BEEG',           'beeg.com',           CDisplayListItem.TYPE_CATEGORY, ['https://beeg.com'],                      'beeg',    'http://staticloads.com/img/logo/logo.png', None)) 
            valTab.append(CDisplayListItem('PORNRABBIT',     'www.pornrabbit.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornrabbit.com/page/categories/'],'pornrabbit','https://www.pornrabbit.com/static/pornrabbit/img/logo.png', None)) 
-           valTab.append(CDisplayListItem('PORNHD',     'www.pornhd.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornhd.com/category'],'pornhd','http://f90f5c1c633346624330effd22345bfc.lswcdn.net/image/logo.png', None)) 
+           valTab.append(CDisplayListItem('PORNHD',     'www.pornhd.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.pornhd.com/category'],'pornhd','https://pbs.twimg.com/profile_images/527104689444093952/PbRNZmMT_400x400.png', None)) 
            valTab.append(CDisplayListItem('AH-ME',     'www.ah-me.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.ah-me.com/channels.php'],'AH-ME','http://ahmestatic.fuckandcdn.com/ah-me/ahmestatic/v20/common/ah-me/img/logo.jpg', None)) 
            valTab.append(CDisplayListItem('AMATEURPORN',     'www.amateurporn.net', CDisplayListItem.TYPE_CATEGORY, ['http://www.amateurporn.net/channels/'],'AMATEURPORN', 'http://www.amateurporn.net/images/amateur-porn.png', None)) 
            valTab.append(CDisplayListItem('YOUJIZZ',     'http://www.youjizz.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.youjizz.com/categories'],'YOUJIZZ', 'http://www.sample-made.com/cms/content/uploads/2015/05/youjizz_logo-450x400.jpg', None)) 
@@ -337,7 +337,7 @@ class Host:
            valTab.append(CDisplayListItem('TXXX',     'http://www.txxx.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.txxx.com/categories/'],'txxx', 'https://www.txxx.com/images/desktop-logo.png', None)) 
            valTab.append(CDisplayListItem('SUNPORNO',     'https://www.sunporno.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.sunporno.com/channels/'],'sunporno', 'https://sunstatic.fuckandcdn.com/sun/sunstatic/v31/common/sunporno/img/logo_top.png', None)) 
            valTab.append(CDisplayListItem('SEXU',     'http://sexu.com', CDisplayListItem.TYPE_CATEGORY, ['http://sexu.com/'],'sexu', 'http://sexu.com/images/ico-logo.png', None)) 
-           valTab.append(CDisplayListItem('MOVIE4K  XXX',     'https://movie4k.org/xxx', CDisplayListItem.TYPE_CATEGORY, ['http://movie4k.org/xxx-updates.html'],'movie4k', '', None)) 
+           valTab.append(CDisplayListItem('MOVIE4K  XXX',     'https://movie4k.org/xxx', CDisplayListItem.TYPE_CATEGORY, ['http://movie4k.org/xxx-updates.html'],'movie4k', 'https://i.imgur.com/KcrsgQi.png', None)) 
            valTab.append(CDisplayListItem('TUBEWOLF',     'http://www.tubewolf.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.tubewolf.com'],'tubewolf', 'http://images.tubewolf.com/logo.png', None)) 
            valTab.append(CDisplayListItem('ALPHAPORNO',     'http://www.alphaporno.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.alphaporno.com'],'tubewolf', 'http://images.alphaporno.com/logo.png', None)) 
            valTab.append(CDisplayListItem('ZEDPORN',     'http://zedporn.com', CDisplayListItem.TYPE_CATEGORY, ['https://zedporn.com'],'tubewolf', 'http://images.zedporn.com/new-logo.png', None)) 
@@ -1105,7 +1105,9 @@ class Host:
            for item in data:
               phTitle = self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''', 1, True)[0] 
               phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0]
-              phImage = self.cm.ph.getSearchGroups(item, '''data-mediumthumb=['"]([^"^']+?)['"]''', 1, True)[0] 
+              phImage = self.cm.ph.getSearchGroups(item, '''data-mediumthumb=['"]([^"^']+?)['"]''', 1, True)[0]
+              if not phImage: phImage = self.cm.ph.getSearchGroups(item, '''data-thumb_url=['"]([^"^']+?)['"]''', 1, True)[0]
+              if not phImage: phImage = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0]
               phRuntime = self.cm.ph.getDataBeetwenMarkers(item, '<span class="duration">', '<div class="video_title">', False)[1]
               phRuntime = self._cleanHtmlStr(phRuntime).strip() 
               if phUrl.startswith('/'): phUrl = self.MAIN_URL + phUrl
@@ -4548,7 +4550,7 @@ class Host:
               phTime = self.cm.ph.getSearchGroups(item, '''"time">([^"^']+?)<''', 1, True)[0].strip()
               if phUrl.startswith('/'): phUrl = 'https://www.vporn.com' + phUrl
               if phImage.startswith('//'): phImage = 'http:' + phImage
-              valTab.append(CDisplayListItem(phTitle,'['+phTime+']  '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+              valTab.append(CDisplayListItem(decodeHtml(phTitle),'['+phTime+']  '+decodeHtml(phTitle),CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            if next_page:
               next = self.cm.ph.getSearchGroups(next_page, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
               if next.startswith('/'): next = 'https://www.vporn.com' + next
@@ -6572,6 +6574,54 @@ class Host:
             except Exception as e:
                 printExc()
             return ''
+
+        if parser == 'http://www.youjizz.com':
+           COOKIEFILE = os_path.join(GetCookieDir(), 'youjizz.cookie')
+           host = 'iPhone'
+           header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'X-Requested-With':'XMLHttpRequest'}   
+           try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
+           except:
+              printDBG( 'Host getResolvedURL query error url: '+url )
+              return ''
+           printDBG( 'Host getResolvedURL data: '+data )
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"1080","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"720","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"480","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"360","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&") 
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"288","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&") 
+           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"270","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+           videoPage = self.cm.ph.getSearchGroups(data, '''"filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+           videoPage = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''')[0] 
+           if videoPage:
+              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
+              return videoPage.replace("&amp;","&")
+
+           error = self.cm.ph.getDataBeetwenMarkers(data, '<p class="text-gray">', '</p>', False)[1]
+           if error:
+              SetIPTVPlayerLastHostError(_(error))
+              return []
+           return ''
 ##########################################################################################################################
         query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
         try:
@@ -6829,66 +6879,6 @@ class Host:
         if parser == 'http://m.pornhub.com':
            match = re.compile('<div class="play_video.+?<a href="(.+?)"', re.DOTALL).findall(data)
            return match[0]
-
-        if parser == 'http://www.youjizz.com':
-#           data = self.cm.ph.getDataBeetwenMarkers(data, 'var encodings = ', ';', False)[1]
-#           old_quality = '200'
-#           try:
-#              result = simplejson.loads(data)
-#             if result:
-#                for item in result:
-#                    quality = str(item["quality"])
-#                    printDBG( 'Host quality: '+quality )
-#                    printDBG( 'Host old_quality: '+old_quality )
-#
-#                    if quality<old_quality: return 'http:'+filename
-#                    filename = str(item["filename"])
-#                    old_quality = quality
-#                    printDBG( 'Host quality: '+str(item["quality"]) )
-#                    printDBG( 'Host filename: '+str(item["filename"]) )
-#           except:
-#              printDBG( 'Host error json' )
-#           return ''
-#           playerUrl = self.cm.ph.getSearchGroups(data, '''"filename":['"]([^"^']+?\.mp4[^"^']*?)['"]''', 1, ignoreCase=True)[0] 
-#           printDBG( 'Host playerUrl: http:'+playerUrl )
-           error = self.cm.ph.getDataBeetwenMarkers(data, '<p class="text-gray">', '</p>', False)[1]
-           if error:
-              SetIPTVPlayerLastHostError(_(error))
-              return []
-
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"1080","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"720","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"480","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"360","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&") 
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"288","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&") 
-           videoPage = self.cm.ph.getSearchGroups(data, '''"quality":"270","filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           videoPage = self.cm.ph.getSearchGroups(data, '''"filename":['"]([^"^']+?)['"]''')[0].replace('\/','/')
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           videoPage = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''')[0] 
-           if videoPage:
-              if videoPage.startswith('//'): videoPage = 'http:' + videoPage
-              return decodeUrl(videoPage).replace("&amp;","&")
-           return ''
 
         if parser == 'http://www.dachix.com':
            videoPage = self.cm.ph.getSearchGroups(data, '''<source src=['"]([^"^']+?)['"]''')[0] 
@@ -7408,6 +7398,20 @@ def decodeHtml(text):
 	text = text.replace('&#8230;','...')
 	text = text.replace('\u2026','...')
 	text = text.replace('&#41;',')')
+	text = text.replace('&lowbar;','_')
+	text = text.replace('&rsquo;','\'')
+	text = text.replace('&lpar;','(')
+	text = text.replace('&rpar;',')')
+	text = text.replace('&comma;',',')
+	text = text.replace('&period;','.')
+	text = text.replace('&plus;','+')
+	text = text.replace('&num;','#')
+	text = text.replace('&excl;','!')
+	text = text.replace('&#039','\'')
+	text = text.replace('&semi;','')
+	text = text.replace('&lbrack;','[')
+	text = text.replace('&rsqb;',']')
+
 	return text	
 
 ############################################

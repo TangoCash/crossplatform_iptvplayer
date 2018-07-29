@@ -52,7 +52,7 @@ def gettytul():
 class CartoonHD(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'CartoonHD.tv', 'cookie':'cartoonhdtv.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'CartoonHD.tv', 'cookie':'cartoonhdtv.cookie'})
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.loggedIn = None

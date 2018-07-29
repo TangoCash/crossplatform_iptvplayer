@@ -104,7 +104,7 @@ class TvpVod(CBaseHostClass):
     
     def __init__(self):
         printDBG("TvpVod.__init__")
-        CBaseHostClass.__init__(self, {'history':'TvpVod', 'cookie':'tvpvod.cookie', 'cookie_type':'MozillaCookieJar', 'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.tvpVodProxyEnable.value})
+        CBaseHostClass.__init__(self, {'history':'TvpVod', 'cookie':'tvpvod.cookie', 'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.tvpVodProxyEnable.value})
         self.defaultParams = {'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'header':TvpVod.HTTP_HEADERS}
         self.loggedIn = None
         self.fixUrlMap = {'nadobre.tvp.pl':        'http://vod.tvp.pl/8514270/na-dobre-i-na-zle',

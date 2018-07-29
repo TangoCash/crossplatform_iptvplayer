@@ -48,7 +48,7 @@ def gettytul():
 class KinogoCC(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'kinogo.cc', 'cookie':'kinogo.cc.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'kinogo.cc', 'cookie':'kinogo.cc.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://kinogo.cc/'
         self.DEFAULT_ICON_URL = 'https://image.winudf.com/v2/image/Y29tLndQbGVlcmRseWFraW5vZ29fc2NyZWVuc2hvdHNfMF9iMzUzZjkyNw/screen-0.jpg?h=355&fakeurl=1&type=.jpg'

@@ -48,7 +48,7 @@ def gettytul():
 class LuxVeritatisPL(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'luxveritatis.pl', 'cookie':'luxveritatis.pl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'luxveritatis.pl', 'cookie':'luxveritatis.pl.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL_T = 'http://tv-trwam.pl/'
         self.MAIN_URL_R = 'http://www.radiomaryja.pl/'

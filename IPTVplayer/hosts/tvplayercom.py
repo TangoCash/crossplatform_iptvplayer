@@ -66,7 +66,7 @@ def gettytul():
 class TVPlayer(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'tvplayer.com', 'cookie':'tvplayer.com.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'tvplayer.com', 'cookie':'tvplayer.com.cookie'})
         self.DEFAULT_ICON_URL = 'http://ww1.prweb.com/prfiles/2012/03/21/9313945/TVPlayer%20Logo%20New%20USE%20THIS%20ONE.jpg'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept-Encoding':'gzip, deflate', 'Accept': 'text/html'}

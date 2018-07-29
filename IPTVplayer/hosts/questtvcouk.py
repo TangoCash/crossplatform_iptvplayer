@@ -48,7 +48,7 @@ def gettytul():
 class QuesttvCoUK(CBaseHostClass):
     
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'questtv.co.uk', 'cookie':'questtv.co.uk.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'questtv.co.uk', 'cookie':'questtv.co.uk.cookie'})
         self.DEFAULT_ICON_URL = 'http://www.questtv.co.uk/wp-content/themes/dni_wp_theme_quest_uk/img/quest_logo.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://www.questtv.co.uk/'

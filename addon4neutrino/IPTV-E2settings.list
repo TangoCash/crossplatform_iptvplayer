@@ -346,6 +346,8 @@ config.plugins.iptvplayer.maxtvgo_login    = ConfigText(default = "", fixed_size
 config.plugins.iptvplayer.maxtvgo_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.plusdede_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.plusdede_password = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.gomovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
+config.plugins.iptvplayer.gomovies_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.ilepozycji = ConfigInteger(8, (1, 99))  
 config.plugins.iptvplayer.religia = ConfigYesNo(default = True)  
 config.plugins.iptvplayer.natanek = ConfigInteger(8, (1, 999))  

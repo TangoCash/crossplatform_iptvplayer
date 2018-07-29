@@ -12,7 +12,8 @@ from Tools.Directories import resolveFilename, fileExists, SCOPE_PLUGINS
 from Components.config import config, configfile
 from Components.Language import language
 import gettext
-import os, sys
+import os
+import sys
 import threading
 import time
 ###################################################
@@ -58,16 +59,24 @@ def GetIPTVPlayerLastHostError(clear=True):
     return tmp
 
 class IPTVPlayerNotification():
-    def __init__(self, title, message, type, timeout):
+    def __init__(self, title, message, type, timeout, messageHash=None, timestamp=0):
         self.title = str(title)
         self.message = str(message)
         self.type = str(type) # "info", "error", "warning"
         self.timeout = int(timeout)
+        self.messageHash = messageHash
+        self.timestamp = timestamp
         
     def __eq__(self, a):
         return not self.__ne__(a)
     
     def __ne__(self, a):
+        if a == None: 
+            return True
+        
+        if None != self.messageHash and None != a.messageHash:
+            return self.messageHash != a.messageHash
+        
         if self.title != a.title or \
            self.type != a.type or \
            self.message != a.message or \
@@ -79,8 +88,9 @@ class IPTVPlayerNotificationList(object):
     
     def __init__(self):
         self.notificationsList = []
+        self.repeatMessages = {}
         self.mainLock = threading.Lock()
-        # this flag will be checked with mutex taken 
+        # this flag will be checked without mutex
         # to less lock check
         self.empty = True
         
@@ -97,11 +107,22 @@ class IPTVPlayerNotificationList(object):
             pass
         return False
     
-    def push(self, message, type="message", timeout=5): #, allowDuplicates=True
+    def push(self, message, type="message", timeout=5, messageHash=None, repeatMessageTimeoutSec=0):
         ret = False
+        if messageHash == None and repeatMessageTimeoutSec > 0:
+            raise Exception("IPTVPlayerNotificationList.push call with repeatMessageTimeout but without messageHash")
+        
+        if repeatMessageTimeoutSec > 0:
+            timestamp = time.time() + repeatMessageTimeoutSec
+        else:
+            timestamp = None
+        
         with self.mainLock:
             try:
-                notification = IPTVPlayerNotification('IPTVPlayer', message, type, timeout)
+                notification = IPTVPlayerNotification('IPTVPlayer', message, type, timeout, messageHash, timestamp)
+                if messageHash != None:
+                    try: self.notificationsList.remove(notification)
+                    except Exception: pass
                 self.notificationsList.append(notification)
                 self.empty = False
                 ret = True
@@ -120,6 +141,14 @@ class IPTVPlayerNotificationList(object):
                         if item != notification:
                             newList.append(item)
                     self.notificationsList = newList
+                
+                if notification.timestamp != None:
+                    timestamp = time.time()
+                    self.repeatMessages = dict((k, v) for k, v in self.repeatMessages.items() if v.timestamp > timestamp)
+                    if notification.messageHash in self.repeatMessages:
+                        notification = None
+                    else:
+                        self.repeatMessages[notification.messageHash] = notification
             except Exception as e:
                 print(str(e))
                 

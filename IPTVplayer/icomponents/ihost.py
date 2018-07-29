@@ -617,10 +617,7 @@ class CBaseHostClass:
         
         proxyURL = params.get('proxyURL', '')
         useProxy = params.get('useProxy', False)
-        if 'MozillaCookieJar' == params.get('cookie_type', ''):
-            self.cm = common(proxyURL, useProxy, True)
-        else:
-            self.cm = common(proxyURL, useProxy)
+        self.cm = common(proxyURL, useProxy)
 
         self.currList = []
         self.currItem = {}
@@ -629,27 +626,6 @@ class CBaseHostClass:
         if '' != params.get('cookie', ''):
             self.COOKIE_FILE = GetCookieDir(params['cookie'])
         self.moreMode = False
-        self.minPyVer = params.get('min_py_ver', 0)
-        
-    def checkPythonVersion(self, pyVer):
-        try:
-            from Screens.MessageBox import MessageBox
-            import sys
-            if sys.version_info < pyVer:
-                hasSNI = False
-                try:
-                    from ssl import wrap_socket
-                    from inspect import getargspec
-                    if 'server_hostname' in '%s' % [getargspec(wrap_socket)]:
-                        hasSNI = True
-                except Exception:
-                    pass
-                if not hasSNI:
-                    message = _('This service requires a new Enigma2 image with a Python version %s or later.') % ('.'.join(str(x) for x in pyVer))
-                    message += '\n' + _('You can also install SNI patch for you python if available.')
-                    self.sessionEx.waitForFinishOpen(MessageBox, message, type = MessageBox.TYPE_INFO, timeout = 10)
-        except Exception:
-            printExc()
         
     def informAboutGeoBlockingIfNeeded(self, country, onlyOnce=True):
         try: 
@@ -847,10 +823,6 @@ class CBaseHostClass:
         return self.getLinksForVideo(cItem)
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
-        if self.minPyVer > 0:
-            self.checkPythonVersion(self.minPyVer)
-            self.minPyVer = 0 # inform only once
-        
         self.moreMode = False
         if 0 == refresh:
             if len(self.currList) <= index:
@@ -860,7 +832,7 @@ class CBaseHostClass:
             else:
                 self.currItem = self.currList[index]
         if 2 == refresh: # refresh for more items
-            printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> endHandleService index[%s]" % index)
+            printDBG(">> endHandleService index[%s]" % index)
             # remove item more and store items before and after item more
             self.beforeMoreItemList = self.currList[0:index]
             self.afterMoreItemList = self.currList[index+1:]

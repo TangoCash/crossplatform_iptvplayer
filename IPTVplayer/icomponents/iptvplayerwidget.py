@@ -465,12 +465,13 @@ class IPTVPlayerWidget(Screen):
             notifyObj = GetIPTVNotify()
             if not notifyObj.isEmpty():
                 notification = notifyObj.pop()
-                typeMap = {'info'   : MessageBox.TYPE_INFO, 
-                           'error'  : MessageBox.TYPE_ERROR, 
-                           'warning': MessageBox.TYPE_WARNING,
-                          }
-                self.session.openWithCallback(self.processIPTVNotify, MessageBox, notification.message, type = typeMap.get(notification.type, MessageBox.TYPE_INFO), timeout = notification.timeout )    
-                return
+                if notification:
+                    typeMap = {'info'   : MessageBox.TYPE_INFO, 
+                               'error'  : MessageBox.TYPE_ERROR, 
+                               'warning': MessageBox.TYPE_WARNING,
+                              }
+                    self.session.openWithCallback(self.processIPTVNotify, MessageBox, notification.message, type = typeMap.get(notification.type, MessageBox.TYPE_INFO), timeout = notification.timeout )
+                    return
         except Exception:
             printExc()
         self.processProxyQueue()

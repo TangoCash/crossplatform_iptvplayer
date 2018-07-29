@@ -60,7 +60,7 @@ def gettytul():
 class SolarMovie(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'SolarMovie.tv', 'cookie':'solarmovie.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'SolarMovie.tv', 'cookie':'solarmovie.cookie'})
         self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)

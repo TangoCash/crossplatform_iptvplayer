@@ -64,7 +64,7 @@ class TheWatchseriesTo(CBaseHostClass):
                     {'icon':DEFAULT_ICON, 'category':'search_history',  'title': _('Search history')} ]
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'  TheWatchseriesTo.tv', 'cookie':'thewatchseriesto.cookie', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'TheWatchseriesTo.tv', 'cookie':'thewatchseriesto.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.seasonCache = {}
         self.cacheLinks = {}

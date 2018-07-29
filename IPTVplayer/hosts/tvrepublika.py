@@ -35,7 +35,7 @@ def gettytul():
 class TVRepublkaPL(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'telewizjarepublika.pl', 'cookie':'telewizjarepublika.pl.cookie', 'cookie_type':'MozillaCookieJar'})
+        CBaseHostClass.__init__(self, {'history':'telewizjarepublika.pl', 'cookie':'telewizjarepublika.pl.cookie'})
         
         self.DEFAULT_ICON_URL = 'https://www.wykop.pl/cdn/c3397993/link_Slctpx7wLRquolqkd37R5bhtYaVcBy5P,w300h223.jpg'
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT':'1', 'Accept': 'text/html'}

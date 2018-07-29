@@ -55,7 +55,7 @@ def gettytul():
 class SeriesOnlineIO(CBaseHostClass):
  
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie', 'cookie_type':'MozillaCookieJar', 'min_py_ver':(2,7,9)})
+        CBaseHostClass.__init__(self, {'history':'SeriesOnlineIO.tv', 'cookie':'seriesonlineio.cookie'})
         self.DEFAULT_ICON_URL = 'https://www2.series9.io/images/gomovies-logo-light.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}
