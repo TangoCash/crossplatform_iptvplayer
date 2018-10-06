@@ -14,11 +14,10 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CDisplayListItem, Re
 from Plugins.Extensions.IPTVPlayer.icomponents.isubprovider import ISubProvider
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVMainNavigatorList
 from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover3
+from Plugins.Extensions.IPTVPlayer.icomponents.e2ivkselector import GetVirtualKeyboard
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Components.Language import language
-from Components.config import config
 ###################################################
 
 ###################################################
@@ -37,7 +36,6 @@ from Tools.LoadPixmap import LoadPixmap
 from Components.config import config, configfile
 from Components.Sources.StaticText import StaticText
 from Tools.BoundFunction import boundFunction
-from Screens.VirtualKeyBoard import VirtualKeyBoard
 from enigma import getDesktop, eTimer
 ###################################################
 
@@ -211,7 +209,7 @@ class IPTVSubDownloaderWidget(Screen):
         
     def confirmMovieTitle(self):
         # first ask user to provide movie title
-        self.session.openWithCallback(self.confirmMovieTitleCallBack, VirtualKeyBoard, title=(_("Confirm the title of the movie")), text = self.movieTitle)
+        self.session.openWithCallback(self.confirmMovieTitleCallBack, GetVirtualKeyboard(), title=(_("Confirm the title of the movie")), text = self.movieTitle)
         
     def confirmMovieTitleCallBack(self, text = None):
         if isinstance(text, basestring):

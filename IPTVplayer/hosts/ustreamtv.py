@@ -2,13 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, byteify
 ###################################################
 
 ###################################################
@@ -17,33 +13,8 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import copy
 import re
 import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-#config.plugins.iptvplayer.alltubetv_premium  = ConfigYesNo(default = False)
-#config.plugins.iptvplayer.alltubetv_login    = ConfigText(default = "", fixed_size = False)
-#config.plugins.iptvplayer.alltubetv_password = ConfigText(default = "", fixed_size = False)
-
-def GetConfigList():
-    optionList = []
-    #if config.plugins.iptvplayer.alltubetv_premium.value:
-    #    optionList.append(getConfigListEntry("  alltubetv login:", config.plugins.iptvplayer.alltubetv_login))
-    #    optionList.append(getConfigListEntry("  alltubetv hasło:", config.plugins.iptvplayer.alltubetv_password))
-    return optionList
 ###################################################
 
 

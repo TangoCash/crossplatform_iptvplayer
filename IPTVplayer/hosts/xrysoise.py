@@ -2,37 +2,32 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import  CParsingHelper
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
 import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.movieshdco_sortby = ConfigSelection(default = "date", choices = [("date", _("Lastest")), ("views", _("Most viewed")), ("duree", _("Longest")), ("rate", _("Top rated")), ("random", _("Tandom"))]) 
+config.plugins.iptvplayer.movieshdco_sortby = ConfigSelection(default = "date", choices = [("date", _("Lastest")), ("views", _("Most viewed")), ("duree", _("Longest")), ("rate", _("Top rated")), ("random", _("Random"))]) 
 
 def GetConfigList():
     optionList = []

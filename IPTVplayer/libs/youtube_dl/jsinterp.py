@@ -8,13 +8,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 import re
-try:    import simplejson as json
-except Exception: import json
-
-#from __future__ import unicode_literals
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 
 import operator
-import re
 
 from .utils import (
     ExtractorError,
@@ -88,7 +84,7 @@ class JSInterpreter(object):
                         if not remaining_expr:
                             return sub_result
                         else:
-                            expr = json.dumps(sub_result) + remaining_expr
+                            expr = json_dumps(sub_result) + remaining_expr
                         break
             else:
                 raise ExtractorError('Premature end of parens in %r' % expr)
@@ -128,7 +124,7 @@ class JSInterpreter(object):
             return local_vars[var_m.group('name')]
 
         try:
-            return json.loads(expr)
+            return json_loads(expr)
         except ValueError:
             pass
 

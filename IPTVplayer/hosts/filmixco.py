@@ -2,29 +2,18 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
-import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################

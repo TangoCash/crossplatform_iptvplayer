@@ -2,11 +2,11 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
+
+# needed for option bbc_use_web_proxy definition
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.bbc import BBCCoUkIE
 ###################################################
 
@@ -15,37 +15,22 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.bbc import BBCCoUkI
 ###################################################
 import re
 import urllib
-import string
-import base64
-import random
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry(_("Default video quality:"),             config.plugins.iptvplayer.bbc_default_quality))
     optionList.append(getConfigListEntry(_("Use default video quality:"),         config.plugins.iptvplayer.bbc_use_default_quality))
     optionList.append(getConfigListEntry(_("Preferred format:"),                  config.plugins.iptvplayer.bbc_prefered_format))
     optionList.append(getConfigListEntry(_("Use web-proxy (it may be illegal):"), config.plugins.iptvplayer.bbc_use_web_proxy))
-    
     return optionList
 ###################################################
-
 
 
 def gettytul():

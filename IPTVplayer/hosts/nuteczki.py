@@ -2,29 +2,22 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
-import urllib
-import base64
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
-
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -165,7 +158,13 @@ class NuteczkiEU(CBaseHostClass):
                 tmp = self.cm.ph.rgetAllItemsBeetwenNodes(subData[subIdx+1], ('</div', '>'), ('<div', '>', 'row'), False)
                 for item in tmp:
                     icon = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0] )
-                    url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
+                    url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0]
+                    if url == '#': 
+                        url = self.cm.ph.getSearchGroups(item, '''(<div[^>]+?getPlayer[^>]+?>)''')[0]
+                        url = self.cm.ph.getSearchGroups(url, '''\sid=['"]([^"^']+?)['"]''')[0]
+                        if url != '': url = '/getPlayer.php?id=' + url
+                    url = self.getFullUrl( url )
+                    
                     title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(item, '''alt="([^"]+?)"''')[0] )
                     desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'news-meta'), ('</div', '>'), False)[1] )
                     params = dict(cItem)
@@ -266,7 +265,12 @@ class NuteczkiEU(CBaseHostClass):
             else:
                 title = self.cleanHtmlStr( tmp )
             
-            url = self.getFullUrl( self.cm.ph.getSearchGroups(tmp, '''href=['"]([^"^']+?)['"]''')[0] )
+            url = self.cm.ph.getSearchGroups(tmp, '''href=['"]([^"^']+?)['"]''')[0]
+            if url == '#': 
+                url = self.cm.ph.getSearchGroups(item, '''(<div[^>]+?getPlayer[^>]+?>)''')[0]
+                url = self.cm.ph.getSearchGroups(url, '''\sid=['"]([^"^']+?)['"]''')[0]
+                if url != '': url = '/getPlayer.php?id=' + url
+            url = self.getFullUrl( url )
             
             desc = []
             tmp = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'news-meta'), ('</div', '>'))[1]
@@ -318,19 +322,36 @@ class NuteczkiEU(CBaseHostClass):
         if not sts: return []
         self.setMainUrl(self.cm.meta['url'])
         
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'frame-fixer'), ('</div', '>'), caseSensitive=False)
+        for idx in range(len(tmp)):
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp[idx], '''\sdata\-url=['"]([^"^']+?)['"]''', 1, True)[0])
+            if 1 != self.up.checkHostSupport(url):
+                jscode = []
+                jsData = self.cm.ph.getAllItemsBeetwenNodes(tmp[idx], ('<script', '>'), ('</script', '>'), caseSensitive=False)
+                for jsItem in jsData:
+                    if 'src=' in jsItem.lower():
+                        scriptUrl = self.getFullUrl(self.cm.ph.getSearchGroups(jsItem, '''<script[^>]+?src=['"]([^'^"]*?krakenfiles[^'^"]+?)['"]''', 1, True)[0], self.cm.meta['url'])
+                        sts, jsItem = self.getPage(scriptUrl)
+                        if sts and jsItem != '': jscode.append(jsItem)
+                    else:
+                        sts, jsItem = self.cm.ph.getDataBeetwenNodes(jsItem, ('<script', '>'), ('</script', '>'), False, caseSensitive=False)
+                        if sts: jscode.append(jsItem)
+                if len(jscode):
+                    jscode.insert(0, 'window=global; window.location={}; window.location.protocol="%s"; var document={}; document.write=function(txt){print(txt);}' % self.getMainUrl().split('//', 1)[0])
+                    ret = js_execute('\n'.join(jscode), {'timeout_sec':15})
+                    if ret['sts'] and 0 == ret['code']:
+                        printDBG(ret['data'])
+                        data += ret['data'].strip()
+                    
+            elif 'facebook' not in url.lower(): 
+                name = _('Player %s: %s') % (idx+1, self.up.getHostName(url))
+                urlTab.append({'url':url, 'name':name, 'need_resolve':1})
+        
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<iframe', '</iframe>', caseSensitive=False)
         for idx in range(len(tmp)):
             url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp[idx], '''\ssrc=['"]([^"^']+?)['"]''', 1, True)[0])
             if url == '' or 'facebook' in url.lower(): continue
             name = _('Player %s') % (idx + 1)
-            urlTab.append({'url':url, 'name':name, 'need_resolve':1})
-        
-        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'frame-fixer'), ('</div', '>'), caseSensitive=False)
-        for idx in range(len(tmp)):
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp[idx], '''\sdata\-url=['"]([^"^']+?)['"]''', 1, True)[0])
-            if url == '' or 'facebook' in url.lower(): continue
-            if 1 != self.up.checkHostSupport(url): continue 
-            name = _('Player %s: %s') % (idx+1, self.up.getHostName(url))
             urlTab.append({'url':url, 'name':name, 'need_resolve':1})
         
         return urlTab

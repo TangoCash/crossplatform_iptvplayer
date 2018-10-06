@@ -22,7 +22,6 @@ except Exception: import json
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute, MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -197,7 +196,7 @@ class ZalukajCOM(CBaseHostClass):
             if '' != url: self.addVideo({'title':title, 'url':url, 'desc':desc, 'icon':icon})
         if nextPage: 
             params = dict(cItem)
-            params.update({'title':_('Następna strona'), 'page':page+1})
+            params.update({'title':_('Next page'), 'page':page+1})
             self.addDir(params)
             
     def listUpdatedSeries(self, cItem, category):
@@ -224,9 +223,9 @@ class ZalukajCOM(CBaseHostClass):
         sts, data = self._getPage(cItem['url'])
         if not sts: return
 
-        data = self.cm.ph.getDataBeetwenMarkers(data, m1, m2, True)[1]
-        icon  = self.getFullUrl( self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"', 1)[0] )
-        if '' == icon: icon = cItem.get('icon', '')
+        icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^'^"]*?/promote_serial/[^'^"]+?)['"]''')[0])
+
+        data = self.cm.ph.getDataBeetwenNodes(data, m1, m2, False)[1]
         data = data.split(sp)
         if len(data): del data[-1]
         for item in data:
@@ -240,7 +239,7 @@ class ZalukajCOM(CBaseHostClass):
                 
     def listSeriesSeasons(self, cItem, category):
         printDBG("ZalukajCOM.listSeriesSeasons")
-        self._listSeriesBase(cItem, category, '<div id="sezony" align="center">', '<div class="doln2">', '</div>')
+        self._listSeriesBase(cItem, category, ('<div', '>', '"sezony"'), ('<div', '>', 'class="doln2"'), '</div>')
         if 1 == len(self.currList):
             newItem = self.currList[0]
             self.currList = []
@@ -248,7 +247,7 @@ class ZalukajCOM(CBaseHostClass):
         
     def listSeriesEpisodes(self, cItem):
         printDBG("ZalukajCOM.listSeriesEpisodes")
-        self._listSeriesBase(cItem, 'video', '<div id="odcinkicat">', '<div class="doln2">', '</div>')
+        self._listSeriesBase(cItem, 'video', ('<div', '>', '"odcinkicat"'), ('<div', '>', 'class="doln2"'), '</div>')
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("ZalukajCOM.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))

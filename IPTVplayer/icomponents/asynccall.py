@@ -3,7 +3,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import iptv_system, printDBG, GetDukPath, CreateTmpFile, rm, getDebugMode
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import iptv_system, printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 ###################################################
 # FOREIGN import
@@ -126,35 +126,39 @@ class AsyncCall(object):
         
         killable = True
         try:
-            with self.Thread._iptvplayer_ext['kill_lock']:
-                killable = self.Thread._iptvplayer_ext['killable']
-                self.Thread._iptvplayer_ext['terminated'] = True
-                
-            if not killable:
-                # if thread was marked as not killable then thread will 
-                # finish it self, after exist from not killable block
-                return True
+            thread = self.Thread
+            if thread:
+                with thread._iptvplayer_ext['kill_lock']:
+                    killable = thread._iptvplayer_ext['killable']
+                    thread._iptvplayer_ext['terminated'] = True
+                thread = None
+                if not killable:
+                    # if thread was marked as not killable then thread will 
+                    # finish it self, after exist from not killable block
+                    return True
         except Exception:
+            thread = None
             printExc()
 
         # we will kill this thread, so we need clear 
         # resource which it allocated
         self.mainLock.acquire()
         
-        if self.Thread._iptvplayer_ext['iptv_execute'] != None:
-            try:
-                self.Thread._iptvplayer_ext['iptv_execute'].terminate()
-                self.Thread._iptvplayer_ext['iptv_execute'] = None
-            except Exception:
-                printExc()
+        if self.Thread:
+            if self.Thread._iptvplayer_ext['iptv_execute'] != None:
+                try:
+                    self.Thread._iptvplayer_ext['iptv_execute'].terminate()
+                    self.Thread._iptvplayer_ext['iptv_execute'] = None
+                except Exception:
+                    printExc()
 
-        self.Callback = None
-        if self.finished == False:
-            if self.Thread.isAlive():
-                self._kill()
-                self.Thread._Thread__stop()
-            bRet = True
-        
+            self.Callback = None
+            if self.finished == False:
+                if self.Thread.isAlive():
+                    self._kill()
+                    self.Thread._Thread__stop()
+                bRet = True
+            
         self.mainLock.release()
 
         return bRet
@@ -345,24 +349,6 @@ class iptv_execute(object):
 
     #def __del__(self):
     #    printDBG("iptv_execute.__del__ ---")
-
-def iptv_js_execute(jscode, params={}):
-    sts, tmpPath = CreateTmpFile('.iptv_js.js', jscode)
-    if sts:
-        cmd =  GetDukPath()
-        if 'timeout_sec' in params:
-            cmd += ' -t %s ' % params['timeout_sec']
-        cmd += ' ' + tmpPath + ' 2> /dev/null'
-        printDBG("iptv_js_execute cmd[%s]" % cmd)
-        ret = iptv_execute()( cmd )
-        
-        # leave last script for debug purpose
-        if getDebugMode() == '':
-            rm(tmpPath)
-    else:
-        ret = {'sts':False, 'code':-12, 'data':''}
-    printDBG('iptv_js_execute cmd ret[%s]' % ret)
-    return ret
 
 ###############################################################################
 #                          Proxy function Queue

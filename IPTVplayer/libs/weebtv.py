@@ -3,20 +3,16 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
 import urllib
-try:    import simplejson as json
-except Exception: import json
 ############################################
 
 ###################################################
@@ -63,10 +59,10 @@ class WeebTvApi:
     def __init__(self):
         self.cm = common()
         
-    def _jsonToSortedTab(self, json):
+    def _jsonToSortedTab(self, data):
         strTab = []
         outTab = []
-        for v,k in json.iteritems():
+        for v,k in data.iteritems():
             strTab.append(int(v))
             strTab.append(k)
             outTab.append(strTab)
@@ -85,13 +81,15 @@ class WeebTvApi:
                 password = '' 
             postdata = { 'username': username, 'userpassword': password } 
             sts, data = self.cm.getPage(url, WeebTvApi.DEFPARAMS, postdata)
-            if sts: ret = json.loads(data)
+            if sts: ret = json_loads(data)
         except Exception: printExc()
         return ret
     
     def _getStr(self, v, default=''):
-        if type(v) == type(u''): return v.encode('utf-8')
-        elif type(v) == type(''):  return v
+        if type(v) == type(u''):
+            return v.encode('utf-8')
+        elif type(v) == type(''):
+            return v
         return default
     
     def getCategoriesList(self):

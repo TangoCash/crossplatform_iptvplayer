@@ -288,7 +288,7 @@ class IPTVPicturePlayerWidget(Screen):
             self._cleanedUp()
 
     def key_exit(self):
-        self.close()
+        self.close('key_exit')
         
     def key_play(self):
         if self.addParams['seq_mode']:

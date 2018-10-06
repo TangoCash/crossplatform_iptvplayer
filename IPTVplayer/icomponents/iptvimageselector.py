@@ -102,9 +102,9 @@ class IPTVMultipleImageSelectorWidget(Screen):
             skin.append('<widget name="accept_button"  position="10,%d"  zPosition="1" size="%d,%d"  valign="center" halign="center" font="Regular;22" foregroundColor="#00FFFFFF" backgroundColor="#320F0F0F" />' % (y, self.iptv_width-20, self.iptv_accep_height))
         skin.append('</screen>')
         skin = '\n'.join(skin)
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(">>>")
         printDBG(skin)
-        printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        printDBG("<<<")
         return skin
         
     def __init__(self, session, title=None, width=None, height=None, message=None, message_height=None, accep_label=None, accep_height=None, col_num=4, images=[], image_width=160, image_height=160, max_sel_items=None):

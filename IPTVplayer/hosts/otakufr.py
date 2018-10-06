@@ -2,50 +2,16 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import re
 import urllib
-import string
-import random
-import base64
-import hashlib
-from binascii import hexlify, unhexlify
-from urlparse import urlparse, urljoin
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
 
 def gettytul():
     return 'http://otakufr.com/'
@@ -69,18 +35,14 @@ class OtakuFR(CBaseHostClass):
 
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self._getHeaders = None
-        
+
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-        
+
     def getFullUrl(self, url):
         url = CBaseHostClass.getFullUrl(self, url)
         try: url.encode('ascii')
@@ -290,34 +252,7 @@ class OtakuFR(CBaseHostClass):
         if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
-    
-    def getFavouriteData(self, cItem):
-        printDBG('OtakuFR.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('OtakuFR.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('OtakuFR.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         

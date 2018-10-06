@@ -4,34 +4,19 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
-import urllib
-import random
-import string
 try:    import json
 except Exception: import simplejson as json
 
-from os import path as os_path
 ############################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 
 class CanlitvliveIoApi(CBaseHostClass):
@@ -60,13 +45,17 @@ class CanlitvliveIoApi(CBaseHostClass):
         
         data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'class="ct_cont"'), ('</ul', '>'))[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
-        if cItem.get('priv_category', '') == 'tv': data.insert(0, '<a href="/a-z-tum-tv-kanallari.html">A-Z')
-        else:  data.insert(0, '<a href="/tum-radyolar.html">All')
+        if cItem.get('priv_category', '') == 'tv': 
+            data.insert(0, '<a href="/a-z-tum-tv-kanallari.html">A-Z')
+            nextType = 'video'
+        else:
+            data.insert(0, '<a href="/tum-radyolar.html">All')
+            nextType = 'audio'
         for item in data:
             url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
             if not self.cm.isValidUrl(url): continue
             title = self.cleanHtmlStr( item )
-            params = {'name':cItem['name'], 'priv_category':nextCategory, 'type':'dir', 'title':title, 'url':url, 'icon':self.DEFAULT_ICON_URL}
+            params = {'name':cItem['name'], 'priv_category':nextCategory, 'priv_next_type':nextType, 'type':'dir', 'title':title, 'url':url, 'icon':self.DEFAULT_ICON_URL}
             itemsList.append(params)
         
         return itemsList
@@ -87,7 +76,7 @@ class CanlitvliveIoApi(CBaseHostClass):
                 icon = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0] )
                 if icon == '': icon = self.DEFAULT_ICON_URL
                 title = self.cleanHtmlStr( item )
-                params = {'name':cItem['name'], 'type':'video', 'title':title, 'url':url, 'icon':icon}
+                params = {'name':cItem['name'], 'type':cItem.get('priv_next_type', 'video'), 'title':title, 'url':url, 'icon':icon}
                 itemsList.append(params)
         
         return itemsList

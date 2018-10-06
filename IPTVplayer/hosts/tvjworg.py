@@ -2,36 +2,24 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, CSelOneLink, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, CSelOneLink, GetLogoDir, byteify
 import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import datetime
-import re
-import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigYesNo, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################

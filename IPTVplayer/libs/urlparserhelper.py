@@ -96,40 +96,6 @@ def drdX_fx(e):
         n += 72
     return s
 
-
-    
-####################################################
-# myobfuscate.com 
-####################################################
-def MYOBFUSCATECOM_OIO(data, _0lllOI="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=", enc=''):
-    i = 0;
-    while i < len(data):
-        h1 = _0lllOI.find(data[i]);
-        h2 = _0lllOI.find(data[i+1]);
-        h3 = _0lllOI.find(data[i+2]);
-        h4 = _0lllOI.find(data[i+3]);
-        i += 4;
-        bits = h1 << 18 | h2 << 12 | h3 << 6 | h4;
-        o1 = bits >> 16 & 0xff;
-        o2 = bits >> 8 & 0xff;
-        o3 = bits & 0xff;
-        if h3 == 64:
-            enc += chr(o1);
-        else:
-            if h4 == 64:
-                enc += chr(o1) + chr(o2);
-            else:
-                enc += chr(o1) + chr(o2) + chr(o3);
-    return enc
-
-def MYOBFUSCATECOM_0ll(string, baseRet=''):
-    ret = baseRet
-    i = len(string) - 1
-    while i >= 0:
-        ret += string[i]
-        i -= 1
-    return ret
-    
 def VIDEOMEGA_decryptPlayerParams(p, a, c, k, e, d):
     def e1(c):
         return JS_toString(c, 36)
@@ -190,32 +156,6 @@ def SAWLIVETV_decryptPlayerParams(p, a, c, k, e, d):
             p = re.sub(reg, k[c], p)
     return p
 
-def OPENLOADIO_decryptPlayerParams(p, a, c, k, e, d):
-    def e1(c):
-        return c
-    def e2(t=None):
-        return '\\w+'
-    def k1(matchobj):
-        return d[int(matchobj.group(0))]
-    e = e1
-    if True:
-        while c != 0:
-            c -= 1
-            d[c] = k[c]
-            if c < len(k):
-                d[c] = k[c]
-            else:
-                d[c] = c
-        c = 1
-        k = [k1]
-        e = e2
-    while c != 0:
-        c -= 1
-        if k[c]:
-            reg = '\\b' + e(c) + '\\b'
-            p = re.sub(reg, k[c], p)
-    return p
-    
 def KINGFILESNET_decryptPlayerParams(p, a, c, k, e=None, d=None):
     def e1(c, a):
         return JS_toString(c, a)
@@ -252,14 +192,7 @@ def TEAMCASTPL_decryptPlayerParams(p, a, c, k, e=None, d=None):
 ###############################################################################
 # there is problem in exec when this functions are class methods
 # sub (even static) or functions
-# Code example:
-#<div id="player_code" style="height:100% ; width:100%; visibility:none;"><span id='flvplayer'></span>
-#<script type='text/javascript' src='http://vidup.me/player/jwplayer.js'></script>
-#<script type='text/javascript'>eval(function(p,a,c,k,e,d){while(c--)if(k[c])p=p.replace(new RegExp('\\b'+c.toString(a)+'\\b','g'),k[c]);return p}('1l(\'1k\').1j({\'1i\':\'/7/7.1h\',a:"0://g.f.e.c:1g/d/1f/1e.1d",1c:"0",\'1b\':\'9\',\'1a\':\'19\',\'18\':\'h%\',\'17\':\'h%\',\'16\':\'15\',\'14\':\'13\',\'12\':\'11\',\'10\':\'0://g.f.e.c/i/z/6.y\',\'b\':\'0://5.4/7/b.x\',\'w\':\'v\',\'2.a\':\'0://5.4/u/t.s\',\'2.8\':\'0://5.4/6\',\'2.r\':\'q\',\'2.p\':\'o\',\'2.n\':\'9-m\',\'l\':{\'k-1\':{\'8\':\'0://5.4/6\'},\'j-3\':{}}});',36,58,'http||logo||me|vidup|yx616ubt7l82|player|link|bottom|file|skin|187||116|39|84|100||timeslidertooltipplugin|fbit|plugins|right|position|false|hide|_blank|linktarget|png|logoheader|images|000000|screencolor|zip|jpg|00049|image|always|allowscriptaccess|true|allowfullscreen|7022|duration|height|width|transparent|wmode|controlbar|provider|flv|video|zesaswuvnsv27kymojykzci5bbll4pqkmqipzoez4eakqgfaacm7fbqf|182|swf|flashplayer|setup|flvplayer|jwplayer'.split('|')))
-#</script>
-#<br></div>
-#
-#       
+
 def getParamsTouple(code, type=1, r1=False, r2=False ):
     mark1Tab = ["}(", "}\r\n(", "}\n(", "}\r("]
     mark2 = "))"
@@ -365,61 +298,6 @@ def VIDEOWEED_decryptPlayerParams2(w, i, s=None, e=None):
         s += 2
     return i
 
-def VIDEOWEED_unpackJSPlayerParams(code):
-    sts, code = CParsingHelper.rgetDataBeetwenMarkers(code, 'eval(function', '</script>')
-    if not sts: return ''
-    while True:
-        mark1 = "}("
-        mark2 = "));"
-        idx1 = code.rfind(mark1)
-        if -1 == idx1: return ''
-        idx1 += len(mark1)
-        idx2 = code.rfind(mark2, idx1)
-        if -1 == idx2: return ''
-        #idx2 += 1
-        
-        paramsCode = 'paramsTouple = (' + code[idx1:idx2] + ')'
-        paramsAlgoObj = compile(paramsCode, '', 'exec')
-        try:
-            paramsAlgoObj = compile(paramsCode, '', 'exec')
-        except Exception:
-            printDBG('unpackJSPlayerParams compile algo code EXCEPTION')
-            return ''
-        vGlobals = {"__builtins__": None, 'string': string}
-        vLocals = { 'paramsTouple': None }
-        try:
-            exec( paramsAlgoObj, vGlobals, vLocals )
-        except Exception:
-            printDBG('unpackJSPlayerParams exec code EXCEPTION')
-            return ''
-        # decrypt JS Player params
-        code = VIDEOWEED_decryptPlayerParams(*vLocals['paramsTouple'])
-        try:
-            code = VIDEOWEED_decryptPlayerParams(*vLocals['paramsTouple'])
-            if -1 == code.find('eval'):
-                return code
-        except Exception:
-            printDBG('decryptPlayerParams EXCEPTION')
-            return ''
-    return ''
-    
-    
-def pythonUnescape(data):
-    sourceCode = "retData = '''%s'''" % data
-    try:
-        code = compile(sourceCode, '', 'exec')
-    except Exception:
-        printExc('pythonUnescape compile algo code EXCEPTION')
-        return ''
-    vGlobals = {"__builtins__": None, 'string': string}
-    vLocals = { 'paramsTouple': None }
-    try:
-        exec( code, vGlobals, vLocals )
-    except Exception:
-        printExc('pythonUnescape exec code EXCEPTION')
-        return ''
-    return vLocals['retData']
-    
 ###############################################################################
 
 class captchaParser:

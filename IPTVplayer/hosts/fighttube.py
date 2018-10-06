@@ -7,21 +7,13 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListI
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, GetLogoDir, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, GetLogoDir
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 ###################################################
 # FOREIGN import
 ###################################################
 import re
 from Components.config import config
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    return []
 ###################################################
 
 def gettytul():

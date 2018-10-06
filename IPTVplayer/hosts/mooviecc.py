@@ -3,8 +3,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -12,34 +12,19 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
 from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 ###################################################
 
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 
 def gettytul():
     return 'https://moovie.cc/'

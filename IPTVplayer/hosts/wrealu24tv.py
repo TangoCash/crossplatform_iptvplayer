@@ -2,46 +2,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, CSelOneLink
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
-import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'https://wrealu24.tv/'
 
@@ -62,10 +35,7 @@ class WRealu24TV(CBaseHostClass):
         if addParams == {}: addParams = dict(self.defaultParams)
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def listMainMenu(self, cItem):
@@ -134,7 +104,7 @@ class WRealu24TV(CBaseHostClass):
             for item in tmp:
                 jscode.append(item)
             jscode = '\n'.join(jscode)
-            ret = iptv_js_execute( jscode )
+            ret = js_execute( jscode )
             if ret['sts'] and 0 == ret['code']:
                 data = ret['data'].strip()
         

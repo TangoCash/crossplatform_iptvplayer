@@ -2,9 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -12,17 +12,11 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 
@@ -30,8 +24,8 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 # Config options for HOST
 ###################################################
 config.plugins.iptvplayer.kinox_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
-                                                                                              ("proxy_1",  _("Alternative proxy server (1)")),
-                                                                                              ("proxy_2",  _("Alternative proxy server (2)"))])
+                                                                                     ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                     ("proxy_2",  _("Alternative proxy server (2)"))])
 config.plugins.iptvplayer.kinox_alt_domain = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
@@ -92,7 +86,7 @@ class Kinox(CBaseHostClass):
             self.MAIN_URL = 'https://kinox.to/'
         
         self.MAIN_CAT_TAB = [{'category':'news',               'title': _('News'),              'url':self.getMainUrl()                                       },
-                             {'category':'list_langs',         'title': _('Cinemamovies'),      'url':self.getFullUrl('/Kino-filme.html'), 'get_list_mode':'direct'  },
+                             {'category':'list_langs',         'title': _('Cinema movies'),     'url':self.getFullUrl('/Kino-filme.html'), 'get_list_mode':'direct'  },
                              {'category':'list_sub_cats',      'title': _('Movies'),            'url':self.getMainUrl(), 'f_type':'movie',         'sub_idx':2},
                              {'category':'list_sub_cats',      'title': _('Documentaries'),     'url':self.getMainUrl(), 'f_type':'documentation', 'sub_idx':3},
                              {'category':'list_sub_cats',      'title': _('Series'),            'url':self.getMainUrl(), 'f_type':'series',        'sub_idx':4},

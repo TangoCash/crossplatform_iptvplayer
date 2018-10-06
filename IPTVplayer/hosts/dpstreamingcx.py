@@ -2,46 +2,21 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVSleep
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import datetime
 import re
 import urllib
 import urlparse
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -186,6 +161,7 @@ class StreamingSeriesWatch(CBaseHostClass):
             
         sts, data = self.getPage(url, self.defaultParams)
         if not sts: return []
+        cUrl = self.cm.meta['url']
         
         k = self.cm.ph.getSearchGroups(data, 'var\s+?k[^"]*?=[^"]*?"([^"]+?)"')[0]
         secure = self.cm.ph.getSearchGroups(data, '''['"/](secur[^\.]*?)\.js''')[0]
@@ -201,7 +177,7 @@ class StreamingSeriesWatch(CBaseHostClass):
         
         header = dict(self.defaultParams['header'])
         params = dict(self.defaultParams)
-        header['Referer'] = url
+        header['Referer'] = cUrl
         header['Content-Type'] = "application/x-www-form-urlencoded"
         header['Accept-Encoding'] = 'gzip, deflate'
         params['header'] = header
@@ -213,10 +189,12 @@ class StreamingSeriesWatch(CBaseHostClass):
         printDBG(data)
         printDBG('==========================================')
         
-        videoUrl = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^'^"]+?)['"]''')[0]
-        if not self.cm.isValidUrl(videoUrl):
-            videoUrl = self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"]([^'^"]+?)['"]''')[0]
-        return self.up.getVideoLinkExt(videoUrl)
+        tmp = re.compile('''<iframe[^>]+?src=['"]([^'^"]+?)['"]''').findall(data)
+        tmp.extend(re.compile('''<a[^>]+?href=['"]([^'^"]+?)['"]''').findall(data))
+        for videoUrl in tmp:
+            videoUrl = self.getFullUrl(videoUrl)
+            urlTab.extend(self.up.getVideoLinkExt(videoUrl))
+        return urlTab
         
     def getFavouriteData(self, cItem):
         printDBG('StreamingSeriesWatch.getFavouriteData')

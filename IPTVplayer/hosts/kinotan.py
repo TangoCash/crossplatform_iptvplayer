@@ -5,9 +5,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.libs.moonwalkcc import MoonwalkParser
 from Plugins.Extensions.IPTVPlayer.libs.hdgocc import HdgoccParser
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
@@ -15,21 +15,8 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import re
-import urllib
 try:    import json
 except Exception: import simplejson as json
-###################################################
-# E2 GUI COMMPONENTS
-###################################################
-# Config options for HOST
-###################################################
-
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
 
 def gettytul():
     return 'http://kinotan.ru/'
@@ -271,7 +258,7 @@ class Kinotan(CBaseHostClass):
         params['desc'] = desc
         params['url'] = url
         hostName = self.up.getHostName(url)
-        if hostName in ['serpens.nl', '37.220.36.15']:
+        if hostName in ['serpens.nl', 'daaidaij.com','37.220.36.15']:
             hostName = 'moonwalk.cc'
             
         params.update({'category': category, 'serie_title': title}) 

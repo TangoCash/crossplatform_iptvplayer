@@ -2,15 +2,14 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.youtube import YoutubeIE
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html, unescapeHTML
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, CSelOneLink, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getDirectM3U8Playlist, getF4MLinksWithMeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -20,12 +19,9 @@ import re
 import base64
 import copy
 import urllib
-from binascii import hexlify, unhexlify
-from hashlib import md5
+from binascii import unhexlify
 from urlparse import urlparse, parse_qsl
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-try: import json
-except Exception: import simplejson as json
+from Components.config import config, ConfigSelection, ConfigYesNo
 ###################################################
 
 ###################################################
@@ -90,20 +86,42 @@ class MoonwalkParser():
         sts, data = self.cm.getPage(scriptUrl, params)
         if sts:
             jscode.insert(0, '''window=this;var document={};function setTimeout(e,t){}window.document=document,location={},Object.defineProperty(location,"href",{get:function(){return""},set:function(e){}}),window.location=location,document.on=function(){return document},document.constructor=document.on,document.ready=document.on,document.off=document.on,document.bind=document.on;var element=function(e){this.getElementsByTagName=function(){return elem=new element(""),[elem]},this.attributes={},this.expando=function(){return new element("")},this.firstChild={nodeType:3},this.cloneNode=function(){return new element("")},this.appendChild=function(){return new element("")},this.lastChild=function(){return new element("")},this.setAttribute=function(){this.attributes[arguments[0]]={expando:1}},this.getAttribute=function(){return new element("")},Object.defineProperty(this,"style",{get:function(){return{display:"",animation:""}},set:function(e){}})};document.documentElement=new element(""),document.nodeType=9,document.body=document,document.createDocumentFragment=function(){return new element("")},document.getElementById=function(e){return new element(e)},document.createElement=document.getElementById,document.getElementsByTagName=document.getElementById;\n''' + data)
+            try:
+                endIdx = data.rfind('}')
+                idx = endIdx
+                num = 1
+                while num > 0:
+                    idx -= 1
+                    if data[idx] == '{':
+                        num -= 1
+                    elif data[idx] == '}':
+                        num += 1
+                tabVars = []
+                cData = self.cm.ph.getSearchGroups(data[endIdx:], '''\(([^\)]+?)\)''')[0].split(',')
+                vData = self.cm.ph.getSearchGroups(data[:idx].rsplit('function', 1)[-1], '''\(([^\)]+?)\)''')[0].split(',')
+                for idx in range(len(cData)):
+                    tabVars.append('%s=%s;' % (vData[idx].strip(), cData[idx].strip()))
+                jscode.append('\n'.join(tabVars))
+            except Exception:
+                printExc()
             item = "iptv.call = %s;iptv['call']();" % self._getFunctionCode(data.split('getVideoManifests:', 1)[-1])
             jscode.append(item)
-            
-        ret = iptv_js_execute( '\n'.join(jscode), {'timeout_sec':10} )
+        
+        jscode = '\n'.join(jscode)
+        printDBG('Code start:')
+        printDBG(jscode)
+        printDBG('Code end:')
+        ret = js_execute( jscode, {'timeout_sec':30} )
         if ret['sts'] and 0 == ret['code']:
             printDBG(ret['data'])
             try:
-                data = byteify( json.loads(ret['data']) )
+                data = json_loads(ret['data'])
                 baseUrl = data['url']
                 if baseUrl.startswith('/'):
                     baseUrl = self.baseUrl + baseUrl
                 
                 for itemKey in data['data'].keys():
-                    tmp = byteify( json.loads(data['data'][itemKey]) )
+                    tmp = json_loads(data['data'][itemKey])
                     decrypted = tmp['data']['data']
                     key       = tmp['password']['data']
                     iv        = tmp['salt']['iv']['data']
@@ -143,14 +161,14 @@ class MoonwalkParser():
             if not sts: return []
             
             try: 
-                data = byteify( json.loads(data) )
+                data = json_loads(data)
                 data = data['mans']
             except Exception: printExc()
             try:
                 mp4Url = strwithmeta(data["mp4"], {'User-Agent':'Mozilla/5.0', 'Referer':url})
                 sts, tmp = self.cm.getPage(mp4Url, {'User-Agent':'Mozilla/5.0', 'Referer':url})
                 tmpTab = []
-                tmp = byteify(json.loads(tmp))
+                tmp = json_loads(tmp)
                 printDBG(tmp)
                 for key in tmp:
                     mp4Url = tmp[key]
@@ -256,9 +274,9 @@ class MoonwalkParser():
             baseUrl = '{uri.scheme}://{uri.netloc}{uri.path}'.format(uri=parsedUri)
             query = dict(parse_qsl(parsedUri.query))
             
-            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG("+++")
             printDBG(data)
-            printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG("+++")
             
             episodeData = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''episodes\s*:'''), re.compile(']]'))[1]
             if episodeData != '': 

@@ -3,9 +3,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, GetCookieDir
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -13,15 +11,13 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 ###################################################
 from time import time
 import re
-try: import json
-except Exception: import simplejson as json
 from os import path as os_path
 ############################################
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigText, getConfigListEntry
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 from Screens.MessageBox import MessageBox
@@ -153,7 +149,7 @@ class WagasWorldApi(CBaseHostClass):
         ret = None
         errorMsg = ''
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             errorMsg = self.cleanHtmlStr(data.get('err', ''))
             ret = {'url':data['url'], 'episode':data['episode'], 'title':data['name']}
         except Exception:

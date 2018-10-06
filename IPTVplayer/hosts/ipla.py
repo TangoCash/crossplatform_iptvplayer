@@ -16,10 +16,8 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, CFavItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSelOneLink, GetLogoDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 ###################################################
 
@@ -52,9 +50,9 @@ config.plugins.iptvplayer.iplaUseDF         = ConfigYesNo(default = False)
 
 def GetConfigList():
     optionList = []
-    optionList.append(getConfigListEntry(_("Używaj danych z pamięci podręcznej:"), config.plugins.iptvplayer.iplacachexml))
-    optionList.append(getConfigListEntry(_("Domyślny format video:"), config.plugins.iptvplayer.iplaDefaultformat))
-    optionList.append(getConfigListEntry(_("Używaj domyślnego format video:"), config.plugins.iptvplayer.iplaUseDF))
+    optionList.append(getConfigListEntry("Używaj danych z pamięci podręcznej:", config.plugins.iptvplayer.iplacachexml))
+    optionList.append(getConfigListEntry("Domyślny format video:", config.plugins.iptvplayer.iplaDefaultformat))
+    optionList.append(getConfigListEntry("Używaj domyślnego format video:", config.plugins.iptvplayer.iplaUseDF))
     return optionList
 ###################################################
 

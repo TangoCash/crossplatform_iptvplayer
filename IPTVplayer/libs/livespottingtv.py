@@ -3,42 +3,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
-###################################################
-
-###################################################
-# FOREIGN import
-###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
-import urllib
-import random
-import string
-try:    import json
-except Exception: import simplejson as json
-############################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-
 def GetConfigList():
     optionList = []
     return optionList
-    
 ###################################################
 
 class LivespottingTvApi:
@@ -61,7 +38,7 @@ class LivespottingTvApi:
         sts, data = self.cm.getPage('http://livespotting.tv/api/api.json')
         if not sts: return list
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['streams']:
                 if 'stream' not in item: continue
                 try:

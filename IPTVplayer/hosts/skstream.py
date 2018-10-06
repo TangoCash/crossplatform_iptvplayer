@@ -2,54 +2,41 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerParams, unpackJS, VIDEOMEGA_decryptPlayerParams
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerParams, VIDEOMEGA_decryptPlayerParams
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import re
 import urllib
-import string
 import random
-import base64
-import hashlib
-from binascii import hexlify, unhexlify
-from urlparse import urlparse, urljoin
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.skstream_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
+                                                                                        ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                        ("proxy_2",  _("Alternative proxy server (2)"))])
+config.plugins.iptvplayer.skstream_alt_domain = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.skstream_proxy))
+    if config.plugins.iptvplayer.skstream_proxy.value == 'None':
+        optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.skstream_alt_domain))
     return optionList
 ###################################################
 
-
 def gettytul():
-    return 'http://skstream.info/'
+    return 'https://skstream.info/'
 
 class SKStream(CBaseHostClass):
  
@@ -60,7 +47,6 @@ class SKStream(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.DEFAULT_ICON_URL = 'http://www.skstream.info/apple-touch-icon.png'
         self.MAIN_URL = None
         self.cacheCategories = []
         self.episodesCache = []
@@ -70,15 +56,30 @@ class SKStream(CBaseHostClass):
         self._getHeaders = None
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
+        if addParams == {}: addParams = dict(self.defaultParams)
         
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
+        proxy = config.plugins.iptvplayer.skstream_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
         
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        
+    def getFullIconUrl(self, url):
+        url = self.getFullUrl(url)
+        proxy = config.plugins.iptvplayer.skstream_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            url = strwithmeta(url, {'iptv_http_proxy':proxy})
+        return url
         
     def getFullUrl(self, url):
         url = CBaseHostClass.getFullUrl(self, url)
@@ -88,15 +89,26 @@ class SKStream(CBaseHostClass):
         return url
         
     def selectDomain(self):
-        self.MAIN_URL = 'http://www.skstream.info/'
-        params = dict(self.defaultParams)
-        params['max_data_size'] = 0
-        sts = self.getPage(self.MAIN_URL, params)[0]
-        if sts: self.setMainUrl(self.cm.meta['url'])
-        printDBG("selectDomain [%s]" % self.MAIN_URL)
+        if self.MAIN_URL == None:
+            domains = ['https://ww1.skstream.info/']
+            domain = config.plugins.iptvplayer.skstream_alt_domain.value.strip()
+            if self.cm.isValidUrl(domain):
+                if domain[-1] != '/': domain += '/'
+                domains.insert(0, domain)
+            
+            for domain in domains:
+                sts, data = self.getPage(domain)
+                if not sts: continue
+                if '/series' in data:
+                    self.setMainUrl(self.cm.meta['url'])
+                    break
+        
+        if self.MAIN_URL == None:
+            self.MAIN_URL = domains[0]
+        
+        self.DEFAULT_ICON_URL = self.getFullIconUrl('/apple-touch-icon.png')
         
     def listMainMenu(self, cItem):
-        if self.MAIN_URL == None: return
         MAIN_CAT_TAB = [{'category':'list_categories',         'title': 'Films',                    'url':self.getFullUrl('/films')},
                         {'category':'list_categories',         'title': 'Séries',                   'url':self.getFullUrl('/series')},
                         {'category':'list_categories',         'title': 'Mangas',                   'url':self.getFullUrl('/mangas')},
@@ -224,6 +236,7 @@ class SKStream(CBaseHostClass):
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("SKStream.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        self.selectDomain()
         page = cItem.get('page', 1)
         
         cItem = dict(cItem)
@@ -232,6 +245,7 @@ class SKStream(CBaseHostClass):
     
     def getLinksForVideo(self, cItem):
         printDBG("SKStream.getLinksForVideo [%s]" % cItem)
+        self.selectDomain()
         
         urlTab = self.cacheLinks.get(cItem['url'],  [])
         if len(urlTab): return urlTab
@@ -309,7 +323,7 @@ class SKStream(CBaseHostClass):
                         if 'dl-protect.co' in self.up.getDomain(url):
                             
                             # get JS player script code from confirmation page
-                            sts, tmpData = CParsingHelper.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
+                            sts, tmpData = self.cm.ph.getDataBeetwenMarkers(data, ">eval(", '</script>', False)
                             if sts: data += unpackJSPlayerParams(tmpData, VIDEOMEGA_decryptPlayerParams, 0, r2=True) #YOUWATCH_decryptPlayerParams == VIDUPME_decryptPlayerParams
                             
                             printDBG(data)
@@ -382,8 +396,6 @@ class SKStream(CBaseHostClass):
         
     def getLinksForFavourite(self, fav_data):
         printDBG('SKStream.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
         links = []
         try:
             cItem = byteify(json.loads(fav_data))
@@ -393,8 +405,6 @@ class SKStream(CBaseHostClass):
         
     def setInitListFromFavouriteItem(self, fav_data):
         printDBG('SKStream.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
         try:
             params = byteify(json.loads(fav_data))
         except Exception: 
@@ -407,9 +417,7 @@ class SKStream(CBaseHostClass):
         printDBG('handleService start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
-        if self.MAIN_URL == None:
-            #rm(self.COOKIE_FILE)
-            self.selectDomain()
+        self.selectDomain()
 
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')

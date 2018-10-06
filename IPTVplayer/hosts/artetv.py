@@ -2,46 +2,21 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, NextDay, PrevDay, GetDefaultLang
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
-from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'https://www.arte.tv/'
 
@@ -113,12 +88,22 @@ class ArteTV(CBaseHostClass):
             sts, data = self.getPage(url)
             if not sts: return
             
-            data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>'), ('</article', '>'))
-            for item in data:
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>'), ('</article', '>'))
+            for item in tmp:
                 url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
                 title = self.cleanHtmlStr(item)
                 params = dict(cItem)
                 params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
+                self.addDir(params)
+            
+            data = self.cm.ph.getDataBeetwenNodes(data, ('<nav', '>', 'navigation'), ('</nav', '>'))[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+            for item in data:
+                url = self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0]
+                if '/videos/' not in url: continue
+                title = self.cleanHtmlStr(item)
+                params = dict(cItem)
+                params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':self.getFullUrl(url)})
                 self.addDir(params)
         
     def listItems(self, cItem, nextCategory):
@@ -138,7 +123,7 @@ class ArteTV(CBaseHostClass):
         
         jsonData = self.cm.ph.getDataBeetwenNodes(data, ('__INITIAL_STATE__', '='), ('</script', '>'), False)[1].strip()
         try:
-            jsonData = byteify(json.loads(jsonData[:jsonData.find('};')+1]))
+            jsonData = json_loads(jsonData[:jsonData.find('};')+1])
             try:
                 for item in jsonData['videos']['videos']:
                     try: iconsMap[item['url']] = item['images'][0]['url']
@@ -162,7 +147,8 @@ class ArteTV(CBaseHostClass):
         sectionUrl = ''
         tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<section', '>'), ('</section', '>'))
         while idx < len(tmp):
-            if 'next-teaser__link' not in tmp[idx]:
+            
+            if 'next-teaser__link' not in tmp[idx] and '__duration' not in tmp[idx]:
                 sectionTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp[idx], '<h2', '</h2>')[1])
                 if sectionTitle == '': sectionTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp[idx], ('<li', '>', 'is-highlighted'), ('</li', '>'))[1])
                 sectionUrl = self.getFullUrl(self.cm.ph.getSearchGroups(tmp[idx], '''\shref=['"]([^'^"]+?)['"]''')[0])
@@ -177,9 +163,13 @@ class ArteTV(CBaseHostClass):
                     sectionTitle = ''
                     sectionUrl = ''
                     continue
+            else:
+                tmpSectionTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(tmp[idx], ('<h', '>', 'section-title'), ('</h', '>'))[1])
+                if tmpSectionTitle != '': sectionTitle = tmpSectionTitle
             
             itemsTab = []
             itemsData = self.cm.ph.getAllItemsBeetwenNodes(tmp[idx], ('<a', '>', 'next-teaser__link'), ('</a', '>'))
+            if len(itemsData) == 0: itemsData = self.cm.ph.getAllItemsBeetwenNodes(tmp[idx], ('<a', '</a>', '__duration'), ('</div', '>'))
             for item in itemsData:
                 url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
                 if url == '': continue
@@ -231,7 +221,8 @@ class ArteTV(CBaseHostClass):
                         
                         lang = jsonData['pages']['list'][currentCode]['language']
                         web  = jsonData['pages']['list'][currentCode]['support']
-                        code = zone['code']
+                        code = zone['code']['name']
+                        printDBG('CODE: %s' % zone['code'])
                         nextPage = nextPage.rsplit('/', 1)[-1]
                         if code in nextPage:
                             #url = self.getFullUrl('/guide/api/api/zones/%s/%s/%s' % (lang, web, re.compile('''page=[0-9]+''').sub('page={0}', nextPage)))
@@ -274,7 +265,7 @@ class ArteTV(CBaseHostClass):
         printDBG('+++++++++++++++++++++++++++++++++')
         
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             if 'videos' in data and data['videos'] != None:
                 tab = data['videos']
                 type = 'video'
@@ -339,7 +330,7 @@ class ArteTV(CBaseHostClass):
         
         data = self.cm.ph.getDataBeetwenNodes(data, ('var ', '=', 'js_json_playlist'), ('var ', ';', '='), False)[1].strip()[:-1]
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['videos']:
                 url = self.getFullUrl( item['url'] )
                 title = self.cleanHtmlStr( item['title'] )
@@ -364,23 +355,29 @@ class ArteTV(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("ArteTV.getLinksForVideo [%s]" % cItem)
         self.cacheLinks = {}
-        
+
         sts, data = self.getPage(cItem['url'])
         if not sts: return
-        
+
         url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-        
-        sts, data = self.getPage(url)
-        if not sts: return
-        
+        jsonUrl = url.split('json_url=', 1)[-1].split('&', 1)[0]
+
+        if not jsonUrl:
+            sts, data = self.getPage(url)
+            if not sts: return
+            data = self.cm.ph.getDataBeetwenNodes(data, ('var', '=', 'js_json'), ('</script', '>'), False)[1]
+            data[:data.find('};')+1]
+        else:
+            sts, data = self.getPage(urllib.unquote(jsonUrl))
+            if not sts: return
+
         linksTab = []
-        data = self.cm.ph.getDataBeetwenNodes(data, ('var', '=', 'js_json'), ('</script', '>'), False)[1]
         try:
             langsMap = {'FR':'fr', 'ESP':'es', 'DE':'de', 'POL':'pl', 'ANG':'en'}
             self.cacheLinks = {}
             cacheLabels = {}
             
-            data = byteify(json.loads(data[:data.find('};')+1]))
+            data = json_loads(data)
             for key in data['videoJsonPlayer']['VSR']:
                 item = data['videoJsonPlayer']['VSR'][key]
                 if item['mediaType'] not in ['mp4', 'hls']: continue

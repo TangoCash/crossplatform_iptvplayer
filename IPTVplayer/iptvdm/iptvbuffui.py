@@ -10,12 +10,13 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.cover import SimpleAnimatedCover
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta, enum
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, touch, eConnectCallback, ReadUint32
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, formatBytes, touch, eConnectCallback, ReadUint32, GetIPTVDMImgDir
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvplayer import IPTVStandardMoviePlayer, IPTVMiniMoviePlayer
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvextmovieplayer import IPTVExtMoviePlayer
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdownloadercreator import DownloaderCreator
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover3
 ###################################################
 
 ###################################################
@@ -34,7 +35,7 @@ from os import remove as os_remove
 from datetime import timedelta
 ###################################################
 
-class IPTVPlayerBufferingWidget(Screen):
+class E2iPlayerBufferingWidget(Screen):
     NUM_OF_ICON_FRAMES = 8
     #######################
     #       SIZES
@@ -71,29 +72,44 @@ class IPTVPlayerBufferingWidget(Screen):
     # addinfo
     a_x = 10
     a_y = sz_h - 160
-    printDBG("[IPTVPlayerBufferingWidget] desktop size %dx%d" % (sz_w, sz_h) )
+    #button
+    b_x = sz_w - 10 - 35*3 
+    b_y = sz_h - 10 - 25
+    
+    printDBG("[E2iPlayerBufferingWidget] desktop size %dx%d" % (sz_w, sz_h) )
     skin = """
-        <screen name="IPTVPlayerBufferingWidget"  position="center,center" size="%d,%d" title="IPTV Player Buffering...">
+        <screen name="E2iPlayerBufferingWidget"  position="center,center" size="%d,%d" title="E2iPlayer buffering...">
          <widget name="percentage" size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" /> #foregroundColor="white" shadowColor="black" shadowOffset="-1,-1"
          <widget name="console"    size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" />
          <widget name="icon"       size="%d,%d"   position="%d,%d"  zPosition="4" transparent="1" alphatest="blend" />
-         <widget name="addinfo"   size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" />
+         <widget name="addinfo"    size="%d,%d"   position="%d,%d"  zPosition="5" valign="center" halign="center"  font="Regular;21" backgroundColor="black" transparent="1" />
+         
+         <widget name="ok_button"        position="%d,%d"                     size="35,25"   zPosition="8" pixmap="%s" transparent="1" alphatest="blend" />
+         <widget name="rec_button"       position="%d,%d"                     size="35,25"   zPosition="8" pixmap="%s" transparent="1" alphatest="blend" />
+         <widget name="exit_button"      position="%d,%d"                     size="35,25"   zPosition="8" pixmap="%s" transparent="1" alphatest="blend" />
         </screen>""" %( sz_w, sz_h,         # screen
                         p_w, p_h, p_x, p_y, # percentage
                         c_w, c_h, c_x, c_y, # console
                         i_w, i_h, i_x, i_y, # icon
-                        a_w, a_h, a_x, a_y  # addinfo
+                        a_w, a_h, a_x, a_y,  # addinfo
+                        
+                        b_x, b_y, GetIPTVDMImgDir("key_ok.png"),        # OK
+                        b_x + 35, b_y, GetIPTVDMImgDir("key_rec.png"),  # REC
+                        b_x + 70, b_y, GetIPTVDMImgDir("key_exit.png"), # EXIT
                       )
    
-    def __init__(self, session, url, pathForRecordings, movieTitle, activMoviePlayer, requestedBuffSize, playerAdditionalParams={}):
+    def __init__(self, session, url, pathForBuffering, pathForDownloading, movieTitle, activMoviePlayer, requestedBuffSize, playerAdditionalParams={}, downloadManager=None, fileExtension=''):
         self.session = session
         Screen.__init__(self, session)
         self.onStartCalled = False
         
-        self.recordingPath = pathForRecordings
-        self.filePath      = pathForRecordings + '/.iptv_buffering.flv'
+        self.downloadingPath = pathForDownloading
+        self.bufferingPath = pathForBuffering
+        self.filePath      = pathForBuffering + '/.iptv_buffering.flv'
         self.url           = url
         self.movieTitle    = movieTitle
+        self.downloadManager = downloadManager
+        self.fileExtension = fileExtension
         
         self.currentService   = self.session.nav.getCurrentlyPlayingServiceReference()
         self.activMoviePlayer = activMoviePlayer
@@ -103,16 +119,20 @@ class IPTVPlayerBufferingWidget(Screen):
         self.onShow.append(self.onWindowShow)
         #self.onHide.append(self.onWindowHide)
         
-        self["actions"] = ActionMap(["WizardActions", "MoviePlayerActions"],
+        self["actions"] = ActionMap(["IPTVAlternateVideoPlayer", "WizardActions", "MoviePlayerActions"],
         {
             "ok":          self.ok_pressed,
             "back":        self.back_pressed,
             "leavePlayer": self.back_pressed,
-        }, -1)     
+            "record":      self.record_pressed,
+        }, -1)
 
         self["console"] = Label()
         self["percentage"] = Label()
         self["addinfo"] = Label()
+        self['ok_button']   = Cover3()
+        self['rec_button']  = Cover3()
+        self['exit_button'] = Cover3()
         
         self["icon"] = SimpleAnimatedCover()
         # prepare icon frames path
@@ -154,7 +174,8 @@ class IPTVPlayerBufferingWidget(Screen):
                               ERROR       = 4)
         self.moovAtomStatus = self.MOOV_STS.UNKNOWN
         self.moovAtomDownloader = None
-        self.moovAtomPath  = pathForRecordings + '/.iptv_buffering_moov.flv'
+        self.moovAtomPath  = pathForBuffering + '/.iptv_buffering_moov.flv'
+        self.closeRequestedByUser = None
         
         printDBG(">> activMoviePlayer[%s]" % self.activMoviePlayer)
         
@@ -164,9 +185,13 @@ class IPTVPlayerBufferingWidget(Screen):
         '''
             this method is called once like __init__ but in __init__ we cannot display MessageBox
         '''
+        self['rec_button'].hide()
+        self['ok_button'].hide()
+        
         # create downloader
         self.downloader = DownloaderCreator(self.url)
         self._cleanedUp()
+        
         if self.downloader:
             self.downloader.isWorkingCorrectly(self._startDownloader)
         else:
@@ -201,9 +226,9 @@ class IPTVPlayerBufferingWidget(Screen):
             self.downloader.terminate()
             self.downloader = None
         
-        if self.downloader:
+        if self.moovAtomDownloader:
             self.moovAtomDownloader.terminate()
-            self.downloader = None
+            self.moovAtomDownloader = None
         self._cleanedUp()
 
     def leaveMoviePlayer(self, ret=None, lastPosition=None, clipLength=None, *args, **kwargs):
@@ -216,27 +241,34 @@ class IPTVPlayerBufferingWidget(Screen):
         self.canRunMoviePlayer = False
         self.inMoviePlayer = False
         
-        #  ret == 1 - no data in buffer
-        #  ret == 0 - triggered by user
-        if 1 == ret:
+        self.closeRequestedByUser = ret
+        
+        if 'save_buffer' == ret:
+            self.moveToDownloadManager()
+        elif ret in ['key_exit', None]:
             if DMHelper.STS.DOWNLOADING == self.downloader.getStatus():
                 self.lastSize = self.downloader.getLocalFileSize(True)
-                printDBG("IPTVPlayerBufferingWidget.leaveMoviePlayer: movie player consume all data from buffer - still downloading")
+                printDBG("E2iPlayerBufferingWidget.leaveMoviePlayer: movie player consume all data from buffer - still downloading")
                 self.confirmExitCallBack() # continue
             else:
-                printDBG("IPTVPlayerBufferingWidget.leaveMoviePlayer: movie player consume all data from buffer - downloading finished")
+                printDBG("E2iPlayerBufferingWidget.leaveMoviePlayer: movie player consume all data from buffer - downloading finished")
                 if DMHelper.STS.DOWNLOADED != self.downloader.getStatus(): 
                     self.session.openWithCallback(self.iptvDoClose, MessageBox, text=_("Error occurs during download."), type = MessageBox.TYPE_ERROR, timeout=5)
                 else:
                     self.iptvDoClose()
-        elif 0 == ret or None == ret:
+        elif ret in ['key_stop']:
             # ask if we should close
             self.lastSize = self.downloader.getLocalFileSize(True)
+            #list = [ (_("yes"), True), (_("no"), False) ]
+            #if self.downloadManager and self.downloader and self.downloader.getPlayableFileSize() > 0:
+            #    list.append((_("yes, move playback buffer to the download manager"), 'move'))
             self.session.openWithCallback(self.confirmExitCallBack, MessageBox, text=_("Stop playing?"), type=MessageBox.TYPE_YESNO)
 
     def confirmExitCallBack(self, ret=None):
-        if ret and ret == True:
+        if ret == True:
             self.iptvDoClose()
+        elif ret == 'move':
+            self.moveToDownloadManager()
         else:
             if not self._isInLiveMode():
                 self.canRunMoviePlayer = True
@@ -247,13 +279,42 @@ class IPTVPlayerBufferingWidget(Screen):
                 self.onEnd()
                 self.onStart()
 
+    def moveToDownloadManager(self, fromPlayer=True):
+        fullFilesPaths = [self.downloadingPath + '/' + self.movieTitle + self.fileExtension, self.bufferingPath + '/' + self.movieTitle + self.fileExtension]
+        bRet, msg = self.downloadManager.addBufferItem(self.downloader, fullFilesPaths)
+        if bRet:
+            self.downloader = None
+            message = _('The playback buffer has been moved to the download manager.\nIt will be saved in the file:\n\"%s\"') % msg
+            self.session.openWithCallback(self.iptvDoClose, MessageBox, text=message, type=MessageBox.TYPE_INFO, timeout=5)
+        else:
+            # show error message and ask user what to do
+            message = _("Moving playback buffer to the download manager failed with the following error \"%s\"" % msg)
+            #message += '\n\n' + _("What do you want to do?")
+            #list = [ (_("Continue playback"), True), (_("Stop playback"), False) ]
+            if fromPlayer:
+                message += '\n\n' + _("Stop playing?")
+                self.session.openWithCallback(self.confirmExitCallBack, MessageBox, text=message, type=MessageBox.TYPE_YESNO)
+            else:
+                self.session.openWithCallback(self.iptvContinue, MessageBox, text=message, type=MessageBox.TYPE_INFO)
+                
+    def iptvContinue(self, *args, **kwargs):
+            self.setMainTimerSts(True)
+            self.canRunMoviePlayer = True
+        
     def back_pressed(self):
+        self.closeRequestedByUser = 'key_exit'
         self.iptvDoClose()
-        return
+        
+    def record_pressed(self):
+        if self.canRunMoviePlayer:# and self.downloader.getPlayableFileSize() > 0:
+            self.canRunMoviePlayer = False
+            self.setMainTimerSts(False)
+            self.closeRequestedByUser = 'save_buffer'
+            self.moveToDownloadManager(False)
         
     def iptvDoClose(self, *args, **kwargs):
         self.onEnd()
-        self.close(None, self.lastPosition, self.clipLength)
+        self.close(self.closeRequestedByUser, self.lastPosition, self.clipLength)
     
     def ok_pressed(self):
         if self.canRunMoviePlayer and self.downloader.getPlayableFileSize() > 0:
@@ -271,7 +332,7 @@ class IPTVPlayerBufferingWidget(Screen):
         self.setMainTimerSts(False)
         
         player = self.activMoviePlayer
-        printDBG('IPTVPlayerBufferingWidget.runMovePlayer [%r]' % player)
+        printDBG('E2iPlayerBufferingWidget.runMovePlayer [%r]' % player)
         playerAdditionalParams = dict(self.playerAdditionalParams)
         playerAdditionalParams['downloader'] = self.downloader
         if self.isMOOVAtomAtTheBeginning:
@@ -285,6 +346,7 @@ class IPTVPlayerBufferingWidget(Screen):
         else:
             playerAdditionalParams['file-download-timeout'] = 10000 # 10s
         playerAdditionalParams['file-download-live'] = self._isInLiveMode()
+        playerAdditionalParams['download_manager_available'] = self.downloadManager != None
         if "mini" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVMiniMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 4)
         elif "exteplayer" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'eplayer', playerAdditionalParams)
         elif "extgstplayer" == player: self.session.openWithCallback(self.leaveMoviePlayer, IPTVExtMoviePlayer, self.filePath, self.movieTitle, self.lastPosition, 'gstplayer', playerAdditionalParams)
@@ -303,12 +365,26 @@ class IPTVPlayerBufferingWidget(Screen):
                     self.mainTimer.stop()
                     self.mainTimerEnabled = False
         except Exception: printDBG("setMainTimerSts status[%r] EXCEPTION" % start)
+        
+    def updateRecButton(self):
+        if self.canRunMoviePlayer: #and self.downloader.getPlayableFileSize() > 0:
+            self['rec_button'].show()
+        else:
+            self['rec_button'].hide()
+            
+    def updateOKButton(self):
+        if self.canRunMoviePlayer and False == self.checkMOOVAtom and (self.isMOOVAtomAtTheBeginning == None or self.moovAtomStatus == self.MOOV_STS.DOWNLOADED):
+            self['ok_button'].show()
+        else:
+            self['rec_button'].hide()
     
     def updateDisplay(self):
         printDBG("updateDisplay")
         if self.inMoviePlayer:
             printDBG("updateDisplay aborted - we are in moviePlayer")
             return
+
+        self.updateRecButton()
 
         if not self.mainTimerEnabled:
             printDBG("updateDisplay aborted - timer stoped")
@@ -482,18 +558,25 @@ class IPTVPlayerBufferingWidget(Screen):
         
         # check if it is downloading 
         if self.downloader.getStatus() not in [DMHelper.STS.POSTPROCESSING, DMHelper.STS.DOWNLOADING, DMHelper.STS.WAITING]:
-            self.session.openWithCallback(self.iptvDoClose, MessageBox, _("Error occurs during download. \nStatus[%s], tmpBuffSize[%r], canRunMoviePlayer[%r]") % (self.downloader.getStatus(), tmpBuffSize, self.canRunMoviePlayer), type = MessageBox.TYPE_ERROR, timeout = 10 )
+            #messageTab = [_("Error occurs during download. \nStatus[%s], tmpBuffSize[%r], canRunMoviePlayer[%r]") % (self.downloader.getStatus(), tmpBuffSize, self.canRunMoviePlayer)]
+            messageTab = [_("Error occurs during download.")]
+            errorCode, errorDesc = self.downloader.getLastError()
+            if errorCode != None:
+                messageTab.append(_('%s returned %s: %s') % (self.downloader.getName(), errorCode, _(errorDesc)))
+            self.session.openWithCallback(self.iptvDoClose, MessageBox, '\n'.join(messageTab), type = MessageBox.TYPE_ERROR, timeout = 10 )
             self.canRunMoviePlayer = False
             # stop timer before message
             self.setMainTimerSts(False)
 
+        self.updateOKButton()
+        self.updateRecButton()
         return
     
     def __del__(self):
-        printDBG('IPTVPlayerBufferingWidget.__del__ --------------------------------------')
+        printDBG('E2iPlayerBufferingWidget.__del__ --------------------------------------')
         
     def __onClose(self):
-        printDBG('IPTVPlayerBufferingWidget.__onClose ------------------------------------')
+        printDBG('E2iPlayerBufferingWidget.__onClose ------------------------------------')
         self.onEnd()
         self.session.nav.playService(self.currentService)
         try:
@@ -505,6 +588,7 @@ class IPTVPlayerBufferingWidget(Screen):
         #self.onLayoutFinish.remove(self.doStart)
         self.onShow.remove(self.onWindowShow)
         #self.onHide.remove(self.onWindowHide)
+        self.downloadManager = None
         
     def _cleanedUp(self):
         if fileExists(self.filePath):
@@ -529,5 +613,3 @@ class IPTVPlayerBufferingWidget(Screen):
         if not self.onStartCalled:
             self.onStartCalled = True
             self.onStart()
-
-#class IPTVPlayerWidget

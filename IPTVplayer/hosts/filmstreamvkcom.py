@@ -2,104 +2,118 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import _unquote
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import datetime
 import re
 import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.filmstreamvk_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
+                                                                                            ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                            ("proxy_2",  _("Alternative proxy server (2)"))])
+config.plugins.iptvplayer.filmstreamvk_alt_domain = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.filmstreamvk_proxy))
+    if config.plugins.iptvplayer.filmstreamvk_proxy.value == 'None':
+        optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.filmstreamvk_alt_domain))
     return optionList
 ###################################################
 
 
 def gettytul():
-    return 'http://voir.filmstreamvk.la/'
+    return 'http://filmstreamvk.site/'
 
 class FilmstreamvkCom(CBaseHostClass):
-    HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
-    MAIN_URL = 'http://voir.filmstreamvk.la/'
-    DEFAULT_ICON_URL = 'http://voir.filmstreamvk.la/wp-content/themes/keremiyav4/logo/logo.png'
-    MAIN_CAT_TAB = [{'category':'main',            'title':_('Main'),         'url':MAIN_URL,         },
-                    {'category':'categories',      'title':_('Categories'),   'url':MAIN_URL,         },
-                    {'category':'list_items',      'title':_('Series'),       'url':MAIN_URL+'serie', },
-                    {'category':'list_items',      'title':_('Manga'),        'url':MAIN_URL+'manga', },
-                    {'category':'search',          'title': _('Search'), 'search_item':True,          },
-                    {'category':'search_history',  'title': _('Search history'),                      } ]
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'filmstreamvk.com', 'cookie':'filmstreamvkcom.cookie'})
+        self.HTTP_HEADER = {'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'}
+        self.MAIN_URL = None
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+    
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}: addParams = dict(self.defaultParams)
         
-    def _getFullUrl(self, url, api=True):
-        baseUrl = self.MAIN_URL
-        if 0 < len(url):
-            if url.startswith('//'):
-                url = 'http:' + url
-            elif not url.startswith('http'):
-                url =  baseUrl + url
-        if not baseUrl.startswith('https://'):
-            url = url.replace('https://', 'http://')
+        proxy = config.plugins.iptvplayer.filmstreamvk_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            addParams = dict(addParams)
+            addParams.update({'http_proxy':proxy})
+        
+        return self.cm.getPage(baseUrl, addParams, post_data)
+    
+    def getFullIconUrl(self, url):
+        url = self.getFullUrl(url)
+        proxy = config.plugins.iptvplayer.filmstreamvk_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1':
+                proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else:
+                proxy = config.plugins.iptvplayer.alternative_proxy2.value
+            url = strwithmeta(url, {'iptv_http_proxy':proxy})
         return url
-        
-    def cleanHtmlStr(self, data):
-        data = data.replace('&nbsp;', ' ')
-        data = data.replace('&nbsp', ' ')
-        return CBaseHostClass.cleanHtmlStr(data)
-
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("FilmstreamvkCom.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
+    
+    def selectDomain(self):
+        if self.MAIN_URL == None:
+            domains = ['http://ww1.filmstreamvk.site/']
+            domain = config.plugins.iptvplayer.filmstreamvk_alt_domain.value.strip()
+            if self.cm.isValidUrl(domain):
+                if domain[-1] != '/': domain += '/'
+                domains.insert(0, domain)
             
+            for domain in domains:
+                sts, data = self.getPage(domain)
+                if not sts: continue
+                if '/serie' in data:
+                    self.setMainUrl(self.cm.meta['url'])
+                    break
+        
+        if self.MAIN_URL == None:
+            self.MAIN_URL = domains[0]
+        
+        self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/themes/keremiyav4/logo/logo.png')
+        
+    def listMain(self, cItem):
+        printDBG("FilmstreamvkCom.listMain")
+        MAIN_CAT_TAB = [{'category':'main',            'title':_('Main'),         'url':self.getMainUrl()        },
+                        {'category':'categories',      'title':_('Categories'),   'url':self.getMainUrl()        },
+                        {'category':'list_items',      'title':_('Series'),       'url':self.getFullUrl('serie') },
+                        {'category':'list_items',      'title':_('Manga'),        'url':self.getFullUrl('manga') },
+                        {'category':'search',          'title':_('Search'), 'search_item':True,          },
+                        {'category':'search_history',  'title':_('Search history'),                      } ]
+        
+        self.listsTab(MAIN_CAT_TAB, cItem)
+    
     def listMainCategories(self, cItem, category):
         printDBG("FilmstreamvkCom.listCategories")
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         self._listCategory(cItem, category, '<div class="tam"', '</ul>', data)
         self._listCategory(cItem, category, 'Accueil', '<ul class="sub-menu">', data)
         self._listCategory(cItem, category, '</ul>', 'CONTACT', data)
         
-    
     def listCategories(self, cItem, category):
         printDBG("FilmstreamvkCom.listCategories")
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         self._listCategory(cItem, category, '<li class="cat-item cat', '</ul>', data)
         
@@ -114,7 +128,7 @@ class FilmstreamvkCom(CBaseHostClass):
     def listItems(self, cItem, category):
         printDBG("FilmstreamvkCom.listItems")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         nextPage = self.cm.ph.getSearchGroups(data, '''rel=["']next["'][^>]+?href=['"]([^'^"]+?)['"]''')[0]
@@ -144,7 +158,7 @@ class FilmstreamvkCom(CBaseHostClass):
     def listEpisodes(self, cItem, nextCategory):
         printDBG("FilmstreamvkCom.listEpisodes")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'liste_episode', '</tr>')
@@ -157,7 +171,7 @@ class FilmstreamvkCom(CBaseHostClass):
     def listEpisodesByLanguage(self, cItem):
         printDBG("FilmstreamvkCom.listEpisodesByLanguage")
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         
         descData  = self.cm.ph.getDataBeetwenMarkers(data, '<div class="filmalti">', '<div class="filmborder">')[1]
@@ -193,8 +207,9 @@ class FilmstreamvkCom(CBaseHostClass):
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("FilmstreamvkCom.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
+        self.selectDomain()
         cItem = dict(cItem)
-        cItem['url'] = self.MAIN_URL + '?s=' + urllib.quote(searchPattern)
+        cItem['url'] = self.getFullUrl('/?s=') + urllib.quote(searchPattern)
         self.listItems(cItem, 'episodes')
         
     def _getBaseVideoLink(self, wholeData):
@@ -218,9 +233,10 @@ class FilmstreamvkCom(CBaseHostClass):
     
     def getLinksForVideo(self, cItem):
         printDBG("FilmstreamvkCom.getLinksForVideo [%s]" % cItem)
+        self.selectDomain()
         urlTab = []
         
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.getPage(cItem['url'])
         if not sts: return []
             
         urlTab = self._getBaseVideoLink(data)
@@ -234,7 +250,7 @@ class FilmstreamvkCom(CBaseHostClass):
                 urlTab.append({'name': name, 'url':url, 'need_resolve':1})
         
         if 1 == len(urlTab) and 'filmstreamvk' in self.up.getDomain(urlTab[0]['url']):
-            sts, data = self.cm.getPage(urlTab[0]['url'])
+            sts, data = self.getPage(urlTab[0]['url'])
             if not sts: return urlTab
             mainName = urlTab[0]['name']
             urlTab = self._getBaseVideoLink(data)
@@ -245,11 +261,12 @@ class FilmstreamvkCom(CBaseHostClass):
         
     def getVideoLinks(self, url):
         printDBG("FilmstreamvkCom.getVideoLinks [%s]" % url)
+        self.selectDomain()
         urlTab = []
         
         videoUrl = ''
         if 'filmstreamvk' in self.up.getDomain(url):
-            sts, data = self.cm.getPage(url)
+            sts, data = self.getPage(url)
             if not sts: return []
             tmoUrlTab = self._getBaseVideoLink(data)
             if len(tmoUrlTab):
@@ -273,9 +290,10 @@ class FilmstreamvkCom(CBaseHostClass):
         printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
         self.currList = []
         
+        self.selectDomain()
     #MAIN MENU
         if name == None:
-            self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+            self.listMain({'name':'category'})
         elif category == 'main':
             self.listMainCategories(self.currItem, 'list_items')
         elif category == 'categories':

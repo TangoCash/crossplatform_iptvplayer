@@ -2,41 +2,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import copy
 import re
 import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -49,12 +27,12 @@ class FilmStreamHD(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'filmstreamhd.it', 'cookie':'filmstreamhd.it.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'http://filmstreamhd.it/'
-        self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/themes/BLU/logo/logo.png')
+        self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/uploads/2018/09/logonuovoHD.png')
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_CAT_TAB = [{'category':'home',           'title': _('Home')      },
-                             {'category':'categories',     'title': _('Categories')},
+        self.MAIN_CAT_TAB = [{'category':'list_items',     'title': _('HOME'),         'url':self.getMainUrl()},
+                             {'category':'genres',         'title': _('FILM ARCHIVE'), 'url':self.getFullUrl('/film-archivio')},
                              {'category':'search',         'title': _('Search'), 'search_item':True},
                              {'category':'search_history', 'title': _('Search history'), } 
                             ]
@@ -73,17 +51,25 @@ class FilmStreamHD(CBaseHostClass):
         if self.cm.isValidUrl(url):
             self.MAIN_URL = self.cm.getBaseUrl(url)
     
-    def listCategories(self, cItem, category, m1):
+    def listCategories(self, cItem, nextCategory, m1, addAll=True):
         printDBG("FilmStreamHD.listCategories")
-        sts, data = self.getPage(self.getMainUrl())
+        sts, data = self.getPage(cItem['url'])
         if not sts: return
         self.setMainUrl(data.meta['url'])
         
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', m1), ('</ul', '>'), False)[1]
-        data = re.compile('''<a[^>]+?href=['"]([^"^']+?)['"][^>]*?>([^<]+?)<''').findall(data)
-        for item in data:
+        if addAll:
             params = dict(cItem)
-            params.update({'category':category, 'title':self.cleanHtmlStr(item[1]), 'url':self.getFullUrl(item[0])})
+            params.update({'category':nextCategory, 'title':_('--All--'), 'url':data.meta['url']})
+            self.addDir(params)
+            
+        data = self.cm.ph.getDataBeetwenMarkers(data, m1, '</ul>', False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>')
+        for item in data:
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0])
+            title = self.cleanHtmlStr(item)
+            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''')[0])
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':title, 'url':url})
             self.addDir(params)
     
     def listItems(self, cItem):
@@ -93,29 +79,39 @@ class FilmStreamHD(CBaseHostClass):
         if not sts: return
         self.setMainUrl(data.meta['url'])
         
-        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'nextpostslink'), ('</a', '>'))[1]
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'loadnavi'), ('</a', '>'))[1]
         nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(nextPage, '''href=['"]([^"^']+?)['"]''')[0])
         
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'moviefilm'), ('<div', '>', 'filmborder'))[1]
-        data = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('</div', '>'), ('<div', '>', 'moviefilm'))
-        for item in data:
-            icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0])
-            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0])
-            title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''')[0])
-            
-            desc = []
-            item = self.cm.ph.getAllItemsBeetwenMarkers(item.split('</a>')[-1], '<div', '</div>')
-            for t in item:
-                t = self.cleanHtmlStr(t)
-                if t != '': desc.append(t)
+        data = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('<div', '>', 'preview'), ('<div', '>', 'clear'))
+        for dataItem in data:
+            dataItem = self.cm.ph.rgetAllItemsBeetwenNodes(dataItem, ('</div', '>'), ('<div', '>', 'preview'))
+            for item in dataItem:
+                icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''')[0])
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0])
+                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'movie-title'), ('</span', '>'), False)[1])
                 
-            params = dict(cItem)
-            params.update({'title':title, 'url':url, 'icon':icon, 'desc':' | '.join(desc)})
-            self.addVideo(params)
+                desc = []
+                tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'movie-release'), ('</span', '>'), False)[1])
+                if tmp != '': desc.append(tmp)
+                tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'icon-hd'), ('</span', '>'), False)[1])
+                if tmp != '': desc.append(tmp)
+                tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'movie-info'), ('</div', '>'), False)[1])
+                if tmp != '': desc.append(tmp)
+                desc = [' | '.join(desc)]
+                
+                tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'movie-cast'), ('</div', '>'), False)[1])
+                if tmp != '': desc.append(tmp)
+
+                tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'movie-excerpt'), ('</div', '>'), False)[1])
+                if tmp != '': desc.append(tmp)
+
+                params = dict(cItem)
+                params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
+                self.addVideo(params)
         
         if nextPage:
             params = dict(cItem)
-            params.update({'title':_('Next page'), 'url':nextPage, 'page':cItem.get('page', 1)+1})
+            params.update({'good_for_fav':False, 'title':_('Next page'), 'url':nextPage, 'page':cItem.get('page', 1)+1})
             self.addDir(params)
         
     def listSearchResult(self, cItem, searchPattern, searchType):
@@ -154,32 +150,37 @@ class FilmStreamHD(CBaseHostClass):
         cUrl = data.meta['url']
         self.setMainUrl(cUrl)
         
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'filmaltiaciklama'), ('<div', '>', 'filmborder'))[1]
-        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'konuozet'), ('</div', '>'))[1])
-        icon = ''
-        title = ''
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'single-content'), ('<div', '>', 'single-content'))[1]
+        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'excerpt'), ('</div', '>'))[1])
+        icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(data, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0])
+        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h1', '</h1>')[1])
         
-        keysMap = {'Genere':        'genre',
-                   'IMDB':          'imdb_rating',
-                   'Anno':          'year',
-                   'Scrittori':     'writers',
-                   'Attori':        'actors',
-                   'votes':         'views'}
+        itemsList = []
+        for m in ['imdb-rating', 'views-number']:
+            tmp = self.cm.ph.getDataBeetwenNodes(data, ('<span', '>', m), ('</span', '>'), False)[1].split('<small>', 1)
+            if len(tmp):
+                key = self.cleanHtmlStr(tmp[1])
+                val = self.cleanHtmlStr(tmp[0])
+                itemsList.append((key+':', val))
         
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<p', '>'), ('</p', '>'))
-        for item in data:
-            item = item.split('</span>', 1)
-            if len(item) != 2: continue
-            val = self.cleanHtmlStr(item[-1].replace('</a>', ', ')).replace(', ,', ',')
-            if val.endswith(','): val = val[:-1]
-            key = self.cleanHtmlStr(item[0])
-            if key not in keysMap: continue
-            otherInfo[keysMap[key]] = val
+        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'release'), ('</div', '>'), False)[1].replace('(', ''))
+        if tmp != '': itemsList.append((_('Release:'),  tmp[:-1]))
+        
+        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'categories'), ('</div', '>'), False)[1].replace('</a>', ', ').replace(' , ', ', '))
+        if tmp != '': itemsList.append((_('Categories:'),  tmp[:-1]))
+        
+        for m in ['director', 'actor']:
+            tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', m), ('</div', '>'), False)[1].split('</h4>', 1)
+            if len(tmp):
+                key = self.cleanHtmlStr(tmp[0])
+                val = self.cleanHtmlStr(tmp[1])
+                itemsList.append((key, val))
         
         if title == '': title = cItem['title']
         if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
+        if desc == '': desc = cItem.get('desc', '')
         
-        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
+        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':{'custom_items_list':itemsList}}]
     
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -194,10 +195,12 @@ class FilmStreamHD(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
-        elif category == 'categories':
-            self.listCategories(self.currItem, 'list_items', 'sidebar-right')
-        elif category == 'home':
-            self.listCategories(self.currItem, 'list_items', 'leftC')
+        elif category == 'genres':
+            self.listCategories(self.currItem, 'release', '>Genere<', True)
+        elif category == 'release':
+            self.listCategories(self.currItem, 'sort', '>Anno<', True)
+        elif category == 'sort':
+            self.listCategories(self.currItem, 'list_items', '>Ordinare<', False)
     #ITEMS
         elif category == 'list_items':
             self.listItems(self.currItem)

@@ -56,7 +56,7 @@ config.plugins.iptvplayer.bufferingPath      = ConfigDirectory(default = config.
 config.plugins.iptvplayer.buforowanie        = ConfigYesNo(default = False)
 config.plugins.iptvplayer.buforowanie_m3u8   = ConfigYesNo(default = True)
 config.plugins.iptvplayer.buforowanie_rtmp   = ConfigYesNo(default = False)
-config.plugins.iptvplayer.requestedBuffSize  = ConfigInteger(5, (1,120))
+config.plugins.iptvplayer.requestedBuffSize  = ConfigInteger(2, (1,120))
 config.plugins.iptvplayer.requestedAudioBuffSize  = ConfigInteger(256, (1,10240))
 
 config.plugins.iptvplayer.IPTVDMRunAtStart      = ConfigYesNo(default = False)
@@ -71,6 +71,11 @@ config.plugins.iptvplayer.plugin_autostart = ConfigYesNo(default = False)
 config.plugins.iptvplayer.plugin_autostart_method = ConfigSelection(default = "wizard", choices = [("wizard", "wizard"),("infobar", "infobar")])
 
 config.plugins.iptvplayer.preferredupdateserver = ConfigSelection(default = "", choices = [("", _("Default")),("1", "http://iptvplayer.vline.pl/"), ("2", _("http://www.iptvplayer.gitlab.io/"))])
+config.plugins.iptvplayer.osk_type = ConfigSelection(default = "", choices = [("", _("Auto")),("system", _("System")), ("own", _("Own model"))])
+config.plugins.iptvplayer.osk_layout = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.osk_allow_suggestions = ConfigYesNo(default = True)
+config.plugins.iptvplayer.osk_default_suggestions = ConfigSelection(default = "", choices = [("", _("Auto")),("none", _("None")), ("google", "google.com"), ("filmweb", "filmweb.pl"), ("imdb", "imdb.com"), ("filmstarts", "filmstarts.de")]) 
+
 
 def GetMoviePlayerName(player):
     map = {"auto":_("auto"), "mini": _("internal"), "standard":_("standard"), 'exteplayer': _("external eplayer3"), 'extgstplayer': _("external gstplayer")}
@@ -175,6 +180,10 @@ config.plugins.iptvplayer.alternative_proxy2 = ConfigText(default = "http://user
 config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
 
+config.plugins.iptvplayer.myjd_login = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.myjd_password = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.myjd_jdname = ConfigText(default = "", fixed_size = False)
+
 # Update
 config.plugins.iptvplayer.autoCheckForUpdate = ConfigYesNo(default = False)
 config.plugins.iptvplayer.updateLastCheckedVersion = ConfigText(default = "00.00.00.00", fixed_size = False)
@@ -194,7 +203,7 @@ config.plugins.iptvplayer.hiddenAllVersionInUpdate = ConfigYesNo(default = False
 config.plugins.iptvplayer.hidden_ext_player_def_aspect_ratio = ConfigSelection(default = "-1", choices = [("-1", _("default")), ("0", _("4:3 Letterbox")), ("1", _("4:3 PanScan")), ("2", _("16:9")), ("3", _("16:9 always")), ("4", _("16:10 Letterbox")), ("5", _("16:10 PanScan")), ("6", _("16:9 Letterbox"))] )
         
 config.plugins.iptvplayer.search_history_size  = ConfigInteger(50, (0, 1000000))
-config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (1, 1000000))
+config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (0, 9))
 
 config.plugins.iptvplayer.watched_item_color = ConfigSelection(default = "#808080", choices = COLORS_DEFINITONS)
 config.plugins.iptvplayer.usepycurl = ConfigYesNo(default = False)

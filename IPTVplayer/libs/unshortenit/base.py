@@ -14,13 +14,12 @@ import copy
 
 try: import requests
 except Exception: pass
-try: import json
-except Exception: import simplejson as json
 
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import byteify, printExc, printDBG, GetCookieDir, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError, GetIPTVSleep
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 
 HTTP_HEADER = {
     "User-Agent": 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36',
@@ -52,6 +51,9 @@ class UnshortenIt(object):
     _hrefli_regex = r'href\.li'
     _anonymz_regex = r'anonymz\.com'
     _iitvpl_regex = r'iiv\.pl'
+    _short24_regex = r'short24\.pw'
+    _rapidcrypt_regex = r'rapidcrypt\.net'
+    _vcryptnet_regex = r'vcrypt\.net'
     
     _maxretries = 5
 
@@ -89,6 +91,13 @@ class UnshortenIt(object):
             return self._unshorten_anonymz(uri)
         if re.search(self._iitvpl_regex, domain, re.IGNORECASE):
             return self._unshorten_iivpl(uri)
+        if re.search(self._short24_regex, domain, re.IGNORECASE):
+            return self._unshorten_short24(uri)
+        if re.search(self._rapidcrypt_regex, domain, re.IGNORECASE):
+            return self._unshorten_rapidcrypt(uri)
+        if re.search(self._vcryptnet_regex, domain, re.IGNORECASE):
+            return self._unshorten_vcryptnet(uri)
+        
         return uri, 200
 
     def unwrap_30x(self, uri, timeout=10):
@@ -128,8 +137,6 @@ class UnshortenIt(object):
                         retries = retries + 1
                     else:
                         return r.url, r.status_code
-
-
         except Exception as e:
             return uri, str(e)
 
@@ -157,10 +164,7 @@ class UnshortenIt(object):
                 return True, query["url"].pop()
             else:
                 raise ValueError("Google outbound proxy URL without a target url ('%s')?" % url)
-
-
         return False, url
-
 
     def _unshorten_adfly(self, uri):
 
@@ -191,8 +195,6 @@ class UnshortenIt(object):
         except Exception as e:
             return uri, str(e)
 
-
-
     def _unshorten_linkbucks(self, uri):
         '''
         (Attempt) to decode linkbucks content. HEAVILY based on the OSS jDownloader codebase.
@@ -222,7 +224,6 @@ class UnshortenIt(object):
             r"src=\"http://static\.linkbucks\.com/tmpl/mint/img/lb\.gif\" /></a>.*?<a href=\"(.*?)\"",
             r"id=\"content\" src=\"([^\"]*)",
         ]
-
 
         for regex in regexes:
             if self.inValidate(link):
@@ -265,20 +266,14 @@ class UnshortenIt(object):
             if any([not l1, not l2, not token]):
                 return uri, "Missing required tokens?"
 
-
-            print(l1, l2)
-
-
             authkey = int(l1) + int(l2)
 
 
 
             p1_url = urljoin(baseloc, "/director/?t={tok}".format(tok=token))
-            print(p1_url)
             r2 = requests.get(p1_url, headers=HTTP_HEADER, timeout=self._timeout, cookies=r.cookies)
 
             p1_url = urljoin(baseloc, "/scripts/jquery.js?r={tok}&{key}".format(tok=token, key=l1))
-            print(p1_url)
             r2_1 = requests.get(p1_url, headers=HTTP_HEADER, timeout=self._timeout, cookies=r.cookies)
 
 
@@ -288,16 +283,9 @@ class UnshortenIt(object):
             p3_url = urljoin(baseloc, "/intermission/loadTargetUrl?t={tok}&aK={key}&a_b=false".format(tok=token, key=str(authkey)))
             r3 = requests.get(p3_url, headers=HTTP_HEADER, timeout=self._timeout, cookies=r2.cookies)
 
-            resp_json = json.loads(r3.text)
+            resp_json = json_loads(r3.text)
             if "Url" in resp_json:
                 return resp_json['Url'], r3.status_code
-
-            print(p3_url)
-            print(r3)
-            print(r3.text)
-            print(resp_json)
-
-
 
         return "Wat", "wat"
 
@@ -376,7 +364,7 @@ class UnshortenIt(object):
                 payload = {'adSessionId': session_id, 'callback': 'c'}
                 sts, response = self.cm.getPage('http://sh.st/shortest-url/end-adsession', {'header':http_header}, payload)
 
-                resp_uri = byteify(json.loads(response[6:-2]))['destinationUrl']
+                resp_uri = json_loads(response[6:-2])['destinationUrl']
                 if resp_uri is not None:
                     uri = resp_uri
             
@@ -428,7 +416,7 @@ class UnshortenIt(object):
                 post_data = {'salt':salt, 'banner':banner, 'blocker':0}
                 params['header'] = HTTP_HEADER_AJAX
                 sts, data = self.cm.getPage(baseUri, params, post_data)
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 printDBG(">>>%s<<<" % data)
                 uri = self.cm.ph.getSearchGroups(data[partials], '''href="(https?://[^"]+?)"''')[0]
                 retUri, retSts = uri, 'OK'
@@ -459,12 +447,58 @@ class UnshortenIt(object):
                 payload = {'adSessionId': session_id, 'callback': 'c'}
                 sts, response = self.cm.getPage('http://viid.me/shortest-url/end-adsession', {'header':http_header}, payload)
 
-                resp_uri = byteify(json.loads(response[6:-2]))['destinationUrl']
+                resp_uri = json_loads(response[6:-2])['destinationUrl']
                 if resp_uri is not None:
                     uri = resp_uri
             
             return uri, 'OK'
 
+        except Exception as e:
+            printExc()
+            return uri, str(e)
+
+    def _unshorten_short24(self, uri):
+        try:
+            sts, data = self.cm.getPage(uri, {'header':HTTP_HEADER})
+            uri = self.cm.getFullUrl(self.cm.ph.getSearchGroups(data, '''window\.location\s*?=\s*?['"]([^'^"]+?)['"]''')[0], self.cm.getBaseUrl(self.cm.meta['url']))
+            return uri, 'OK'
+        except Exception as e:
+            printExc()
+            return uri, str(e)
+
+    def _unshorten_rapidcrypt(self, uri):
+        try:
+            COOKIE_FILE = GetCookieDir('rapidcrypt.net')
+            params = {'header':HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIE_FILE}
+            params['cloudflare_params'] = { 'cookie_file':COOKIE_FILE, 'User-Agent':HTTP_HEADER['User-Agent']}
+            sts, data = self.cm.getPageCFProtection(uri, params)
+            uri = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'push_button'), ('</a', '>'))[1]
+            printDBG(uri)
+            uri = self.cm.ph.getSearchGroups(uri, '''href=([^>^\s]+?)[>\s]''')[0]
+            if uri.startswith('"'): uri = self.cm.ph.getSearchGroups(uri, '"([^"]+?)"')[0]
+            elif uri.startswith("'"): uri = self.cm.ph.getSearchGroups(uri, "'([^']+?)'")[0]
+            
+            uri = self.cm.getFullUrl(uri, self.cm.getBaseUrl(self.cm.meta['url']))
+            return uri, 'OK'
+        except Exception as e:
+            printExc()
+            return uri, str(e)
+
+    def _unshorten_vcryptnet(self, uri):
+        try:
+            COOKIE_FILE = GetCookieDir('vcrypt.net')
+            params = {'header':HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIE_FILE}
+            params['cloudflare_params'] = { 'cookie_file':COOKIE_FILE, 'User-Agent':HTTP_HEADER['User-Agent']}
+            sts, data = self.cm.getPageCFProtection(uri, params)
+            uri = self.cm.ph.getDataBeetwenNodes(data, ('<a', '>', 'push_button'), ('</a', '>'))[1]
+            
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG(self.cm.meta['url'])
+            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            uri = self.cm.meta['url']
+            
+            uri = self.cm.getFullUrl(uri, self.cm.getBaseUrl(self.cm.meta['url']))
+            return uri, 'OK'
         except Exception as e:
             printExc()
             return uri, str(e)

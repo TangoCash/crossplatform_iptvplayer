@@ -3,31 +3,21 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, GetLogoDir
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 import re
 import urllib
 import time
 import random
 try:    import json
 except Exception: import simplejson as json
-from os import urandom as os_urandom
-
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-
+from Components.config import config, ConfigSelection, ConfigYesNo, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -59,7 +49,7 @@ class Ekstraklasa(CBaseHostClass):
     ETV_MAIN_MENU = [ {'name': 'Bramki', 'navi': 'bramki'},
                       {'name': 'Skróty', 'navi': 'skroty'},
                       {'name': 'Bramka kolejki', 'navi': 'bramka-kolejki'},
-                      {'name': 'Magazyn', 'navi': 'magazyn-t-mobile-ekstraklasy'},
+                      {'name': 'Magazyn', 'navi': 'magazyny/magazyn-ekstraklasy'},
                     ]
     ETV_CATEGORY  = 'etv_category'
     ETV_FORMAT    = 'mp4'
@@ -183,14 +173,22 @@ class Ekstraklasa(CBaseHostClass):
             if not sts: return videoUrls
             ckmId = self.cm.ph.getSearchGroups(data, 'data-params-mvp="([^"]+?)"')[0]
             if '' == ckmId: ckmId = self.cm.ph.getSearchGroups(data, 'id="mvp:([^"]+?)"')[0]
+            if '' == ckmId: ckmId = self.cm.ph.getSearchGroups(data, 'data\-mvp="([^"]+?)"')[0]
             if '' != ckmId: 
                 videoUrls = self.getVideoTab_ETV(ckmId)
                 break
-            data = self.cm.ph.getDataBeetwenMarkers(data, 'pulsembed_embed', '</div>')[1]
-            url  = self.cm.ph.getSearchGroups(data, 'href="([^"]+?)"')[0] 
-        
+            tmp = self.cm.ph.getDataBeetwenMarkers(data, 'pulsembed_embed', '</div>')[1]
+            url = self.cm.ph.getSearchGroups(tmp, 'href="([^"]+?)"')[0]
+            if url == '':
+                tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'embeddedApp'), ('</div', '>'), False)[1]
+                tmp = self.cleanHtmlStr(self.cm.ph.getSearchGroups(tmp, '''data\-params=['"]([^'^"]+?)['"]''')[0])
+                try:
+                    tmp = json.loads(tmp)['parameters']['embedCode'].encode('utf-8')
+                    url = self.cm.getFullUrl(self.cm.ph.getSearchGroups(tmp, 'data\-src="([^"]+?)"')[0], self.cm.meta['url'])
+                except Exception:
+                    printExc()
         return videoUrls
-        
+
     def getDescription_ETV(self, url):
         printDBG("Ekstraklasa.getDescription url[%r]" % url )
         content = {}

@@ -1,198 +1,211 @@
 # -*- coding: utf-8 -*-
-
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetLogoDir
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import re, urllib    
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry, ConfigPIN
+import re
+import urllib
+try:    import json
+except Exception: import simplejson as json
 ###################################################
 
-###################################################
-# Config options for HOST
-###################################################
-#config.plugins.iptvplayer.PIN = ConfigPIN(default = 6666 , censor='*')
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
-###################################################
-# Title of HOST
-###################################################
 def gettytul():
-    return 'http://trailers.apple.com/'
+    return 'https://trailers.apple.com/'
 
-class IPTVHost(IHost):
-    LOGO_NAME = 'appletrailerslogo.png'
+class TrailersApple(CBaseHostClass):
 
     def __init__(self):
-        printDBG( "init begin" )
-        self.host = Host()
-        self.prevIndex = []
-        self.currList = []
-        self.prevList = []
-        printDBG( "init end" )
+        CBaseHostClass.__init__(self, {'history':'TrailersApple', 'cookie':'TrailersApple.cookie'})
+        self.MAIN_URL    = 'https://trailers.apple.com/'
+        self.DEFAULT_ICON_URL = 'http://www.userlogos.org/files/logos/mafi0z/apple%20trailers.png'
+        self.cacheLinks = {}
     
-    def getLogoPath(self):  
-        return RetHost(RetHost.OK, value = [GetLogoDir(self.LOGO_NAME)])
-
-    def getInitList(self):
-        printDBG( "getInitList begin" )
-        self.prevIndex = []
-        self.currList = self.host.getInitList()
-        self.host.setCurrList(self.currList)
-        self.prevList = []
-        printDBG( "getInitList end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getListForItem(self, Index = 0, refresh = 0, selItem = None):
-        printDBG( "getListForItem begin" )
-        self.prevIndex.append(Index)
-        self.prevList.append(self.currList)
-        self.currList = self.host.getListForItem(Index, refresh, selItem)
-        #self.currList = [ self.prevList[-1][Index] ]
-        printDBG( "getListForItem end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getPrevList(self, refresh = 0):
-        printDBG( "getPrevList begin" )
-        if(len(self.prevList) > 0):
-            self.prevIndex.pop()
-            self.currList = self.prevList.pop()
-            self.host.setCurrList(self.currList)
-            printDBG( "getPrevList end OK" )
-            return RetHost(RetHost.OK, value = self.currList)
-        else:
-            printDBG( "getPrevList end ERROR" )
-            return RetHost(RetHost.ERROR, value = [])
-
-    def getCurrentList(self, refresh = 0):
-        printDBG( "getCurrentList begin" )
-        #if refresh == 1
-        #self.prevIndex[-1] #ostatni element prevIndex
-        #self.prevList[-1]  #ostatni element prevList
-        #tu pobranie listy dla dla elementu self.prevIndex[-1] z listy self.prevList[-1]  
-        printDBG( "getCurrentList end" )
-        return RetHost(RetHost.OK, value = self.currList)
-
-    def getLinksForVideo(self, Index = 0, item = None):
-        return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
+    def getFullUrl(self, url, baseUrl=None):
+        return CBaseHostClass.getFullUrl(self, url.replace('&#038;', '&'), baseUrl)
+    
+    def getPage(self, baseUrl, addParams={}, post_data=None):
+        return self.cm.getPage(baseUrl, addParams, post_data)
+    
+    def listMain(self, cItem):
+        printDBG("TrailersApple.listMain")
         
-    def getResolvedURL(self, url):
-        printDBG( "getResolvedURL begin" )
-        if url != None and url != '':        
-            ret = self.host.getResolvedURL(url)
-            if ret != None and ret != '':        
-               printDBG( "getResolvedURL ret: "+ret)
-               list = []
-               list.append(ret)
-               printDBG( "getResolvedURL end OK" )
-               return RetHost(RetHost.OK, value = list)
-            else:
-               printDBG( "getResolvedURL end" )
-               return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
-        else:
-            printDBG( "getResolvedURL end" )
-            return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
-
-    def getSearchResults(self, pattern, searchType = None):
-        return RetHost(RetHost.NOT_IMPLEMENTED, value = [])
-
-    ###################################################
-    # Additional functions on class IPTVHost
-    ###################################################
-
-class Host:
-    currList = []
-    MAIN_URL = ''
+        MAIN_CAT_TAB = [{'category':'list_items',     'title':'Just Added',    'url':self.getFullUrl('/trailers/home/feeds/just_added.json')},
+                        {'category':'list_items',     'title':'Exclusive',     'url':self.getFullUrl('/trailers/home/feeds/exclusive.json')},
+                        {'category':'list_items',     'title':'Just HD',       'url':self.getFullUrl('/trailers/home/feeds/just_hd.json')},
+                        {'category':'list_items',     'title':'Most Popular',  'url':self.getFullUrl('/trailers/home/feeds/most_pop.json')},
+                        {'category':'list_items',     'title':'Movie Studios', 'url':self.getFullUrl('/trailers/home/feeds/studios.json')},
+                        {'category':'search',         'title': _('Search'),       'search_item':True       },
+                        {'category':'search_history', 'title': _('Search history'),                        }]
+        self.listsTab(MAIN_CAT_TAB, cItem)
     
+    def listCatItems(self, cItem, nextCategory):
+        printDBG("TrailersApple.listCatItems")
+        printDBG(cItem['c_tree'])
+        try:
+            cTree = cItem['c_tree']
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(cTree['dat'], '''href=['"]([^'^"]+?)['"]''')[0])
+            if url != '':
+                params = dict(cItem)
+                params.update({'good_for_fav':False, 'category':nextCategory, 'title':_('--All--'), 'url':url})
+                self.addDir(params)
+            
+            for item in cTree['list']:
+                title = self.cleanHtmlStr(item['dat'])
+                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item['dat'], '''href=['"]([^'^"]+?)['"]''')[0])
+                if 'list' not in item:
+                    if url != '' and title != '':
+                        params = dict(cItem)
+                        params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
+                        self.addDir(params)
+                elif len(item['list']) == 1 and title != '':
+                    item['list'][0]['dat'] = item['dat']
+                    params = dict(cItem)
+                    params.update({'good_for_fav':False, 'c_tree':item['list'][0], 'title':title, 'url':url})
+                    self.addDir(params)
+        except Exception:
+            printExc()
+    
+    def listSubItems(self, cItem):
+        printDBG("TrailersApple.listSubItems")
+        self.currList = cItem['sub_items']
+    
+    def listItems(self, cItem, nextCategory):
+        printDBG("TrailersApple.listItems [%s]" % cItem)
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
+        try:
+            data = byteify(json.loads(data))
+            if 'results' in data: data = data['results']
+            for item in data:
+                printDBG(item)
+                if len(item['trailers']) == 0: continue
+                title = self.cleanHtmlStr(item['title'])
+                url = self.getFullUrl(item['location'])
+                icon = self.getFullIconUrl(item['poster'])
+                desc = []
+                if 'releasedate' in item: desc.append(item['releasedate'][:16])
+                
+                for it in [(_('Studio:'), 'studio'), (_('Director:'), 'director'), (_('Directors:'), 'directors'), (_('Genres:'), 'genres'), (_('Genre:'), 'genre'), (_('Actors:'), 'actors')]:
+                    if it[1] not in item: continue
+                    if isinstance(item[it[1]], list):
+                        value = ', '.join(item[it[1]])
+                    else:
+                        value = item[it[1]]
+                    desc.append('%s %s' % (it[0], value))
+                params = {'good_for_fav':True, 'name':'category', 'category':nextCategory, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)}
+                self.addDir(params)
+        except Exception:
+            printExc()
+        
+    def exploreItem(self, cItem):
+        printDBG("TrailersApple.exploreItem")
+        self.cacheLinks = {}
+        
+        sts, data = self.getPage(cItem['url'])
+        if not sts: return
+        cUrl = self.cm.meta['url']
+        self.setMainUrl(cUrl)
+        
+        filmId = self.cm.ph.getSearchGroups(data, '''FilmId\s*=\s*['"](\d+)['"]''')[0]
+        
+        sts, data = self.getPage(self.getFullUrl('/trailers/feeds/data/%s.json' % filmId))
+        if not sts: return
+        try:
+            data = byteify(json.loads(data))
+            key = 0
+            for item in data['clips']:
+                title = item['title']
+                desc = item['runtime']
+                icon = self.getFullIconUrl(item['thumb'])
+
+                urls = []
+                for version, versionData in item.get('versions', {}).iteritems():
+                    for size, sizeData in versionData.get('sizes', {}).iteritems():
+                        url = sizeData.get('src')
+                        if not url:
+                            continue
+                        urls.append({
+                            'name': '%s-%s' % (version, size),
+                            'url': self.getFullUrl(re.sub(r'_(\d+p\.mov)', r'_h\1', url)),
+                            'width': int(sizeData.get('width')),
+                            'height': int(sizeData.get('height')),
+                            'language': version[:2],
+                            'need_resolve': 1,
+                        })
+                key += 1
+                url = cItem['url'] + '#clip_' + str(key)
+                self.cacheLinks[url] = urls
+                params = dict(cItem)
+                params.update({'good_for_fav': False, 'url':url, 'title':cItem['title'] + ': ' + title, 'icon':icon, 'desc':desc})
+                self.addVideo(params)
+        except Exception:
+            printExc()
+    
+    def listSearchResult(self, cItem, searchPattern, searchType):
+        searchPattern = urllib.quote_plus(searchPattern)
+        
+        url = self.getFullUrl('/trailers/home/scripts/quickfind.php?q=') + urllib.quote_plus(searchPattern)
+        self.listItems({'url':url}, 'explore_item')
+        
+    def getLinksForVideo(self, cItem):
+        printDBG("TrailersApple.getLinksForVideo [%s]" % cItem)
+        return self.cacheLinks.get(cItem['url'], [])
+        
+    def getVideoLinks(self, videoUrl):
+        printDBG("TrailersApple.getVideoLinks [%s]" % videoUrl)
+        # mark requested link as used one
+        if len(self.cacheLinks.keys()):
+            for key in self.cacheLinks:
+                for idx in range(len(self.cacheLinks[key])):
+                    if videoUrl in self.cacheLinks[key][idx]['url']:
+                        if not self.cacheLinks[key][idx]['name'].startswith('*'):
+                            self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
+        
+        return [{'name':'direct', 'url':videoUrl}]
+        
+    def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
+        printDBG('handleService start')
+        
+        CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
+
+        name     = self.currItem.get("name", '')
+        category = self.currItem.get("category", '')
+        printDBG( "handleService: ||| name[%s], category[%s] " % (name, category) )
+        self.currList = []
+        
+    #MAIN MENU
+        if name == None:
+            self.listMain({'name':'category', 'type':'category'})
+        elif category == 'cat_items':
+            self.listCatItems(self.currItem, 'list_items')
+        elif category == 'sub_items':
+            self.listSubItems(self.currItem)
+        elif category == 'list_items':
+            self.listItems(self.currItem, 'explore_item')
+        elif category == 'explore_item':
+            self.exploreItem(self.currItem)
+    #SEARCH
+        elif category in ["search", "search_next_page"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
+        else:
+            printExc()
+        
+        CBaseHostClass.endHandleService(self, index, refresh)
+
+class IPTVHost(CHostBase):
+
     def __init__(self):
-        printDBG( 'Host __init__ begin' )
-        self.cm = pCommon.common()
-        self.currList = []
-        printDBG( 'Host __init__ begin' )
-        
-    def setCurrList(self, list):
-        printDBG( 'Host setCurrList begin' )
-        self.currList = list
-        printDBG( 'Host setCurrList begin' )
-        return 
-
-    def getInitList(self):
-        printDBG( 'Host getInitList begin' )
-        #self.currList = self.MAIN_MENU
-        self.currList = self.listsItems(-1, '', 'main-menu')
-        printDBG( 'Host getInitList end' )
-        return self.currList
-
-    def getListForItem(self, Index = 0, refresh = 0, selItem = None):
-        printDBG( 'Host getListForItem begin' )
-        valTab = []
-        if len(self.currList[Index].urlItems) == 0:
-           return valTab
-        valTab = self.listsItems(Index, self.currList[Index].urlItems[0], self.currList[Index].urlSeparateRequest)
-        self.currList = valTab
-        printDBG( 'Host getListForItem end' )
-        return self.currList
-
-    def listsItems(self, Index, url, name = ''):
-        printDBG( 'Host listsItems begin' )
-        DEFAULT_ICON_URL = 'http://www.citymac.com/sites/tdcurran/images/user/Apple-TV-Programming/apple-trailers.jpg'
-        valTab = []
-        if name == 'main-menu':
-           printDBG( 'Host listsItems begin name='+name )
-           #valTab.append(CDisplayListItem("Newest (HD-1080p)",  "Newest (HD-1080p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_1080p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           #valTab.append(CDisplayListItem("Current (HD-1080p)", "Current (HD-1080p)", CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_1080p.xml'], 'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Newest (HD-720p)",   "Newest (HD-720p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_720p.xml'],   'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Current (HD-720p)",  "Current (HD-720p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_720p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Newest (HD-480p)",   "Newest (HD-480p)",   CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest_480p.xml'],   'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Current (HD-480p)",  "Current (HD-480p)",  CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current_480p.xml'],  'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Newest (SD)",        "Newest (SD)",        CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/newest.xml'],        'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           valTab.append(CDisplayListItem("Current (SD)",       "Current (SD)",       CDisplayListItem.TYPE_CATEGORY, ['http://trailers.apple.com/trailers/home/xml/current.xml'],       'appletrailers-movies', DEFAULT_ICON_URL, None)) 
-           printDBG( 'Host listsItems end' )
-           return valTab
-        
-        # ########## #
-        if 'appletrailers-movies' == name:
-           printDBG( 'Host listsItems begin name='+name )
-           self.MAIN_URL = 'http://trailers.apple.com' 
-           sts, data = self.cm.getPage(url)
-           if not sts: return valTab
-           printDBG( 'Host listsItems data: '+data )
-           phMovies = re.findall('<movieinfo.*?<title>(.*?)</title>.*?<runtime>(.*?)</runtime>.*?<location>(.*?)</location>.*?<large filesize=".*?">(.*?)</large>', data, re.S)
-           if phMovies:
-              for (phTitle, phRuntime, phImage, phUrl) in phMovies:
-                  phUrl = urlparser.decorateUrl(phUrl, {'User-Agent':'QuickTime/7.6.2'})
-                  printDBG( 'Host listsItems phTitle:   ' +phTitle )
-                  printDBG( 'Host listsItems phRuntime: ' +phRuntime )
-                  printDBG( 'Host listsItems phImage:   ' +phImage )
-                  printDBG( 'Host listsItems phUrl:     ' +phUrl )
-                  valTab.append(CDisplayListItem(phTitle,'['+phRuntime+'] '+phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
-           printDBG( 'Host listsItems end' )
-           return valTab
-
-        return valTab
-
-    def getResolvedURL(self, url):
-        printDBG( 'Host getResolvedURL begin' )
-        printDBG( 'Host getResolvedURL url: '+url )
-        videoUrl = ''
-        valTab = []
-
-        if self.MAIN_URL == 'http://trailers.apple.com':
-           printDBG( 'Host getResolvedURL mainurl: '+self.MAIN_URL )
-           return url
-
-        printDBG( 'Host getResolvedURL end' )
-        return videoUrl
+        CHostBase.__init__(self, TrailersApple(), True, [])

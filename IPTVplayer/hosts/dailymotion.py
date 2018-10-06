@@ -2,31 +2,18 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 from datetime import timedelta
-import re
 import urllib
-import base64
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -121,7 +108,7 @@ class Dailymotion(CBaseHostClass):
         params.update({'title':_('All'), 'category':category})
         self.addDir(params)
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             nextPage = data['has_more']
             for item in data['list']:
                 params = dict(cItem)
@@ -168,7 +155,7 @@ class Dailymotion(CBaseHostClass):
         if not sts: return
         nextPage = False
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             nextPage = data['has_more']
             for item in data['list']:
                 printDBG(item)

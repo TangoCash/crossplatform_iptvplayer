@@ -2,46 +2,35 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVSleep
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
 import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-
+config.plugins.iptvplayer.akoam_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
+                                                                                     ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                     ("proxy_2",  _("Alternative proxy server (2)"))])
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.akoam_proxy))
     return optionList
 ###################################################
+
 def gettytul():
     return 'https://ar.akoam.net/'
 
@@ -49,31 +38,55 @@ class AkoAm(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'ako.am', 'cookie':'ako.am.cookie'})
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.MAIN_URL = 'https://ar.akoam.net/'
-        self.DEFAULT_ICON_URL = self.getFullIconUrl('/scripts/site/img/main_logo.png')
+        
+        self.USER_AGENT = self.cm.getDefaultHeader()['User-Agent']
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
-        self.AJAX_HEADER = dict(self.HTTP_HEADER)
-        self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
+        self.AJAX_HEADER = MergeDicts(self.HTTP_HEADER, {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'})
+        
+        self.DEFAULT_ICON_URL = self.getFullIconUrl('/scripts/site/img/main_logo.png')
         
         self.cacheLinks    = {}
         self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
+    def setMainUrl(self, url):
+        CBaseHostClass.setMainUrl(self, url)
+        self.HTTP_HEADER['Referer'] = self.getMainUrl()
+        self.HTTP_HEADER['Origin'] = self.getMainUrl()[:-1]
+        
+    def getProxy(self):
+        proxy = config.plugins.iptvplayer.akoam_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1': proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else: proxy = config.plugins.iptvplayer.alternative_proxy2.value
+        else: proxy = None
+        return proxy
+    
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         while True:
             if addParams == {}: addParams = dict(self.defaultParams)
             origBaseUrl = baseUrl
             baseUrl = self.cm.iriToUri(baseUrl)
-            def _getFullUrl(url):
-                if self.cm.isValidUrl(url): return url
-                else: return urlparse.urljoin(baseUrl, url)
-            addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+            
+            proxy = self.getProxy()
+            if proxy != None: addParams = MergeDicts(addParams, {'http_proxy':proxy})
+            addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
             sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+            
             if sts and 'class="loading"' in data:
                 GetIPTVSleep().Sleep(5)
                 continue
             break
         return sts, data
+    
+    def getFullIconUrl(self, url):
+        url = CBaseHostClass.getFullIconUrl(self, url.strip())
+        if url == '': return url
+        proxy = self.getProxy()
+        if proxy != None: url = strwithmeta(url, {'iptv_http_proxy':proxy})
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID', 'cf_clearance', '__cfduid'])
+        url = strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.HTTP_HEADER['User-Agent']})
+        return url
     
     def listMainMenu(self, cItem, nextCategory):
         printDBG("AkoAm.listMainMenu")

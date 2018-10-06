@@ -4,11 +4,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCookieDir, rm
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
@@ -16,11 +12,8 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
+from Components.config import config, ConfigText, getConfigListEntry
 import urllib
-import random
-import string
 try:    import json
 except Exception: import simplejson as json
 
@@ -30,7 +23,6 @@ from os import path as os_path
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -107,9 +99,9 @@ class WizjaTvApi(CBaseHostClass):
             if ret[0]:
                 self.loggedIn = True
                 if not ret[1]:
-                    self.sessionEx.open(MessageBox, _('Użytkownika "%s" zalogowany poprawnie. Brak premium!') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
+                    self.sessionEx.open(MessageBox, ('Użytkownika "%s" zalogowany poprawnie. Brak premium!') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
             else:
-                self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s". Sprawdź dane do logowania w konfiguracji hosta.') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
+                self.sessionEx.open(MessageBox, ('Problem z zalogowanie użytkownika "%s". Sprawdź dane do logowania w konfiguracji hosta.') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
                 self.loggedIn = False
         else:
             self.sessionEx.open(MessageBox,'Serwis ten wymaga zalogowania. Wprowadź swój login i hasło w konfiguracji hosta dostępnej po naciśnięciu niebieskiego klawisza.', type = MessageBox.TYPE_ERROR, timeout = 10 )

@@ -2,47 +2,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, NextDay, PrevDay, GetDefaultLang
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.m3uparser import ParseM3u
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
-import re
-import urllib
-import string
 import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
-from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'http://radiostacja.pl/'
 
@@ -67,9 +39,9 @@ class RadiostacjaPl(CBaseHostClass):
     def listMainMenu(self, cItem):
         printDBG("RadiostacjaPl.listMainMenu")
         
-        MAIN_CAT_TAB = [{'category':'live',           'title': _('Stacje Radiowe'),  'f_cache':'live',     'url':self.getFullUrl('/data/mobile/live.json')}, 
-                        {'category':'channels',       'title': _('Kanały Muzyczne'), 'f_cache':'muzyczne', 'url':self.getFullUrl('/data/mobile/muzyczne_android.json')}, 
-                        {'category':'djsety',         'title': _('Sety Muzyczne'),   'f_cache':'podcasty', 'url':self.getFullUrl('/data/mobile/podcasty_android.json'), 'f_key':'djsety'}, 
+        MAIN_CAT_TAB = [{'category':'live',           'title': 'Stacje Radiowe',  'f_cache':'live',     'url':self.getFullUrl('/data/mobile/live.json')}, 
+                        {'category':'channels',       'title': 'Kanały Muzyczne', 'f_cache':'muzyczne', 'url':self.getFullUrl('/data/mobile/muzyczne_android.json')}, 
+                        {'category':'djsety',         'title': 'Sety Muzyczne',   'f_cache':'podcasty', 'url':self.getFullUrl('/data/mobile/podcasty_android.json'), 'f_key':'djsety'}, 
                        ]
         
         self.listsTab(MAIN_CAT_TAB, cItem)
@@ -83,11 +55,11 @@ class RadiostacjaPl(CBaseHostClass):
         printDBG("RadiostacjaPl.listGenres [%s]" % cItem)
         
         params = dict(cItem)
-        params.update({'good_for_fav':True, 'title': _('Radia RMFON'), 'category':nextCategory2, 'f_cache':'rmfon', 'url':'http://rmfon.pl/json/app.txt', 'icon':'http://www.programosy.pl/download/screens/13748/android-rmfon-1_s.png'})
+        params.update({'good_for_fav':True, 'title': 'Radia RMFON', 'category':nextCategory2, 'f_cache':'rmfon', 'url':'http://rmfon.pl/json/app.txt', 'icon':'http://www.programosy.pl/download/screens/13748/android-rmfon-1_s.png'})
         self.addDir(params)
         
-        CAT_TAB = [{'good_for_fav':True, 'title': _('Radia ZET'),      'f_key':'eurozet'},
-                   {'good_for_fav':True, 'title': _('Radia Lokalne'),  'f_key':'lokalne'}]
+        CAT_TAB = [{'good_for_fav':True, 'title': 'Radia ZET',      'f_key':'eurozet'},
+                   {'good_for_fav':True, 'title': 'Radia Lokalne',  'f_key':'lokalne'}]
         
         cItem = dict(cItem)
         cItem['category'] = nextCategory1
@@ -99,7 +71,7 @@ class RadiostacjaPl(CBaseHostClass):
             if not sts: return
             
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 self.cache[cItem['f_cache']] = data
             except Exception:
                 printExc()
@@ -129,8 +101,8 @@ class RadiostacjaPl(CBaseHostClass):
         printDBG("RadiostacjaPl.listGenres [%s]" % cItem)
         self._fillCache(cItem)
         
-        CAT_TAB = [{'good_for_fav':True, 'category':'list_items',  'title': _('Wszystkie'), 'f_key':'muzyczne'},
-                   {'good_for_fav':True, 'category':'list_genres', 'title': _('Nastroje'),  'f_key':'kategorie'}]
+        CAT_TAB = [{'good_for_fav':True, 'category':'list_items',  'title': 'Wszystkie', 'f_key':'muzyczne'},
+                   {'good_for_fav':True, 'category':'list_genres', 'title': 'Nastroje',  'f_key':'kategorie'}]
         
         cItem = dict(cItem)
         cItem.pop('category', None)

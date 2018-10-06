@@ -3,40 +3,24 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetPluginDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from urlparse import urlparse
 try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from urlparse import urlparse, urljoin
 
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
-from binascii import hexlify, unhexlify, a2b_hex
-from hashlib import md5, sha256
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from binascii import unhexlify
+from hashlib import md5
+import base64
 ###################################################
 
 ###################################################
@@ -92,20 +76,14 @@ class HDStreams(CBaseHostClass):
                             ]
     
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        if addParams == {}: addParams = dict(self.defaultParams)
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
-        url = self.getFullUrl(url)
+        url = CBaseHostClass.getFullIconUrl(self, url.strip())
         if url == '': return ''
-        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID', 'cf_clearance'])
         return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
         
     def cryptoJS_AES_decrypt(self, encrypted, password, salt):
@@ -191,11 +169,11 @@ class HDStreams(CBaseHostClass):
         
     def listItems(self, cItem, nextCategory='', searchPattern=''):
         printDBG("HDStreams.listItems |%s|" % cItem)
-        NUM = 48
+        #NUM = 48
         url = cItem['url']
         page = cItem.get('page', 1)
         
-        query = {'perPage':NUM, 'page':page}
+        query = {'page':page} #'perPage':NUM, 
         keys = [('f_genre', 'genre[]'), ('f_year', 'year[]'), ('f_order', 'order'), ('f_order_by', 'orderBy')]
         for item in keys:
             if item[0] in cItem:

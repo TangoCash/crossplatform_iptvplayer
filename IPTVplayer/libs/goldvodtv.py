@@ -4,23 +4,17 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify, GetPyScriptCmd
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
-import urllib
-import random
-import string
+from Components.config import config, ConfigText, getConfigListEntry
 try:    import json
 except Exception: import simplejson as json
 
@@ -84,7 +78,7 @@ class GoldVodTVApi:
                 self.loggedIn = True
                 self.http_params.update({'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE})
             else:
-                self.sessionEx.open(MessageBox, _('Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."') % login, type = MessageBox.TYPE_INFO, timeout = 10 )
+                self.sessionEx.open(MessageBox, 'Problem z zalogowanie użytkownika "%s. Sprawdź dane do logowania w konfiguracji hosta."' % login, type = MessageBox.TYPE_INFO, timeout = 10 )
                 self.loggedIn = False
         
         channelsTab = []

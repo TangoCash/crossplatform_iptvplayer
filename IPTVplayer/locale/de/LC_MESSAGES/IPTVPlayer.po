@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: IPTVPlayer\n"
 "POT-Creation-Date: 2013-12-15 12:19+0100\n"
 "PO-Revision-Date: \n"
-"Last-Translator: doubledip <islu@gmx.de>\n"
+"Last-Translator: doubledip <----@---.de>\n"
 "Language-Team: IPTVPlayer\n"
 "Language: de_DE\n"
 "MIME-Version: 1.0\n"
@@ -44,12 +44,12 @@ msgstr ""
 
 msgid ""
 "\n"
-"This host is not integral part of the IPTVPlayer plugin.\n"
-"It is not supported by IPTVPlayer team."
+"This host is not integral part of the E2iPlayer plugin.\n"
+"It is not supported by E2iPlayer team."
 msgstr ""
 "\n"
-"Dieser Host ist kein integrierter Teil des IPTVPlayer Plugins.\n"
-"Es wird nicht vom IPTVPlayer Team unterstützt."
+"Dieser Host ist kein integrierter Teil des E2iPlayer Plugins.\n"
+"Es wird nicht vom E2iPlayer Team unterstützt."
 
 msgid ""
 "\n"
@@ -86,21 +86,6 @@ msgstr "    Service Icon Größe "
 msgid "    Video buffer size [MB]"
 msgstr "    Videopuffergröße in [MB]"
 
-msgid "  alltubetv login:"
-msgstr "  alltubetv Login:"
-
-msgid "  alltubetv password:"
-msgstr "  alltubetv Passwort:"
-
-msgid " (chunk %s)"
-msgstr " (Teil %s)"
-
-msgid " - mobile broadcast url"
-msgstr " - URL mobile Übertragung"
-
-msgid " Audio buffer size [KB]"
-msgstr " Audiopuffergröße in [KB]"
-
 msgid " Last.fm login:"
 msgstr " Last.fm Login:"
 
@@ -108,10 +93,7 @@ msgid " Password"
 msgstr " Passwort"
 
 msgid " Username or Email"
-msgstr " Benutzername oder EMail"
-
-msgid " Video buffer size [MB]"
-msgstr " Videopuffergröße in [MB]"
+msgstr " Benutzername oder E-Mail"
 
 msgid ""
 " has not been detected. \n"
@@ -166,8 +148,8 @@ msgstr "> Drücke OK zum Start  <"
 msgid "ABORTED"
 msgstr "ABGEBROCHEN"
 
-msgid "AC3 mix mode"
-msgstr "AC3 Mix Modus"
+msgid "AC3 downmix mode"
+msgstr "AC3 Downmix-Modus"
 
 msgid "ARTICLE"
 msgstr "ARTIKEL"
@@ -257,9 +239,6 @@ msgstr "Sind Sie sicher, dass Sie die Datei \"%s\" entfernen wollen?"
 msgid "Aspect"
 msgstr "Seitenverhältnis"
 
-msgid "Audio buffer size [KB]"
-msgstr "Audiopuffergröße in [KB]"
-
 msgid "Auto check for plugin update"
 msgstr "Automatisch nach Plugin Aktualisierung prüfen"
 
@@ -326,11 +305,11 @@ msgstr "Beendet.\n"
 msgid "Configuration"
 msgstr "Konfiguration"
 
-msgid "Configuration for service[%s]"
-msgstr "Konfiguration für Service [%s]"
+msgid "Configuration [%s] service"
+msgstr "Konfiguration [%s] Service"
 
-msgid "Configure IPTV Player"
-msgstr "Konfiguriere IPTV Player"
+msgid "Configure %s"
+msgstr "Konfiguriere %s"
 
 msgid "Configure host"
 msgstr "Konfiguriere Host"
@@ -400,8 +379,8 @@ msgstr "dunkelgrau"
 msgid "Debug logs"
 msgstr "Debug Log-Dateien"
 
-msgid "Default second video policy"
-msgstr "Zweites Standard Video-Verfahren"
+msgid "Default video policy for 4:3"
+msgstr "Standard Video-Verfahren für 4:3"
 
 msgid "Default video aspect ratio"
 msgstr "Standard Seitenverhältnis"
@@ -462,10 +441,10 @@ msgstr "Erneut herunterladen"
 
 msgid ""
 "Download can not be started.\n"
-" Incorrect address ('%r')."
+" Incorrect address \"%r\"."
 msgstr ""
 "Download kann nicht gestartet werden.\n"
-" Ungültige Adresse ('%r')."
+" Ungültige Adresse \"%r\"."
 
 msgid ""
 "Download can not be started.\n"
@@ -649,14 +628,11 @@ msgstr "Ende"
 msgid "External movie player config"
 msgstr "Externen Movie Player konfigurieren"
 
-msgid "External player infobar timeout"
-msgstr "Timeout der Infoleiste"
+msgid "Info Banner timeout"
+msgstr "Timeout der Infobar"
 
-msgid "External player use software decoder for the AAC"
-msgstr "Softwaredekoder für AAC verwenden"
-
-msgid "External player use software decoder for the DTS"
-msgstr "Softwaredekoder für DTS verwenden"
+msgid "Use software decoder for the %s"
+msgstr "Softwaredekoder für %s verwenden"
 
 msgid "Extracting an update packet."
 msgstr "Entpacke Update-Paket."
@@ -788,13 +764,13 @@ msgid "IPTV - the recorder mode"
 msgstr "IPTV - Aufnahme Modus"
 
 msgid "IPTV Player - settings"
-msgstr "IPTV Player - Konfiguration"
+msgstr "E2iPlayer - Konfiguration"
 
 msgid "IPTV Player HD version %s"
-msgstr "IPTV Player HD Version %s"
+msgstr "E2iPlayer HD Version %s"
 
 msgid "IPTV Player version %s"
-msgstr "IPTV Player Version %s"
+msgstr "E2iPlayer Version %s"
 
 msgid "IPTV Recordings"
 msgstr "IPTV Aufnahmen"
@@ -803,17 +779,17 @@ msgid "IPTV download manager"
 msgstr "Downloadverwaltung"
 
 msgid "IPTVPlayer - update"
-msgstr "IPTV Player - Aktualisierung"
+msgstr "E2iPlayer - Aktualisierung"
 
 msgid "IPTVPlayer need some additional setup"
-msgstr "IPTV Player braucht weitere Handgriffe"
+msgstr "E2iPlayer braucht weitere Handgriffe"
 
 msgid ""
 "IPTVPlayer need some additional setup.\n"
 "Such as downloading and installation additional binaries.\n"
 "Press OK to start."
 msgstr ""
-"IPTV Player braucht weitere Handgriffe. \n"
+"E2iPlayer braucht weitere Handgriffe. \n"
 "Wie das Herunterladen und Installieren weiterer Binärdateien.\n"
 "Drücken Sie OK für Start."
 
@@ -821,10 +797,10 @@ msgid "IPTVPlayer services configuration"
 msgstr "IPTV-Player Service Konfiguration"
 
 msgid "IPTVPlayer setup version %s"
-msgstr "IPTV Player Setup Version %s"
+msgstr "E2iPlayer Setup Version %s"
 
 msgid "IPTVPlayer setup version %s "
-msgstr "IPTV Player Setup Version %s "
+msgstr "E2iPlayer Setup Version %s "
 
 msgid "Icons size"
 msgstr "Icon-Größe"
@@ -942,20 +918,17 @@ msgstr "hellgrau"
 msgid "Line Spacing"
 msgstr "Untertitel Zeilenabstand"
 
-msgid "Links are videos and messages, without division into categories"
-msgstr "Alle Video-Links ohne Einteilung in Kategorien"
+msgid "Links from all files without categories"
+msgstr "Links aus allen Dateien ohne Einteilung in Kategorien"
 
-msgid "Links to the video files from the file urllist.txt"
-msgstr "Links zu den Videodateien aus urllist.txt"
+msgid "Links from the file %s"
+msgstr "Links aus der Datei %s"
 
 msgid "List only channels with subscription"
 msgstr "Zeige nur Kanäle mit Abonnement"
 
 msgid "Live Channels"
 msgstr "Live Kanäle"
-
-msgid "Live broadcasts from the file urllist.stream"
-msgstr "Live Übertragungen aus der Datei urllist.stream"
 
 msgid "Load"
 msgstr "Laden"
@@ -1190,11 +1163,11 @@ msgstr "Polnisch"
 msgid "Poland"
 msgstr "Polen"
 
-msgid "Policy"
+msgid "Video policy"
 msgstr "Video-Verfahren"
 
-msgid "Policy2"
-msgstr "Video-Verfahren 2"
+msgid "Video policy for 4:3"
+msgstr "Video-Verfahren für 4:3"
 
 msgid "Polish channles"
 msgstr "Polnische Kanäle"
@@ -1668,20 +1641,17 @@ msgstr "Tester: "
 msgid "Text files ytlist and urllist are in:"
 msgstr "Verzeichnis von ytlist.txt, urllist.txt:"
 
-msgid "The \"%s\" utility is used by IPTVPlayer."
-msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player verwendet."
+msgid "The \"%s\" utility is used by the %s as external movie player based on the ffmpeg and libeplayer."
+msgstr "Der \"%s\" wird vom %s als Externer Movie Player verwendet basierend auf ffmpeg und Libeplayer."
 
-msgid "The \"%s\" utility is used by the IPTVPlayer as external movie player based on the ffmpeg and libeplayer."
-msgstr "Der \"%s\" wird vom IPTV Player als Externer Movie Player verwendet basierend auf ffmpeg und Libeplayer."
+msgid "The \"%s\" utility is used by the %s as external movie player."
+msgstr "Der \"%s\" wird vom %s als Externer Movie Player verwendet."
 
-msgid "The \"%s\" utility is used by the IPTVPlayer as external movie player."
-msgstr "Der \"%s\" wird vom IPTV Player als Externer Movie Player verwendet."
+msgid "The \"%s\" utility is used by the %s to buffering and downloading [%s] links."
+msgstr "Das \"%s\" Dienstprogramm wird vom %s zum Puffern und Herunterladen von [%s] Links verwendet."
 
-msgid "The \"%s\" utility is used by the IPTVPlayer to buffering and downloading [%s] links."
-msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player zum Puffern und Herunterladen von [%s] Links verwendet."
-
-msgid "The \"%s\" utility is used by the IPTVPlayer to determine the encoding of the text."
-msgstr "Das \"%s\" Dienstprogramm wird vom IPTV Player werwendet, um die Kodierung von Texten zu bestimmen."
+msgid "The \"%s\" utility is used by the %s to determine the encoding of the text."
+msgstr "Das \"%s\" Dienstprogramm wird vom %s werwendet, um die Kodierung von Texten zu bestimmen."
 
 msgid "The current host crashed"
 msgstr "Der aktuelle Host ist abgestürzt"
@@ -1955,7 +1925,7 @@ msgid "You do not have a premium account.Starting a sponsored broadcast."
 msgstr "Sie haben kein Premium-Konto. Starte eine gesponsorte Übertragung."
 
 msgid "You need to enter email and password in configuration."
-msgstr "Sie müssen Email und Passwort in der Konfiguration eingeben."
+msgstr "Sie müssen E-Mail und Passwort in der Konfiguration eingeben."
 
 msgid "You probably have not access to this page due to geolocation restriction."
 msgstr "Sie haben womöglich keinen Zugang zu dieser Seite aufgrund von Geolokalisatios-Restriktionen."
@@ -1975,8 +1945,8 @@ msgstr "Youtube Player"
 msgid "[%s] - configuration"
 msgstr "[%s] - Konfiguration"
 
-msgid "[%s] will be used by IPTVPlayer."
-msgstr "[%s] wird von IPTVPlayer benutzt werden."
+msgid "[%s] will be used by %s."
+msgstr "[%s] wird von %s benutzt werden."
 
 msgid "[%s] with buffering"
 msgstr "[%s] mit Pufferung"
@@ -2137,8 +2107,8 @@ msgstr "Verlasse Movie Player..."
 msgid "lime"
 msgstr "limettengrün"
 
-msgid "live transfers"
-msgstr "Live Übertragungen"
+msgid "Live streams"
+msgstr "Live-Streams"
 
 msgid "login"
 msgstr "Login"
@@ -2423,7 +2393,7 @@ msgid "Some changes will be applied only after movie player restart."
 msgstr "Manche Änderungen werden erst nach Movie Player Neustart angewendet."
 
 msgid "IPTV Player download manager"
-msgstr "IPTV Player Downloadverwaltung"
+msgstr "E2iPlayer Downloadverwaltung"
 
 msgid "Animation [dubbing]"
 msgstr "Animation [Synchronisiert]"
@@ -2491,11 +2461,8 @@ msgstr "Audio"
 msgid "New episodes"
 msgstr "Neue Episoden"
 
-msgid "External player use software decoder for the WMA"
-msgstr "Softwaredekoder für WMA verwenden"
-
-msgid "AAC mix mode"
-msgstr "AAC Mix Modus"
+msgid "AAC downmix mode"
+msgstr "AAC Downmix-Modus"
 
 msgid "Preferred protocol:"
 msgstr "Bevorzugtes Protokoll:"
@@ -2967,7 +2934,7 @@ msgid ""
 "Email: samsamsam@o2.pl"
 msgstr ""
 "Bitte überprüfen Sie '%s' mit Ihrem Internet Browser auf dem PC. Bitte melden Sie das Problem, falls Links zugänglich sein sollten. \n"
-"Email: samsamsam@o2.pl"
+"E-Mail: samsamsam@o2.pl"
 
 msgid "Last error: \"Videomega has blocked your IP for some time. Please retry this link after some time.\""
 msgstr "Letzter Fehler: \"Videomega hat für einige Zeit Ihre IP geblockt. Bitte versuchen Sie den Link einige Zeit später aufzurufen.\""
@@ -3044,12 +3011,6 @@ msgstr "Neue HD Videos"
 
 msgid "Use proxy gateway"
 msgstr "Benutze Proxy Gateway"
-
-msgid "show iframe for audio item"
-msgstr "Iframe beim Abspielen von Audiodateien"
-
-msgid "Iframe file"
-msgstr "Audio Iframe"
 
 msgid "Total size: "
 msgstr "Gesamtgröße: "
@@ -3431,15 +3392,6 @@ msgstr "Abfrage"
 msgid "(unsafe)"
 msgstr "(unsicher)"
 
-msgid "External player use software decoder for the AC3"
-msgstr "Softwaredekoder für AC3 verwenden"
-
-msgid "External player use software decoder for the EAC3"
-msgstr "Softwaredekoder für EAC3 verwenden"
-
-msgid "External player use software decoder for the MP3"
-msgstr "Softwaredekoder für MP3 verwenden"
-
 msgid "Menu"
 msgstr "Menü"
 
@@ -3562,14 +3514,14 @@ msgstr "Alternative Domain:"
 msgid "Initialize web interface (experimental)"
 msgstr "Initialisiere Web-Interface (experimentell)"
 
-msgid "Link protected with google recaptcha v2."
-msgstr "Link ist geschützt mit Google reCAPTCHA v2."
+msgid "Link protected with google recaptcha v2"
+msgstr "Link ist geschützt mit Google reCaptcha v2"
 
 msgid "Please fill your login and password in the host configuration (available under blue button) and try again."
 msgstr "Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration aus und versuchen Sie es danach erneut."
 
-msgid "Allow watched flag to be set (experimental)"
-msgstr "Setzen von Gesehen-Marker erlauben (experimentell)"
+msgid "Allow watched flag to be set"
+msgstr "Setzen von Gesehen-Marker erlauben"
 
 msgid "Unset watched"
 msgstr "Als gesehen entmarkieren"
@@ -3596,7 +3548,7 @@ msgid "Missed the program?"
 msgstr "Sendung verpasst?"
 
 msgid "email"
-msgstr "Email"
+msgstr "E-Mail"
 
 msgid "DRM protected streams are not supported."
 msgstr "DRM geschützte Streams werden nicht unterstützt."
@@ -3651,10 +3603,10 @@ msgid "Unknown file extension \"%s\"."
 msgstr "Unbekannte Dateierweiterung \"%s\"."
 
 msgid "Functionality protected by Google reCAPTCHA!"
-msgstr "Funktionalität ist geschützt mit Google reCAPTCHA!"
+msgstr "Funktionalität ist geschützt mit Google reCaptcha!"
 
 msgid "Network connection failed."
-msgstr "Netzwerkverbindung fehlgeschlagen"
+msgstr "Netzwerkverbindung fehlgeschlagen."
 
 msgid "Unknown server response."
 msgstr "Unbekannte Serverantwort."
@@ -3662,8 +3614,8 @@ msgstr "Unbekannte Serverantwort."
 msgid "Disable/Enable groups"
 msgstr "Deaktivieren/Aktivieren von Gruppen"
 
-msgid "IPTVPlayer enable/disabled groups"
-msgstr "IPTV Player aktivierte/deaktivierte Gruppen"
+msgid "E2iPlayer enable/disabled groups"
+msgstr "E2iPlayer aktivierte/deaktivierte Gruppen"
 
 msgid "Hide \"%s\" group"
 msgstr "Verstecke \"%s\" Gruppe"
@@ -3735,8 +3687,328 @@ msgstr ""
 "Der Service %s benötigt ein Abonnement.\n"
 "Bitte füllen Sie Ihr Login und Passwort in der Host Konfiguration aus - zugänglich über die blaue Taste."
 
-msgid "Use black iframe at normal video playback finish"
-msgstr "Zeige schwarzes Iframe am Ende von Videowiedergabe"
-
 msgid "Black iframe file"
 msgstr "Schwarzes Iframe"
+
+msgid "cmdwrap tool"
+msgstr "cmdwrap-Tool"
+
+msgid "It improves commands execution with very long arguments.\n"
+msgstr "Es verbessert die Befehlsausführung mit sehr langen Argumenten.\n"
+
+msgid "Utility \"%s\" can not be found."
+msgstr "Dienstprogramm \"%s\" kann nicht gefunden werden."
+
+msgid "Critical Error – Content-Encoding gzip cannot be handled!"
+msgstr "Kritischer Fehler - Content-Encoding gzip kann nicht behandelt werden!"
+
+msgid "Use web-proxy for VODs (it may be illegal):"
+msgstr "Benutze Web-Proxy für VOD (könnte illegal sein):"
+
+msgid "WARNING (phase 1/3)"
+msgstr "WARNUNG (Phase 1/3)"
+
+msgid "Because of very bad behaviour of user @DirtyDonki your image was blacklisted."
+msgstr "Wegen des sehr schlechten Verhaltens des Benutzers @DirtyDonki wurde dein Image auf die schwarze Liste gesetzt."
+
+msgid "Please be also informed that users of https://vuplus-images.co.uk/ forum will NOT get support, due to same reason."
+msgstr "Bitte beachten Sie auch, dass Benutzer des https://vuplus-images.co.uk/ Forums aus dem gleichen Grund KEINEN Support erhalten."
+
+msgid "Connection error."
+msgstr "Verbindungs-Fehler."
+
+msgid "%s has been protected with google recaptcha v2. You can try to use API version."
+msgstr "%s wurde mit google reCaptcha v2 geschützt. Sie können versuchen, die API-Version zu verwenden."
+
+msgid "RAM buffer size [MB] for network protocols"
+msgstr "RAM-Puffer in [MB] für Online-Inhalte"
+
+msgid "RAM buffer size [MB] for local files"
+msgstr "RAM-Puffer in [MB] für Lokal-Inhalte"
+
+msgid "Please wait for initialization data."
+msgstr "Bitte warten Sie auf die Initialisierungsdaten."
+
+msgid "Please wait - downloading initialization data."
+msgstr "Bitte warten - Initialisierungsdaten werden heruntergeladen."
+
+msgid "Whole file must be downloaded to start playback!"
+msgstr "Die gesamte Datei muss heruntergeladen werden, um die Wiedergabe zu starten!"
+
+msgid "You can use external eplayer to start playback faster."
+msgstr ""
+
+msgid "Failed to gzip."
+msgstr ""
+
+msgid "Please visit \"%s\" and confirm that you are human."
+msgstr "Bitte besuchen Sie \"%s\" um zu bestätigen, dass Sie ein Mensch sind."
+
+msgid "Please register and set login and password in the host configuration, to solve this problems permanently."
+msgstr "Bitte registrieren Sie sich und setzen Sie Login und Passwort in der Host Konfiguration, um diese Probleme dauerhaft zu lösen."
+
+msgid "Failed to connect to server \"%s\"."
+msgstr "Die Verbindung zum Server \"%s\" konnte nicht hergestellt werden."
+
+msgid "Use links cache"
+msgstr "Links-Cache verwenden"
+
+msgid "Captcha solving service"
+msgstr "Captcha-Lösungsservice"
+
+msgid ""
+"Resolving reCaptcha with %s failed!\n"
+"\n"
+msgstr ""
+"Das Auflösen von reCaptcha mit %s ist fehlgeschlagen!\n"
+"\n"
+
+msgid "%s timeout."
+msgstr "%s Zeitüberschreitung."
+
+msgid "Network failed %s."
+msgstr "Netzwerk fehlgeschlagen %s."
+
+msgid "https://openload.co/ link extractor error."
+msgstr "https://openload.co/ Link Extraktor Fehler."
+
+msgid ""
+"The host %s requires registration. \n"
+"Please fill your login and password in the host configuration. Available under blue button."
+msgstr ""
+"Der Service %s erfordert eine Registrierung. \n"
+"Bitte geben Sie Ihren Login und Ihr Passwort in der Host Konfiguration ein. Verfügbar über die blaue Taste."
+
+msgid "Use the PyCurl for HTTP(S) requests"
+msgstr "Verwende PyCurl für HTTP(S) Anfragen"
+
+msgid "The preferred update server"
+msgstr "Bevorzugter Update-Server"
+
+msgid "Lead programmer: "
+msgstr "Leitender Programmierer: "
+
+msgid "Problem with parsing the server list."
+msgstr "Problem mit dem Parsen der Serverliste."
+
+msgid "Copy graphics without icons."
+msgstr "Kopiere Grafiken ohne Icons."
+
+msgid "Copy all graphics."
+msgstr "Kopiere alle Grafiken."
+
+msgid "Copy icons."
+msgstr "Kopiere Icons."
+
+msgid "HTTPS connection error \"%s\"\n"
+msgstr "HTTPS-Verbindungsfehler \"%s\"\n"
+
+msgid "It looks like your current configuration do not allow to connect to the https://%s/.\n"
+msgstr "Es sieht so aus, als ob Ihre aktuelle Konfiguration es nicht erlaubt, eine Verbindung zu https://%s/ herzustellen.\n"
+
+msgid "You can disable HTTPS certificates validation in the E2iPlayer configuration to suppress this problem."
+msgstr "Sie können die Validierung von HTTPS-Zertifikaten in der E2iPlayer-Konfiguration deaktivieren, um dieses Problem zu beheben."
+
+msgid "You can install PyCurl package from %s to fix this problem."
+msgstr "Sie können das PyCurl-Paket von %s installieren, um dieses Problem zu beheben."
+
+msgid "You can enable PyCurl in the E2iPlayer configuration to fix this problem."
+msgstr "Sie können PyCurl in der E2iPlayer-Konfiguration aktivieren, um dieses Problem zu beheben."
+
+msgid "Please report this problem to the developer %s."
+msgstr "Bitte melden Sie dieses Problem dem Entwickler %s."
+
+msgid "Use web proxy gateway"
+msgstr "Verwende Webproxy-Gateway"
+
+msgid "Always"
+msgstr "Immer"
+
+msgid "Never"
+msgstr "Nie"
+
+msgid "Create LCD/VFD summary screen"
+msgstr "Erzeuge Summary-Screen für LCD/VFD"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "Internal Server Error. Server response code: %s"
+msgstr "Interner Serverfehler. Server-Antwortcode: %s"
+
+msgid "%s e-mail"
+msgstr "%s E-Mail"
+
+msgid "%s password"
+msgstr "%s Passwort"
+
+msgid "%s device name"
+msgstr "%s Gerätename"
+
+msgid ""
+"JDownloader script execution failed.\n"
+"Error code: %s\n"
+msgstr ""
+"JDownloader Script Ausführung fehlgeschlagen.\n"
+"Fehler Code:: %s\n"
+
+msgid "Access denied. Please check password."
+msgstr "Zugriff verweigert. Bitte überprüfen Sie das Passwort."
+
+msgid ""
+"Error code: %s\n"
+"Error message: %s"
+msgstr ""
+"Fehler Code: %s\n"
+"Fehler Mitteilung: %s"
+
+msgid "JDownloader script execution"
+msgstr "JDownloader Script Ausführung"
+
+msgid "Server return 404 - Not Found."
+msgstr "Server-Antwort 404 - Nicht gefunden."
+
+msgid "It looks like some kind of protection. Try again later."
+msgstr "Es sieht nach einer Art Schutz aus. Versuchen Sie es später noch einmal."
+
+msgid "Please visit %s to learn how to redirect this task to the external device."
+msgstr "Bitte besuchen Sie %s, um zu erfahren, wie Sie diese Aufgabe auf das externe Gerät umleiten können."
+
+msgid "You can use \"%s\" or \"%s\" services for automatic solution."
+msgstr "Sie können die Dienste von %s oder %s für eine automatische Lösung nutzen."
+
+msgid "Go to the host configuration available under blue button."
+msgstr "Gehen Sie zu der unter der blauen Taste verfügbaren Host Konfiguration."
+
+msgid "Page accessible to logged in members only."
+msgstr "Die Seite ist nur für eingeloggte Mitglieder zugänglich."
+
+msgid "You can try to use proxy as workaround, check options under blue button."
+msgstr "Sie können versuchen, einen Proxy als Workaround zu verwenden, überprüfen Sie die Optionen unter der blauen Taste."
+
+msgid "Stop playback with buffer save"
+msgstr "Wiedergabe stoppen mit Pufferspeicherung"
+
+msgid "Moving playback buffer to the download manager failed with the following error \"%s\""
+msgstr "Das Verschieben des Wiedergabepuffers in die Downloadverwaltung ist mit folgendem Fehler fehlgeschlagen \"%s\""
+
+msgid "Max number of parallel downloads has been reached."
+msgstr "Die maximale Anzahl paralleler Downloads ist erreicht."
+
+msgid "This site is protected with Google reCaptcha v2."
+msgstr "Diese Seite ist geschützt mit Google reCaptcha v2."
+
+msgid "Preferred language"
+msgstr "Bevorzugte Sprache"
+
+msgid "Hosting \"%s\" not supported."
+msgstr "Hosting \"%s\" nicht unterstützt."
+
+msgid "Hosting \"%s\" unknown."
+msgstr "Hosting \"%s\" unbekannt."
+
+msgid ""
+"OpenSSL in your image has different library names then these used by %s.\n"
+"here is need to create following symlinks:\n"
+"%s\n"
+"to be able to install binary components from %s server.\n"
+"Do you want to proceed?"
+msgstr ""
+"OpenSSL in Ihrem Image hat andere Bibliotheksnamen als diese, die von %s verwendet werden.\n"
+"Es ist notwendig folgende Symlinks zu erstellen:\n"
+"%s\n"
+"um Binärkomponenten vom %s Server installieren zu können.\n"
+"Möchten Sie fortfahren?"
+
+msgid ""
+"Service %s requires registration. \n"
+"Please fill your login and password in the %s configuration."
+msgstr ""
+"Service %s benötigt eine Registrierung. \n"
+"Bitte füllen Sie Ihr Login und Passwort in der %s Konfiguration."
+
+msgid "24 hour format "
+msgstr "24 Stunden-Format "
+
+msgid "12 hour format "
+msgstr "12 Stunden-Format "
+
+msgid "Info Banner clock format"
+msgstr "Infobar Uhr-Format"
+
+msgid "Inject black iframe at video playback finish"
+msgstr "Schwarzes Iframe am Wiedergabeende einfügen"
+
+msgid "Show iframe during audio playback"
+msgstr "Zeige Iframe während Audiowiedergabe"
+
+msgid "Radio iframe file"
+msgstr "Radio Iframe"
+
+msgid "The %s utility is necessary here but it was not detected."
+msgstr "Das Dienstprogramm %s ist hier notwendig, wurde aber nicht erkannt."
+
+msgid "Please consider restart your Engima2 and agree to install the %s utlity when the %s will propose this."
+msgstr "Bitte erwägen Sie einen Neustart von Engima2 und stimmen Sie zu, das %s Dienstprogramm zu installieren, wenn %s dies vorschlägt."
+
+msgid "Cyrillic Latin Converter"
+msgstr "Kyrillisch-Lateinisch Konverter"
+
+msgid "Moving file from \"%s\" to \"%s\" failed.\n"
+msgstr "Verschieben von Datei von \"%s\" zu \"%s\" fehlgeschlagen.\n"
+
+msgid "Own model"
+msgstr "Eigenes Model"
+
+msgid "Virtual Keyboard type"
+msgstr "Virtueller Tastatur-Typ"
+
+msgid ""
+"Downloading file:\n"
+"%r."
+msgstr ""
+"Herunterlade Datei:\n"
+"%r."
+
+msgid ""
+"Download failed.\n"
+"Last error \"%s (%s)\"."
+msgstr ""
+"Download fehlgeschlagen.\n"
+"Letzter Fehler \"%s (%s)\"."
+
+msgid "Load of the Virtual Keyboard layout \"%s\" failed due to the following error: \"%s\""
+msgstr "Das Laden des Layouts der virtuellen Tastatur \"%s\" ist aufgrund des folgenden Fehlers fehlgeschlagen: \"%s\""
+
+msgid "\"%s\" Virtual Keyboard layout not available."
+msgstr "\"%s\" virtuelle Tastatur-Layout nicht verfügbar."
+
+msgid "Do you want to download \"%s\" Virtual Keyboard layout now?"
+msgstr "Möchten Sie das \"%s\" virtuelle Tastatur-Layout jetzt herunterladen?"
+
+msgid "Do you want to try to re-download \"%s\" Virtual Keyboard layout?"
+msgstr "Möchten Sie versuchen das \"%s\" virtuelle Tastatur-Layout erneut herunterzuladen?"
+
+msgid "    Allow suggestions"
+msgstr "    Erlaube Suchvorschläge"
+
+msgid "    Default suggestions provider"
+msgstr "    Standard Suchmaschine"
+
+msgid "Filmstarts Suggestions"
+msgstr "Filmstarts Ergebnisse"
+
+msgid "Filmweb Suggestionss"
+msgstr "Filmweb Ergebnisse"
+
+msgid "IMDb Suggestions"
+msgstr "IMDb Ergebnisse"
+
+msgid "Youtube Suggestions"
+msgstr "Youtube Ergebnisse"
+
+msgid "Google Suggestions"
+msgstr "Google Ergebnisse"

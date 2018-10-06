@@ -3,37 +3,30 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify, rm, GetPluginDir, GetCacheSubDir, ReadTextFile, WriteTextFile
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify, rm, GetCacheSubDir, ReadTextFile, WriteTextFile
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
 import base64
 from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
+from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha as  UnCaptchaReCaptcha_fallback
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -67,7 +60,7 @@ def GetConfigList():
 def gettytul():
     return 'http://mrpiracy.site/'
 
-class MRPiracyGQ(CBaseHostClass):
+class MRPiracyGQ(CBaseHostClass, CaptchaHelper):
     LINKS_CACHE = {}
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'mrpiracy.gq', 'cookie':'mrpiracygq.cookie'})
@@ -133,14 +126,8 @@ class MRPiracyGQ(CBaseHostClass):
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url):
-                return url
-            else:
-                return urlparse.urljoin(baseUrl, url)
-            
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         if sts:
             encoding = self.cm.ph.getDataBeetwenMarkers(data, 'charset=', '"', False)[1]
@@ -357,6 +344,7 @@ class MRPiracyGQ(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return urlTab
+        cUrl = self.cm.meta['url']
         
         trailerUrl = self.cm.ph.getSearchGroups(data, '''trailer\(\s*["'](https?://youtube.com/[^"^']+?)["']''')[0]
         
@@ -368,9 +356,10 @@ class MRPiracyGQ(CBaseHostClass):
         
         token = self.cm.ph.getSearchGroups(data, '''var\s+form_data\s*=\s*['"]([^'^"]+?)['"]''')[0]
         jscode = []
-        jscode.append(self.cm.ph.getDataBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)[1])
-        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'server'), ('</script', '>'))[1]
-        jscode.append(self.cm.ph.getDataBeetwenNodes(tmp, ('<script', '>'), ('</script', '>'), False)[1])
+        scriptsData = self.cm.ph.getAllItemsBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)
+        for item in scriptsData:
+            if ('var _' in item and 'server' in item) or (item.count('var ') == 1 and item.count(';') < 2):
+                jscode.append(item)
         jscode = '\n'.join(jscode)
         
         linksData = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'buttonSv'), ('</div', '>'))
@@ -381,10 +370,37 @@ class MRPiracyGQ(CBaseHostClass):
             playerData['ref_url'] = cItem['url']
             url = '>' + '%s' % playerData
             playerData['jscode'] = jscode
-            urlTab.append({'name':name, 'url':strwithmeta(url, playerData), 'need_resolve':1})
+            urlTab.append({'name':'[www] ' + name, 'url':strwithmeta(url, playerData), 'need_resolve':1})
+        
+        if len(urlTab):
+            authCookie = self.cm.getCookieItem(self.COOKIE_FILE, 'id_utilizador')
+            if authCookie == '': authCookie = self.cm.getCookieItem(self.COOKIE_FILE, 'admin')
+        
+            id = urlTab[0]['url'].meta.get('id', '')
+            type = cItem['url'].rsplit('/', 1)[-1].split('.', 1)[0]
+            url = 'http://mpapi.ml/apinew/' + type + 's.php?action=links&' + {'filme':'idFilme'}.get(type, 'idEpisodio') + '=' + id
+            
+            sts, data = self.getPage(url, {'cookie_items':{'username':authCookie}})
+            if sts:
+                try:
+                    kodiLinks = []
+                    data = byteify(json.loads(data))
+                    for item in data:
+                        for i in range(10):
+                            if i == 0: key = 'URL'
+                            else: key = 'URL%s' % i
+                            url = item.get(key, '')
+                            if not self.cm.isValidUrl(url): continue
+                            kodiLinks.append({'name':'[kodi] ' + self.up.getHostName(url).rsplit('.', 1)[0].title(), 'url':strwithmeta(url, {'kodi_link':True, 'Referer':cUrl}), 'need_resolve':1})
+                    kodiLinks.extend(urlTab)
+                    urlTab = kodiLinks
+                except Exception:
+                    printExc()
         
         if self.cm.isValidUrl(trailerUrl):
             urlTab.append({'name':_('Trailer'), 'url':trailerUrl, 'need_resolve':1})
+            sts, data = self.getPage(cItem['url'])
+            if not sts: return urlTab
         
         if len(urlTab):
             self.cacheLinks[cItem['url']] = urlTab
@@ -429,7 +445,7 @@ class MRPiracyGQ(CBaseHostClass):
             try:
                 jscode = playerData.pop('jscode', '')
                 jscode += '''var iptv_fake_element={hide:function(){},show:function(){},addClass:function(){},removeClass:function(){}};playertype="iptv_player_data";var iptv_player_data=''' + json.dumps(playerData) + ''';$=function(){return 1==arguments.length&&arguments[0].endsWith(playertype)?{data:function(a){return iptv_player_data[a]}}:iptv_fake_element},$.ajax=function(){print(JSON.stringify(arguments[0]))},''' + playerData['callback'] + '''(iptv_player_data.sitekey);'''
-                ret = iptv_js_execute(jscode)
+                ret = js_execute(jscode)
                 data = ret['data'].strip()
                 data = byteify(json.loads(data))
                 
@@ -440,24 +456,7 @@ class MRPiracyGQ(CBaseHostClass):
                 urlParams['header']['Referer'] = playerData['ref_url']
 
                 if 'sitekey' in playerData:
-                    errorMsgTab = [_('Link protected with google recaptcha v2.')]
-                    recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
-                    recaptcha.HTTP_HEADER['Referer'] = playerData['ref_url']
-                    recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
-                    token = recaptcha.processCaptcha(playerData['sitekey'])
-                    if token == '':
-                        recaptcha = None
-                        if config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '9kw.eu':
-                            recaptcha = UnCaptchaReCaptcha_9kw()
-                        elif config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value == '2captcha.com':
-                            recaptcha = UnCaptchaReCaptcha_2captcha()
-                        
-                        if recaptcha != None:
-                            token = recaptcha.processCaptcha(playerData['sitekey'], playerData['ref_url'])
-                        else:
-                            errorMsgTab.append(_('You can use \"%s\" or \"%s\" services to workaround this protection.') % ("http://2captcha.com/", "https://9kw.eu/", )) 
-                            errorMsgTab.append(_('Go to the host configuration available under blue button.'))
-                    
+                    token, errorMsgTab = self.processCaptcha(playerData['sitekey'], playerData['ref_url'], config.plugins.iptvplayer.mrpiracy_bypassrecaptcha.value)
                     printDBG('> token "%s" ' % token)
                     post_data['token'] = token
                     
@@ -596,7 +595,7 @@ class MRPiracyGQ(CBaseHostClass):
 
         sitekey = self.cm.ph.getSearchGroups(data, 'fallback\?k=([^"]+?)"')[0]
         if sitekey != '':
-            recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
+            recaptcha = UnCaptchaReCaptcha_fallback(lang=GetDefaultLang())
             recaptcha.HTTP_HEADER['Referer'] = self.getMainUrl()
             recaptcha.HTTP_HEADER['User-Agent'] = self.USER_AGENT
             token = recaptcha.processCaptcha(sitekey)

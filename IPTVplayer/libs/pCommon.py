@@ -1,13 +1,16 @@
 ﻿# -*- coding: utf-8 -*-
-# Based on (root)/trunk/xbmc-addons/src/plugin.video.polishtv.live/hosts/ @ 419 - Wersja 605
 
 ###################################################
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, SetTmpCookieDir, rm, UsePyCurl
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute, IsMainThread, IsThreadTerminated, SetThreadKillable
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, rm, UsePyCurl
+from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import IsMainThread, IsThreadTerminated, SetThreadKillable
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
+from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 # FOREIGN import
 ###################################################
@@ -17,20 +20,18 @@ import base64
 try: import ssl
 except Exception: pass
 import re
-import string
 import time
-import htmlentitydefs
 import cookielib
 import unicodedata
-try:    import json
-except Exception: import simplejson as json
+try: import pycurl
+except Exception: pass
 try:
     try: from cStringIO import StringIO
     except Exception: from StringIO import StringIO 
     import gzip
 except Exception: pass
-from Tools.Directories import fileExists
 from urlparse import urljoin, urlparse, urlunparse
+from binascii import hexlify
 ###################################################
 
 def DecodeGzipped(data):
@@ -107,21 +108,11 @@ class CParsingHelper:
             if deep < 0:
                 break
         return cTree, idx, deep
-    
+
     @staticmethod
     def getSearchGroups(data, pattern, grupsNum=1, ignoreCase=False):
-        tab = []
-        if ignoreCase:
-            match = re.search(pattern, data, re.IGNORECASE)
-        else:
-            match = re.search(pattern, data)
-        
-        for idx in range(grupsNum):
-            try:    value = match.group(idx + 1)
-            except Exception: value = ''
-            tab.append(value)
-        return tab
-        
+        return ph.search(data, pattern, ph.IGNORECASE if ignoreCase else 0, grupsNum)
+
     @staticmethod
     def getDataBeetwenReMarkers(data, pattern1, pattern2, withMarkers=True):
         match1 = pattern1.search(data)
@@ -134,94 +125,34 @@ class CParsingHelper:
         else:
             return True, data[match1.end(0): (match1.end(0) + match2.start(0)) ]
 
-        
     @staticmethod
     def getDataBeetwenMarkers(data, marker1, marker2, withMarkers=True, caseSensitive=True):
-        if caseSensitive:
-            idx1 = data.find(marker1)
-        else:
-            idx1 = data.lower().find(marker1.lower())
-        if -1 == idx1: return False, ''
-        if caseSensitive:
-            idx2 = data.find(marker2, idx1 + len(marker1))
-        else:
-            idx2 = data.lower().find(marker2.lower(), idx1 + len(marker1))
-        if -1 == idx2: return False, ''
-        
-        if withMarkers:
-            idx2 = idx2 + len(marker2)
-        else:
-            idx1 = idx1 + len(marker1)
+        flags = 0
+        if withMarkers: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.find(data, marker1, marker2, flags)
 
-        return True, data[idx1:idx2]
-        
     @staticmethod
     def getAllItemsBeetwenMarkers(data, marker1, marker2, withMarkers=True, caseSensitive=True):
-        itemsTab = []
-        if caseSensitive:
-            sData = data
-        else:
-            sData = data.lower()
-            marker1 = marker1.lower()
-            marker2 = marker2.lower()
-        idx1 = 0
-        while True:
-            idx1 = sData.find(marker1, idx1)
-            if -1 == idx1: return itemsTab
-            idx2 = sData.find(marker2, idx1 + len(marker1))
-            if -1 == idx2: return itemsTab
-            tmpIdx2 = idx2 + len(marker2) 
-            if withMarkers:
-                idx2 = tmpIdx2
-            else:
-                idx1 = idx1 + len(marker1)
-            itemsTab.append(data[idx1:idx2])
-            idx1 = tmpIdx2
-        return itemsTab
-        
+        flags = 0
+        if withMarkers: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.findall(data, marker1, marker2, flags)
+
     @staticmethod
     def rgetAllItemsBeetwenMarkers(data, marker1, marker2, withMarkers=True, caseSensitive=True):
-        itemsTab = []
-        if caseSensitive:
-            sData = data
-        else:
-            sData = data.lower()
-            marker1 = marker1.lower()
-            marker2 = marker2.lower()
-        idx1 = len(data)
-        while True:
-            idx1 = sData.rfind(marker1, 0, idx1)
-            if -1 == idx1: return itemsTab
-            idx2 = sData.rfind(marker2, 0, idx1)
-            if -1 == idx2: return itemsTab
-            
-            if withMarkers:
-                itemsTab.insert(0, data[idx2:idx1+len(marker1)])
-            else:
-                itemsTab.insert(0, data[idx2+len(marker2):idx1])
-            idx1 = idx2
-        return itemsTab
-        
+        flags = 0
+        if withMarkers: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.rfindall(data, marker1, marker2, flags)
+
     @staticmethod
     def rgetDataBeetwenMarkers2(data, marker1, marker2, withMarkers=True, caseSensitive=True):
-        if caseSensitive:
-            sData = data
-        else:
-            sData = data.lower()
-            marker1 = marker1.lower()
-            marker2 = marker2.lower()
-        idx1 = len(data)
-        
-        idx1 = sData.rfind(marker1, 0, idx1)
-        if -1 == idx1: return False, ''
-        idx2 = sData.rfind(marker2, 0, idx1)
-        if -1 == idx2: return False, ''
-        
-        if withMarkers:
-            return True, data[idx2:idx1+len(marker1)]
-        else:
-            return True, data[idx2+len(marker2):idx1]
-        
+        flags = 0
+        if withMarkers: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.rfind(data, marker1, marker2, flags)
+
     @staticmethod
     def rgetDataBeetwenMarkers(data, marker1, marker2, withMarkers = True):
         # this methods is not working as expected, but is is used in many places
@@ -230,143 +161,39 @@ class CParsingHelper:
         if -1 == idx1: return False, ''
         idx2 = data.rfind(marker2, idx1 + len(marker1))
         if -1 == idx2: return False, ''
-        
         if withMarkers:
             idx2 = idx2 + len(marker2)
         else:
             idx1 = idx1 + len(marker1)
         return True, data[idx1:idx2]
-        
+
     @staticmethod
     def getDataBeetwenNodes(data, node1, node2, withNodes=True, caseSensitive=True):
-        ret = CParsingHelper.getAllItemsBeetwenNodes(data, node1, node2, withNodes, 1, caseSensitive)
-        if len(ret): return True, ret[0]
-        else: return False, ''
-    
+        flags = 0
+        if withNodes: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.find(data, node1, node2, flags)
+
     @staticmethod
     def getAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1, caseSensitive=True):
-        if len(node1) < 2 or len(node2) < 2:
-            return []
-        itemsTab = []
-        n1S = node1[0]
-        n1E = node1[1]
-        if len(node1) > 2: n1P = node1[2]
-        else: n1P = None
-        n2S = node2[0]
-        n2E = node2[1]
-        if len(node2) > 2: n2P = node2[2]
-        else: n2P = None
-        lastIdx = 0
-        search = 1
-        
-        if caseSensitive:
-            sData = data
-        else:
-            sData = data.lower()
-            n1S = n1S.lower()
-            n1E = n1E.lower()
-            if n1P != None: n1P = n1P.lower()
-            n2S = n2S.lower()
-            n2E = n2E.lower()
-            if n2P != None: n2P = n2P.lower()
-            
-        while True:
-            if search == 1:
-                # node 1 - start
-                idx1 = sData.find(n1S, lastIdx)
-                if -1 == idx1: return itemsTab
-                lastIdx = idx1 + len(n1S)
-                idx2 = sData.find(n1E, lastIdx)
-                if -1 == idx2: return itemsTab
-                lastIdx = idx2 + len(n1E)
-                if n1P != None and sData.find(n1P, idx1 + len(n1S), idx2) == -1:
-                    continue
-                search = 2
-            else:
-                # node 2 - end
-                tIdx1 = sData.find(n2S, lastIdx)
-                if -1 == tIdx1: return itemsTab
-                lastIdx = tIdx1 + len(n2S)
-                tIdx2 = sData.find(n2E, lastIdx)
-                if -1 == tIdx2: return itemsTab
-                lastIdx = tIdx2 + len(n2E)
+        flags = 0
+        if withNodes: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.findall(data, node1, node2, flags, limits=numNodes)
 
-                if n2P != None and sData.find(n2P, tIdx1 + len(n2S), tIdx2) == -1:
-                    continue
-
-                if withNodes:
-                    idx2 = tIdx2 + len(n2E)
-                else:
-                    idx1 = idx2 + len(n1E)
-                    idx2 = tIdx1
-                search = 1
-                itemsTab.append(data[idx1:idx2])
-            if numNodes > 0 and len(itemsTab) == numNodes:
-                break
-        return itemsTab
-        
     @staticmethod
     def rgetDataBeetwenNodes(data, node1, node2, withNodes=True, caseSensitive=True):
-        ret = CParsingHelper.rgetAllItemsBeetwenNodes(data, node1, node2, withNodes, 1, caseSensitive)
-        if len(ret): return True, ret[0]
-        else: return False, ''
+        flags = 0
+        if withNodes: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.rfind(data, node1, node2, flags)
         
     @staticmethod
     def rgetAllItemsBeetwenNodes(data, node1, node2, withNodes=True, numNodes=-1, caseSensitive=True):
-        if len(node1) < 2 or len(node2) < 2:
-            return []
-        itemsTab = []
-        n1S = node1[0]
-        n1E = node1[1]
-        if len(node1) > 2: n1P = node1[2]
-        else: n1P = None
-        n2S = node2[0]
-        n2E = node2[1]
-        if len(node2) > 2: n2P = node2[2]
-        else: n2P = None
-        lastIdx = len(data)
-        search = 1
-        if caseSensitive:
-            sData = data
-        else:
-            sData = data.lower()
-            n1S = n1S.lower()
-            n1E = n1E.lower()
-            if n1P != None: n1P = n1P.lower()
-            n2S = n2S.lower()
-            n2E = n2E.lower()
-            if n2P != None: n2P = n2P.lower()
-        while True:
-            if search == 1:
-                # node 1 - end
-                idx1 = sData.rfind(n1S, 0, lastIdx)
-                if -1 == idx1: return itemsTab
-                lastIdx = idx1
-                idx2 = sData.find(n1E, idx1+len(n1S))
-                if -1 == idx2: return itemsTab
-                if n1P != None and sData.find(n1P, idx1 + len(n1S), idx2) == -1:
-                    continue
-                search = 2
-            else:
-                # node 2 - start
-                tIdx1 = sData.rfind(n2S, 0, lastIdx)
-                if -1 == tIdx1: return itemsTab
-                lastIdx = tIdx1
-                tIdx2 = sData.find(n2E, tIdx1+len(n2S), idx1)
-                if -1 == tIdx2: return itemsTab
-                if n2P != None and sData.find(n2P, tIdx1 + len(n2S), tIdx2) == -1:
-                    continue
-                if withNodes:
-                    s1 = tIdx1
-                    s2 = idx2 + len(n1E)
-                else:
-                    s1 = tIdx2 + len(n2E)
-                    s2 = idx1
-                search = 1
-                itemsTab.insert(0, data[s1:s2])
-            if numNodes > 0 and len(itemsTab) == numNodes:
-                break
-        return itemsTab
+        flags = 0
+        if withNodes: flags |= ph.START_E|ph.END_E
+        if not caseSensitive: flags |= ph.IGNORECASE
+        return ph.rfindall(data, node1, node2, flags, limits=numNodes)
 
     @staticmethod
     def removeDoubles(data, pattern):
@@ -389,7 +216,7 @@ class CParsingHelper:
                     quote = not quote
                 elif not tag:
                     out = out + c
-        return re.sub('&\w+;', ' ',out)        
+        return re.sub('&\w+;', ' ',out)
         
     # this method is useful only for developers 
     # to dump page code to the file
@@ -424,10 +251,45 @@ class CParsingHelper:
     def isalpha(txt, idx=None):
         return CParsingHelper.getNormalizeStr(txt, idx).isalpha()
 
+    STRIP_HTML_TAGS_C = None
+    @staticmethod 
+    def cleanHtmlStr(str):
+        if None == CParsingHelper.STRIP_HTML_TAGS_C:
+            CParsingHelper.STRIP_HTML_TAGS_C = False
+            try:
+                from Plugins.Extensions.IPTVPlayer.libs.iptvsubparser import _subparser as p
+                if 'strip_html_tags' in dir(p):
+                    CParsingHelper.STRIP_HTML_TAGS_C = p
+            except Exception:
+                printExc()
+
+        if CParsingHelper.STRIP_HTML_TAGS_C and type(u' ') != type(str):
+            return CParsingHelper.STRIP_HTML_TAGS_C.strip_html_tags(str)
+
+        str = str.replace('<', ' <')
+        str = str.replace('&nbsp;', ' ')
+        str = str.replace('&nbsp', ' ')
+        str = clean_html(str)
+        str = str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+        return CParsingHelper.removeDoubles(str, ' ').strip()
+
 class common:
     HOST   = 'Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0'
     HEADER = None
     ph = CParsingHelper
+    
+    @staticmethod
+    def getDefaultHeader(browser='firefox'):
+        if browser == 'firefox': ua = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:46.0) Gecko/20100101 Firefox/46.0'
+        elif browser == 'iphone_3_0': ua = 'Mozilla/5.0 (iPhone; U; CPU iPhone OS 3_0 like Mac OS X; en-us) AppleWebKit/528.18 (KHTML, like Gecko) Version/4.0 Mobile/7A341 Safari/528.16'
+        else: ua = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
+        
+        HTTP_HEADER = { 'User-Agent':ua,
+                        'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Encoding':'gzip, deflate',
+                        'DNT':1 
+                      }
+        return dict(HTTP_HEADER)
     
     @staticmethod
     def getParamsFromUrlWithMeta(url, baseHeaderOutParams=None):
@@ -460,7 +322,13 @@ class common:
         return domain
         
     @staticmethod
-    def getFullUrl(url, mainUrl='http://fake'):
+    def getFullUrl(url, mainUrl='http://fake/'):
+        if url.startswith('./'):
+            url = url[1:]
+
+        currUrl = mainUrl
+        mainUrl = common.getBaseUrl(currUrl)
+
         if url.startswith('//'):
             proto = mainUrl.split('://', 1)[0]
             url = proto + ':' + url
@@ -469,10 +337,13 @@ class common:
             url = proto + url
         elif url.startswith('/'):
             url = mainUrl + url[1:]
-        elif 0 < len(url) and not common.isValidUrl(url):
-            url = urljoin(mainUrl, url)
+        elif 0 < len(url) and '://' not in url:
+            if currUrl == mainUrl:
+                url =  mainUrl + url
+            else:
+                url = urljoin(currUrl, url)
         return url
-        
+
     @staticmethod
     def isValidUrl(url):
         return url.startswith('http://') or url.startswith('https://')
@@ -485,7 +356,6 @@ class common:
         
         self.curlSession = None
         self.pyCurlAvailable = None
-        self.pyCurl = None
         if not useMozillaCookieJar:
             raise Exception("You should stop use parameter useMozillaCookieJar it change nothing, because from only MozillaCookieJar can be used")
     
@@ -496,9 +366,23 @@ class common:
         messages.append(_('It looks like your current configuration do not allow to connect to the https://%s/.\n') % domain)
         
         if type == 'verify' and IsHttpsCertValidationEnabled():
-            messages.append(_('You can disable HTTPS certificates validation in the IPTVPlayer configuration to suppress this problem.'))
+            messages.append(_('You can disable HTTPS certificates validation in the E2iPlayer configuration to suppress this problem.'))
         else:
-            messages.append(_('You can install PyCurl package from http://www.iptvplayer.gitlab.io/ to fix this problem.'))
+            pyCurlInstalled = False
+            try:
+                verInfo = pycurl.version_info()
+                printDBG("usePyCurl VERSION: %s" % [verInfo])
+                if verInfo[4] & (1<<7) and verInfo[1].startswith('7.6') and verInfo[5] == 'wolfSSL/3.15.3':
+                    pyCurlInstalled = True
+            except Exception:
+                printExc()
+            if pyCurlInstalled:
+                if not UsePyCurl():
+                    messages.append(_('You can enable PyCurl in the E2iPlayer configuration to fix this problem.'))
+                else:
+                    messages.append(_('Please report this problem to the developer %s.') % 'iptvplayere2@gmail.com')
+            else:
+                messages.append(_('You can install PyCurl package from %s to fix this problem.') % 'http://www.iptvplayer.gitlab.io/')
         GetIPTVNotify().push('\n'.join(messages), 'error', 40, type + domain, 40)
     
     def usePyCurl(self):
@@ -506,7 +390,7 @@ class common:
         if UsePyCurl():
             if self.pyCurlAvailable == None:
                 try:
-                    import pycurl
+                    #import pycurl as pycurl
                     #test = pycurl.SSLVERSION_TLSv1_3
                     verInfo = pycurl.version_info()
                     printDBG("usePyCurl VERSION: %s" % [verInfo])
@@ -515,7 +399,6 @@ class common:
                     # request
                     if verInfo[4] & (1<<7):
                         self.pyCurlAvailable = True
-                        self.pyCurl = pycurl
                     else:
                         self.pyCurlAvailable = False
                 except Exception:
@@ -529,7 +412,7 @@ class common:
             sts, data = self.getPage('http://ip-api.com/json')
             if sts:
                 try:
-                    self.geolocation['countryCode'] = byteify(json.loads(data))['countryCode']
+                    self.geolocation['countryCode'] = json_loads(data)['countryCode']
                 except Exception:
                     printExc()
         return self.geolocation.get('countryCode', '').lower()
@@ -577,14 +460,22 @@ class common:
         cookiesDict = self.getCookieItems(cookiefile)
         return cookiesDict.get(item, '')
         
-    def getCookieItems(self, cookiefile, ignoreDiscard=True, ignoreExpires=False):
-        cookiesDict = {}
+    def getCookie(self, cookiefile, ignoreDiscard=True, ignoreExpires=False):
+        cj = None
         try:
             if self.usePyCurl():
                 cj = self._pyCurlLoadCookie(cookiefile, ignoreDiscard, ignoreExpires)
             else:
                 cj = cookielib.MozillaCookieJar()
                 cj.load(cookiefile, ignore_discard = ignoreDiscard)
+        except Exception:
+            printExc()
+        return cj
+
+    def getCookieItems(self, cookiefile, ignoreDiscard=True, ignoreExpires=False):
+        cookiesDict = {}
+        try:
+            cj = self.getCookie(cookiefile, ignoreDiscard, ignoreExpires)
             for cookie in cj:
                 cookiesDict[cookie.name] = cookie.value
         except Exception:
@@ -611,7 +502,6 @@ class common:
             GetIPTVNotify().push('\s'.join([msg1, msg2]), 'error', 40)
             raise Exception("Wrong usage!")
         
-        pycurl = self.pyCurl
         # by default we will work in return_data mode
         if 'return_data' not in params:
             params['return_data'] = True
@@ -694,7 +584,7 @@ class common:
                         # it could be valid - we need to wait for more data
                         valid = True
                 if not valid:
-                    printDBG('wrong body')
+                    printDBG('wrong body: %s' % hexlify(value))
                     return 0
             
             if fileHandler != None and 0 == len(checkFromFirstBytes):
@@ -771,9 +661,10 @@ class common:
                 curlSession.setopt(pycurl.HTTPHEADER, customHeaders)
             
             curlSession.setopt(pycurl.ACCEPT_ENCODING, "") # enable all supported built-in compressions
-            #sslProto = params.get('ssl_protocol', None)
-            #ssl.PROTOCOL_TLSv1_2
-            #curlSession.setopt(pycurl.SSLVERSION, pycurl.SSLVERSION_TLSv1_0) # TLS v1.0 or later 
+            if None != params.get('ssl_protocol', None):
+                sslProtoVer = self.getPyCurlSSLProtocolVersion(params['ssl_protocol'])
+                if None != sslProtoVer:
+                    curlSession.setopt(pycurl.SSLVERSION, sslProtoVer)
             
             if 'use_cookie' not in params and 'cookiefile' in params and ('load_cookie' in params or 'save_cookie' in params):
                 params['use_cookie'] = True
@@ -812,6 +703,11 @@ class common:
             if not IsHttpsCertValidationEnabled():
                 curlSession.setopt(pycurl.SSL_VERIFYHOST, 0)
                 curlSession.setopt(pycurl.SSL_VERIFYPEER, 0)
+                #curlSession.setopt(pycurl.PROXY_SSL_VERIFYHOST, 0)
+                curlSession.setopt(pycurl.PROXY_SSL_VERIFYPEER, 0)
+            else:
+                curlSession.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
+                curlSession.setopt(pycurl.PROXY_CAINFO, "/etc/ssl/certs/ca-certificates.crt")
             
             #proxy support
             if self.useProxy:
@@ -862,7 +758,7 @@ class common:
                     try:
                         curlSession.perform()
                     except pycurl.error as e:
-                        if e[0] != self.pyCurl.E_WRITE_ERROR:
+                        if e[0] != pycurl.E_WRITE_ERROR:
                             raise e
                         else: printExc()
                 else:
@@ -921,31 +817,37 @@ class common:
         # if we use old curlSession and fail we should
         # re-try with fresh curlSession
         if self.curlSession != None:
-            maxTries = 2
+            sessionReused = True
         else:
-            maxTries = 1
+            sessionReused = False
         
         sts, data = False, None
         try:
+            maxTries = 3
             tries = 0
             while tries < maxTries:
                 tries += 1
                 sts, data = self._getPageWithPyCurl(url, params, post_data)
                 if not sts and 'pycurl_error' in self.meta and \
-                   self.pyCurl.E_SSL_CONNECT_ERROR == self.meta['pycurl_error'][0] and \
-                   'SSL_set_session failed' in self.meta['pycurl_error'][1]:
-                    printDBG("pCommon - getPageWithPyCurl() - retry with fresh session")
-                    continue
-                else:
-                    break
+                   pycurl.E_SSL_CONNECT_ERROR == self.meta['pycurl_error'][0]:
+                    if 'SSL_set_session failed' in self.meta['pycurl_error'][1] or '-308' in self.meta['pycurl_error'][1]:
+                        printDBG("pCommon - getPageWithPyCurl() - retry with fresh session")
+                        if sessionReused:
+                            sessionReused = False
+                            continue
+                    elif '-313' in self.meta['pycurl_error'][1] and 'ssl_protocol' not in params:
+                        params = dict(params)
+                        params['ssl_protocol'] = 'TLSv1_2'
+                        continue
+                break
             
             if not sts and 'pycurl_error' in self.meta:
-                if self.meta['pycurl_error'][0] == self.pyCurl.E_SSL_CONNECT_ERROR:
+                if self.meta['pycurl_error'][0] == pycurl.E_SSL_CONNECT_ERROR:
                     self.reportHttpsError('other', url, self.meta['pycurl_error'][1])
-                elif self.meta['pycurl_error'][0] in [self.pyCurl.E_SSL_CACERT, self.pyCurl.E_SSL_ISSUER_ERROR, \
-                                                      self.pyCurl.E_SSL_PEER_CERTIFICATE, self.pyCurl.E_SSL_CACERT_BADFILE]:
+                elif self.meta['pycurl_error'][0] in [pycurl.E_SSL_CACERT, pycurl.E_SSL_ISSUER_ERROR, \
+                                                      pycurl.E_SSL_PEER_CERTIFICATE, pycurl.E_SSL_CACERT_BADFILE]:
                     self.reportHttpsError('verify', url, self.meta['pycurl_error'][1])
-                elif self.meta['pycurl_error'][0] == self.pyCurl.E_SSL_INVALIDCERTSTATUS:
+                elif self.meta['pycurl_error'][0] == pycurl.E_SSL_INVALIDCERTSTATUS:
                     self.reportHttpsError('verify', url, self.meta['pycurl_error'][1])
         except Exception:
             printExc()
@@ -999,7 +901,7 @@ class common:
             if 'ssl_protocol' not in addParams and 'TLSV1_ALERT_PROTOCOL_VERSION' in errorMsg:
                     try:
                         newParams = dict(addParams)
-                        newParams['ssl_protocol'] = ssl.PROTOCOL_TLSv1_2
+                        newParams['ssl_protocol'] = 'TLSv1_2'
                         return self.getPage(url, newParams, post_data)
                     except Exception: 
                         pass
@@ -1007,7 +909,7 @@ class common:
                 self.reportHttpsError('version', url, errorMsg)
             elif 'VERIFY_FAILED' in errorMsg:
                 self.reportHttpsError('verify', url, errorMsg)
-            elif 'SSL' in errorMsg: #GET_SERVER_HELLO
+            elif 'SSL' in errorMsg or 'unknown url type: https' in errorMsg: #GET_SERVER_HELLO
                 self.reportHttpsError('other', url, errorMsg)
             
             response = None
@@ -1026,10 +928,15 @@ class common:
     def getPageCFProtection(self, baseUrl, params={}, post_data=None):
         cfParams = params.get('cloudflare_params', {})
         
-        def _getFullUrlEmpty(url):
+        def _getFullUrl(url, baseUrl):
+            if 'full_url_handle' in cfParams:
+                return cfParams['full_url_handle'](url)
+            return self.getFullUrl(url, baseUrl)
+        
+        def _getFullUrl2(url, baseUrl):
+            if 'full_url_handle2' in cfParams:
+                return cfParams['full_url_handle2'](url)
             return url
-        _getFullUrl  = cfParams.get('full_url_handle', _getFullUrlEmpty)
-        _getFullUrl2 = cfParams.get('full_url_handle2', _getFullUrlEmpty)
         
         url = baseUrl
         header = {'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'}
@@ -1071,7 +978,7 @@ class common:
                         if not sts: return False, None
                         
                         url = self.ph.getSearchGroups(tmp, 'action="([^"]+?)"')[0]
-                        if url != '': url = _getFullUrl( url )
+                        if url != '': url = _getFullUrl( url, domain )
                         else: url = data.meta['url']
                         actionType = self.ph.getSearchGroups(tmp, 'method="([^"]+?)"', 1, True)[0].lower()
                         post_data2 = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
@@ -1109,21 +1016,21 @@ class common:
                         printDBG("+ CODE +")
                         printDBG(jscode)
                         printDBG("++++++++")
-                        ret = iptv_js_execute( jscode )
-                        decoded = byteify(json.loads(ret['data'].strip()))
+                        ret = js_execute( jscode )
+                        decoded = json_loads(ret['data'].strip())
                         
                         verData = self.ph.getDataBeetwenReMarkers(verData, re.compile('<form[^>]+?id="challenge-form"'), re.compile('</form>'), False)[1]
                         printDBG(">>")
                         printDBG(verData)
                         printDBG("<<")
-                        verUrl =  _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0] )
+                        verUrl =  _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0], domain)
                         get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
                         get_data['jschl_answer'] = decoded['answer']
                         verUrl += '?'
                         for key in get_data:
                             verUrl += '%s=%s&' % (key, get_data[key])
-                        verUrl = _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0] ) + '?jschl_vc=%s&pass=%s&jschl_answer=%s' % (get_data['jschl_vc'], get_data['pass'], get_data['jschl_answer'])
-                        verUrl = _getFullUrl2( verUrl )
+                        verUrl = _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0], domain) + '?jschl_vc=%s&pass=%s&jschl_answer=%s' % (get_data['jschl_vc'], get_data['pass'], get_data['jschl_answer'])
+                        verUrl = _getFullUrl2( verUrl, domain)
                         params2 = dict(params)
                         params2['load_cookie'] = True
                         params2['save_cookie'] = True
@@ -1240,6 +1147,26 @@ class common:
             printExc("common.getFile download file exception")
         dictRet.update( {'sts': bRet, 'fsize': downDataSize} )
         return dictRet
+        
+    def getUrllibSSLProtocolVersion(self, protocolName):
+        if not isinstance(protocolName, basestring):
+            GetIPTVNotify().push('getUrllibSSLProtocolVersion error. Please report this problem to iptvplayere2@gmail.com', 'error', 40)
+            return protocolName
+        if protocolName == 'TLSv1_2':
+            return ssl.PROTOCOL_TLSv1_2
+        elif protocolName == 'TLSv1_1':
+            return ssl.PROTOCOL_TLSv1_1
+        return None
+        
+    def getPyCurlSSLProtocolVersion(self, protocolName):
+        if not isinstance(protocolName, basestring):
+            GetIPTVNotify().push('getPyCurlSSLProtocolVersion error. Please report this problem to iptvplayere2@gmail.com', 'error', 40)
+            return protocolName
+        if protocolName == 'TLSv1_2':
+            return pycurl.SSLVERSION_TLSv1_2
+        elif protocolName == 'TLSv1_1':
+            return pycurl.SSLVERSION_TLSv1_1
+        return None
     
     def getURLRequestData(self, params = {}, post_data = None):
         
@@ -1319,19 +1246,23 @@ class common:
         if params.get('no_redirection', False):
             customOpeners.append( NoRedirection() )
         
+        if None != params.get('ssl_protocol', None):
+            sslProtoVer = self.getUrllibSSLProtocolVersion(params['ssl_protocol'])
+        else:
+            sslProtoVer = None
         # debug 
         #customOpeners.append(urllib2.HTTPSHandler(debuglevel=1))
         #customOpeners.append(urllib2.HTTPHandler(debuglevel=1))
         if not IsHttpsCertValidationEnabled():
             try:
-                if params.get('ssl_protocol', None) != None:
-                    ctx = ssl._create_unverified_context(params['ssl_protocol'])
+                if sslProtoVer != None:
+                    ctx = ssl._create_unverified_context( sslProtoVer )
                 else:
                     ctx = ssl._create_unverified_context()
                 customOpeners.append(urllib2.HTTPSHandler(context=ctx))
             except Exception: pass
-        elif params.get('ssl_protocol', None) != None:
-            ctx = ssl.SSLContext(params['ssl_protocol'])
+        elif sslProtoVer != None:
+            ctx = ssl.SSLContext( sslProtoVer )
             customOpeners.append(urllib2.HTTPSHandler(context=ctx))
         
         #proxy support
@@ -1424,9 +1355,10 @@ class common:
                     out_data = data
             except Exception as e:
                 printExc()
-                msg1 = _("Critical Error – Content-Encoding gzip cannot be handled!")
-                msg2 = _("Last error:\n%s" % str(e))
-                GetIPTVNotify().push('%s\n\n%s' % (msg1, msg2), 'error', 20)
+                if params.get('max_data_size', -1) == -1: 
+                    msg1 = _("Critical Error – Content-Encoding gzip cannot be handled!")
+                    msg2 = _("Last error:\n%s" % str(e))
+                    GetIPTVNotify().push('%s\n\n%s' % (msg1, msg2), 'error', 20)
                 out_data = data
  
         if params.get('use_cookie', False) and params.get('save_cookie', False):
@@ -1434,11 +1366,6 @@ class common:
                 cj.save(params['cookiefile'], ignore_discard = True)
             except Exception as e:
                 printExc()
-                msg1 = _("Critical Error – cookie can't be saved!")
-                msg2 = _("Last error:\n%s" % str(e))
-                msg3 = _("Please make sure that the folder for cache data (set in the configuration) is writable.")
-                GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 20)
-                SetTmpCookieDir()
                 raise e
         
         out_data, metadata = self.handleCharset(params, out_data, metadata)

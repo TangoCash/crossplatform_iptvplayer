@@ -14,8 +14,8 @@ from random import shuffle as random_shuffle
 ####################################################
 #                   E2 components
 ####################################################
+from skin import parseColor
 from Screens.Screen import Screen
-from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Screens.MessageBox import MessageBox
 from Screens.ChoiceBox import ChoiceBox
 from Components.ActionMap import ActionMap
@@ -48,11 +48,12 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           eConnectCallback, GetSkinsDir, GetIconDir, GetPluginDir, GetExtensionsDir, \
                                                           SortHostsList, GetHostsOrderList, CSearchHistoryHelper, IsExecutable, \
                                                           CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
-                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, ClearTmpCookieDir, \
+                                                          GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, TestTmpCookieDir, TestTmpJSCacheDir,\
+                                                          ClearTmpCookieDir, ClearTmpJSCacheDir, SetTmpCookieDir, SetTmpJSCacheDir,\
                                                           GetEnabledHostsList, SaveHostsOrderList, GetUpdateServerUri
 from Plugins.Extensions.IPTVPlayer.itools.iptvhostgroups import IPTVHostsGroups
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
-from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import IPTVPlayerBufferingWidget
+from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import E2iPlayerBufferingWidget
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdmapi import IPTVDMApi, DMItem
 from Plugins.Extensions.IPTVPlayer.iptvupdate.updatemainwindow import IPTVUpdateWindow, UpdateMainAppImpl
 
@@ -71,23 +72,23 @@ from Plugins.Extensions.IPTVPlayer.icomponents.cover import Cover, Cover3
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvchoicebox import IPTVChoiceBoxWidget, IPTVChoiceBoxItem
 import Plugins.Extensions.IPTVPlayer.icomponents.asynccall as asynccall
 from Plugins.Extensions.IPTVPlayer.icomponents.playerselector import PlayerSelectorWidget
-
+from Plugins.Extensions.IPTVPlayer.icomponents.e2ivkselector import GetVirtualKeyboard
 ######################################################
 gDownloadManager = None
 
-class IPTVPlayerWidget(Screen):
+class E2iPlayerWidget(Screen):
     IPTV_VERSION = GetIPTVPlayerVerstion()
     screenwidth = 1980
     if screenwidth and screenwidth == 1920:
         skin =  """
-                    <screen name="IPTVPlayerWidget" position="center,center" size="1590,825" title="IPTV Player HD v%s">
+                    <screen position="center,center" size="1590,825" title="E2iPlayer %s">
                             <ePixmap position="5,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="180,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="385,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="700,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <widget render="Label" source="key_red" position="45,9" size="140,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget render="Label" source="key_yellow" position="220,9" size="180,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-                            <widget render="Label" source="key_green" position="425,9" size="300,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
+                            <widget name="key_green_ext" position="425,9" size="300,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget render="Label" source="key_blue" position="740,9" size="140,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget name="headertext" position="15,55" zPosition="1" size="1080,30" font="Regular;30" transparent="1" backgroundColor="#00000000" />
                             <widget name="statustext" position="15,148" zPosition="1" size="985,90" font="Regular;30" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
@@ -105,20 +106,20 @@ class IPTVPlayerWidget(Screen):
                 """ %( IPTV_VERSION, GetIconDir('red.png'), GetIconDir('yellow.png'), GetIconDir('green.png'), GetIconDir('blue.png'))
     else:
         skin =  """
-                    <screen name="IPTVPlayerWidget" position="center,center" size="1090,525" title="IPTV Player v%s">
+                    <screen position="center,center" size="1090,525" title="E2iPlayer %s">
                             <ePixmap position="30,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="287,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="554,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <ePixmap position="801,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <widget render="Label" source="key_red"    position="65,9"  size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
-                            <widget render="Label" source="key_green"  position="322,9" size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
+                            <widget name="key_green_ext"  position="322,9" size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget render="Label" source="key_yellow" position="589,9" size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget render="Label" source="key_blue"   position="836,9" size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget name="headertext" position="5,47" zPosition="1" size="1080,23" font="Regular;20" transparent="1" backgroundColor="#00000000" />
                             <widget name="statustext" position="5,140" zPosition="1" size="985,90" font="Regular;20" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
                             <widget name="list" position="5,100" zPosition="2" size="1080,280" enableWrapAround="1" scrollbarMode="showOnDemand" transparent="1" backgroundColor="#00000000" />
                             <widget name="console" position="165,430" zPosition="1" size="935,140" font="Regular;20" transparent="1" backgroundColor="#00000000" />
-                            <widget name="cover" zPosition="2" position="5,400" size="122,140" alphatest="blend" />     
+                            <widget name="cover" zPosition="2" position="5,400" size="122,140" alphatest="blend" />
                             <widget name="playerlogo" zPosition="4" position="964,3" size="120,40" alphatest="blend" />
                             <ePixmap zPosition="4" position="5,395" size="1080,5" pixmap="%s" transparent="1" />
                             <widget name="sequencer" position="0,0" zPosition="6" size="1090,525" font="Regular;160" halign="center" valign="center" transparent="1" backgroundColor="#00000000" />
@@ -129,9 +130,9 @@ class IPTVPlayerWidget(Screen):
                             <widget name="spinner_3" zPosition="1" position="495,200" size="16,16" transparent="1" alphatest="blend" />
                             <widget name="spinner_4" zPosition="1" position="511,200" size="16,16" transparent="1" alphatest="blend" />
                     </screen>
-                """ %( IPTV_VERSION, GetIconDir('red.png'), GetIconDir('green.png'), GetIconDir('yellow.png'), GetIconDir('blue.png'), GetIconDir('line.png'))      
+                """ %( IPTV_VERSION, GetIconDir('red.png'), GetIconDir('green.png'), GetIconDir('yellow.png'), GetIconDir('blue.png'), GetIconDir('line.png'))
     def __init__(self, session):
-        printDBG("IPTVPlayerWidget.__init__ desktop IPTV_VERSION[%s]\n" % (IPTVPlayerWidget.IPTV_VERSION) )
+        printDBG("E2iPlayerWidget.__init__ desktop IPTV_VERSION[%s]\n" % (E2iPlayerWidget.IPTV_VERSION) )
         self.session = session
         self.skinResolutionType = 'sd'
         screenwidth = 1980
@@ -165,7 +166,9 @@ class IPTVPlayerWidget(Screen):
             self.session.nav.stopService()
 
         self["key_red"]    = StaticText(_("Exit"))
-        self["key_green"]  = StaticText(_("Player > Recorder"))
+        #self["key_green"]  = StaticText(_("Download"))
+        self["key_green_ext"]  = Label(_("Download"))
+        
         self["key_yellow"] = StaticText(_("Refresh"))
         self["key_blue"]   = StaticText(_("More"))
 
@@ -182,14 +185,15 @@ class IPTVPlayerWidget(Screen):
             "back"    :   self.back_pressed,
             "info"    :   self.info_pressed,
             "8"       :   self.startAutoPlaySequencer,
-#            "0"       :   self.ok_pressedUseAlternativePlayer,
             "0"       :   self.ok_pressed0,
             "1"       :   self.ok_pressed1,
             "2"       :   self.ok_pressed2,
             "3"       :   self.ok_pressed3,
             "4"       :   self.ok_pressed4,
             "play"    :   self.startAutoPlaySequencer,
-            "menu"    :   self.menu_pressed
+            "menu"    :   self.menu_pressed,
+            "tools"   :   self.blue_pressed,
+            "record"  :   self.green_pressed,
         }, -1)
 
         self["headertext"] = Label()
@@ -303,7 +307,6 @@ class IPTVPlayerWidget(Screen):
                 gDownloadManager.runWorkThread() 
         #################################################################
 
-
         #################################################################
         #                   Auto playing sequencer
         #################################################################
@@ -312,22 +315,56 @@ class IPTVPlayerWidget(Screen):
         self.autoPlaySeqTimer_conn = eConnectCallback(self.autoPlaySeqTimer.timeout, self.autoPlaySeqTimerCallBack)
         self.autoPlaySeqTimerValue = 0
         #################################################################
-        
+
         self.activePlayer = None
         self.canRandomizeList = False
-        
+
         self.prevVideoMode = None
-        
-        # clear temp cookie location to use path from configuration
-        ClearTmpCookieDir()
-        
+
+        # test if path for js and cookies temporary files
+        # is writable, without this plugin can not works
+        try:
+            TestTmpCookieDir()
+            TestTmpJSCacheDir()
+            ClearTmpCookieDir()
+            ClearTmpJSCacheDir()
+        except Exception as e:
+            SetTmpCookieDir()
+            SetTmpJSCacheDir()
+            msg1 = _("Critical Error – cookie can't be saved!")
+            msg2 = _("Last error:\n%s" % str(e))
+            msg3 = _("Please make sure that the folder for cache data (set in the configuration) is writable.")
+            GetIPTVNotify().push('%s\n\n%s\n\n%s' % (msg1, msg2, msg3), 'error', 20)
+
         self.statusTextValue = ""
         self.enabledHostsListOld = []
         asynccall.SetMainThreadId()
         
         self.checkWrongImage = True
+        self.downloadable = False
+        self.colorEnabled = parseColor("#FFFFFF")
+        self.colorDisabled = parseColor("#808080")
     
     #end def __init__(self, session):
+    
+    def updateDownloadButton(self):
+        self.downloadable = False
+        try:
+            if self["list"].visible:
+                item = self.getSelItem()
+                self.downloadable = self.isDownloadableType(item.type)
+                if self.downloadable and item.urlItems[0].url.startswith('file://'): # workaround for LocalMedia
+                    self.downloadable = False
+        except Exception:
+            printExc()
+        
+        try:
+            if self.downloadable:
+                self["key_green_ext"].instance.setForegroundColor(self.colorEnabled)
+            else:
+                self["key_green_ext"].instance.setForegroundColor(self.colorDisabled)
+        except Exception:
+            printExc()
     
     def getSkinResolutionType(self):
         return self.skinResolutionType
@@ -337,7 +374,7 @@ class IPTVPlayerWidget(Screen):
         self["statustext"].setText(msg)
         
     def __del__(self):
-        printDBG("IPTVPlayerWidget.__del__ --------------------------")
+        printDBG("E2iPlayerWidget.__del__ --------------------------")
 
     def __onClose(self):
         self.session.nav.playService(self.currentService)
@@ -375,6 +412,12 @@ class IPTVPlayerWidget(Screen):
         
     def isPlayableType(self, type):
         if type in [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_ARTICLE, CDisplayListItem.TYPE_PICTURE]:
+            return True
+        else:
+            return False
+        
+    def isDownloadableType(self, type):
+        if type in [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_DATA]:
             return True
         else:
             return False
@@ -431,9 +474,7 @@ class IPTVPlayerWidget(Screen):
                 elif not self.workThread.isFinished():
                     if self.hostName not in GetHostsList(fromList=True, fromHostFolder=False):
                         message = _('It seems that the host "%s" has crashed.') % self.hostName
-                        message += _('\nThis host is not integral part of the IPTVPlayer plugin.\nIt is not supported by IPTVPlayer team.')
-                        if 'weebtv' == self.hostName:
-                            message += _('\nPlease use "Web" streams player -> WeebTV instead.')
+                        message += _('\nThis host is not integral part of the E2iPlayer plugin.\nIt is not supported by E2iPlayer team.')
                         self.session.open(MessageBox, message, type = MessageBox.TYPE_ERROR)
                     else:
                         message = _('It seems that the host "%s" has crashed. Do you want to report this problem?') % self.hostName
@@ -450,7 +491,7 @@ class IPTVPlayerWidget(Screen):
                 try: 
                     exceptStack = self.workThread.getExceptStack()
                     reporter = GetPluginDir('iptvdm/reporthostcrash.py')
-                    msg = urllib_quote('%s|%s|%s|%s' % ('HOST_CRASH', IPTVPlayerWidget.IPTV_VERSION, self.hostName, self.getCategoryPath()))
+                    msg = urllib_quote('%s|%s|%s|%s' % ('HOST_CRASH', E2iPlayerWidget.IPTV_VERSION, self.hostName, self.getCategoryPath()))
                     self.crashConsole = iptv_system('python "%s" "http://iptvplayer.vline.pl/reporthostcrash.php?msg=%s" "%s" 2&>1 > /dev/null' % (reporter, msg, exceptStack))
                     printDBG(msg)
                 except Exception:
@@ -522,18 +563,9 @@ class IPTVPlayerWidget(Screen):
 
     def green_pressed(self):
         self.stopAutoPlaySequencer()
-        if self.recorderMode and IsExecutable( DMHelper.GET_WGET_PATH() ):
-            self.recorderMode = False
-            printDBG( "IPTV - tryb Odtwarzacza" )
-            self["key_green"].setText(_("Player > Recorder"))
-        elif not IsExecutable( DMHelper.GET_WGET_PATH() ):
-            self.recorderMode = False
-            self["key_green"].setText(_("Player > Recorder"))
-        else:
-            self.recorderMode = True
-            printDBG( "IPTV - tryb Rekordera" )
-            self["key_green"].setText(_("Recorder > Player"))
-        return
+        self.updateDownloadButton()
+        self.recorderMode = self.downloadable
+        if  self.downloadable: self.ok_pressed('green')
 
     def yellow_pressed(self):
         self.stopAutoPlaySequencer()
@@ -541,6 +573,13 @@ class IPTVPlayerWidget(Screen):
         return
      
     def blue_pressed(self):
+        # For Keyboard test
+        #if False:
+        #    from Plugins.Extensions.IPTVPlayer.icomponents.e2ivksuggestion import AutocompleteSearch
+        #    from Plugins.Extensions.IPTVPlayer.suggestions.google import SuggestionsProvider
+        #    self.session.open(GetVirtualKeyboard(), additionalParams={'autocomplete':AutocompleteSearch(SuggestionsProvider(True))})
+        #    return
+        
         # For subtitles test
         if False:
             from Plugins.Extensions.IPTVPlayer.icomponents.iptvsubdownloader import IPTVSubDownloaderWidget
@@ -583,8 +622,12 @@ class IPTVPlayerWidget(Screen):
         
     def stopAutoPlaySequencer(self):
         if self.autoPlaySeqStarted:
-            #try: raise
-            #except Exception: printExc()
+            if not config.plugins.iptvplayer.disable_live.value:
+                self.session.nav.playService(self.currentService)
+            
+            if config.plugins.iptvplayer.autoplay_start_delay.value == 0:
+                self.showWindow()
+            
             self.autoPlaySeqTimer.stop()
             self["sequencer"].setText("")
             self.autoPlaySeqStarted = False
@@ -599,7 +642,11 @@ class IPTVPlayerWidget(Screen):
         idx = self.getSelIndex()
         if -1 != idx:
             # find next playable item
-            if goToNext:  idx += 1
+            if goToNext:
+                idx += 1
+                if config.plugins.iptvplayer.autoplay_start_delay.value == 0:
+                    self.hideWindow()
+            
             while idx < len(self.currList):
                 if self.currList[idx].type in [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_PICTURE, CDisplayListItem.TYPE_MORE]:
                     break
@@ -613,8 +660,12 @@ class IPTVPlayerWidget(Screen):
     
     def sequencerPressOK(self):
         self.autoPlaySeqTimerValue = config.plugins.iptvplayer.autoplay_start_delay.value
-        self["sequencer"].setText(str(self.autoPlaySeqTimerValue))
-        self.autoPlaySeqTimer.start(1000)
+        
+        if self.autoPlaySeqTimerValue == 0:
+            self.ok_pressed('sequencer')
+        else:
+            self["sequencer"].setText(str(self.autoPlaySeqTimerValue))
+            self.autoPlaySeqTimer.start(1000)
             
     def autoPlaySeqTimerCallBack(self):
         self.autoPlaySeqTimerValue -= 1
@@ -793,6 +844,7 @@ class IPTVPlayerWidget(Screen):
             self["console"].setText('')
     
     def onSelectionChanged(self):
+        self.updateDownloadButton()
         self.changeBottomPanel()
 
     def back_pressed(self):
@@ -803,9 +855,8 @@ class IPTVPlayerWidget(Screen):
                     self.workThread = None
                     self.setStatusTex(_("Operation aborted!"))
                 return
-        except Exception: return    
+        except Exception: return
         if self.visible:
-                       
             if len(self.prevSelList) > 0:
                 self.nextSelIndex = self.prevSelList.pop()
                 self.categoryList.pop()
@@ -835,9 +886,6 @@ class IPTVPlayerWidget(Screen):
                 self.currSelIndex = currSelIndex = self["list"].getCurrentIndex()
                 self.requestListFromHost('ForArticleContent', currSelIndex)
     #end info_pressed(self):
-    
-#    def ok_pressedUseAlternativePlayer(self):
-#        self.ok_pressed(useAlternativePlayer=True)
 
     def ok_pressed0(self):
         self.activePlayer.set({}) 
@@ -865,12 +913,16 @@ class IPTVPlayerWidget(Screen):
     
     def ok_pressed(self, eventFrom='remote', useAlternativePlayer=False):
         self.useAlternativePlayer = useAlternativePlayer
+        if eventFrom != 'green':
+            self.recorderMode = False
+        
         if 'sequencer' != eventFrom:
             self.stopAutoPlaySequencer()
-        if self.visible:
+        
+        if self.visible or 'sequencer' == eventFrom:
             sel = None
             try:
-                if len(self.currList) > 0 and not self["list"].getVisible():
+                if len(self.currList) > 0 and (not self["list"].getVisible() and 'sequencer' != eventFrom):
                     printDBG("ok_pressed -> ignored /\\")
                     return
             except Exception:
@@ -1022,6 +1074,7 @@ class IPTVPlayerWidget(Screen):
     def onStart(self):
         self.onShow.remove(self.onStart)
         #self.onLayoutFinish.remove(self.onStart)
+        self.setTitle( 'E2iPlayer ' + GetIPTVPlayerVerstion() )
         self.loadSpinner()
         self.hideSpinner()
         self.checkBlacklistedImage()
@@ -1065,7 +1118,7 @@ class IPTVPlayerWidget(Screen):
         
     def selectHost(self, arg1=None):
         printDBG(">> selectHost")
-        self.groupObj = None
+        #self.groupObj = None
         self.group = None
         self.host = None
         self.hostName = ''
@@ -1429,12 +1482,13 @@ class IPTVPlayerWidget(Screen):
             if hRet.status == RetHost.OK: self.hostFavTypes = hRet.value
         except Exception: printExc('The current host crashed')
         
-        # request initial list from host        
+        # request initial list from host
         self.getInitialList()
     #end selectHostCallback(self, ret):
 
     def selectLinkForCurrVideo(self, customUrlItems=None):
-        if not self.visible:
+        if not self.visible and not (self.autoPlaySeqStarted and 
+           config.plugins.iptvplayer.autoplay_start_delay.value == 0):
             self.setStatusTex("")
             self.showWindow()
         
@@ -1581,12 +1635,12 @@ class IPTVPlayerWidget(Screen):
             if len(ret.value) > 0:
                 url = ret.value[0]
         
-        self.setStatusTex("")            
+        self.setStatusTex("")
         self["list"].show()
         
         if url != '' and CDisplayListItem.TYPE_PICTURE == self.currItem.type:
             self.session.openWithCallback(self.leavePicturePlayer, IPTVPicturePlayerWidget, url, config.plugins.iptvplayer.bufferingPath.value, self.currItem.name, {'seq_mode':self.autoPlaySeqStarted})
-        elif url != '' and self.currItem.type in [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_DATA]:
+        elif url != '' and self.isDownloadableType(self.currItem.type):
             printDBG( "playVideo url[%s]" % url)
             if self.currItem.type == CDisplayListItem.TYPE_DATA:
                 recorderMode = True
@@ -1594,7 +1648,7 @@ class IPTVPlayerWidget(Screen):
                 recorderMode = self.recorderMode
             url = urlparser.decorateUrl(url)
             titleOfMovie = self.currItem.name.replace('/','-').replace(':','-').replace('*','-').replace('?','-').replace('"','-').replace('<','-').replace('>','-').replace('|','-')
-            fileExtension = self.getFileExt(url, self.currItem.type)            
+            fileExtension = self.getFileExt(url, self.currItem.type)
                         
             blocked, reaseon = self.isUrlBlocked(url, self.currItem.type)
             if blocked:
@@ -1606,19 +1660,21 @@ class IPTVPlayerWidget(Screen):
             else:
                 isBufferingMode = self.activePlayer.get('buffering', self.checkBuffering(url))
             
+            bufferingPath = config.plugins.iptvplayer.bufferingPath.value
+            downloadingPath = config.plugins.iptvplayer.NaszaSciezka.value
             if not recorderMode:
-                pathForRecordings = config.plugins.iptvplayer.bufferingPath.value
+                destinationPath = config.plugins.iptvplayer.bufferingPath.value
             else:
-                pathForRecordings = config.plugins.iptvplayer.NaszaSciezka.value
-            fullFilePath = pathForRecordings + '/' + titleOfMovie + fileExtension
-             
-            if (recorderMode or isBufferingMode) and not iptvtools_FreeSpace(pathForRecordings, 500):
+                destinationPath = config.plugins.iptvplayer.NaszaSciezka.value
+            
+            if (recorderMode or isBufferingMode) and not iptvtools_FreeSpace(destinationPath, 500):
                 self.stopAutoPlaySequencer()
-                self.session.open(MessageBox, _("There is no free space on the drive [%s].") % pathForRecordings, type=MessageBox.TYPE_INFO, timeout=10)
+                self.session.open(MessageBox, _("There is no free space on the drive [%s].") % destinationPath, type=MessageBox.TYPE_INFO, timeout=10)
             elif recorderMode:
                 global gDownloadManager
                 if None != gDownloadManager:
                     if IsUrlDownloadable(url):
+                        fullFilePath = downloadingPath + '/' + titleOfMovie + fileExtension
                         ret = gDownloadManager.addToDQueue( DMItem(url, fullFilePath) )
                     else:
                         ret = False
@@ -1648,9 +1704,10 @@ class IPTVPlayerWidget(Screen):
                 
                 self.writeCurrentTitleToFile(titleOfMovie)
                 if isBufferingMode:
+                    global gDownloadManager
                     self.session.nav.stopService()
                     player = self.activePlayer.get('player', self.getMoviePlayer(True, self.useAlternativePlayer))
-                    self.session.openWithCallback(self.leaveMoviePlayer, IPTVPlayerBufferingWidget, url, pathForRecordings, titleOfMovie, player.value, self.bufferSize, gstAdditionalParams)
+                    self.session.openWithCallback(self.leaveMoviePlayer, E2iPlayerBufferingWidget, url, bufferingPath, downloadingPath, titleOfMovie, player.value, self.bufferSize, gstAdditionalParams, gDownloadManager, fileExtension)
                 else:
                     self.session.nav.stopService()
                     player = self.activePlayer.get('player', self.getMoviePlayer(False, self.useAlternativePlayer))
@@ -1688,7 +1745,14 @@ class IPTVPlayerWidget(Screen):
         if None not in [self.prevVideoMode, videoMode] and self.prevVideoMode != videoMode:
             printDBG("Restore previus video mode")
             SetE2VideoMode(self.prevVideoMode)
-        if not config.plugins.iptvplayer.disable_live.value:
+        
+        try:
+            if answer != None:
+                self.stopAutoPlaySequencer()
+        except Exception:
+            printExc()
+        
+        if not config.plugins.iptvplayer.disable_live.value and not self.autoPlaySeqStarted:
             self.session.nav.playService(self.currentService)
         
         if 'favourites' == self.hostName and lastPosition != None and clipLength != None:
@@ -1784,24 +1848,79 @@ class IPTVPlayerWidget(Screen):
             self.session.openWithCallback(self.selectSearchTypeCallback, ChoiceBox, title=_("Search type"), list = searchTypes)
         else:
             self.searchType = None
-            self.session.openWithCallback(self.enterPatternCallBack, VirtualKeyBoard, title=(_("Your search entry")), text = self.searchPattern)
+            self.doSearchWithVirtualKeyboard()
     
     def selectSearchTypeCallback(self, ret = None):
         if ret:
             self.searchType = ret[1]
-            self.session.openWithCallback(self.enterPatternCallBack, VirtualKeyBoard, title=(_("Your search entry")), text = self.searchPattern)
+            self.doSearchWithVirtualKeyboard()
         else:
             pass
-            # zrezygnowal z wyszukiwania
+
+    def doSearchWithVirtualKeyboard(self):
+        printDBG("doSearchWithVirtualKeyboard")
+        caps = {}
+        virtualKeyboard = GetVirtualKeyboard(caps)
+        
+        if caps.get('has_additional_params'):
+            try:
+                additionalParams = {}
+                if caps.get('has_suggestions') and config.plugins.iptvplayer.osk_allow_suggestions.value:
+                    # we have to be careful here as we will call method 
+                    # directly from host it must be non blocking!!!
+                    suggestionsProvider = None
+                    try:
+                        if self.visible and not self.isInWorkThread():
+                            currSelIndex = self.getSelItem().itemIdx 
+                            hRet= self.host.getSuggestionsProvider(currSelIndex)
+                            if hRet.status == RetHost.OK and hRet.value and hRet.value[0]:
+                                suggestionsProvider = hRet.value[0] if hRet.value[0] != None else False
+                    except Exception:
+                        printExc()
+
+                    if suggestionsProvider == None:
+                        providerAlias = config.plugins.iptvplayer.osk_default_suggestions.value
+                        if not providerAlias:
+                            if not self.groupObj:
+                                self.groupObj = IPTVHostsGroups()
+                            if self.hostName in self.groupObj.PREDEFINED_HOSTS['moviesandseries']:
+                                if self.hostName in self.groupObj.PREDEFINED_HOSTS['polish']:
+                                    providerAlias = 'filmweb'
+                                elif self.hostName in self.groupObj.PREDEFINED_HOSTS['german']:
+                                    providerAlias = 'filmstarts'
+                                else:
+                                    providerAlias = 'imdb'
+                            else:
+                                providerAlias = 'google'
+
+                        if providerAlias == 'filmweb':
+                            from Plugins.Extensions.IPTVPlayer.suggestions.filmweb import SuggestionsProvider as filmweb_Provider
+                            suggestionsProvider = filmweb_Provider()
+                        elif providerAlias == 'imdb':
+                            from Plugins.Extensions.IPTVPlayer.suggestions.imdb import SuggestionsProvider as imdb_Provider
+                            suggestionsProvider = imdb_Provider()
+                        elif providerAlias == 'google':
+                            from Plugins.Extensions.IPTVPlayer.suggestions.google import SuggestionsProvider as google_Provider
+                            suggestionsProvider = google_Provider()
+                        elif providerAlias == 'filmstarts':
+                            from Plugins.Extensions.IPTVPlayer.suggestions.filmstarts import SuggestionsProvider as filmstarts_Provider
+                            suggestionsProvider = filmstarts_Provider()
+
+                    if suggestionsProvider:
+                        from Plugins.Extensions.IPTVPlayer.icomponents.e2ivksuggestion import AutocompleteSearch
+                        additionalParams['autocomplete']  = AutocompleteSearch(suggestionsProvider)
+
+                self.session.openWithCallback(self.enterPatternCallBack, virtualKeyboard, title=(_("Your search entry")), text = self.searchPattern, additionalParams=additionalParams)
+                return
+            except Exception:
+                printExc()
+        self.session.openWithCallback(self.enterPatternCallBack, virtualKeyboard, title=(_("Your search entry")), text = self.searchPattern)
 
     def enterPatternCallBack(self, callback = None):
         if callback is not None and len(callback):  
             self.searchPattern = callback
             CSearchHistoryHelper.saveLastPattern(self.searchPattern)
             self.requestListFromHost('ForSearch')
-        else:
-            pass
-            # zrezygnowal z wyszukiwania
 
     def configCallback(self):
         if IPTVPlayerNeedInit():
@@ -1845,12 +1964,12 @@ class IPTVPlayerWidget(Screen):
         refresh  = params['add_param'].get('refresh', 0)
         selIndex = params['add_param'].get('selIndex', -1)
         ret      = params['ret']
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> IPTVPlayerWidget.reloadList refresh[%s], selIndex[%s]" % (refresh, selIndex))
+        printDBG("> E2iPlayerWidget.reloadList refresh[%s], selIndex[%s]" % (refresh, selIndex))
         if 0 < refresh and -1 < selIndex:
             self.nextSelIndex = selIndex
         # ToDo: check ret.status if not OK do something :P
         if ret.status != RetHost.OK:
-            printDBG( "++++++++++++++++++++++ reloadList ret.status = %s" % ret.status )
+            printDBG( "+ reloadList ret.status = %s" % ret.status )
             self.stopAutoPlaySequencer()
         
         self.canRandomizeList = False
@@ -1904,8 +2023,9 @@ class IPTVPlayerWidget(Screen):
             #selection will not be change so manualy call
             self.changeBottomPanel()
             
-            self.setStatusTex("")            
+            self.setStatusTex("")
             self["list"].show()
+        self.updateDownloadButton()
         if 2 == refresh:
             self.autoPlaySequencerNext(False)
         elif 1 == refresh:
@@ -1974,7 +2094,7 @@ class IPTVPlayerWidget(Screen):
         asynccall.gMainFunctionsQueueTab[0].addToQueue("handleFavouriteItemCallback", [thread, ret])
         
     def handleFavouriteItemCallback(self, ret):
-        printDBG("IPTVPlayerWidget.handleFavouriteItemCallback")
+        printDBG("E2iPlayerWidget.handleFavouriteItemCallback")
         self.setStatusTex("")
         self["list"].show()
         linkList = []
@@ -1988,7 +2108,7 @@ class IPTVPlayerWidget(Screen):
         else: self.session.open(MessageBox, _("No valid links available."), type=MessageBox.TYPE_INFO, timeout=10 )
         
     def menu_pressed(self):
-        printDBG("IPTVPlayerWidget.menu_pressed")
+        printDBG("E2iPlayerWidget.menu_pressed")
         # we have to be careful here as we will call method 
         # directly from host
         options = []
@@ -2015,7 +2135,7 @@ class IPTVPlayerWidget(Screen):
             printExc()
             
     def requestCustomActionFromHost(self, ret):
-        printDBG("IPTVPlayerWidget.requestCustomActionFromHost ret[%r]" % [ret])
+        printDBG("E2iPlayerWidget.requestCustomActionFromHost ret[%r]" % [ret])
         if isinstance(ret, IPTVChoiceBoxItem):
             self.requestListFromHost('PerformCustomAction', -1, ret.privateData)
             
@@ -2023,7 +2143,7 @@ class IPTVPlayerWidget(Screen):
         asynccall.gMainFunctionsQueueTab[0].addToQueue("handlePerformCustomActionCallback", [thread, ret])
             
     def handlePerformCustomActionCallback(self, ret):
-        printDBG("IPTVPlayerWidget.handlePerformCustomActionCallback")
+        printDBG("E2iPlayerWidget.handlePerformCustomActionCallback")
         self.setStatusTex("")
         self["list"].show()
         linkList = []
@@ -2039,7 +2159,7 @@ class IPTVPlayerWidget(Screen):
         asynccall.gMainFunctionsQueueTab[0].addToQueue("handleMarkItemAsViewedCallback", [thread, ret])
            
     def handleMarkItemAsViewedCallback(self, ret):
-        printDBG("IPTVPlayerWidget.handleMarkItemAsViewedCallback")
+        printDBG("E2iPlayerWidget.handleMarkItemAsViewedCallback")
         self.setStatusTex("")
         self["list"].show()
         linkList = []
@@ -2072,7 +2192,7 @@ class IPTVPlayerWidget(Screen):
                             GetIPTVNotify().push('\n'.join(message), 'error', 120)
             except:
                 printExc()
-#class IPTVPlayerWidget
+#class E2iPlayerWidget
 
 class IPTVPlayerLCDScreen(Screen):
     try:

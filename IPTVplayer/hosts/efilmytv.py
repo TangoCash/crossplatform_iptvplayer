@@ -3,11 +3,10 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, GetTmpDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetTmpDir, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
@@ -16,23 +15,16 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 import urlparse
 import time
 import re
-import urllib
-import string
-import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
 from copy import deepcopy
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 from Screens.MessageBox import MessageBox
 ###################################################
@@ -597,7 +589,7 @@ class EFilmyTv(CBaseHostClass):
         
         if len(jscode) > 0:
             jscode.insert(0, 'var document={write:function(e){print(e)}};Base64={},Base64.decode=function(e){e.length%4==3&&(e+="="),e.length%4==2&&(e+="=="),e=Duktape.dec("base64",e),decText="";for(var t=0;t<e.byteLength;t++)decText+=String.fromCharCode(e[t]);return decText};')
-            ret = iptv_js_execute('\n'.join(jscode))
+            ret = js_execute('\n'.join(jscode))
             if ret['sts'] and 0 == ret['code']:
                 data = ret['data'].strip()
         if 'premium' in videoUrl.meta['f_type']:

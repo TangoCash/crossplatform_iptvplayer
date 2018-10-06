@@ -3,24 +3,17 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
@@ -30,7 +23,6 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 

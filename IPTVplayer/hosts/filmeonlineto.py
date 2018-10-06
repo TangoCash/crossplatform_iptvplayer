@@ -2,12 +2,11 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
@@ -16,21 +15,9 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 import time
 import re
 import urllib
-import string
-import random
-import base64
-from urlparse import urlparse
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -263,7 +250,7 @@ class FilmeOnlineTo(CBaseHostClass):
         if not sts: return
         
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s*?movie\s*?\=\s*?\{'), re.compile('}'))[1]
-        ret = iptv_js_execute( data + '; print(JSON.stringify(movie));' )
+        ret = js_execute( data + '; print(JSON.stringify(movie));' )
         try:
             printDBG(ret['data'])
             movieData = byteify(json.loads(ret['data']), '', True)
@@ -368,7 +355,7 @@ class FilmeOnlineTo(CBaseHostClass):
         if not sts: return
         
         data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s*?movie\s*?\=\s*?\{'), re.compile('}'))[1]
-        ret = iptv_js_execute( data + '; print(JSON.stringify(movie));' )
+        ret = js_execute( data + '; print(JSON.stringify(movie));' )
         try:
             movieData = byteify(json.loads(ret['data']), '', True)
             urlParams = dict(self.defaultParams)

@@ -2,91 +2,82 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
 import urllib
-import string
-import random
-import base64
-import hashlib
-from binascii import hexlify, unhexlify
-from urlparse import urlparse, urljoin
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+import time
+from binascii import hexlify
+from hashlib import md5
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
 
 def gettytul():
-    return 'http://videopenny.net/'
+    return 'https://videopenny.net/'
 
 class VideoPenny(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'video.penny.ie', 'cookie':'video.penny.ie.cookie'})
-        self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.DEFAULT_ICON_URL = 'http://videopenny.net/wp-content/uploads/icons/VideoPennyNet-logo_126x30.png'
+        self.DEFAULT_ICON_URL = 'https://videopenny.net/wp-content/uploads/icons/VideoPennyNet-logo_126x30.png'
         self.MAIN_URL = None
         self.cacheSeries = []
         self.cachePrograms = []
         self.cacheLast = {}
 
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'cookie_items':{'retina':'1'}}
         self._getHeaders = None
+        self.mainPageReceived = False
+        self.timestam = 0
+        
+    def _getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}: addParams = dict(self.defaultParams)
+        
+        if 'cookie_items' in addParams:
+            timestamp = int(time.time())
+            if timestamp > self.timestam:
+                timestamp += 180
+                hash = hexlify(md5(str(timestamp)).digest())
+                addParams['cookie_items']['token'] = '%s,%s' % (timestamp, hash)
+        
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        if sts and 'zablokowany.html' in self.cm.meta['url']:
+            messages = self.cleanHtmlStr(data)
+            GetIPTVNotify().push(messages, 'error', 40, self.cm.meta['url'], 40)
+        return sts, data
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
-        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-        
+        if not self.mainPageReceived:
+            requestUrl = self.getMainUrl()
+            sts, data = self._getPage(self.getMainUrl(), addParams, post_data)
+            self.mainPageReceived = True
+            if sts:
+                self.setMainUrl(self.cm.meta['url'])
+            if baseUrl == requestUrl: return  sts, data
+        return self._getPage(baseUrl, addParams, post_data)
+
     def getFullUrl(self, url):
         url = CBaseHostClass.getFullUrl(self, url)
         try: url.encode('ascii')
         except Exception: url = urllib.quote(url, safe="/:&?%@[]()*$!+-=|<>;")
         return url
         
-    def selectDomain(self):                
-        self.MAIN_URL = 'http://videopenny.net/'
+    def selectDomain(self):
+        self.MAIN_URL = 'https://videopenny.net/'
+        sts, data = self.getPage(self.getMainUrl())
+
         self.MAIN_CAT_TAB = [{'category':'list_sort_filter',    'title': 'Seriale',           'url':self.getFullUrl('/kategoria-2/seriale-pl'),           'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Seriale-tv.png')},
                              {'category':'list_sort_filter',    'title': 'Programy online',   'url':self.getFullUrl('/kategoria-2/programy-rozrywkowe'),  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Programy-online.png')},
                              {'category':'list_sort_filter',    'title': 'Filmy',             'url':self.getFullUrl('/category/filmy-pl/'),               'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Filmy.png')},
@@ -224,8 +215,32 @@ class VideoPenny(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
+        self.setMainUrl(self.cm.meta['url'])
         
         urlTab = []
+        uniqueTab = set()
+        
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'multilink-table'), ('</div', '>'))[1]
+        printDBG(tmp)
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<tr', '</tr>')
+        for mainItem in tmp:
+            linkVer = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(mainItem, ('<td', '>', 'multilink-title'), ('</td', '>'), False)[1])
+            mainItem = self.cm.ph.getAllItemsBeetwenMarkers(mainItem, '<a', '</a>')
+            for nameItem in mainItem:
+                url = self.cm.getFullUrl(self.cm.ph.getSearchGroups(nameItem, '''href=['"]([^'^"]+?)['"]''')[0])
+                name = self.cleanHtmlStr(nameItem)
+                playerId = self.cm.ph.getSearchGroups(nameItem, '''id=['"]([^'^"]+?)['"]''')[0]
+                embedData = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', playerId), ('</div', '>'))
+                for item in embedData:
+                    if not self.cm.ph.getSearchGroups(item, '''class=['"](%s)['"]''' % playerId)[0]: continue
+
+                    playerUrl = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''['"]((?:https?:)?//[^'^"]+?)['"]''')[0])
+                    if not self.cm.isValidUrl(playerUrl): continue
+                    if 1 != self.up.checkHostSupport(playerUrl) and '/player.php' not in playerUrl: continue 
+                    if playerUrl in uniqueTab: continue
+                    uniqueTab.add(playerUrl)
+                    urlTab.append({'name':'%s - %s' % (linkVer, name), 'url':strwithmeta(playerUrl, {'Referer':self.cm.meta['url']}), 'need_resolve':1})
+        
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'player-embed', '</div>')[1]
         tmp += '\n'.join(self.cm.ph.getAllItemsBeetwenNodes(data, ('<', '>', 'multilink'), ('</a', '>')))
         data = tmp
@@ -235,8 +250,10 @@ class VideoPenny(CBaseHostClass):
         for item in tmp:
             playerUrl = item.strip()
             if not self.cm.isValidUrl(playerUrl): continue
-            if 1 != self.up.checkHostSupport(playerUrl): continue 
-            urlTab.append({'name':self.up.getDomain(playerUrl, False), 'url':playerUrl, 'need_resolve':1})
+            if 1 != self.up.checkHostSupport(playerUrl) and '/player.php' not in playerUrl: continue 
+            if playerUrl in uniqueTab: continue
+            uniqueTab.add(playerUrl)
+            urlTab.append({'name':self.up.getDomain(playerUrl, False), 'url':strwithmeta(playerUrl, {'Referer':self.cm.meta['url']}), 'need_resolve':1})
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')[1]
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<source', '>')
@@ -248,50 +265,34 @@ class VideoPenny(CBaseHostClass):
             if label == '': label = self.cm.ph.getSearchGroups(item, '''res=\s*([^\s]+?)[\s>]''')[0]
             printDBG(url)
             if self.cm.isValidUrl(url):
-                urlTab.append({'name':'[%s] %s' % (type, label), 'url':strwithmeta(url)})
+                urlTab.append({'name':'[%s] %s' % (type, label), 'url':strwithmeta(url, {'Referer':self.cm.meta['url']})})
         
         return urlTab
         
     def getVideoLinks(self, videoUrl):
         printDBG("VideoPenny.getVideoLinks [%s]" % videoUrl)
         urlTab = []
+        
+        if 0 == self.up.checkHostSupport(videoUrl): # 'rodzinnekino' not in self.cm.getBaseUrl(videoUrl):
+            params = dict(self.defaultParams)
+            params['header'] = dict(params['header'])
+            params['header']['Referer'] = videoUrl.meta['Referer']
+            params['max_data_size'] = 0
+            params['save_cookie'] = False
+            sts, data = self.getPage(videoUrl, params)
+            if not sts: return []
+            videoUrl = strwithmeta(self.cm.meta['url'], videoUrl.meta)
+
         if self.cm.isValidUrl(videoUrl):
             urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
-    
-    def getFavouriteData(self, cItem):
-        printDBG('VideoPenny.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('VideoPenny.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('VideoPenny.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         if self.MAIN_URL == None:
-            #rm(self.COOKIE_FILE)
+            rm(self.COOKIE_FILE)
             self.selectDomain()
 
         name     = self.currItem.get("name", '')

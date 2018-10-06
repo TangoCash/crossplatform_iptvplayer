@@ -5,9 +5,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import IHost, CDisplayListItem, RetHost, CUrlItem, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir,GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, byteify
 
 ###################################################
 # FOREIGN import
@@ -16,8 +14,9 @@ import re
 import copy
 try:    import json 
 except Exception: import simplejson as json
-
 ###################################################
+
+
 def gettytul():
     return 'https://spryciarze.pl/'
     

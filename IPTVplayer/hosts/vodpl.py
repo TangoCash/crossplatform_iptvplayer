@@ -2,35 +2,22 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm, CSelOneLink
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, CSelOneLink
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
 import time
-import re
 import urllib
-import string
 import random
-import base64
-from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigYesNo, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
@@ -69,8 +56,8 @@ class VODPL(CBaseHostClass):
     
         self.MAIN_CAT_TAB = [{'category':'list_filters',  'title': _('Movies'),         'url':self.getFullUrl('filmy'),              'f_element':'SiteFilmy',        },
                              {'category':'list_items',    'title': _('Series'),         'url':self.getFullUrl('seriale'),            'f_element':'SiteSeriale',      },
-                             {'category':'list_filters',  'title': _('Programy onetu'), 'url':self.getFullUrl('programy-onetu'),     'f_element':'SiteProgramyOnetu',},
-                             {'category':'list_filters',  'title': _('Dokumentalne'),   'url':self.getFullUrl('filmy-dokumentalne'), 'f_element':'SiteDokumenty',    },
+                             {'category':'list_filters',  'title': 'Programy onetu',    'url':self.getFullUrl('programy-onetu'),     'f_element':'SiteProgramyOnetu',},
+                             {'category':'list_filters',  'title': 'Dokumentalne',      'url':self.getFullUrl('filmy-dokumentalne'), 'f_element':'SiteDokumenty',    },
                              
                              
                              {'category':'search',            'title': _('Search'), 'search_item':True,},
@@ -451,11 +438,11 @@ class IPTVHost(CHostBase):
     
     def getSearchTypes(self):
         searchTypesOptions = []
-        searchTypesOptions.append((_("Wszystkie"),    "wszystkie"))
-        searchTypesOptions.append((_("Filmy"),            "filmy"))
-        searchTypesOptions.append((_("Seriale"),        "seriale"))
-        searchTypesOptions.append((_("Dokumentalne"), "dokumenty"))
-        searchTypesOptions.append((_("Programy TV"),   "programy"))
+        searchTypesOptions.append(("Wszystkie",    "wszystkie"))
+        searchTypesOptions.append(("Filmy",            "filmy"))
+        searchTypesOptions.append(("Seriale",        "seriale"))
+        searchTypesOptions.append(("Dokumentalne", "dokumenty"))
+        searchTypesOptions.append(("Programy TV",   "programy"))
         return searchTypesOptions
     
     #def withArticleContent(self, cItem):

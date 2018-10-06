@@ -6,31 +6,21 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
-import urllib
 import random
-import string
-try:    import json
-except Exception: import simplejson as json
-
-from os import path as os_path
 ############################################
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -121,13 +111,13 @@ class VideoStarApi(CBaseHostClass):
         httpParams['header'] = dict(httpParams['header'])
         httpParams['header']['Referer'] = self.getMainUrl()
         sts, data = self.cm.getPage(actionUrl, httpParams, post_data)
-        printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        printDBG(">>>")
         printDBG(data)
-        printDBG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        printDBG("<<<")
         if sts:
             errMessage = ''
             try:
-                data = byteify(json.loads(data), '', True)
+                data = json_loads(data, '', True)
                 if data['status'] == 'error':
                     errMessage = 'Błędne dane do logowania.'
                 elif data['status'] == 'ok' and '' != data['user']['token']:
@@ -177,7 +167,7 @@ class VideoStarApi(CBaseHostClass):
         
         try:
             idx = 0
-            data = byteify(json.loads(data), '', True)
+            data = json_loads(data, '', True)
             for item in data['channels']:
                 guestTimeout = item.get('guest_timeout', '')
                 if not config.plugins.iptvplayer.videostar_show_all_channels.value and (item['access_status'] == 'unsubscribed' or (not self.loggedIn and guestTimeout == '0')): continue
@@ -229,7 +219,7 @@ class VideoStarApi(CBaseHostClass):
                     if sts: continue
                 
                 if not sts: break
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 if data['data'] != None:
                     for item in data['data']['stream_channel']['streams']:
                         if formatId == '2':

@@ -3,7 +3,7 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
@@ -11,7 +11,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 # FOREIGN import
 ###################################################
-import re
 import urllib
 from urlparse import urljoin
 from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
@@ -175,7 +174,7 @@ class GoMovies(CBaseHostClass):
         if page == 1:
             if 'search' not in cItem:
                 # var url = 'https://www3.123movieshub.sc/movie/filter/' + type + '/' + sortby + '/' + genres + '/' + countries + '/' + year + '/' + quality + '/';
-                url += '/{0}/{1}/{2}/{3}/all/{4}'.format(cItem['sort_by'], cItem['genre'], cItem['country'], cItem['year'], cItem['quality'])
+                url += '/{0}/{1}/{2}/{3}/{4}'.format(cItem['sort_by'], cItem['genre'], cItem['country'], cItem['year'], cItem['quality'])
         
         sts, data = self.getPage(url)
         if not sts: return
@@ -185,7 +184,7 @@ class GoMovies(CBaseHostClass):
             SetIPTVPlayerLastHostError(_('Functionality protected by Google reCAPTCHA!'))
         
         nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'pagination'), ('</ul', '>'), False)[1]
-        nextPage = self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"]([^"^']+?)['"][^>]*?>%s<''' % (page + 1))[0]
+        nextPage = self.cm.ph.getSearchGroups(nextPage, '''<a[^>]+?href=['"]([^"^']+?)['"][^>]*?>%s<''' % (page + 1))[0]
         
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'item'), ('</div', '>'), False)
         for item in data:

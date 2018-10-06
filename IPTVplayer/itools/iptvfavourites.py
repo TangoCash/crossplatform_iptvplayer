@@ -7,6 +7,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CFavItem
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 ###################################################
 
 ###################################################
@@ -14,9 +15,6 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CFavItem
 ###################################################
 import codecs
 from os import path as os_path, remove as os_remove
-try: import json
-except Exception: import simplejson as json
-
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CFavItem
 ###################################################
 
@@ -185,7 +183,7 @@ class IPTVFavourites:
             try:
                 data = self._loadFromFile(filePath)
                 printDBG(data)
-                data = byteify( json.loads(data) )
+                data = json_loads(data)
                 favItems = []
                 for item in data:
                     favItems.append( CFavItem().setFromDict(item) )
@@ -204,7 +202,7 @@ class IPTVFavourites:
             try:
                 data = self._loadFromFile(filePath)
                 printDBG(data)
-                data = byteify( json.loads(data) )
+                data = json_loads(data)
                 self.groups = data
             except Exception:
                 printExc()
@@ -234,7 +232,7 @@ class IPTVFavourites:
             items = []
             for favItem in group['items']:
                 items.append( favItem.getAsDict() )
-            data = json.dumps(items)
+            data = json_dumps(items)
             self._saveToFile(filePath, data)
         except Exception:
             printExc()
@@ -249,7 +247,7 @@ class IPTVFavourites:
             groups = deepcopy(self.groups)
             for item in groups: item.pop("items", None)
             filePath = os_path.join(self.favDir, IPTVFavourites.GROUPS_FILE_NAME)
-            data = json.dumps(groups)
+            data = json_dumps(groups)
             self._saveToFile(filePath, data)
         except Exception:
             self.lastError = _("Error writing file \"%s\".\n") % filePath

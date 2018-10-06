@@ -130,7 +130,7 @@ class customMoviePlayer(InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, Inf
         elif self.aspectratiomode == "4": #panscan
             eAVSwitch.getInstance().setAspectRatio(3)
             self.aspectratiomode = "1"
-            
+        
     def pauseBeforeClose(self):
         printDBG("pauseBeforeClose")
         service = self.session.nav.getCurrentService()
@@ -149,11 +149,10 @@ class customMoviePlayer(InfoBarShowHide, InfoBarSeek, InfoBarAudioSelection, Inf
         printDBG("customMoviePlayer.leavePlayer isClosing[%r], endFile[%r]" % (self.isClosing, endFile))
         if False == self.isClosing:
             self.pauseBeforeClose()
-            #self.session.nav.playService(None)
             if endFile:
-                self._doClose(1)
+                self._doClose(None)
             else:
-                self._doClose(0)
+                self._doClose('key_stop')
 
     def doEofInternal(self, playing):
         printDBG( "--- eofint movieplayer ---" )
@@ -213,7 +212,18 @@ class IPTVStandardMoviePlayer(standardMoviePlayer):
         standardMoviePlayer.__init__(self, self.session, fileRef)
         self.skinName = "MoviePlayer"
         standardMoviePlayer.skinName = "MoviePlayer"
+        self.e2iplayerEOF = False
 
+    def doEofInternal(self, *args, **kwargs):
+        if (args and args[0]) or kwargs.get('playing', False):
+            self.e2iplayerEOF = True
+        standardMoviePlayer.doEofInternal(self, *args, **kwargs)
+
+    def close(self, *args, **kwargs):
+        if self.e2iplayerEOF:
+            standardMoviePlayer.close(self, *args, **kwargs)
+        else:
+            standardMoviePlayer.close(self, 'key_exit')
 
 class IPTVMiniMoviePlayer(customMoviePlayer):
     def __init__(self, session, uri, title, lastPosition=None, bugEOFworkaround=0):

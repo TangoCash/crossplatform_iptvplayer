@@ -2,43 +2,25 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetPluginDir, GetCacheSubDir, ReadTextFile, WriteTextFile
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
-
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_9kw import UnCaptchaReCaptcha as UnCaptchaReCaptcha_9kw
-from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2_2captcha import UnCaptchaReCaptcha as UnCaptchaReCaptcha_2captcha
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import re
-import urllib
-import string
-import random
 import base64
 import hashlib
-from binascii import hexlify, unhexlify
-from urlparse import urlparse, urljoin
+from binascii import unhexlify
 try:    import json
 except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
@@ -47,8 +29,8 @@ config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = 
 config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.bsto_linkcache = ConfigYesNo(default = True)
 config.plugins.iptvplayer.bsto_bypassrecaptcha = ConfigSelection(default = "None", choices = [("None",        _("None")),
-                                                                                             ("9kw.eu",       "https://9kw.eu/"),
-                                                                                             ("2captcha.com", "http://2captcha.com/")])
+                                                                                              ("9kw.eu",       "https://9kw.eu/"),
+                                                                                              ("2captcha.com", "http://2captcha.com/")])
 
 def GetConfigList():
     optionList = []
@@ -65,11 +47,11 @@ def GetConfigList():
 def gettytul():
     return 'https://bs.to/'
 
-class BSTO(CBaseHostClass):
+class BSTO(CBaseHostClass, CaptchaHelper):
     LINKS_CACHE = {}
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'bs.to', 'cookie':'bsto.cookie'})
-        self.USER_AGENT = 'User-Agent=Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
@@ -85,12 +67,8 @@ class BSTO(CBaseHostClass):
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
@@ -181,6 +159,7 @@ class BSTO(CBaseHostClass):
             for link in item:
                 name = self.cleanHtmlStr(link)
                 url  = self.getFullUrl(self.cm.ph.getSearchGroups(link, '''href=['"]([^'^"]+?)['"]''')[0])
+                if name == '': name = url.rsplit('/', 1)[-1]
                 self.cacheLinks[key].append({'name':name, 'url':strwithmeta(url, {'links_key':key}), 'need_resolve':1})
             if len(self.cacheLinks[key]):
                 params = dict(cItem)
@@ -292,21 +271,22 @@ class BSTO(CBaseHostClass):
             url = data.meta['url']
             
             if url == prevUrl:
+                query = {}
+                tmp = self.cm.ph.getDataBeetwenNodes(data, ('<form', '>'), ('</form', '>'), False)[1]
+                tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<input', '>', False)
+                for item in tmp:
+                    name = self.cm.ph.getSearchGroups(item, '''name=['"]([^'^"]+?)['"]''')[0]
+                    value = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
+                    if name != '':
+                        query[name] = value
+                
                 sitekey = self.cm.ph.getSearchGroups(data, '''['"]sitekey['"]\s*?:\s*?['"]([^'^"]+?)['"]''')[0]
                 if sitekey != '' and 'bitte das Captcha' in data:
-                    errorMsgTab = [_('Link protected with google recaptcha v2.')]
-                    recaptcha = None
-                    if config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '9kw.eu':
-                        recaptcha = UnCaptchaReCaptcha_9kw()
-                    elif config.plugins.iptvplayer.bsto_bypassrecaptcha.value == '2captcha.com':
-                        recaptcha = UnCaptchaReCaptcha_2captcha()
-                    
-                    if recaptcha != None:
-                        token = recaptcha.processCaptcha(sitekey, prevUrl)
-                        if token != '':
-                            sts, data = self.cm.getPage(url + '?token=' + token, self.defaultParams)
-                            if not sts: return []
-                            url = data.meta['url']
+                    token, errorMsgTab = self.processCaptcha(sitekey,  self.cm.meta['url'], config.plugins.iptvplayer.bsto_bypassrecaptcha.value)
+                    if token != '':
+                        sts, data = self.cm.getPage(url + '?t=%s&s=%s' % (token, query.get('s', '')), self.defaultParams)
+                        if not sts: return []
+                        url = data.meta['url']
             
             if 1 != self.up.checkHostSupport(url):
                 url  = baseUrl.replace('/out/', '/watch/')[1:]

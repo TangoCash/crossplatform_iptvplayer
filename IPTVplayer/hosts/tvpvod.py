@@ -4,31 +4,27 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigInteger, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 from datetime import datetime, timedelta, date
-from binascii import hexlify
 import re
 import urllib
 import time
-import random
-try:    import simplejson as json
-except Exception: import json
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 config.plugins.iptvplayer.tvpvod_premium  = ConfigYesNo(default = False)
@@ -63,7 +59,6 @@ def GetConfigList():
     optionList.append(getConfigListEntry("Domyślna jakość wideo",           config.plugins.iptvplayer.tvpVodDefaultformat))
     optionList.append(getConfigListEntry("Używaj domyślnej jakości wideo:", config.plugins.iptvplayer.tvpVodUseDF))
     optionList.append(getConfigListEntry("Korzystaj z proxy?",              config.plugins.iptvplayer.tvpVodProxyEnable))
-    #optionList.append(getConfigListEntry("Więcej jako następna strona",     config.plugins.iptvplayer.tvpVodNextPage))
     return optionList
 ###################################################
 
@@ -326,7 +321,7 @@ class TvpVod(CBaseHostClass):
         if not sts: return
         try:
             #date.fromtimestamp(item['release_date']['sec']).strftime('%H:%M')
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             data['items'].sort(key=lambda item: item['release_date_hour'])
             for item in data['items']:
                 if not item.get('is_live', False): continue 
@@ -402,7 +397,7 @@ class TvpVod(CBaseHostClass):
             params = dict(cItem)
             params.update({'page':page+1})
             if config.plugins.iptvplayer.tvpVodNextPage.value:
-                params['title'] = _("Następna strona")
+                params['title'] = _('Next page')
                 self.addDir(params)
             else:
                 params['title'] = _('More')
@@ -424,7 +419,7 @@ class TvpVod(CBaseHostClass):
             
     def mapHoeverItem(self, cItem, item, rawItem, nextCategory):
         try:
-            item = byteify(json.loads(item))
+            item = json_loads(item)
             title = self.getJItemStr(item, 'title')
             icon = self._getFullUrl(self.getJItemStr(item, 'image'))
             tmp = []
@@ -642,6 +637,12 @@ class TvpVod(CBaseHostClass):
     def getObjectID(self, url):
         sts, data = self.cm.getPage(url, self.defaultParams)
         if not sts: return ''
+        
+        sess_player_url = self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?/sess/player/video/[^'^"]+?)['"]''')[0]
+        if sess_player_url != '':
+            sts, tmp = self.cm.getPage(sess_player_url, self.defaultParams)
+            if sts: data = tmp
+        
         asset_id = self.cm.ph.getSearchGroups(data, '''id=['"]tvplayer\-[0-9]+\-([0-9]+)''')[0]
         
         if asset_id == '': asset_id = self.cm.ph.getSearchGroups(data, 'object_id=([0-9]+?)[^0-9]')[0]
@@ -713,16 +714,16 @@ class TvpVod(CBaseHostClass):
             sts, data = self.cm.getPage( 'http://www.tvp.pl/shared/cdn/tokenizer_v2.php?mime_type=video%2Fmp4&object_id=' + asset_id, self.defaultParams)
             printDBG("%s -> [%s]" % (sts, data))
             try:
-                data = json.loads( data )
+                data = json_loads( data )
                 
                 def _getVideoLink(data, FORMATS):
                     videoTab = []
                     for item in data['formats']:
                         if item['mimeType'] in FORMATS.keys():
-                            formatType = FORMATS[item['mimeType']].encode('utf-8')
+                            formatType = FORMATS[item['mimeType']]
                             format = self.REAL_FORMATS.get(formatType, '')
                             name = self.getFormatFromBitrate( str(item['totalBitrate']) ) + '\t ' + formatType
-                            url = item['url'].encode('utf-8')
+                            url = item['url']
                             if 'm3u8' == formatType:
                                 videoTab.extend( getDirectM3U8Playlist(url, checkExt=False, variantCheck=False) )
                             else:
@@ -753,7 +754,7 @@ class TvpVod(CBaseHostClass):
             sts, data = self.cm.getPage( 'https://apivod.tvp.pl/tv/video/%s/default/default?device=android' % asset_id, params)
             printDBG("%s -> [%s]" % (sts, data))
             try:
-                data = byteify(json.loads( data ), '', True)
+                data = json_loads(data, '', True)
                 for item in data['data']:
                     if 'formats' in item:
                         data = item
@@ -802,7 +803,7 @@ class TvpVod(CBaseHostClass):
             if premium: self.loggedIn, msg = self.tryTologin()
         
         try:
-            cItem = byteify(json.loads(fav_data))
+            cItem = json_loads(fav_data)
             links = self.getLinksForVideo(cItem)
         except Exception:
             cItem = {'url':fav_data}
@@ -814,15 +815,15 @@ class TvpVod(CBaseHostClass):
         
     def getFavouriteData(self, cItem):
         printDBG('TvpVod.getFavouriteData')
-        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem['icon']}
+        params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem.get('desc', ''), 'icon':cItem.get('icon', '')}
         if 'list_episodes' in cItem:
             params['list_episodes'] = cItem['list_episodes']
-        return json.dumps(params) 
+        return json_dumps(params) 
         
     def setInitListFromFavouriteItem(self, fav_data):
         printDBG('TvpVod.setInitListFromFavouriteItem')
         try:
-            params = byteify(json.loads(fav_data))
+            params = json_loads(fav_data)
         except Exception: 
             params = {}
             printExc()

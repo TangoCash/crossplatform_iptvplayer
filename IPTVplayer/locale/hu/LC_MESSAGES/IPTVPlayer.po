@@ -86,21 +86,6 @@ msgstr "    Ikonméret"
 msgid "    Video buffer size [MB]"
 msgstr "   Video pufferméret (MB)"
 
-msgid "  alltubetv login:"
-msgstr "  alltubetv felhasználónév:"
-
-msgid "  alltubetv password:"
-msgstr "  alltubetv jelszó:"
-
-msgid " (chunk %s)"
-msgstr "(%s darab)"
-
-msgid " - mobile broadcast url"
-msgstr "- Mobil sugárzás címe"
-
-msgid " Audio buffer size [KB]"
-msgstr " Audio puffer méret [KB]"
-
 msgid " Last.fm login:"
 msgstr " Last.fm felhasználónév:"
 
@@ -109,9 +94,6 @@ msgstr "Jelszó"
 
 msgid " Username or Email"
 msgstr "Felhasználónév vagy Email cím"
-
-msgid " Video buffer size [MB]"
-msgstr "Video pufferméret [MB]"
 
 msgid ""
 " has not been detected. \n"
@@ -256,9 +238,6 @@ msgstr "Biztosan törlöd?   \"%s\"?"
 
 msgid "Aspect"
 msgstr "Képarány"
-
-msgid "Audio buffer size [KB]"
-msgstr "Audio puffer méret [KB]"
 
 msgid "Auto"
 msgstr "Automatikus"

@@ -4,10 +4,8 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import *
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 import re
-
-try: import json
-except Exception: import simplejson as json
 
 NO_DEFAULT = None
 compiled_regex_type = type(re.compile(''))
@@ -25,10 +23,10 @@ class InfoExtractor():
         sts, data = self.cm.getPage(url, params)
         if not sts: return None
         if fatal:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
         else:
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
             except Exception:
                 printExc()
                 data = None

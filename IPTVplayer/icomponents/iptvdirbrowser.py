@@ -11,6 +11,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVMainNavigatorList
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, mkdir, IsValidFileName, GetBinDir, eConnectCallback, E2PrioFix
+from Plugins.Extensions.IPTVPlayer.icomponents.e2ivkselector import GetVirtualKeyboard
 ###################################################
  
 ###################################################
@@ -20,7 +21,6 @@ from enigma import eConsoleAppContainer, getDesktop
 
 from Screens.Screen import Screen
 from Screens.HelpMenu import HelpableScreen
-from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Screens.MessageBox import MessageBox
 from Components.Sources.StaticText import StaticText
 from Components.Label import Label
@@ -260,7 +260,7 @@ class IPTVDirectorySelectorWidget(Screen):
             self.currDirChanged()
         
     def newDir(self):
-        self.session.openWithCallback(self.enterPatternCallBack, VirtualKeyBoard, title = (_("Enter name")), text = "")
+        self.session.openWithCallback(self.enterPatternCallBack, GetVirtualKeyboard(), title = (_("Enter name")), text = "")
 
     def enterPatternCallBack(self, newDirName=None):
         if None != self.currDir and newDirName != None:

@@ -3,33 +3,20 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -83,15 +70,7 @@ class SeriesOnlineIO(CBaseHostClass):
             addParams = dict(addParams)
             addParams.update({'http_proxy':proxy})
 
-        def _getFullUrl(url):
-            if url == '': return ''
-            
-            if self.cm.isValidUrl(url):
-                return url
-            else:
-                return urlparse.urljoin(baseUrl, url)
-
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
 
         tries = 0
         while tries < 2:
@@ -105,7 +84,7 @@ class SeriesOnlineIO(CBaseHostClass):
             break
 
         if captcha:
-            message =_('This site is protected with google recaptcha v2.')
+            message =_('This site is protected with Google reCaptcha v2.')
             SetIPTVPlayerLastHostError(message)
             if not self.userInformedAboutCaptchaProtection:
                 self.userInformedAboutCaptchaProtection = True
@@ -293,7 +272,7 @@ class SeriesOnlineIO(CBaseHostClass):
                 tmp = item
                 break
         if tmp == '': return
-        ret = iptv_js_execute( '$={}; $.ajax=function(setup){print(JSON.stringify(setup));}\n' + tmp)
+        ret = js_execute( '$={}; $.ajax=function(setup){print(JSON.stringify(setup));}\n' + tmp)
         if ret['sts'] and 0 == ret['code']:
             decoded = ret['data'].strip()
             printDBG('DECODED DATA -> \n[%s]\n' % decoded)
@@ -463,31 +442,8 @@ class SeriesOnlineIO(CBaseHostClass):
     def getFavouriteData(self, cItem):
         printDBG('SeriesOnlineIO.getFavouriteData')
         params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'data_url':cItem['data_url'], 'desc':cItem['desc'], 'info_url':cItem['info_url'], 'icon':cItem['icon']}
-        return json.dumps(params) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('SeriesOnlineIO.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('SeriesOnlineIO.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
+        return json.dumps(params)
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         

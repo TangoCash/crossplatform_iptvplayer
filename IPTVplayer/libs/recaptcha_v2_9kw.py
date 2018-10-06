@@ -3,22 +3,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVSleep
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetTmpDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVSleep
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 from Components.config import config
-
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 # FOREIGN import
 ###################################################
 import time
 import urllib
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config
 ###################################################
 
 class UnCaptchaReCaptcha:
@@ -45,7 +42,7 @@ class UnCaptchaReCaptcha:
             sts, data = self.cm.getPage(apiUrl)
             if sts:
                 printDBG('API DATA:\n%s\n' % data)
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 if 'captchaid' in data:
                     captchaid = data['captchaid']
                     sleepObj = GetIPTVSleep()
@@ -69,7 +66,7 @@ class UnCaptchaReCaptcha:
                             break 
                         else:
                             printDBG('API DATA:\n%s\n' % data)
-                            data = byteify(json.loads(data))
+                            data = json_loads(data)
                             token = data['answer']
                             if token != '': 
                                 break

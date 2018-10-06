@@ -4,16 +4,16 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, GetCookieDir, GetDefaultLang, rm, byteify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printDBG, printExc, GetDefaultLang, rm, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
 from Screens.MessageBox import MessageBox
 ###################################################
 # FOREIGN import
@@ -24,13 +24,12 @@ import urlparse
 import urllib
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigYesNo, ConfigText, ConfigSelection, getConfigListEntry
+from Components.config import config, ConfigText, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-#config.plugins.iptvplayer.ekinotvPREMIUM = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ekinotv_login = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.ekinotv_password = ConfigText(default = "", fixed_size = False)
 
@@ -39,8 +38,6 @@ config.plugins.iptvplayer.ekinotv_sortorder = ConfigSelection(default = "desc", 
 
 def GetConfigList():
     optionList = []
-    #optionList.append(getConfigListEntry("Użytkownik PREMIUM Ekino TV?", config.plugins.iptvplayer.ekinotvPREMIUM))
-    #if config.plugins.iptvplayer.ekinotvPREMIUM.value:
     optionList.append(getConfigListEntry("Ekino TV login:", config.plugins.iptvplayer.ekinotv_login))
     optionList.append(getConfigListEntry("Ekino TV hasło:", config.plugins.iptvplayer.ekinotv_password))
     optionList.append(getConfigListEntry("Sortuj według:", config.plugins.iptvplayer.ekinotv_sortby))
@@ -324,7 +321,7 @@ class EkinoTv(CBaseHostClass):
                 playerParams = self.cm.ph.getSearchGroups(item, '''ShowPlayer[^"^']*?['"]([^"^']+?)['"]\s*\,\s*['"]([^"^']+?)['"]''', 2)
                 url = ''
                 if premium and '' not in playerParams:
-                    ret = iptv_js_execute( jscode + ('\nShowPlayer("%s","%s");' % (playerParams[0], playerParams[1])))
+                    ret = js_execute( jscode + ('\nShowPlayer("%s","%s");' % (playerParams[0], playerParams[1])))
                     if ret['sts'] and 0 == ret['code']:
                         printDBG(ret['data'])
                         url = self.getFullUrl(self.cm.ph.getSearchGroups(ret['data'], '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', ignoreCase=True)[0])
@@ -493,7 +490,8 @@ class EkinoTv(CBaseHostClass):
                     if t != '': self.loginMessage.append(t)
                 self.loginMessage = '[/br]'.join(self.loginMessage)
             else:
-                message = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'alert'), ('</div', '>'))[1])
+                if sts: message = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'alert'), ('</div', '>'))[1])
+                else: message = ''
                 self.sessionEx.open(MessageBox, _('Login failed.') + '\n' + message, type = MessageBox.TYPE_ERROR, timeout = 10)
                 printDBG('tryTologin failed')
         return self.loggedIn

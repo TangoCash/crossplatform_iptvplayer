@@ -2,46 +2,22 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, NextDay, PrevDay
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import urlparse
-import time
-import re
-import urllib
-import string
-import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
-from copy import deepcopy
+from datetime import  timedelta
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'https://my-free-mp3.net/'
 
@@ -62,6 +38,7 @@ class MyFreeMp3(CBaseHostClass):
                              {'category':'search',         'title': _('Search'),          'search_item':True}, 
                              {'category':'search_history', 'title': _('Search history')},
                             ]
+        self.streamUrl = 'http://newtabz.stream/'
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
@@ -82,6 +59,15 @@ class MyFreeMp3(CBaseHostClass):
         sts, data = self.getPage(self.getMainUrl())
         if not sts: return
         self.setMainUrl(self.cm.meta['url'])
+        
+        # 
+        tmp = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^'^"]+?)['"]''')[0])
+        sts, tmp = self.getPage(tmp)
+        if sts:
+            tmp = self.cm.ph.getSearchGroups(tmp, '''['"]([^'^"]*?/newtab[^'^"]+?)['"]''')[0]
+            if tmp != '': self.streamUrl = self.getFullUrl(tmp)
+            if not self.streamUrl.endswith('/'): self.streamUrl += '/'
+            self.streamUrl = self.cm.getBaseUrl(self.streamUrl)
         
         url = self.getFullUrl('/api/search.php?callback=jQuery2130550300194200308_1532280982151')
         data = self.cm.ph.getDataBeetwenNodes(data, ('<select', '>', 'sort'), ('</select', '>'), False)[1]
@@ -170,7 +156,7 @@ class MyFreeMp3(CBaseHostClass):
             if 'aid' in item: id = item['aid']
             else: id = item['id']
             
-            url  = 'https://newtabs.stream/stream/%s:%s' % (encode(item['owner_id']), encode(id))
+            url  = self.streamUrl + 'stream/%s:%s' % (encode(item['owner_id']), encode(id))
             #url  = 'http://streams.my-free-mp3.net/stream/%s:%s' % (encode(item['owner_id']), encode(item['aid']))
             return [{'name':'direct', 'url':strwithmeta(url, {'User-Agent':self.USER_AGENT, 'Referer':self.getMainUrl()})}]
         except Exception:

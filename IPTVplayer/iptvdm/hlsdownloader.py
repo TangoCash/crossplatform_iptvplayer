@@ -82,6 +82,9 @@ class HLSDownloader(BaseDownloader):
         if 'iptv_m3u8_key_uri_replace_old' in meta and 'iptv_m3u8_key_uri_replace_new' in meta:
             addParams = ' -k "%s" -n "%s" ' % (meta['iptv_m3u8_key_uri_replace_old'], meta['iptv_m3u8_key_uri_replace_new'])
         
+        if 'iptv_m3u8_seg_download_retry' in meta:
+            addParams += ' -w %s ' % meta['iptv_m3u8_seg_download_retry']
+        
         cmd = DMHelper.getBaseHLSDLCmd(self.downloaderParams) + (' "%s"' % self.url) + addParams + (' -o "%s"' % self.filePath) + ' > /dev/null'
 
         printDBG("HLSDownloader::start cmd[%s]" % cmd)

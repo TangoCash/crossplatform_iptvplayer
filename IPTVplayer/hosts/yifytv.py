@@ -3,36 +3,25 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerParams, VIDEOWEED_decryptPlayerParams, VIDEOWEED_decryptPlayerParams2, SAWLIVETV_decryptPlayerParams
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.base import noPadding
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from datetime import datetime
-import string
 import re
 import urllib
 import base64
 try:    import json
 except Exception: import simplejson as json
-from binascii import hexlify, unhexlify, a2b_hex
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from binascii import unhexlify
+from Components.config import config, ConfigSelection, getConfigListEntry
 from copy import deepcopy
-###################################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 ###################################################
 
 ###################################################
@@ -129,7 +118,7 @@ class YifyTV(CBaseHostClass):
                 jscode = self.cm.ph.getDataBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)[1]
                 if 'eval' in jscode:
                     jscode = '%s\n%s' % (base64.b64decode('''dmFyIGlwdHZfY29va2llcz1bXSxkb2N1bWVudD17fTtPYmplY3QuZGVmaW5lUHJvcGVydHkoZG9jdW1lbnQsImNvb2tpZSIse2dldDpmdW5jdGlvbigpe3JldHVybiIifSxzZXQ6ZnVuY3Rpb24obyl7bz1vLnNwbGl0KCI7IiwxKVswXS5zcGxpdCgiPSIsMiksb2JqPXt9LG9ialtvWzBdXT1vWzFdLGlwdHZfY29va2llcy5wdXNoKG9iail9fSk7dmFyIHdpbmRvdz10aGlzLGxvY2F0aW9uPXt9O2xvY2F0aW9uLnJlbG9hZD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfY29va2llcykpfTs='''), jscode)
-                    ret = iptv_js_execute( jscode )
+                    ret = js_execute( jscode )
                     if ret['sts'] and 0 == ret['code']:
                         try:
                             cookies = byteify(json.loads(ret['data'].strip()))
@@ -316,7 +305,7 @@ class YifyTV(CBaseHostClass):
             printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
             printDBG(jscode)
             printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            ret = iptv_js_execute( jscode )
+            ret = js_execute( jscode )
             if ret['sts'] and 0 == ret['code']:
                 decoded = ret['data'].strip()
                 printDBG('DECODED DATA -> [%s]' % decoded)
@@ -424,9 +413,9 @@ class YifyTV(CBaseHostClass):
                                     printDBG("+++++++++++++++++++++++  CODE  ++++++++++++++++++++++++")
                                     printDBG(jscode)
                                     printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                                    ret = iptv_js_execute( jscode )
+                                    ret = js_execute( jscode )
                                     if not ret['sts'] or  0 != ret['code']:
-                                        ret = iptv_js_execute( jscode.replace('eval(', 'print(') )
+                                        ret = js_execute( jscode.replace('eval(', 'print(') )
                                     if ret['sts'] and 0 == ret['code']:
                                         decoded = ret['data'].strip()
                                         printDBG('DECODED DATA -> [%s]' % decoded)

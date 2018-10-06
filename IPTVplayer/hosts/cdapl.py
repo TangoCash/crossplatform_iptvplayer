@@ -4,18 +4,16 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printDBG, printExc, byteify, rm
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 import re
 import urllib
-import time
-import random
 try:    import simplejson as json
 except Exception: import json
 
@@ -26,14 +24,13 @@ except Exception: import json
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.cda_searchsort = ConfigSelection(default = "best", choices = [("best", _("Najtrafniejsze")), ("date", _("Najnowsze")), ("rate", _("Najlepiej oceniane")), ("alf", _("Alfabetycznie"))])
+config.plugins.iptvplayer.cda_searchsort = ConfigSelection(default = "best", choices = [("best", "Najtrafniejsze"), ("date", "Najnowsze"), ("rate", "Najlepiej oceniane"), ("alf", "Alfabetycznie")])
 config.plugins.iptvplayer.cda_login      = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.cda_password   = ConfigText(default = "", fixed_size = False)
 
@@ -41,7 +38,7 @@ def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry("Login:", config.plugins.iptvplayer.cda_login))
     optionList.append(getConfigListEntry("Hasło:", config.plugins.iptvplayer.cda_password))
-    optionList.append( getConfigListEntry( _("Sortuj wyniki wyszukiwania po:"), config.plugins.iptvplayer.cda_searchsort ) )
+    optionList.append( getConfigListEntry( "Sortuj wyniki wyszukiwania po:", config.plugins.iptvplayer.cda_searchsort ) )
     return optionList
 ###################################################
 

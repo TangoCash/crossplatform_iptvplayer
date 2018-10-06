@@ -2,10 +2,7 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
 ###################################################
 

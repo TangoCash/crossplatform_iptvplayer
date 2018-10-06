@@ -2,10 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
@@ -18,13 +17,7 @@ try:    import json
 except Exception: import simplejson as json
 ###################################################
 
-###################################################
-# Config options for HOST
-###################################################
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
+
 def gettytul():
     return 'http://bajkipopolsku.com/'
 

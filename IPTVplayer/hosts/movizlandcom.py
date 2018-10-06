@@ -2,43 +2,18 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from datetime import timedelta
-import time
-import re
 import urllib
-import unicodedata
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -52,11 +27,11 @@ class MovizlandCom(CBaseHostClass):
     
     MAIN_URL      = 'http://m.movizland.com/'
     SEARCH_URL    = MAIN_URL + '?s='
-    DEFAULT_ICON  = "http://vb.movizland.com/movizland/images/logo.png"
+    DEFAULT_ICON_URL  = "http://vb.movizland.com/movizland/images/logo.png"
     
-    MAIN_CAT_TAB = [{'category':'categories',      'title': _('Categories'), 'url':MAIN_URL,      'icon':DEFAULT_ICON},
-                    {'category':'search',          'title': _('Search'), 'search_item':True,      'icon':DEFAULT_ICON},
-                    {'category':'search_history',  'title': _('Search history'),                  'icon':DEFAULT_ICON} ]
+    MAIN_CAT_TAB = [{'category':'categories',      'title': _('Categories'), 'url':MAIN_URL,},
+                    {'category':'search',          'title': _('Search'), 'search_item':True,},
+                    {'category':'search_history',  'title': _('Search history'),            } ]
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'  MovizlandCom.tv', 'cookie':'movizlandcom.cookie'})
@@ -235,6 +210,49 @@ class MovizlandCom(CBaseHostClass):
         printDBG("MovizlandCom.getLinksForFavourite")
         return self.getLinksForVideo({'url':fav_data})
 
+    def getArticleContent(self, cItem):
+        printDBG("MovizlandCom.getArticleContent [%s]" % cItem)
+        
+        retTab = []
+        
+        otherInfo = {}
+        
+        url = cItem['url'].replace('://m.', '://')
+        sts, data = self.getPage(url)
+        if not sts: return []
+        cUrl = data.meta['url']
+        
+        desc = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'contentMovie'), ('</div', '>'))[1])
+        tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'poster-movie'), ('</div', '>'))[1]
+        icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(tmp, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0])
+        title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<em', '>', 'befores'), ('</em', '>'))[1])
+        
+        itemsList = []
+
+        tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<span', '>', 'ratings'), ('</span', '>'), False)[1])
+        if tmp != '': itemsList.append((_('Rating:'),  tmp))
+
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<btns', '</btns>')
+        for item in data:
+            item = item.split('</span>', 1)
+            if len(item) < 2: continue
+            key = self.cleanHtmlStr(item[0]) 
+            if key == '': cotninue
+            val = []
+            item = self.cm.ph.getAllItemsBeetwenMarkers(item[1], '<a', '</a>')
+            for it in item:
+                it = self.cleanHtmlStr(it)
+                if it: val.append(it)
+
+            if len(val):
+                itemsList.append((key, ', '.join(val)))
+        
+        if title == '': title = cItem['title']
+        if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
+        if desc == '': desc = cItem.get('desc', '')
+        
+        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':{'custom_items_list':itemsList}}]
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -275,107 +293,7 @@ class IPTVHost(CHostBase):
         # for now we must disable favourites due to problem with links extraction for types other than movie
         CHostBase.__init__(self, MovizlandCom(), True, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('movizlandcomlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-        
-    #def getArticleContent(self, Index = 0):
-    #    retCode = RetHost.ERROR
-    #    retlist = []
-    #    if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-    #
-    #    hList = self.host.getArticleContent(self.host.currList[Index])
-    #    for item in hList:
-    #        title      = item.get('title', '')
-    #        text       = item.get('text', '')
-    #        images     = item.get("images", [])
-    #        othersInfo = item.get('other_info', '')
-    #        retlist.append( ArticleContent(title = title, text = text, images =  images, richDescParams = othersInfo) )
-    #    return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie
-        #searchTypesOptions.append((_("Movies"),   "movie"))
-        #searchTypesOptions.append((_("TV Shows"), "tv_shows"))
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  self.host._getIconUrl( cItem.get('icon', '') )
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return
+    def withArticleContent(self, cItem):
+        if cItem['type'] != 'video':
+            return False
+        return True

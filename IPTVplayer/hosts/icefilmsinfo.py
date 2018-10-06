@@ -2,9 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
@@ -14,21 +14,10 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
-import string
-import base64
 import random
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -275,16 +264,6 @@ class IceFilms(CBaseHostClass):
                 sourceId = self.cm.ph.getSearchGroups(source, '''onclick=['"]go\((\d+)\)['"]''')[0]
                 if sourceId == '': continue
                 sourceName = self.cleanHtmlStr(clean_html(source.replace('</a>', ' ')))
-                
-                # hostings filter
-                # do not add hostings wich require captcha
-                add = True
-                for notSup in [' uploadx ', ' uploadz ', ' owndrives ', ' upload ', ' suprafiles']:
-                    if notSup in (' %s ' % sourceName.lower()): 
-                        add = False
-                        break
-                if not add: continue
-                # end hostings filter
                 
                 urlTab.append({'name':'[{0}] {1}'.format(mainTitle, sourceName), 'url':strwithmeta(sourceId, {'url':cItem['url']}), 'need_resolve':1})
         

@@ -4,18 +4,17 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetLogoDir
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import byteify, printExc, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printExc, CSelOneLink
 from Components.config import config, getConfigListEntry, ConfigYesNo, ConfigText
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 # FOREIGN import
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ####################################################
 # E2 GUI COMMPONENTS
 ####################################################
@@ -107,7 +106,7 @@ class MusicBox(CBaseHostClass):
         if not sts:
             return
         try:
-            data = byteify(json.loads(data))['feed']['entry']
+            data = json_loads(data)['feed']['entry']
             for x in range(len(data)):
                 item = data[x]
                 artist = item['im:artist']['label']
@@ -129,7 +128,7 @@ class MusicBox(CBaseHostClass):
         if not sts:
             return
         try:
-            data = byteify(json.loads(data))['feed']['entry']
+            data = json_loads(data)['feed']['entry']
             for x in range(len(data)):
                 item = data[x]
                 artist = item['im:artist']['label']
@@ -149,7 +148,7 @@ class MusicBox(CBaseHostClass):
         if not sts:
             return
         try:
-            data = byteify(json.loads(data))['results']
+            data = json_loads(data)['results']
             for x in range(1, len(data)):
                 item = data[x]
                 artist = item['artistName']
@@ -231,7 +230,7 @@ class MusicBox(CBaseHostClass):
             sts, data = self.cm.getPage('http://ws.audioscrobbler.com/2.0/?method=album.getInfo&artist='+urllib.quote(artist)+'&album='+urllib.quote(album)+'&api_key=' + audioscrobbler_api_key + '&format=json', {'header': HEADER})
             if not sts: return
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             try:
                 albumIcon = self.cm.getFullUrl(data['album']['image'][-1]['#text'], self.cm.meta['url'])
             except Exception:
@@ -261,7 +260,7 @@ class MusicBox(CBaseHostClass):
             if not sts:
                 return
             try:
-                data = byteify(json.loads(data))['playlists']['playlist']
+                data = json_loads(data)['playlists']['playlist']
                 for x in range(len(data)):
                     item = data[x]
                     playlist_name = item['title']
@@ -279,7 +278,7 @@ class MusicBox(CBaseHostClass):
         if not sts:
             return
         try:
-            data = byteify(json.loads(data))['playlist']['trackList']['track']
+            data = json_loads(data)['playlist']['trackList']['track']
             print data
             for x in range(len(data)):
                 item = data[x]
@@ -313,28 +312,11 @@ class MusicBox(CBaseHostClass):
 
     def _getLinksForVideo(self, url):
         printDBG("_getLinksForVideo url[%s]" % url)
-        ytformats = config.plugins.iptvplayer.ytformat.value
-        maxRes    = int(config.plugins.iptvplayer.ytDefaultformat.value) * 1.1
-        dash      = config.plugins.iptvplayer.ytShowDash.value
 
         if not url.startswith("http://") and not url.startswith("https://") :
             url = 'http://www.youtube.com/' + url
-        tmpTab, dashTab = self.ytp.getDirectLinks(url, ytformats, dash, dashSepareteList = True)
-        
-        def __getLinkQuality( itemLink ):
-            val = self.cm.ph.getSearchGroups('|%s|' %itemLink['format'], '[^0-9]([0-9]+?)[^0-9]')[0]
-            if '' == val: return 0
-            return int(val)
-        tmpTab = CSelOneLink(tmpTab, __getLinkQuality, maxRes).getSortedLinks()
-        if config.plugins.iptvplayer.ytUseDF.value and 0 < len(tmpTab):
-            tmpTab = [tmpTab[0]]
-        
-        videoUrls = []
-        for item in tmpTab:
-            videoUrls.append({'name': item['format'] + ' | ' + item['ext'] , 'url':item['url']})
-        for item in dashTab:
-            videoUrls.append({'name': _("[dash] ") + item['format'] + ' | ' + item['ext'] , 'url':item['url']})
-        return videoUrls
+
+        return self.up.getVideoLinkExt(url)
     
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('handleService start')

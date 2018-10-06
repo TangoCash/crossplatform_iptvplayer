@@ -4,9 +4,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, CSearchHistoryHelper, remove_html_markup, CSelOneLink, IsExecutable, printExc, byteify
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, IsExecutable, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
@@ -17,8 +16,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 ###################################################
 try:    import json
 except Exception: import simplejson as json
-import os, re, urllib
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigDirectory, getConfigListEntry
+import  re, urllib
+from Components.config import config, ConfigDirectory, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -35,7 +34,7 @@ def GetConfigList():
     optionList.append(getConfigListEntry(_("Use default video quality:"), config.plugins.iptvplayer.ytUseDF))
     # temporary, the ffmpeg must be in right version to be able to merge file without transcoding
     # checking should be moved to setup
-    if not config.plugins.iptvplayer.ytUseDF.value and IsExecutable('ffmpeg'): 
+    if IsExecutable('ffmpeg'): 
         optionList.append(getConfigListEntry(_("Allow dash format:"), config.plugins.iptvplayer.ytShowDash))
     return optionList
 ###################################################
@@ -198,7 +197,7 @@ class Youtube(CBaseHostClass):
             printExc()
             return self.getLinksForVideo({'url':fav_data})
         return links
-        
+
     def setInitListFromFavouriteItem(self, fav_data):
         printDBG('Youtube.setInitListFromFavouriteItem')
         try:
@@ -208,7 +207,7 @@ class Youtube(CBaseHostClass):
             printExc()
         self.addDir(params)
         return True
-    
+
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('Youtube.handleService start')
         
@@ -239,7 +238,12 @@ class Youtube(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
-    
+
+    def getSuggestionsProvider(self, index):
+        printDBG('Youtube.getSuggestionsProvider')
+        from Plugins.Extensions.IPTVPlayer.suggestions.google import SuggestionsProvider
+        return SuggestionsProvider(True)
+
 class IPTVHost(CHostBase):
     
     def getSearchTypes(self):

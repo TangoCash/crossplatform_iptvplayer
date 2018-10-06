@@ -273,7 +273,7 @@ class IPTVVirtualKeyBoardWithCaptcha(Screen):
             self["text"].update()
 
     def ok(self):
-        self.close(self["text"].getText().encode("UTF-8"))
+        self.close(self["text"].getText())
 
     def exit(self):
         self.close(None)

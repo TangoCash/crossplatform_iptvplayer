@@ -2,46 +2,33 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
-import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-
+config.plugins.iptvplayer.cimaclub_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
+                                                                                        ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                        ("proxy_2",  _("Alternative proxy server (2)"))])
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.cimaclub_proxy))
     return optionList
 ###################################################
+
 def gettytul():
     return 'http://cimaclub.com/'
 
@@ -49,7 +36,7 @@ class CimaClubCom(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'cimaclub.com', 'cookie':'cimaclub.com.cookie'})
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.USER_AGENT = self.cm.getDefaultHeader()['User-Agent']
         self.MAIN_URL = 'http://cimaclub.com/'
         self.DEFAULT_ICON_URL = 'https://i.pinimg.com/originals/f2/67/05/f267052cb0ba96d70dd21e41a20a522e.jpg'
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
@@ -69,25 +56,29 @@ class CimaClubCom(CBaseHostClass):
         self.cacheFiltersKeys = []
         self.cacheEpisodes = []
         
+    def getProxy(self):
+        proxy = config.plugins.iptvplayer.cimaclub_proxy.value
+        if proxy != 'None':
+            if proxy == 'proxy_1': proxy = config.plugins.iptvplayer.alternative_proxy1.value
+            else: proxy = config.plugins.iptvplayer.alternative_proxy2.value
+        else: proxy = None
+        return proxy
+    
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
-        origBaseUrl = baseUrl
-        baseUrl = self.cm.iriToUri(baseUrl)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        proxy = self.getProxy()
+        if proxy != None: addParams = MergeDicts(addParams, {'http_proxy':proxy})
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
         url = CBaseHostClass.getFullIconUrl(self, url.strip())
-        if url == '': return ''
-        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
-        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.USER_AGENT})
-        
-    def setMainUrl(self, url):
-        if self.cm.isValidUrl(url):
-            self.MAIN_URL = self.cm.getBaseUrl(url)
+        if url == '': return url
+        proxy = self.getProxy()
+        if proxy != None: url = strwithmeta(url, {'iptv_http_proxy':proxy})
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID', 'cf_clearance', '__cfduid'])
+        url = strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.HTTP_HEADER['User-Agent']})
+        return url
         
     def _addSubSection(self, cItem, sectionTitle, key, data, revert=False):
         self.cacheSubSections[key] = self.cacheSubSections.get(key, [])

@@ -3,10 +3,10 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html, compat_parse_qs
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -14,16 +14,7 @@ from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html, comp
 ###################################################
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 from hashlib import md5
-import re
-try:    import json 
-except Exception: import simplejson as json
 ############################################
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-#from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
@@ -71,7 +62,7 @@ class FilmOnComApi:
             sts, data = self.cm.getPage(data)
             if sts:
                 try:
-                    data = byteify(json.loads(data))
+                    data = json_loads(data)
                     self.session_key = data['session_key']
                     self.comscore    = data['comscore']
                     self.middleware  = data['middleware']
@@ -88,8 +79,7 @@ class FilmOnComApi:
             sts, data = self.cm.getPage(url)
             if sts:
                 try:
-                    data = byteify(json.loads(data))
-                    #printDBG(data)
+                    data = json_loads(data)
                     seekable = data['seekable']
                     for stream in data['streams']:
                         name = stream.get('name', '')
@@ -130,7 +120,6 @@ class FilmOnComApi:
         self._getJsonDataIfNeed('channels', force)
         currChannelsList = [] 
         for channel_it in self.jsonData['channels']:
-            #printDBG("========================================================================[%r]" % channel_it['group_id'])
             if 'group_id' not in channel_it: continue
             if group_id == channel_it['group_id']:
                 currChannelsList.append(channel_it)
@@ -157,7 +146,7 @@ class FilmOnComApi:
             sts, data = self.cm.getPage(url)
             if sts:
                 try:
-                    data = json.loads(data)
+                    data = json_loads(data)
                     if not isinstance(data, list):
                         data = []
                 except Exception:

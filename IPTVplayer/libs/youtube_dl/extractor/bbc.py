@@ -8,9 +8,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.base import InfoExtractor
-
-try: import json
-except Exception: import simplejson as json
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 
@@ -250,7 +248,7 @@ class BBCCoUkIE(InfoExtractor):
         player = None
         if tviplayer != '':
             printDBG(tviplayer)
-            tmp = byteify(json.loads(tviplayer))
+            tmp = json_loads(tviplayer)
             player = tmp.get('player', {})
             duration = int_or_none(player.get('duration'))
             programme_id = player.get('vpid')

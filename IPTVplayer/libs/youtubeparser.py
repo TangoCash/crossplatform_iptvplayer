@@ -3,24 +3,21 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.youtube import YoutubeIE
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html, unescapeHTML
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, remove_html_markup, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsExecutable
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-
-from datetime import timedelta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import re
-try: import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from datetime import timedelta
+from Components.config import config, ConfigSelection, ConfigYesNo
 ###################################################
 
 ###################################################
@@ -29,14 +26,26 @@ from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, 
 config.plugins.iptvplayer.ytformat        = ConfigSelection(default = "mp4", choices = [("flv, mp4", "flv, mp4"),("flv", "flv"),("mp4", "mp4")]) 
 config.plugins.iptvplayer.ytDefaultformat = ConfigSelection(default = "720", choices = [("0", _("the worst")), ("144", "144p"), ("240", "240p"), ("360", "360p"),("720", "720"), ("1080", "1080"),("9999", _("the best"))])
 config.plugins.iptvplayer.ytUseDF         = ConfigYesNo(default = True)
-config.plugins.iptvplayer.ytShowDash      = ConfigYesNo(default = False)
+config.plugins.iptvplayer.ytShowDash      = ConfigSelection(default = "auto", choices = [("auto", _("Auto")),("true", _("Yes")),("false", _("No"))])
 config.plugins.iptvplayer.ytSortBy        = ConfigSelection(default = "", choices = [("", _("Relevance")),("video_date_uploaded", _("Upload date")),("video_view_count", _("View count")),("video_avg_rating", _("Rating"))]) 
+
 
 class YouTubeParser():
     HOST = 'Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0'
     def __init__(self):
         self.cm = common()
         return
+
+    @staticmethod
+    def isDashAllowed():
+        value = config.plugins.iptvplayer.ytShowDash.value
+        printDBG("ALLOW DASH: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s" % value)
+        if value == "true" and IsExecutable('ffmpeg'):
+            return True
+        elif value == "auto" and IsExecutable('ffmpeg') and IsExecutable(config.plugins.iptvplayer.exteplayer3path.value):
+            return True
+        else:
+            return False
 
     def getDirectLinks(self, url, formats = 'flv, mp4', dash=True, dashSepareteList = False):
         printDBG('YouTubeParser.getDirectLinks')
@@ -113,7 +122,7 @@ class YouTubeParser():
                 if sts:
                     data = data.replace('\\"', '"').replace('\\\\\\/', '/')
                     hlsUrl = self.cm.ph.getSearchGroups(data, '''"hlsvp"\s*:\s*"(https?://[^"]+?)"''')[0]
-                    hlsUrl= byteify(json.loads('"%s"' % hlsUrl))
+                    hlsUrl= json_loads('"%s"' % hlsUrl)
                     if self.cm.isValidUrl(hlsUrl):
                         hlsList = getDirectM3U8Playlist(hlsUrl)
                         if len(hlsList):
@@ -133,10 +142,10 @@ class YouTubeParser():
                     sts, data = self.cm.getPage(url, {'header':{'User-agent':'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'}})
                     data = data.replace('\\"', '"').replace('\\\\\\/', '/').replace('\\/', '/')
                     dashUrl = self.cm.ph.getSearchGroups(data, '''"dashmpd"\s*:\s*"(https?://[^"]+?)"''')[0]
-                    dashUrl = byteify(json.loads('"%s"' % dashUrl))
+                    dashUrl = json_loads('"%s"' % dashUrl)
                     if '?' not in dashUrl: dashUrl += '?mpd_version=5'
                     else: dashUrl += '&mpd_version=5'
-                    printDBG("DASH URL >>>>>>>>>>>>>>>>>>>>>>> [%s]" % dashUrl)
+                    printDBG("DASH URL >> [%s]" % dashUrl)
                     if self.cm.isValidUrl(dashUrl):
                         dashList = getMPDLinksWithMeta(dashUrl, checkExt=False)
                         printDBG(dashList)
@@ -191,7 +200,8 @@ class YouTubeParser():
                         tmarker = titleMarker[1:tidx]
                         title = self.cm.ph.getDataBeetwenMarkers(data[i],  titleMarker, '</%s>' % tmarker)[1]
             
-            if '' != title: title = CParsingHelper.removeDoubles(remove_html_markup(title, ' '), ' ')
+            if '' != title:
+                title = CParsingHelper.cleanHtmlStr(title)
             if i == 0:
                 printDBG(data[i])
                 
@@ -220,8 +230,7 @@ class YouTubeParser():
             
             newDescTab = []
             for desc in descTab:
-                desc = self.cm.ph.removeDoubles(remove_html_markup(desc, ' '), ' ')
-                desc = clean_html(desc).strip()
+                desc = CParsingHelper.cleanHtmlStr(desc)
                 if desc != '':
                     newDescTab.append(desc)
             
@@ -246,7 +255,7 @@ class YouTubeParser():
                     #    if correctUrlTab[i].startswith('https:'):
                     #        correctUrlTab[i] = "http:" + correctUrlTab[i][6:]
 
-                title = clean_html(title)
+                title = CParsingHelper.cleanHtmlStr(title)
                 params = {'type': urlPatterns[type][0], 'category': type, 'title': title, 'url': correctUrlTab[0], 'icon': correctUrlTab[1].replace('&amp;', '&'), 'time': time, 'desc': '[/br]'.join(newDescTab)}
                 currList.append(params)
 
@@ -287,8 +296,8 @@ class YouTubeParser():
                 if '1' == page:
                     sts,data = CParsingHelper.getDataBeetwenMarkers(data, 'id="pl-video-list"', 'footer-container', False)
                 else:
-                    data = json.loads(data)
-                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
+                    data = json_loads(data)
+                    data = data['load_more_widget_html'] + '\n' + data['content_html']
                     
                 # nextPage
                 match = re.search('data-uix-load-more-href="([^"]+?)"', data)
@@ -326,8 +335,8 @@ class YouTubeParser():
                 if '1' == page:
                     sts,data = CParsingHelper.getDataBeetwenMarkers(data, 'feed-item-container', 'footer-container', False)
                 else:
-                    data = json.loads(data)
-                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
+                    data = json_loads(data)
+                    data = data['load_more_widget_html'] + '\n' + data['content_html']
                     
                 # nextPage
                 match = re.search('data-uix-load-more-href="([^"]+?)"', data)
@@ -396,8 +405,8 @@ class YouTubeParser():
                 if '1' == page:
                     sts,data = CParsingHelper.getDataBeetwenMarkers(data, '<div class="yt-lockup clearfix', 'footer-container')
                 else:
-                    data = json.loads(data)
-                    data = (data['load_more_widget_html'] + '\n' + data['content_html']).encode('utf-8')
+                    data = json_loads(data)
+                    data = data['load_more_widget_html'] + '\n' + data['content_html']
                     
                 # nextPage
                 match = re.search('data-uix-load-more-href="([^"]+?)"', data)
@@ -427,13 +436,12 @@ class YouTubeParser():
         printDBG('YouTubeParser.getVideosApiPlayList url[%s]' % url)
         playlistID = self.cm.ph.getSearchGroups(url + '&', 'list=([^&]+?)&')[0]
         baseUrl = 'https://www.youtube.com/list_ajax?style=json&action_get_list=1&list=%s' % playlistID
-        
 
         currList = []
         if baseUrl != '':
             sts, data =  self.cm.getPage(baseUrl, {'host': self.HOST})
             try:
-                data = byteify( json.loads(data) )['video']
+                data = json_loads(data)['video']
                 for item in data:
                     url   = 'http://www.youtube.com/watch?v=' + item['encrypted_id']
                     title = item['title']

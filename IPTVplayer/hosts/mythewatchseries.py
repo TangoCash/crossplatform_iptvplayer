@@ -2,52 +2,16 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetPluginDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
-
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import re
 import urllib
-import string
-import random
-import base64
-from urlparse import urlparse
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-from urlparse import urlparse, urljoin
-
-from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
-from binascii import hexlify, unhexlify, a2b_hex
-from hashlib import md5, sha256
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -81,12 +45,8 @@ class MyTheWatchseries(CBaseHostClass):
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}:
             addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
@@ -424,33 +384,6 @@ class MyTheWatchseries(CBaseHostClass):
         if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
-    
-    def getFavouriteData(self, cItem):
-        printDBG('MyTheWatchseries.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('MyTheWatchseries.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('MyTheWatchseries.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')

@@ -336,7 +336,7 @@ class Playlist(BasePathMixin):
         else:
             resolution_pair = None
 
-        self.stream_info = StreamInfo(bandwidth=stream_info['bandwidth'],
+        self.stream_info = StreamInfo(bandwidth=stream_info.get('bandwidth'),
                                       program_id=stream_info.get('program_id'),
                                       resolution=resolution_pair,
                                       codecs=stream_info.get('codecs'))

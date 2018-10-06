@@ -812,9 +812,6 @@ msgstr "Αγαπημένα"
 msgid "Following"
 msgstr "Ακολουθούνται"
 
-msgid " - mobile broadcast url"
-msgstr " - URL εκπομπής κινητού"
-
 msgid "Now playing"
 msgstr "Αναπαραγωγή τώρα"
 
@@ -871,9 +868,6 @@ msgstr "Μήνας"
 
 msgid "%s viewers, %s channels"
 msgstr "%s προβολές, %s κανάλια"
-
-msgid " (chunk %s)"
-msgstr " (κομμάτι %s)"
 
 msgid "Promoted channels"
 msgstr "Κανάλια που προωθούνται"
@@ -1247,12 +1241,6 @@ msgstr " Όνομα χρήστη ή email"
 
 msgid " Password"
 msgstr " Κωδικός"
-
-msgid " Video buffer size [MB]"
-msgstr " Μέγεθος προφόρτωσης βίντεο [MB]"
-
-msgid " Audio buffer size [KB]"
-msgstr " Μέγεθος προφόρτωσης ήχου [KB]"
 
 msgid "https - validate SSL certificates"
 msgstr "https - επικύρωση πιστοποιητικών SSL"

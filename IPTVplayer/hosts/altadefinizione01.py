@@ -2,42 +2,22 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
-import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
 
 def gettytul():
-    return 'http://altadefinizione01.zone/'
+    return 'https://altadefinizione01.fm/'
 
 class Altadefinizione(CBaseHostClass):
 
@@ -49,7 +29,7 @@ class Altadefinizione(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'} )
         
-        self.MAIN_URL = 'http://www.altadefinizione01.zone/'
+        self.MAIN_URL = 'https://www.altadefinizione01.fm/'
         self.DEFAULT_ICON_URL = 'https://previews.123rf.com/images/yusufsangdes89/yusufsangdes891507/yusufsangdes89150700042/42557652-cinema-camera-icon-movie-lover-series-icon.jpg'
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}

@@ -2,13 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.moonwalkcc import MoonwalkParser
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 ###################################################
@@ -16,30 +12,9 @@ from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 ###################################################
 # FOREIGN import
 ###################################################
-import copy
 import re
-import urllib
-import base64
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -147,7 +122,7 @@ class HDKinoMir(CBaseHostClass):
             params['desc'] = desc
             params['url'] = url
             hostName = self.up.getHostName(url)
-            if hostName in ['serpens.nl', '37.220.36.15']:
+            if hostName in ['serpens.nl', '37.220.36.15', 'daaidaij.com']:
                 hostName = 'moonwalk.cc'
             
             if hostName == 'moonwalk.cc' and '/serial/' in url:

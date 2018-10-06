@@ -4,8 +4,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm, GetTmpDir
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -13,16 +14,15 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from copy import deepcopy
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -44,8 +44,8 @@ def gettytul():
     return 'https://freedisc.pl/'
 
 class FreeDiscPL(CBaseHostClass):
-    HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
-    AJAX_HEADER = dict(HEADER)
+    HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
+    AJAX_HEADER = dict(HTTP_HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept':'application/json, text/javascript, */*; q=0.01', 'Content-Type':'application/json; charset=UTF-8'} )
     
     MAIN_URL = 'https://freedisc.pl/'
@@ -64,7 +64,7 @@ class FreeDiscPL(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'  FreeDiscPL.tv', 'cookie':'FreeDiscPL.cookie'})
-        self.defaultParams = {'with_metadata':True, 'ignore_http_code_ranges':[(410,410),(404,404)], 'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'with_metadata':True, 'ignore_http_code_ranges':[(410,410),(404,404)], 'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.loggedIn = None
         self.login    = ''
         self.password = ''
@@ -72,15 +72,94 @@ class FreeDiscPL(CBaseHostClass):
         self.treeCache = {}
         
     def getPage(self, url, params={}, post_data=None):
-        if params == {}: params = dict(self.defaultParams)
-        sts, data = self.cm.getPage(url, params, post_data)
-        if sts and data.meta.get('status_code', 0) in [410, 404] and 'captcha' in data:
-            errorMsg = [_('Link protected with google recaptcha v2.')]
-            errorMsg.append(_("Please visit \"%s\" and confirm that you are human." % self.getMainUrl()))
-            if not self.loggedIn: errorMsg.append(_('Please register and set login and password in the host configuration, to solve this problems permanently.'))
-            errorMsg = '\n'.join(errorMsg)
-            GetIPTVNotify().push(errorMsg, 'info', 10)
-            SetIPTVPlayerLastHostError(errorMsg)
+        mainParamsUrl = params
+        if mainParamsUrl == {}: mainParamsUrl = dict(self.defaultParams)
+
+        while True:
+            sts, data = self.cm.getPage(url, mainParamsUrl, post_data)
+            if sts and data.meta.get('status_code', 0) in [410, 404]:
+                tmp = re.sub("<!--[\s\S]*?-->", "", data)
+                if 'sitekey' in tmp:
+                    errorMsg = [_('Link protected with google recaptcha v2.')]
+                    errorMsg.append(_("Please visit \"%s\" and confirm that you are human." % self.getMainUrl()))
+                    if not self.loggedIn: errorMsg.append(_('Please register and set login and password in the host configuration, to solve this problems permanently.'))
+                    errorMsg = '\n'.join(errorMsg)
+                    GetIPTVNotify().push(errorMsg, 'info', 10)
+                    SetIPTVPlayerLastHostError(errorMsg)
+                    break
+                elif 'captcha' in tmp:
+
+                    paramsUrl = dict(self.defaultParams)
+                    paramsUrl['header'] = dict(paramsUrl['header'])
+
+                    cUrl = self.cm.meta['url']
+                    tmp = ph.find(tmp, ('<div', '>', 'footer-404'), '</form>')[1]
+
+                    captchaTitle = self.cleanHtmlStr(tmp.split('<form', 1)[0])
+
+                    sendLabel = self.cleanHtmlStr( ph.getattr(ph.find(tmp, ('<input', '>', 'Button'), flags=(ph.IGNORECASE|ph.START_E))[1], 'value') )
+                    captchaLabel = self.cleanHtmlStr(ph.getattr(tmp, 'placeholder'))
+                    captchaLabel = '%s %s' % (sendLabel, captchaLabel)
+
+                    if captchaLabel.strip() == '': captchaLabel = _('Captcha')
+                    if captchaTitle == '': captchaTitle = captchaLabel
+                    else: captchaTitle = '%s\n\n%s' % (captchaTitle, captchaLabel)
+                    sendLabel = _('Send')
+
+                    imgUrl = self.getFullIconUrl(ph.search(tmp, ph.IMAGE_SRC_URI_RE)[1], cUrl)
+
+                    actionUrl = self.getFullUrl(ph.getattr(tmp, 'action'), cUrl)
+                    if actionUrl == '': actionUrl = cUrl
+                    raw_post = ph.findall(tmp, '<input', '>', flags=ph.IGNORECASE)
+                    printDBG(tmp)
+                    captcha_post_data = {}
+                    for it in raw_post:
+                        val = ph.getattr(it, 'value').strip()
+                        name = ph.getattr(it, 'name')
+                        if name == '': continue
+                        captcha_post_data[name] = val
+
+                    header = dict(self.HTTP_HEADER)
+                    header['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                    params = dict(self.defaultParams)
+                    params.update( {'maintype': 'image', 'subtypes':['jpeg', 'png'], 'check_first_bytes':['\xFF\xD8','\xFF\xD9','\x89\x50\x4E\x47'], 'header':header} )
+                    filePath = GetTmpDir('.iptvplayer_captcha.jpg')
+                    rm(filePath)
+                    ret = self.cm.saveWebFile(filePath, imgUrl.replace('&amp;', '&'), params)
+                    if not ret.get('sts'):
+                        errorMsg = _('Fail to get "%s".') % imgUrl
+                        SetIPTVPlayerLastHostError(errorMsg)
+                        GetIPTVNotify().push(errorMsg, 'error', 10)
+                        break
+                    params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
+                    params['accep_label'] = sendLabel
+                    params['title'] = captchaLabel
+                    params['status_text'] = captchaTitle
+                    params['status_text_hight'] = 200
+                    params['with_accept_button'] = True
+                    params['list'] = []
+                    item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
+                    item['label_size'] = (660,110)
+                    item['input_size'] = (680,25)
+                    item['icon_path'] = filePath
+                    item['title'] = _('Answer')
+                    item['input']['text'] = ''
+                    params['list'].append(item)
+                    params['vk_params'] = {'invert_letters_case':True}
+
+                    ret = 0
+                    retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
+                    printDBG(retArg)
+                    if retArg and len(retArg) and retArg[0]:
+                        printDBG(retArg[0])
+                        captcha_post_data['captcha'] = retArg[0][0]
+                        paramsUrl['header']['Referer'] = cUrl
+                        sts, tmp = self.cm.getPage(actionUrl, paramsUrl, captcha_post_data)
+                        printDBG(tmp)
+                    else:
+                        break
+            break
+
         return sts, data
 
     def listsTab(self, tab, cItem, type='dir'):
@@ -106,7 +185,7 @@ class FreeDiscPL(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))['response']
+            data = json_loads(data)['response']
             if 'visited' in url:
                 data = data['html_visited']
             else:
@@ -148,13 +227,13 @@ class FreeDiscPL(CBaseHostClass):
         params['header'] = dict(self.AJAX_HEADER)
         params['header']['Referer']= self.cm.getBaseUrl(self.getMainUrl()) + 'search/%s/%s' % (cItem.get('f_search_type', ''), urllib.quote(cItem.get('f_search_pattern', '')))
         
-        sts, data = self.getPage(cItem['url'], params, json.dumps(post_data))
+        sts, data = self.getPage(cItem['url'], params, json_dumps(post_data))
         if not sts: return
         
         printDBG(data)
         
         try:
-            data = byteify(json.loads(data))['response']
+            data = json_loads(data)['response']
             logins = data['logins_translated']
             translated = data['directories_translated']
             for item in data['data_files']['data']:
@@ -230,7 +309,7 @@ class FreeDiscPL(CBaseHostClass):
                 sts, data = self.getPage(url, urlParams)
                 if not sts: return
                 
-                self.treeCache[userId] = byteify(json.loads(data), '', True)['response']['data']
+                self.treeCache[userId] = json_loads(data, '', True)['response']['data']
             
             # sub dirs at first
             if dirId in self.treeCache[userId]:
@@ -255,7 +334,7 @@ class FreeDiscPL(CBaseHostClass):
             sts, data = self.getPage(url, urlParams)
             if not sts: return
 
-            data = byteify(json.loads(data), '', True)['response']['data']
+            data = json_loads(data, '', True)['response']['data']
             if 'data' in data:
                 filesTab = []
                 for key in data['data']:
@@ -321,7 +400,7 @@ class FreeDiscPL(CBaseHostClass):
             links = self.getLinksForVideo({'url':fav_data})
         else:
             try:
-                cItem = byteify(json.loads(fav_data))
+                cItem = json_loads(fav_data)
                 links = self.getLinksForVideo(cItem)
             except Exception: printExc()
         return links
@@ -354,11 +433,11 @@ class FreeDiscPL(CBaseHostClass):
             params['header']['Referer']= self.getMainUrl()
             
             post_data = {"email_login":self.login,"password_login":self.password,"remember_login":1,"provider_login":""}
-            sts, data = self.getPage(self.getFullUrl('/account/signin_set'), params, json.dumps(post_data))
+            sts, data = self.getPage(self.getFullUrl('/account/signin_set'), params, json_dumps(post_data))
             if not sts: return None
             
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 if data['success'] == True: self.loggedIn = True
                 else: errMsg = [self.cleanHtmlStr(data['response']['info'])]
             except Exception:

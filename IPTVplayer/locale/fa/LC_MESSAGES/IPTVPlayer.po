@@ -71,40 +71,13 @@ msgstr ""
 msgid "    Video buffer size [MB]"
 msgstr ""
 
-msgid "  Filmy3dEU login:"
-msgstr ""
-
-msgid "  Filmy3dEU password:"
-msgstr ""
-
-msgid "  KinomanTV login:"
-msgstr ""
-
-msgid "  KinomanTV password:"
-msgstr ""
-
-msgid "  alltubetv login:"
-msgstr ""
-
-msgid "  alltubetv password:"
-msgstr ""
-
 msgid "  password:"
-msgstr ""
-
-msgid " (chunk %s)"
 msgstr ""
 
 msgid " - Local version"
 msgstr ""
 
 msgid " - Remote version"
-msgstr ""
-
-msgid " - mobile broadcast url"
-msgstr ""
-
-msgid " Audio buffer size [KB]"
 msgstr ""
 
 msgid " Last.fm login:"
@@ -114,9 +87,6 @@ msgid " Password"
 msgstr ""
 
 msgid " Username or Email"
-msgstr ""
-
-msgid " Video buffer size [MB]"
 msgstr ""
 
 msgid ""
@@ -420,9 +390,6 @@ msgid "Audience zone"
 msgstr ""
 
 msgid "Audio"
-msgstr ""
-
-msgid "Audio buffer size [KB]"
 msgstr ""
 
 msgid "Australia"

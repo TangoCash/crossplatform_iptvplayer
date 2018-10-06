@@ -4,40 +4,28 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printDBG, printExc
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 import re
-import urllib
 import time
-import random
 try:    import json
 except Exception: import simplejson as json
-
-
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.liveleak_searchsort = ConfigSelection(default = "relevance", choices = [("relevance", _("Najtrafniejsze")), ("date", _("Najnowsze")), ("views", _("Popularność")), ("votes", _("Najlepiej oceniane"))])
+config.plugins.iptvplayer.liveleak_searchsort = ConfigSelection(default = "relevance", choices = [("relevance", "Najtrafniejsze"), ("date", "Najnowsze"), ("views", "Popularność"), ("votes", "Najlepiej oceniane")])
 
 def GetConfigList():
     optionList = []
-    optionList.append( getConfigListEntry( _("Sortuj wyniki wyszukiwania po:"), config.plugins.iptvplayer.liveleak_searchsort ) )
+    optionList.append( getConfigListEntry( "Sortuj wyniki wyszukiwania po:", config.plugins.iptvplayer.liveleak_searchsort ) )
     return optionList
 ###################################################
 

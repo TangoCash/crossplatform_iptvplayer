@@ -2,39 +2,19 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
 import base64
-import datetime
-from copy import deepcopy
-from hashlib import md5
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
-###################################################
-
-###################################################
-# Config options for HOST
 ###################################################
 
 def GetConfigList():
@@ -43,15 +23,15 @@ def GetConfigList():
 ###################################################
 
 def gettytul():
-    return 'http://streaming.cinemay.com/'
+    return 'http://cinemay.ws/'
 
 class Cinemay(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'Cinemay', 'cookie':'Cinemay.cookie'})
-        self.DEFAULT_ICON_URL = 'http://streaming.cinemay.com/image/logo.png' 
+        self.DEFAULT_ICON_URL = 'http://cinemay.ws/image/logo.png' 
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.MAIN_URL = 'http://streaming.cinemay.com/'
+        self.MAIN_URL = 'http://cinemay.ws/'
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
@@ -75,14 +55,8 @@ class Cinemay(CBaseHostClass):
         
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url):
-                return url
-            else:
-                return urlparse.urljoin(baseUrl, url)
-            
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         printDBG("++++++++++++++++++++++++++++++++++++++++")
         printDBG("url: %s" % baseUrl)
@@ -92,6 +66,9 @@ class Cinemay(CBaseHostClass):
         return sts, data
     
     def listMainMenu(self, cItem):
+        sts, data = self.getPage(self.getMainUrl())
+        if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         self.listsTab(self.MAIN_CAT_TAB, cItem)
         
     def listItems1(self, cItem, nextCategory):
@@ -103,6 +80,7 @@ class Cinemay(CBaseHostClass):
             
         sts, data = self.getPage(url)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         nextPage = self.cm.ph.getDataBeetwenMarkers(data, 'class="pagination"', '</div>')[1]
         if ('/page/%s/' % (page + 1)) in nextPage: nextPage = True
@@ -136,6 +114,7 @@ class Cinemay(CBaseHostClass):
             
             sts, data = self.getPage(cItem['url'])
             if not sts: return
+            self.setMainUrl(self.cm.meta['url'])
             
             data = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'list-series'), ('</ul', '>'))[1]
             data = re.compile('''<li[^>]+?class=['"]alpha\-title['"][^>]*?>''').split(data)
@@ -172,6 +151,7 @@ class Cinemay(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         descTab = ['']
         tmp = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="extradsbottom', '</div>')
@@ -308,7 +288,7 @@ class Cinemay(CBaseHostClass):
                 scripts.append(item.strip())
             try:
                 jscode = base64.b64decode('''dmFyIGRvY3VtZW50PXt9LHdpbmRvdz10aGlzO3dpbmRvdy5sb2NhdGlvbj17aG9zdG5hbWU6IiVzIn0sZG9jdW1lbnQud3JpdGU9ZnVuY3Rpb24obil7cHJpbnQobil9Ow==''') % (self.up.getDomain(videoUrl, True))
-                ret = iptv_js_execute( jscode + '\n'.join(scripts))
+                ret = js_execute( jscode + '\n'.join(scripts))
                 if ret['sts'] and 0 == ret['code']:
                     data = ret['data'].strip()
                     videoUrl = self.cm.ph.getSearchGroups(data, '''url['"]?=['"]?([^'^"^>]+?)['">]''')[0].strip()

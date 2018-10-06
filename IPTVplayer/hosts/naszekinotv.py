@@ -3,35 +3,28 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
 from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+import base64
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 from Screens.MessageBox import MessageBox
 ###################################################
@@ -480,7 +473,14 @@ class NaszeKinoTv(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenNodes(data, ('<tbody', '>'), ('</tbody', '>'), False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<tr', '</tr>', False)
         for item in data:
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0])
+            url = ''
+            tmp = ph.getattr(item, 'data-iframe')
+            try:
+                tmp = json_loads(base64.b64decode(tmp))['src']
+                url = self.getFullUrl(tmp)
+            except Exception:
+                printExc()
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0])
             if url == '': continue
             item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<td', '</td>')
             name = []

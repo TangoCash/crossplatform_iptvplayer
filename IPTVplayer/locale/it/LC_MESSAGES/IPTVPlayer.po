@@ -743,20 +743,11 @@ msgstr "Preferiti"
 msgid "Following"
 msgstr "Chi Seguo"
 
-msgid " - mobile broadcast url"
-msgstr " - Url trasmissione mobile"
-
 msgid "Now playing"
 msgstr "In riproduzione"
 
 msgid "History"
 msgstr "Cronologia"
-
-msgid " Video buffer size [MB]"
-msgstr "Dimensioni buffer (in MB)"
-
-msgid " Audio buffer size [KB]"
-msgstr "Dimensione del buffer Audio [KB]"
 
 msgid "Country (changing may be illegal in your country)"
 msgstr "Paese (cambiare può essere illegale nel proprio paese)"
@@ -802,9 +793,6 @@ msgstr "Mese"
 
 msgid "%s viewers, %s channels"
 msgstr "%s osservatori, %s canali"
-
-msgid " (chunk %s)"
-msgstr " (Episodio %s)"
 
 msgid "Promoted channels"
 msgstr "Canali Promoted"

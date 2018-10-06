@@ -6,23 +6,17 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir, GetDefaultLang, WriteTextFile, ReadTextFile
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
 from datetime import datetime
 from hashlib import md5
 from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
@@ -48,7 +42,7 @@ def GetConfigList():
     return optionList
 ###################################################
 def gettytul():
-    return 'https://www.plusdede.com/'
+    return 'https://megadede.com/'
 
 class PlusDEDE(CBaseHostClass):
     login    = None
@@ -58,7 +52,7 @@ class PlusDEDE(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'plusdede.com', 'cookie':'plusdede.com.cookie'})
         self.DEFAULT_ICON_URL = 'https://img15.androidappsapk.co/300/f/d/3/com.joramun.plusdede.png'
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.MAIN_URL = 'https://www.plusdede.com/'
+        self.MAIN_URL = 'https://www.megadede.com/'
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
@@ -84,10 +78,7 @@ class PlusDEDE(CBaseHostClass):
         if addParams == {}: addParams = dict(self.defaultParams)
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def calcLoginMarker(self, login, password):
@@ -402,8 +393,8 @@ class PlusDEDE(CBaseHostClass):
                 for t in tmp:
                     t = self.cleanHtmlStr(t)
                     if t != '': titleTab.append(t)
-                if idx == 0: retTab.append({'name':_('%s') % (' | '.join(titleTab)), 'url':self.getFullUrl(url), 'need_resolve':1})
-                else: dwnTab.append({'name':_('%s') % (' | '.join(titleTab)), 'url':self.getFullUrl(url), 'need_resolve':1})
+                if idx == 0: retTab.append({'name':'%s' % (' | '.join(titleTab)), 'url':self.getFullUrl(url), 'need_resolve':1})
+                else: dwnTab.append({'name':'%s' % (' | '.join(titleTab)), 'url':self.getFullUrl(url), 'need_resolve':1})
         
         #retTab.extend(dwnTab)
         if len(retTab): self.cacheLinks[cacheKey] = retTab
@@ -593,7 +584,7 @@ class PlusDEDE(CBaseHostClass):
             error = ''
             sts, data = self.cm.getPage(actionUrl, httpParams, post_data)
             try:
-                tmp = byteify(json.loads(data))['content']
+                tmp = json_loads(data)['content']
                 printDBG(tmp)
                 tmp = self.cm.ph.getAllItemsBeetwenNodes(tmp, ('<div', '>', 'alert'), ('</div', '>'))
                 tab = []

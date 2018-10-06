@@ -22,10 +22,7 @@
 import urllib
 import urllib2
 import re
-try:
-    import simplejson
-except Exception:
-    import json as simplejson
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 
 
 API_URL = 'http://api.yousee.tv/rest'
@@ -57,89 +54,45 @@ class YouSeeApi(object):
                 url += '/' + key + '/' + str(value)
         url += '/format/json'
 
-        print('Invoking URL: %s' % re.sub('/password/([^/]+)/', '/password/****/', url))
-
         try:
             r = urllib2.Request(url, headers={'X-API-KEY': API_KEY})
             if method == METHOD_POST and params:
                 print("POST data: %s" % urllib.urlencode(params))
                 r.add_data(urllib.urlencode(params))
             u = urllib2.urlopen(r)
-            json = u.read()
+            data = u.read()
             u.close()
         except urllib2.HTTPError, error:
-            json = error.read()
+            data = error.read()
         except Exception, ex:
             raise YouSeeApiException(ex)
 
         try:
-            return simplejson.loads(json)
+            return json_loads(data)
         except Exception:
             return None
 
 
 class YouSeeLiveTVApi(YouSeeApi):
     def channel(self, id):
-        """
-        Returns metadata for channel based on channel id.
-
-        @param id: channel id
-        @return:
-        """
         return self._invoke(AREA_LIVETV, 'channel', {
             'id': id
         })
 
     def popularChannels(self):
-        """
-        Returns list of channels sorted by popularity.
-        Based on live viewing data from yousee.tv
-        """
         return self._invoke(AREA_LIVETV, 'popularchannels')
 
     def allowedChannels(self):
-        """
-        Returns list of channels the requesting IP is allowed to stream.
-        """
         return self._invoke(AREA_LIVETV, 'allowed_channels', {
             'apiversion': 2
         })
 
     def suggestedChannels(self):
-        """
-        Returns list of channels that should be presented to the user. NOTE: this is not the list of allowed channels.
-        A non-yousee bredbaand user will get a list of channels from "Grundpakken".
-        """
         return self._invoke(AREA_LIVETV, 'suggested_channels')
 
     def streamUrl(self, channelId, client='xbmc'):
-        """
-        Returns absolute streaming URL for channel.
-        Channel rights are based on client ip address.
-
-        @param channelId: Unique ID of channel (e.g. 1 for DR1)
-        @type channelId: int
-        @param client: client identifier. Handset or platform. Used to determine best stream.
-        @type client: str
-        """
-        json = self._invoke(AREA_LIVETV, 'streamurl', {
+        data = self._invoke(AREA_LIVETV, 'streamurl', {
             'channel_id': channelId,
             'client': client
         })
-
-        return json
-
-if __name__ == '__main__':
-    api = YouSeeLiveTVApi()
-    json = api.allowedChannels()
-    json = api.streamUrl(1)
-
-    #    api = YouSeeTVGuideApi()
-    #    json = api.programs(1)
-
-    # api = YouSeeMovieApi()
-    # json= api.moviesInGenre('action')['movies'][1]
-
-    s = simplejson.dumps(json, sort_keys=True, indent=4)
-    print '\n'.join([l.rstrip() for l in s.splitlines()])
-
+        return data

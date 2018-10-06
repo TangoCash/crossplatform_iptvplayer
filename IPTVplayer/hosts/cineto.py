@@ -3,8 +3,9 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir, GetDefaultLang
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, GetDefaultLang, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -12,47 +13,25 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-import datetime
-from copy import deepcopy
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 
 def gettytul():
     return 'https://cine.to/'
 
-class CineTO(CBaseHostClass):
+class CineTO(CBaseHostClass, CaptchaHelper):
+    LINKS_CACHE = {}
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'cine.to', 'cookie':'cine.to.cookie'})
         self.DEFAULT_ICON_URL = 'https://cine.to/opengraph.jpg'
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.USER_AGENT = 'Mozilla / 5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebkit / 538.1 (KHTML, podobnie jak Gecko) SamsungBrowser / 1.1 TV Safari / 538.1'
         self.MAIN_URL = 'https://cine.to/'
-        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
         
@@ -357,14 +336,40 @@ class CineTO(CBaseHostClass):
                             self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
                         break
         
+        returnCode = 200
+        errorMsgTab = []
         sts, data = self.getPage(videoUrl)
         if sts: 
             videoUrl = data.meta['url']
+            cacheKey = videoUrl
+            if 1 != self.up.checkHostSupport(videoUrl) and 'gcaptchaSetup' in data:
+                if cacheKey in CineTO.LINKS_CACHE:
+                    videoUrl = CineTO.LINKS_CACHE[cacheKey]
+                else:
+                    sitekey = self.cm.ph.getSearchGroups(data, '''gcaptchaSetup\s*?\(\s*?['"]([^'^"]+?)['"]''')[0]
+                    if sitekey != '':
+                        token, errorMsgTab = self.processCaptcha(sitekey, self.cm.meta['url'])
+                        
+                        if token != '':
+                            params = MergeDicts(self.defaultParams, {'max_data_size':0})
+                            params['header'] = MergeDicts(params['header'] , {'Referer':self.cm.meta['url']})
+                            sts, data = self.getPage(videoUrl + '?token=' + token, params)
+                            if sts: videoUrl = self.cm.meta['url']
+                    if 1 == self.up.checkHostSupport(videoUrl):
+                        CineTO.LINKS_CACHE[cacheKey] = videoUrl
+            returnCode = self.cm.meta.get('status_code', 200)
             urlTab = self.up.getVideoLinkExt(videoUrl)
-            if 0 == len(urlTab) and 'gcaptchaSetup' in data:
-                SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.'))
         else:
+            returnCode = self.cm.meta.get('status_code', 200)
             urlTab = self.up.getVideoLinkExt(videoUrl)
+        
+        if 0 == len(urlTab):
+            if returnCode == 404:
+                errorMsgTab= [_("Server return 404 - Not Found.")]
+                errorMsgTab.append(_("It looks like some kind of protection. Try again later."))
+            
+            if len(errorMsgTab):
+                SetIPTVPlayerLastHostError('\n'.join(errorMsgTab)) 
         
         return urlTab
         

@@ -31,7 +31,7 @@ class ConfigGroupsMenu(ConfigBaseWidget):
         self.groupObj = IPTVHostsGroups()
         
         ConfigBaseWidget.__init__(self, session)
-        self.setup_title = _("IPTVPlayer enable/disabled groups")
+        self.setup_title = _("E2iPlayer enable/disabled groups")
         self.__preparLists()
 
     def __del__(self):

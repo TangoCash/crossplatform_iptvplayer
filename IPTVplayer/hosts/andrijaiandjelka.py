@@ -2,39 +2,20 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
-import re
 import urllib
-import base64
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+import time
+from binascii import hexlify
+from hashlib import md5
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
 
 def gettytul():
     return 'https://andrija-i-andjelka.com/'
@@ -53,19 +34,25 @@ class AndrijaIAndjelka(CBaseHostClass):
         #https://previews.123rf.com/images/yusufsangdes89/yusufsangdes891507/yusufsangdes89150700042/42557652-cinema-camera-icon-movie-lover-series-icon.jpg
         self.DEFAULT_ICON_URL = 'https://img00.deviantart.net/972b/i/2010/241/0/4/tv_series_icon_set_by_silentbang-d2xl0kj.jpg'
         
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'cookie_items':{}}
+        self.timestam = 0
     
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url):
-                return url
-            else:
-                return urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        if addParams == {}: addParams = dict(self.defaultParams)
+
+        if 'cookie_items' in addParams:
+            timestamp = int(time.time())
+            if timestamp > self.timestam:
+                timestamp += 180
+                hash = hexlify(md5(str(timestamp)).digest())
+                addParams['cookie_items']['token'] = '%s,%s' % (timestamp, hash)
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-    
+
+    def getFullIconUrl(self, url, baseUrl=None):
+        return CBaseHostClass.getFullIconUrl(self, url.replace('&amp;', '&'), baseUrl)
+
     def listMainMenu(self, cItem):
         printDBG("AndrijaIAndjelka.listMainMenu")
 
@@ -109,7 +96,7 @@ class AndrijaIAndjelka(CBaseHostClass):
 
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>', 'post-'), ('</article', '>'), False)
         for item in data:
-            icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0] )
+            icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?\.jpe?g(?:\?[^'^"]*?)?)['"]''')[0] )
             url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
             title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'title'), ('</h', '>'), False)[1] )
 
@@ -132,7 +119,7 @@ class AndrijaIAndjelka(CBaseHostClass):
         data = self.cm.ph.getDataBeetwenNodes(data, ('<article', '>', 'post-'), ('</article', '>'), False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<td', '</td>')
         for item in data:
-            icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?)['"]''')[0] )
+            icon  = self.getFullIconUrl( self.cm.ph.getSearchGroups(item, '''<img[^>]+?src=['"]([^"^']+?\.jpe?g(?:\?[^'^"]*?)?)['"]''')[0] )
             url   = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
             title = self.cleanHtmlStr( item )
 

@@ -2,12 +2,9 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -15,31 +12,21 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import urlparse
-import time
 import re
 import urllib
-import string
-import random
 import base64
-from hashlib import md5
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
 config.plugins.iptvplayer.losmovies_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
-                                                                                            ("proxy_1",  _("Alternative proxy server (1)")),
-                                                                                            ("proxy_2",  _("Alternative proxy server (2)"))])
+                                                                                         ("proxy_1",  _("Alternative proxy server (1)")),
+                                                                                         ("proxy_2",  _("Alternative proxy server (2)"))])
 
 def GetConfigList():
     optionList = []
@@ -49,7 +36,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://los-movies.com/'
+    return 'http://losmovies.cx/'
 
 class LosMovies(CBaseHostClass):
  
@@ -58,11 +45,10 @@ class LosMovies(CBaseHostClass):
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'https://superrepo.org/static/images/icons/original/xplugin.video.losmovies.png.pagespeed.ic.JtaWsQ6YWz.jpg'
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
+        self.HEADER = self.cm.getDefaultHeader(browser='chrome')
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'https://los-movies.com/'
+        self.MAIN_URL = 'http://losmovies.cx/'
         self.cacheEpisodes = {}
         self.cacheLinks = {}
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -100,7 +86,7 @@ class LosMovies(CBaseHostClass):
             else:
                 return urlparse.urljoin(baseUrl, url)
                 
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.HEADER['User-Agent']}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def listCats(self, cItem, nextCategory):
@@ -108,6 +94,7 @@ class LosMovies(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="btn-group">', '</div>')[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a', '</a>', withMarkers=True)
@@ -135,6 +122,7 @@ class LosMovies(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<h1 class="centerHeader">', '<footer>')[1]
         data = data.split('showEntityTeaser ')
@@ -162,6 +150,7 @@ class LosMovies(CBaseHostClass):
         
         sts, data = self.getPage(url)
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         nextPage = self.cm.ph.getDataBeetwenMarkers(data, 'pagination', '</div>', False)[1]
         if '' != self.cm.ph.getSearchGroups(nextPage, 'page=(%s)[^0-9]' % (page+1))[0]: nextPage = True
@@ -201,6 +190,7 @@ class LosMovies(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
         seasonsTitlesTab = {}
         seasonsData = self.cm.ph.getDataBeetwenMarkers(data, '<div id="seasons">', '</ul>')[1]
@@ -254,7 +244,7 @@ class LosMovies(CBaseHostClass):
             urlTab = self.cacheLinks.get(cItem['url'],  [])
             if len(urlTab): return urlTab
             
-            url = cItem['url']        
+            url = cItem['url']
             sts, data = self.getPage(url, self.defaultParams)
             if not sts: return urlTab
         else:
@@ -363,11 +353,13 @@ class LosMovies(CBaseHostClass):
             printDBG(item)
             
             if 'mp4' in item:
+                url = strwithmeta(self.cm.getFullUrl(url, self.cm.meta['url']), {'User-Agent':self.HEADER['User-Agent'], 'Referer':self.cm.meta['url']})
                 urlTab.append({'name':name, 'url':url})
             elif 'captions' in item:
                 format = url[-3:]
                 if format in ['srt', 'vtt']:
-                    subTracks.append({'title':name, 'url':self.getFullIconUrl(url), 'lang':name, 'format':format})
+                    url = strwithmeta(self.cm.getFullUrl(url, self.cm.meta['url']), {'User-Agent':self.HEADER['User-Agent'], 'Referer':self.cm.meta['url']})
+                    subTracks.append({'title':name, 'url':url, 'lang':name, 'format':format})
             
         printDBG(subTracks)
         if len(subTracks):

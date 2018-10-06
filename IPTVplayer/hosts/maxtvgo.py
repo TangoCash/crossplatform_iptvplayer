@@ -3,8 +3,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, GetTmpDir, GetDefaultLang, WriteTextFile, ReadTextFile
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 ###################################################
@@ -13,25 +13,16 @@ from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 # FOREIGN import
 ###################################################
 import urlparse
-import time
-import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -109,8 +100,10 @@ class MaxtvGO(CBaseHostClass):
                 subItems = []
                 for it in item['videos']:
                     title = self.cleanHtmlStr(it['title'])
-                    icon = self.getFullIconUrl(it['image'])
-                    url = self.getFullUrl('index.php?film=') + it['code']
+                    #icon = self.getFullIconUrl(it['image'])
+                    icon = str(it.get('vimeoPosterId', ''))
+                    if icon != '': icon = 'http://i.vimeocdn.com/video/%s.jpg?mw=300' % icon
+                    url = self.getFullUrl('video.php?film=') + it['code']
                     params = dict(cItem)
                     params.update({'type':'video', 'good_for_fav':True, 'title':title, 'url':url, 'icon':icon})
                     subItems.append(params)
@@ -160,9 +153,9 @@ class MaxtvGO(CBaseHostClass):
         
         cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
         
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<source', '>')
-        for item in data:
+        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>')[1]
+        tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<source', '>')
+        for item in tmp:
             url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
             if not self.cm.isValidUrl(url): continue
             type = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''type=['"]([^'^"]+?)['"]''')[0]).lower()
@@ -171,6 +164,12 @@ class MaxtvGO(CBaseHostClass):
                 retTab.append({'name':'direct', 'url':url, 'need_resolve':0})
             else:
                 printDBG("Unknown source: [%s]" % item)
+        
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'player'), ('</div', '>'), False)[1]
+        videoUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0], self.cm.meta['url'])
+        if videoUrl != '':
+            videoUrl = strwithmeta(videoUrl, {'User-Agent':self.USER_AGENT, 'Referer':self.cm.meta['url']})
+            retTab.extend(self.up.getVideoLinkExt(videoUrl))
         
         return retTab
         
@@ -229,7 +228,6 @@ class MaxtvGO(CBaseHostClass):
         printDBG("MaxtvGO.getArticleContent [%s]" % cItem)
         self.tryTologin()
         
-        
         if self.up.getDomain(cItem['url']) not in self.up.getDomain(self.getMainUrl()):
             return []
         
@@ -237,7 +235,7 @@ class MaxtvGO(CBaseHostClass):
         if not sts: return []
         
         videoID = self.cm.ph.getSearchGroups(data, '''(<input[^>]+?videoID[^>]+?>)''', 1, True)[0]
-        videoID = self.cm.ph.getSearchGroups(videoID, '''\sid=['"]([^'^"]+?)['"]''', 1, True)[0]
+        videoID = self.cm.ph.getSearchGroups(videoID, '''\svalue=['"]([^'^"]+?)['"]''', 1, True)[0]
         
         if videoID == '':
             return []
@@ -293,7 +291,7 @@ class MaxtvGO(CBaseHostClass):
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')
         
-        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        printDBG( "handleService: || name[%s], category[%s] " % (name, category) )
         self.currList = []
         
     #MAIN MENU

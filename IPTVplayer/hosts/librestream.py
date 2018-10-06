@@ -2,44 +2,16 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.moonwalkcc import MoonwalkParser
-from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import copy
 import re
 import urllib
-import base64
-try:    import json
-except Exception: import simplejson as json
-from datetime import datetime
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -272,9 +244,11 @@ class LibreStream(CBaseHostClass):
         printDBG("LibreStream.getVideoLinks [%s]" % videoUrl)
         urlTab = []
         
-        if videoUrl.startswith('http'):
-            urlTab = self.up.getVideoLinkExt(videoUrl)
-        return urlTab
+        if 0 == self.up.checkHostSupport(videoUrl):
+            sts, data = self.cm.getPage(videoUrl, {'max_data_size':0})
+            if not sts: return []
+            videoUrl = self.cm.meta['url']
+        return self.up.getVideoLinkExt(videoUrl)
         
     def getFavouriteData(self, cItem):
         return cItem['url']
@@ -322,91 +296,3 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, LibreStream(), True, [CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('librestreamlogo.png')])
-    
-    def getLinksForVideo(self, Index = 0, selItem = None):
-        retCode = RetHost.ERROR
-        retlist = []
-        if not self.isValidIndex(Index): return RetHost(retCode, value=retlist)
-        
-        urlList = self.host.getLinksForVideo(self.host.currList[Index])
-        for item in urlList:
-            retlist.append(CUrlItem(item["name"], item["url"], item['need_resolve']))
-
-        return RetHost(RetHost.OK, value = retlist)
-    # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        retlist = []
-        urlList = self.host.getVideoLinks(url)
-        for item in urlList:
-            need_resolve = 0
-            retlist.append(CUrlItem(item["name"], item["url"], need_resolve))
-
-        return RetHost(RetHost.OK, value = retlist)
-    
-    def converItem(self, cItem):
-        hostList = []
-        searchTypesOptions = [] # ustawione alfabetycznie  
-        
-        hostLinks = []
-        type = CDisplayListItem.TYPE_UNKNOWN
-        possibleTypesOfSearch = None
-
-        if 'category' == cItem['type']:
-            if cItem.get('search_item', False):
-                type = CDisplayListItem.TYPE_SEARCH
-                possibleTypesOfSearch = searchTypesOptions
-            else:
-                type = CDisplayListItem.TYPE_CATEGORY
-        elif cItem['type'] == 'video':
-            type = CDisplayListItem.TYPE_VIDEO
-        elif 'more' == cItem['type']:
-            type = CDisplayListItem.TYPE_MORE
-        elif 'audio' == cItem['type']:
-            type = CDisplayListItem.TYPE_AUDIO
-            
-        if type in [CDisplayListItem.TYPE_AUDIO, CDisplayListItem.TYPE_VIDEO]:
-            url = cItem.get('url', '')
-            if '' != url:
-                hostLinks.append(CUrlItem("Link", url, 1))
-            
-        title       =  cItem.get('title', '')
-        description =  cItem.get('desc', '')
-        icon        =  cItem.get('icon', '')
-        
-        return CDisplayListItem(name = title,
-                                    description = description,
-                                    type = type,
-                                    urlItems = hostLinks,
-                                    urlSeparateRequest = 1,
-                                    iconimage = icon,
-                                    possibleTypesOfSearch = possibleTypesOfSearch)
-    # end converItem
-
-    def getSearchItemInx(self):
-        try:
-            list = self.host.getCurrList()
-            for i in range( len(list) ):
-                if list[i]['category'] == 'search':
-                    return i
-        except Exception:
-            printDBG('getSearchItemInx EXCEPTION')
-            return -1
-
-    def setSearchPattern(self):
-        try:
-            list = self.host.getCurrList()
-            if 'history' == list[self.currIndex]['name']:
-                pattern = list[self.currIndex]['title']
-                search_type = list[self.currIndex]['search_type']
-                self.host.history.addHistoryItem( pattern, search_type)
-                self.searchPattern = pattern
-                self.searchType = search_type
-        except Exception:
-            printDBG('setSearchPattern EXCEPTION')
-            self.searchPattern = ''
-            self.searchType = ''
-        return

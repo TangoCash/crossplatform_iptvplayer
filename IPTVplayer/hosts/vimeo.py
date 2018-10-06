@@ -2,48 +2,51 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, NextDay, PrevDay, GetDefaultLang
-from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
-from copy import deepcopy
+from datetime import  timedelta
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 ###################################################
 
-###################################################
-# Config options for HOST
-###################################################
 
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'https://vimeo.com/'
+
+class SuggestionsProvider:
+
+    def __init__(self):
+        self.cm = common()
+        self.cm.HEADER = {'User-Agent':self.cm.getDefaultHeader()['User-Agent'], 'X-Requested-With':'XMLHttpRequest'}
+
+    def getName(self):
+        return _("Vimeo Suggestions")
+
+    def getSuggestions(self, text, locale):
+        lang = locale.split('-', 1)[0]
+        url = 'https://vimeo.com/search/autocomplete?q=' + urllib.quote(text)
+        sts, data = self.cm.getPage(url)
+        if sts:
+            retList = []
+            for item in json.loads(data)['options']:
+                retList.append(item['text'].encode('UTF-8'))
+            return retList 
+        return None
 
 class VimeoCom(CBaseHostClass):
     
@@ -382,6 +385,10 @@ class VimeoCom(CBaseHostClass):
             printExc()
         
         CBaseHostClass.endHandleService(self, index, refresh)
+
+    def getSuggestionsProvider(self, index):
+        printDBG('Vimeo.getSuggestionsProvider')
+        return SuggestionsProvider()
 
 class IPTVHost(CHostBase):
 

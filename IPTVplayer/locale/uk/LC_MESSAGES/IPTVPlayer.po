@@ -101,29 +101,14 @@ msgstr "  KinomanTV Логін:"
 msgid "  KinomanTV password:"
 msgstr "  KinomanTV Пароль:"
 
-msgid "  alltubetv login:"
-msgstr "  alltubetv логін:"
-
-msgid "  alltubetv password:"
-msgstr "  alltubetv пароль:"
-
 msgid "  password:"
 msgstr "  Пароль:"
-
-msgid " (chunk %s)"
-msgstr " (частина %s)"
 
 msgid " - Local version"
 msgstr " - Локальна версія"
 
 msgid " - Remote version"
 msgstr " - Дистанційна версія"
-
-msgid " - mobile broadcast url"
-msgstr " - Посилання для мобільних пристроїв"
-
-msgid " Audio buffer size [KB]"
-msgstr " Розмір буфера Аудіо в [KB]"
 
 msgid " Last.fm login:"
 msgstr " Last.fm Вхід:"
@@ -133,9 +118,6 @@ msgstr " Пароль"
 
 msgid " Username or Email"
 msgstr " Імя користувача або адрес електронної пошти"
-
-msgid " Video buffer size [MB]"
-msgstr " Розмір буфера Відео в [MB]"
 
 msgid ""
 " has not been detected. \n"
@@ -445,9 +427,6 @@ msgstr "Приймальня"
 
 msgid "Audio"
 msgstr "Аудіо"
-
-msgid "Audio buffer size [KB]"
-msgstr "Розмір буфера Аудіо в [KB]"
 
 msgid "Australia"
 msgstr "Австралія"

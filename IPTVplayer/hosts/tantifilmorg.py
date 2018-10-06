@@ -2,51 +2,27 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
 import re
 import urllib
-import string
-import base64
-import random
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
-
-
 
 def gettytul():
-    return 'http://tantifilm.uno/'
+    return 'https://tantifilm.gratis/'
 
 class TantiFilmOrg(CBaseHostClass):
- 
+    REMOVE_COOKIE = True
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'TantiFilmOrg.tv', 'cookie':'tantifilmorg.cookie'})
         self.USER_AGENT = 'Mozilla/5.0'
@@ -56,7 +32,7 @@ class TantiFilmOrg(CBaseHostClass):
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.MAIN_URL = 'http://www.tantifilm.uno/'
+        self.MAIN_URL = 'https://www.tantifilm.gratis/'
         self.DEFAULT_ICON_URL = 'https://raw.githubusercontent.com/Zanzibar82/images/master/posters/tantifilm.png'
         
         self.MAIN_CAT_TAB = [{'category':'list_categories',    'title': _('Categories'),                           'url':self.MAIN_URL  },
@@ -76,12 +52,31 @@ class TantiFilmOrg(CBaseHostClass):
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
         
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
-        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        if sts and 'aes.min.js' in data:
+            jscode = ['var document={};document.location={};']
+            tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<script', '>'), ('</script', '>'))
+            for item in tmp:
+                scriptUrl = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
+                if scriptUrl != '':
+                    sts2, item = self.cm.getPage(scriptUrl, addParams, post_data)
+                    if sts2: jscode.append(item)
+                else:
+                    item = self.cm.ph.getDataBeetwenNodes(item, ('<script', '>'), ('</script', '>'), False)[1]
+                    if item != '': jscode.append(item)
+            jscode.append('print(JSON.stringify(document));')
+            ret = ret = js_execute('\n'.join(jscode), {'timeout_sec':15})
+            if ret['sts'] and 0 == ret['code']:
+                try:
+                    tmp = byteify(json.loads(ret['data']))
+                    item = tmp['cookie'].split(';', 1)[0].split('=', 1)
+                    self.defaultParams['cookie_items'] = {item[0]:item[1]}
+                    addParams['cookie_items'] = self.defaultParams['cookie_items']
+                    sts, data = self.cm.getPage(baseUrl, addParams, post_data)
+                except Exception:
+                    printExc()
+        return sts, data
         
     def refreshCookieHeader(self):
         self.cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE)
@@ -97,23 +92,27 @@ class TantiFilmOrg(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        self.setMainUrl(self.cm.meta['url'])
         
-        params = dict(cItem)
-        params.update({'category':nextCategory, 'title':'Film', 'url':self.getFullUrl('/film/')})
-        self.addDir(params)
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<nav id="ddmenu">', '</ul>', withMarkers=False)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
+        #params = dict(cItem)
+        #params.update({'category':nextCategory, 'title':'Film', 'url':self.getFullUrl('/film/')})
+        #self.addDir(params)
+        printDBG(data)
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<nav', '>', 'ddmenu'), ('</ul', '>'), False)[1]
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>', withMarkers=True)
+        printDBG(data)
         for item in data:
             title = self.cleanHtmlStr(item)
             if title.upper() == 'HOME': continue # not items on home page
-            url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
+            url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+            if self.cm.getBaseUrl(self.getMainUrl(), True) != self.cm.getBaseUrl(url, True) or '/supporto/' in url:
+                continue
             params = dict(cItem)
             if 'elenco-saghe' not in url:
-                params.update({'category':nextCategory, 'title':title, 'url':self.getFullUrl(url)})
+                params.update({'category':nextCategory, 'title':title, 'url':url})
                 self.addDir(params)
             else:
-                params.update({'category':'list_collections', 'title':title, 'url':self.getFullUrl(url)})
+                params.update({'category':'list_collections', 'title':title, 'url':url})
                 self.addDir(params)
                 break
                 
@@ -405,7 +404,7 @@ class TantiFilmOrg(CBaseHostClass):
                     tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<script', '>'), ('</script', '>'), False)
                     for item in tmp:
                         jscode.append(item)
-                    ret = iptv_js_execute( '\n'.join(jscode) )
+                    ret = js_execute( '\n'.join(jscode) )
                     if ret['sts'] and 0 == ret['code']:
                         data = ret['data'].strip()
                         if self.cm.isValidUrl(data):
@@ -427,30 +426,7 @@ class TantiFilmOrg(CBaseHostClass):
                 printExc()
                 break
         return urlTab
-        
-    def getFavouriteData(self, cItem):
-        printDBG('TantiFilmOrg.getFavouriteData')
-        return json.dumps(cItem)
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('TantiFilmOrg.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('TantiFilmOrg.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -460,11 +436,14 @@ class TantiFilmOrg(CBaseHostClass):
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')
         
-        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        printDBG( "handleService: || name[%s], category[%s] " % (name, category) )
         self.currList = []
         
     #MAIN MENU
         if name == None:
+            if TantiFilmOrg.REMOVE_COOKIE:
+                TantiFilmOrg.REMOVE_COOKIE = False
+                rm(self.COOKIE_FILE)
             self.listMainMenu({'name':'category', 'url':self.MAIN_URL}, 'list_items')
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
         elif 'list_categories' == category:

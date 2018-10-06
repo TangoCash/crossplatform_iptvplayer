@@ -11,6 +11,7 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvdirbrowser import IPTVDirectorySelectorWidget, IPTVFileSelectorWidget
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.e2ivkselector import GetVirtualKeyboard
 ###################################################
 
 ###################################################
@@ -21,7 +22,6 @@ from enigma import getDesktop
 
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
-from Screens.VirtualKeyBoard import VirtualKeyBoard
 
 from Components.ActionMap import ActionMap, HelpableActionMap
 from Components.Label import Label
@@ -40,27 +40,36 @@ class ConfigIPTVFileSelection(ConfigDirectory):
 
 class ConfigBaseWidget(Screen, ConfigListScreen):
     screenwidth = 1980
-    if screenwidth and screenwidth == 1920:
-        skin = """
-            <screen position="center,50" size="920,860" title="" >
-                <widget name="config"    position="10,70" size="900,780" zPosition="1" transparent="1" scrollbarMode="showOnDemand" enableWrapAround="1" />
-                <widget name="key_red"   position="10,10" zPosition="2" size="600,35" valign="center" halign="left"   font="Regular;28" transparent="1" foregroundColor="red" />
-                <widget name="key_ok"    position="10,10" zPosition="2" size="600,35" valign="center" halign="center" font="Regular;28" transparent="1" foregroundColor="white" />
-                <widget name="key_green" position="10,10" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;28" transparent="1" foregroundColor="green" />
-                <widget name="key_blue"    position="0,0" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;28" transparent="1" foregroundColor="green" />
-                <widget name="key_yellow"  position="0,0" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;28" transparent="1" foregroundColor="green" />
-            </screen>"""
+    if screenwidth == 1920:
+        width = 920
+        height = 860
+        font = 28
+    elif screenwidth == 1280:
+        width = 720
+        height = 600
+        font = 22
     else:
-        skin = """
-            <screen position="center,50" size="620,440" title="" >
-                <widget name="config"    position="10,50" size="600,370" zPosition="1" transparent="1" scrollbarMode="showOnDemand" enableWrapAround="1" />
-                <widget name="key_red"   position="10,10" zPosition="2" size="600,35" valign="center" halign="left"   font="Regular;22" transparent="1" foregroundColor="red" />
-                <widget name="key_ok"    position="10,10" zPosition="2" size="600,35" valign="center" halign="center" font="Regular;22" transparent="1" foregroundColor="white" />
-                <widget name="key_green" position="10,10" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;22" transparent="1" foregroundColor="green" />
-                
-                <widget name="key_blue"    position="0,0" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;22" transparent="1" foregroundColor="green" />
-                <widget name="key_yellow"  position="0,0" zPosition="2" size="600,35" valign="center" halign="right"  font="Regular;22" transparent="1" foregroundColor="green" />
-            </screen>"""      
+        width = 620
+        height = 440
+        font = 22
+    
+    skin = """
+        <screen position="center,center" size="%d,%d" title="" >
+            <widget name="config"    position="10,50" size="%d,%s" zPosition="1" transparent="1" scrollbarMode="showOnDemand" enableWrapAround="1" />
+            <widget name="key_red"   position="10,10" zPosition="2" size="%d,35" valign="center" halign="left"   font="Regular;%d" transparent="1" foregroundColor="red" />
+            <widget name="key_ok"    position="10,10" zPosition="2" size="%d,35" valign="center" halign="center" font="Regular;%d" transparent="1" foregroundColor="white" />
+            <widget name="key_green" position="10,10" zPosition="2" size="%d,35" valign="center" halign="right"  font="Regular;%d" transparent="1" foregroundColor="green" />
+            
+            <widget name="key_blue"    position="0,0" zPosition="2" size="%d,35" valign="center" halign="right"  font="Regular;%d" transparent="1" foregroundColor="green" />
+            <widget name="key_yellow"  position="0,0" zPosition="2" size="%d,35" valign="center" halign="right"  font="Regular;%d" transparent="1" foregroundColor="green" />
+        </screen>""" % (width, height, 
+                        width-20, height-80, 
+                        width-20, font,
+                        width-20, font,
+                        width-20, font,
+                        width-20, font,
+                        width-20, font)
+
     def __init__(self, session):
         printDBG("ConfigBaseWidget.__init__ -------------------------------")
         Screen.__init__(self, session)
@@ -123,10 +132,10 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
         self.runSetup()
 
     def onSelectionChanged(self):
-        self.isOkEnabled = self.isOkActive()              
+        self.isOkEnabled = self.isOkActive()
         self.isSelectable = self.isSelectableActive()
         self.setOKLabel()
-        
+
     def isHiddenOptionsUnlocked(self):
         if "ybybyybb" == self.hiddenOptionsSecretCode:
             return True
@@ -148,6 +157,12 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
         if self["config"].getCurrent() is not None:
             currItem = self["config"].getCurrent()[1]
             if isinstance(currItem, ConfigText) or isinstance(currItem, ConfigPassword):
+                try:
+                    # I really do not like this "help screen" NumericalTextInputHelpDialog which cover others options
+                    # it is much easier to type text with VK after OK press, but maybe option need to be added to allow user to have this "help"
+                    currItem.help_window.hide()
+                except Exception:
+                    printExc()
                 return True
         return False
         
@@ -260,7 +275,12 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
         elif isinstance(currItem, ConfigText):
             def VirtualKeyBoardCallBack(curIndex, newTxt):
                 if isinstance(newTxt, basestring): self["config"].list[curIndex][1].value = newTxt
-            self.session.openWithCallback(boundFunction(VirtualKeyBoardCallBack, curIndex), VirtualKeyBoard, title=(_("Enter a value")), text=currItem.value)
+            try:
+                # we need hide NumericalTextInputHelpDialog before 
+                self["config"].list[curIndex][1].help_window.hide()
+            except Exception:
+                printExc()
+            self.session.openWithCallback(boundFunction(VirtualKeyBoardCallBack, curIndex), GetVirtualKeyboard(), title=(_("Enter a value")), text=currItem.value)
             return
 
         ConfigListScreen.keyOK(self)
@@ -277,10 +297,12 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
     def keyYellow(self):
         self.hiddenOptionsSecretCode += "y"
         self.runSetup()
+        self.keyPageUp()
 
     def keyBlue(self):
         self.hiddenOptionsSecretCode += "b"
         self.runSetup()
+        self.keyPageDown()
         
     def keyMenu(self):
         pass
@@ -294,10 +316,12 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
             self["config"].instance.moveSelection(self["config"].instance.moveDown)
             
     def keyPageUp(self):
-        pass
+        if self["config"].instance is not None:
+            self["config"].instance.moveSelection(self["config"].instance.pageUp)
     
     def keyPageDown(self):
-        pass
+        if self["config"].instance is not None:
+            self["config"].instance.moveSelection(self["config"].instance.pageDown)
         
     def keyHome(self):
         pass

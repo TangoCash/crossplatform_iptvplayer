@@ -2,42 +2,32 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from datetime import timedelta
-import time
 import re
 import urllib
-import unicodedata
 import base64
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
 
 ###################################################
 # Config options for HOST
 ###################################################
+config.plugins.iptvplayer.swatchseries_web_proxy_gateway = ConfigSelection(default = "auto", choices = [("auto", _("Auto")), ("always", _("Always")), ("never",  _("Never"))])
 
 def GetConfigList():
     optionList = []
+    optionList.append(getConfigListEntry(_("Use web proxy gateway"), config.plugins.iptvplayer.swatchseries_web_proxy_gateway))
     return optionList
 ###################################################
 
@@ -71,6 +61,12 @@ class TheWatchseriesTo(CBaseHostClass):
         self.needProxy = None
         
     def isNeedProxy(self):
+        val = config.plugins.iptvplayer.swatchseries_web_proxy_gateway.value
+        if val == 'always':
+            return True
+        elif val == 'never':
+            return False
+        
         if self.needProxy == None:
             sts, data = self.cm.getPage(self.MAIN_URL)
             if sts and '/series"' in data:
@@ -84,7 +80,7 @@ class TheWatchseriesTo(CBaseHostClass):
         params.update({'header':HTTP_HEADER})
         
         if self.isNeedProxy() and ('thewatchseries.to' in url or 'watch-series.to' in url or 'the-watch-series.to' in url or self.DOMAIN in url):
-            proxy = 'http://securefor.com/browse.php?u={0}&b=4'.format(urllib.quote(url, ''))
+            proxy = 'http://myproxysite.ga/browse.php?u={0}&b=4'.format(urllib.quote(url, ''))
             params['header']['Referer'] = proxy + '&f=norefer'
             params['header']['Cookie'] = 'flags=2e5;'
             url = proxy
@@ -96,7 +92,7 @@ class TheWatchseriesTo(CBaseHostClass):
     def getIconUrl(self, url):
         url = self.getFullUrl(url)
         if self.isNeedProxy() and ('thewatchseries.to' in url or 'watch-series.to' in url or 'the-watch-series.to' in url or self.DOMAIN in url):
-            proxy = 'http://securefor.com/browse.php?u={0}&b=4&f=norefer'.format(urllib.quote(url, ''))
+            proxy = 'http://myproxysite.ga/browse.php?u={0}&b=4&f=norefer'.format(urllib.quote(url, ''))
             params = {}
             params['User-Agent'] = self.HEADER['User-Agent'],
             params['Referer'] = proxy

@@ -29,7 +29,7 @@ class ConfigHostMenu(ConfigBaseWidget):
         self.list = [ ]
         self.hostName = hostName
         ConfigBaseWidget.__init__(self, session)
-        self.setup_title = _("Configuration for service[%s]") % self.hostName
+        self.setup_title = _("Configuration [%s] service") % self.hostName
         self.host = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['GetConfigList'], -1)
 
     def __del__(self):
@@ -192,6 +192,14 @@ class ConfigHostsMenu(ConfigBaseWidget):
             self._moveItem(curIndex)
         else:
             ConfigBaseWidget.keyDown(self)
+            
+    def keyPageUp(self):
+        if not self.reorderingEnabled:
+            ConfigBaseWidget.keyPageUp(self)
+    
+    def keyPageDown(self):
+        if not self.reorderingEnabled:
+            ConfigBaseWidget.keyPageDown(self)
     
     def keyLeft(self):
         if not self.reorderingEnabled:

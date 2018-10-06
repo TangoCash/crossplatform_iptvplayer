@@ -5,23 +5,21 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher import aes_cbc, base
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-import re
+from Components.config import config, ConfigSelection, ConfigYesNo, getConfigListEntry
 import urllib
 import time
 import binascii
-try:    import simplejson as json
-except Exception: import json
 from os import urandom as os_urandom
 try:
     from hashlib import sha1
@@ -30,11 +28,6 @@ except ImportError:
     sha1 = sha.new
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-###################################################
 
 ###################################################
 # Config options for HOST
@@ -154,7 +147,7 @@ class TvnVod(CBaseHostClass):
                 return default
         except Exception:
             return default
-        return clean_html(u'%s' % v).encode('utf-8')
+        return clean_html('%s' % v)
         
     def _getJItemNum(self, item, key, default=0):
         v = item.get(key, None)
@@ -231,7 +224,7 @@ class TvnVod(CBaseHostClass):
         try:
             url = self.getBaseUrl(pl) + urlQuery
             sts, data = self.cm.getPage(url, { 'header': self.getHttpHeader(pl) })
-            data = json.loads(data)
+            data = json_loads(data)
             
             if 'success' != data['status']:
                 printDBG("TvnVod.listsCategories status[%s]" % data['status'])
@@ -288,11 +281,11 @@ class TvnVod(CBaseHostClass):
                     if '' == title: title = self._getJItemStr(item, 'title', '')
                     if '' == title:
                         if category == 'recommended': continue
-                        else: title = _('Brak nazwy')
+                        else: title = 'Brak nazwy'
                     tmp = self._getJItemStr(item, 'episode', '')
-                    if tmp not in ('', '0'): title += _(", odcinek ") + tmp
+                    if tmp not in ('', '0'): title += ", odcinek " + tmp
                     tmp = self._getJItemStr(item, 'season', '')
-                    if tmp not in ('', '0'): title += _(", sezon ") + tmp
+                    if tmp not in ('', '0'): title += ", sezon " + tmp
                     try:
                         tmp = self._getJItemStr(item, 'start_date', '')
                         if '' != tmp:
@@ -307,14 +300,14 @@ class TvnVod(CBaseHostClass):
                     # get icon
                     icon = self._getIconUrl(item)
                 
-                    params = { 'id'       : id,
-                               'previd'   : cItem.get('id', ''),
-                               'title'    : title,
-                               'desc'     : desc,
-                               'icon'     : icon,
-                               'category' : category,
-                               'season'   : 0,
-                             }
+                    params = { 'id'          : id,
+                               'previd'      : cItem.get('id', ''),
+                               'title'       : title,
+                               'desc'        : desc,
+                               'icon'        : icon,
+                               'category'    : category,
+                               'season'      : 0,
+                               'good_for_fav': True, }
                     if 'episode' == category:
                         if cItem.get('search_category', False):
                             continue
@@ -328,18 +321,18 @@ class TvnVod(CBaseHostClass):
             
             if showSeasons:
                 for season in seasons:
-                    params = { 'id'       : cItem['id'],
-                               'previd'   : cItem.get('id', ''),
-                               'title'    : self._getJItemStr(season, 'name', ''),
-                               'desc'     : '',
-                               'icon'     : self._getIconUrl(season),
-                               'category' : cItem['category'], #self._getJItemStr(season, 'type', ''),
-                               'season'   : self._getJItemNum(season, 'id', 0),
-                             }
+                    params = { 'id'          : cItem['id'],
+                               'previd'      : cItem.get('id', ''),
+                               'title'       : self._getJItemStr(season, 'name', ''),
+                               'desc'        : '',
+                               'icon'        : self._getIconUrl(season),
+                               'category'    : cItem['category'], #self._getJItemStr(season, 'type', ''),
+                               'season'      : self._getJItemNum(season, 'id', 0),
+                               'good_for_fav': True, }
                     self.addDir(params)
             if showNextPage:
                 params = dict(cItem)
-                params.update({'title':_('Następna strona'), 'page': page, 'icon':'', 'desc':''})
+                params.update({'good_for_fav':False, 'title':_('Next page'), 'page': page, 'icon':'', 'desc':''})
                 self.addDir(params)
         except Exception: 
             printExc()
@@ -378,7 +371,7 @@ class TvnVod(CBaseHostClass):
         videoUrl = ''
         if len(url) > 0:
             if 'Android' in pl:
-                videoUrl = self._generateToken(url).encode('utf-8')
+                videoUrl = self._generateToken(url)
             elif 'Panasonic' in pl:
                 videoUrl = url
             else:
@@ -407,7 +400,7 @@ class TvnVod(CBaseHostClass):
             sts, data = self.cm.getPage(url, { 'header': self.getHttpHeader(pl) })
             if not sts: continue
             try:
-                data = json.loads(data)
+                data = json_loads(data)
                 if 'success' == data['status']:
                     data = data['item']
                     # videoTime = 0
@@ -443,10 +436,11 @@ class TvnVod(CBaseHostClass):
                 break
         return videoUrls
         
-    def getFavouriteData(self, cItem):
-        return str(cItem['id'])
-        
     def getLinksForFavourite(self, fav_data):
+        try:
+            cItem = json_loads(fav_data)
+            return self.getLinks(cItem['id'])
+        except Exception: printExc()
         return self.getLinks(fav_data)
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):

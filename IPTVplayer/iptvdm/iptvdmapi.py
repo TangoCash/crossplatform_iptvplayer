@@ -221,13 +221,47 @@ class IPTVDMApi():
         if False == exist:
             self.downloadIdx += 1
             newItem.downloadIdx = self.downloadIdx 
-            newItem.statusFile = DMHelper.STATUS_FILE_PATH + str(newItem.downloadIdx) + DMHelper.STATUS_FILE_EXT
             self.queueDQ.append(newItem)
             bRet = True
         if bRet:
             self.listChanged()
         return bRet
-    
+
+    def addBufferItem(self, downloader, fullFilesPaths=[]):
+        if downloader.getStatus() == DMHelper.STS.DOWNLOADING:
+            if len(self.queueUD) >= self.MAX_DOWNLOAD_ITEM:
+                return False, _('Max number of parallel downloads has been reached.')
+        
+        bRet, msg = False, ''
+        for newFilePath in fullFilesPaths:
+            newFilePath = DMHelper.makeUnikalFileName(newFilePath, False, False)
+            bRet, msg = downloader.moveFullFileName(newFilePath)
+            if bRet:
+                msg = newFilePath
+                break
+            
+        if bRet:
+            newItem = DMItem(downloader.getUrl(), downloader.getFullFileName())
+            
+            # at now we need to pack it to download item
+            self.downloadIdx += 1
+            newItem.downloadIdx = self.downloadIdx 
+            newItem.downloader = downloader
+            newItem.status = downloader.getStatus()
+            
+            self.updateItemSTS(newItem)
+            if downloader.getStatus() == DMHelper.STS.DOWNLOADING:
+                newItem.callback = boundFunction(self.cmdFinished, newItem.downloadIdx)
+                newItem.downloader.subscribeFor_Finish( newItem.callback )
+                self.queueUD.append(newItem)
+                self.runWorkThread()
+            else:
+                self.queueAA.append(newItem)
+            
+            self.listChanged()
+        
+        return bRet, msg
+
     def processDQ(self):
             if False == self.running: return
             dListChanged = False
@@ -237,12 +271,6 @@ class IPTVDMApi():
                 self.queueUD.append(item)
                 dListChanged = True
                 
-                # remove old sts file
-                try:
-                    os.remove(item.statusFile)
-                except Exception:
-                    printExc("ERROR: while removing status file %s" % item.statusFile)
-                    
                 # start downloading
                 self.runCMD(item)
                 
@@ -291,7 +319,7 @@ class IPTVDMApi():
         self.queueUD[listUDIdx].callback   = None
         
         item = self.queueUD[listUDIdx]
-        printDBG("Downloading finished idx[%s] File[%s] URL[%s]" % (downloadIdx, item.fileName, item.url) )        
+        printDBG("Downloading finished idx[%s] File[%s] URL[%s]" % (downloadIdx, item.fileName, item.url) )
         
         item = self.queueUD[listUDIdx]
         # add processed item to self.queueAA
@@ -323,7 +351,7 @@ class IPTVDMApi():
         
     def updateDownloadedItemStatus(self, listUDIdx):
         printDBG("updateDownloadedItemStatus listUDIdx[%d]" % listUDIdx)
-        self.updateItemSTS(listUDIdx)
+        self.updateItemSTS(self.queueUD[listUDIdx])
         # dItem - copy only for reading filed
         dItem = self.queueUD[listUDIdx]
         status = 'UNKNOWN'
@@ -351,29 +379,29 @@ class IPTVDMApi():
         #print( dItem.fileName + ": "+ " status: " + dItem.status + dItem.downloadedSize + " " + dItem.downloadedProcent + " " + dItem.downloadedSpeed + " " + dItem.timeToFinish )
     # end updateEndItemStatus
     
-    def updateItemSTS(self, listUDIdx):
-        printDBG("updateItemSTS listUDIdx[%d]" % listUDIdx)
-        self.queueUD[listUDIdx].downloader.updateStatistic()
-        self.queueUD[listUDIdx].downloadedSize  = self.queueUD[listUDIdx].downloader.getLocalFileSize()
-        self.queueUD[listUDIdx].fileSize        = self.queueUD[listUDIdx].downloader.getRemoteFileSize()
-        self.queueUD[listUDIdx].downloadedSpeed = self.queueUD[listUDIdx].downloader.getDownloadSpeed()
+    def updateItemSTS(self, downloadItem):
+        printDBG("updateItemSTS downloadIdx[%d]" % downloadItem.downloadIdx)
+        downloadItem.downloader.updateStatistic()
+        downloadItem.downloadedSize  = downloadItem.downloader.getLocalFileSize()
+        downloadItem.fileSize        = downloadItem.downloader.getRemoteFileSize()
+        downloadItem.downloadedSpeed = downloadItem.downloader.getDownloadSpeed()
         
-        if self.queueUD[listUDIdx].downloader.hasDurationInfo():
-            self.queueUD[listUDIdx].totalFileDuration = self.queueUD[listUDIdx].downloader.getTotalFileDuration()
-            self.queueUD[listUDIdx].downloadedFileDuration = self.queueUD[listUDIdx].downloader.getDownloadedFileDuration()
+        if downloadItem.downloader.hasDurationInfo():
+            downloadItem.totalFileDuration = downloadItem.downloader.getTotalFileDuration()
+            downloadItem.downloadedFileDuration = downloadItem.downloader.getDownloadedFileDuration()
         
         # calculate downloadedProcent
-        if self.queueUD[listUDIdx].fileSize > 0 and self.queueUD[listUDIdx].downloadedSize > 0:
-            self.queueUD[listUDIdx].downloadedProcent = (100 * self.queueUD[listUDIdx].downloadedSize) / self.queueUD[listUDIdx].fileSize
-        elif self.queueUD[listUDIdx].totalFileDuration > 0 and self.queueUD[listUDIdx].downloadedFileDuration > 0:
-            self.queueUD[listUDIdx].downloadedProcent = (100 * self.queueUD[listUDIdx].downloadedFileDuration) / self.queueUD[listUDIdx].totalFileDuration
+        if downloadItem.fileSize > 0 and downloadItem.downloadedSize > 0:
+            downloadItem.downloadedProcent = (100 * downloadItem.downloadedSize) / downloadItem.fileSize
+        elif downloadItem.totalFileDuration > 0 and downloadItem.downloadedFileDuration > 0:
+            downloadItem.downloadedProcent = (100 * downloadItem.downloadedFileDuration) / downloadItem.totalFileDuration
         return True
             
     def updateDownloadItemsStatus(self):
         stsChanged = False 
         printDBG("updateDownloadItemsStatus")
         for listUDIdx in range( len(self.queueUD) ):
-            if self.updateItemSTS(listUDIdx):
+            if self.updateItemSTS(self.queueUD[listUDIdx]):
                 stsChanged = True
         if stsChanged:
             self.listChanged()

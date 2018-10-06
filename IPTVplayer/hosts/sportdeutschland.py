@@ -4,8 +4,8 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, CSearchHistoryHelper, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
@@ -13,23 +13,11 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 ###################################################
 # FOREIGN import
 ###################################################
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, getConfigListEntry
 from datetime import datetime
-import re
-import urllib
 import time
-import random
 try:    import simplejson as json
 except Exception: import json
-
-
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-
 ###################################################
 
 ###################################################
@@ -108,7 +96,7 @@ class SportDeutschland(CBaseHostClass):
         printDBG("SportDeutschland.listCategories")
         data = self._getItemsListFromJson(self.MAIN_API_URL + 'sections?access_token=true&per_page=9999')
         
-        params = {'name':'category', 'title':_('--Wszystkie--'), 'category':'category', 'permalink':'', 'uuid':'', 'page':1}
+        params = {'name':'category', 'title':_('--All--'), 'category':'category', 'permalink':'', 'uuid':'', 'page':1}
         self.addDir(params)
         
         for item in data:

@@ -3,39 +3,21 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetPluginDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common, CParsingHelper
-import Plugins.Extensions.IPTVPlayer.libs.urlparser as urlparser
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import iptv_js_execute
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
-
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import time
 import re
 import urllib
-import string
-import random
 import base64
 from urlparse import urlparse
-from binascii import hexlify, unhexlify
-from hashlib import md5
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+from Components.config import config, ConfigYesNo, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -51,7 +33,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://tv3.ie/3player'
+    return 'https://virginmediatelevision.ie/player'
 
 class C3player(CBaseHostClass):
  
@@ -65,12 +47,12 @@ class C3player(CBaseHostClass):
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
         self.DEFAULT_ICON_URL = 'http://compass.xboxlive.com/assets/58/73/58738a5d-013b-4bf1-ac89-cdb72477dae9.png'
-        self.MAIN_URL = 'https://www.tv3.ie/'
+        self.MAIN_URL = 'https://virginmediatelevision.ie/player'
         self.cacheLinks = {}
         
     def listMainMenu(self, cItem):
         printDBG("C3player.listMainMenu")
-        MAIN_CAT_TAB = [{'category':'list_live',       'title': _('LIVE'),   'url':self.getFullUrl('/player_2015/assets/ajax/live_drop_down.php?layout=top_nav')},
+        MAIN_CAT_TAB = [{'category':'list_live',       'title': _('LIVE'),   'url':self.getFullUrl('/player/assets/ajax/live_drop_down.php?layout=top_nav')},
                         {'category':'list_by_day',     'title': _('BY DAY'), 'url':self.getFullUrl('/3player/byday')},
                         {'category':'list_az',         'title': _('A-Z'),    'url':self.getFullUrl('/3player/a-z')},
                         
@@ -160,7 +142,7 @@ class C3player(CBaseHostClass):
             videoID = self.cm.ph.getSearchGroups(item, '''data\-videoID=['"]([0-9]+?)['"]''')[0]
             if '' in [showId, dataType]: continue
             title = self.cleanHtmlStr(item)
-            url = self.getFullUrl('/player_2015/assets/ajax/filter_tiles.php?showID={0}&videoID=&type={1}'.format(showId, dataType))
+            url = self.getFullUrl('/player/assets/ajax/filter_tiles.php?showID={0}&videoID=&type={1}'.format(showId, dataType))
             params = dict(cItem)
             params.update({'good_for_fav':True, 'category':nextCategory, 'title':title.title(), 'f_show_title':cItem['title'], 'url':url, 'f_show_id':showId, 'f_data_type':dataType})
             self.addDir(params)
@@ -169,7 +151,7 @@ class C3player(CBaseHostClass):
             dataType = 'all'
             showId = self.cm.ph.getSearchGroups(cItem['url'] + '/', '''/show/([0-9]+?)[^0-9]''')[0]
             if showId != '':
-                url = self.getFullUrl('/player_2015/assets/ajax/filter_tiles.php?showID={0}&videoID=&type={1}'.format(showId, dataType))
+                url = self.getFullUrl('/player/assets/ajax/filter_tiles.php?showID={0}&videoID=&type={1}'.format(showId, dataType))
                 cItem = dict(cItem)
                 cItem.update({'good_for_fav':True, 'category':nextCategory, 'title':_('All'), 'f_show_title':cItem['title'], 'url':url, 'f_show_id':showId, 'f_data_type':dataType})
                 self.listItems(cItem, 'explore_show')
@@ -191,8 +173,9 @@ class C3player(CBaseHostClass):
             showId = self.cm.ph.getSearchGroups(data, '''data\-showID=['"]([0-9]+?)['"]''')[0]
             offset = self.cm.ph.getSearchGroups(data, '''data\-offset=['"]([0-9]+?)['"]''')[0]
             id = self.cm.ph.getSearchGroups(data, '''\sid=['"]([^'^"]+?)['"]''')[0]
-            if '' not in [showId, offset, id]:
-                url = self.getFullUrl('/player_2015/assets/ajax/{0}.php?showID={1}&videoID=&offset={2}&type={3}'.format(id, showId, offset, cItem['f_data_type']))
+            printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> [%s] [%s] [%s]" % (showId, offset, id))
+            if '' not in (showId, offset, id):
+                url = self.getFullUrl('/player/assets/ajax/{0}.php?showID={1}&videoID=&offset={2}&type={3}'.format(id, showId, offset, cItem['f_data_type']))
                 params = dict(cItem)
                 params.update({'good_for_fav':False, 'url':url, 'title':_('Next page'), 'page':page+1})
                 self.addDir(params)
@@ -219,7 +202,7 @@ class C3player(CBaseHostClass):
             if date == '': continue
             subItems = []
             for it in filters:
-                url = self.getFullUrl('/player_2015/assets/ajax/ajax_site.php?pageType=byday&showID=%s&videoID=%s' % (it['f_filter_id'], date))
+                url = self.getFullUrl('/player/assets/ajax/ajax_site.php?pageType=byday&showID=%s&videoID=%s' % (it['f_filter_id'], date))
                 params = dict(it)
                 params.update({'good_for_fav':True, 'name':'category', 'type':'category', 'category':nextCategory2, 'url':url})
                 subItems.append(params)
@@ -236,7 +219,7 @@ class C3player(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))['content']
+            data = json_loads(data)['content']
             data = re.sub("<!--[\s\S]*?-->", "", data).split('<footer', 1)[0]
             data = re.compile('''<div[^>]+?list_row[^>]+?>''').split(data)
             if len(data): del data[0]
@@ -261,7 +244,7 @@ class C3player(CBaseHostClass):
             if pageType == '': continue
             
             title = self.cleanHtmlStr(item).upper()
-            url = self.getFullUrl('/player_2015/assets/ajax/ajax_site.php?pageType=%s') % pageType
+            url = self.getFullUrl('/player/assets/ajax/ajax_site.php?pageType=%s') % pageType
             if showId != '': url += '&showID=%s' % showId
             
             params = dict(cItem)
@@ -275,7 +258,7 @@ class C3player(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))['content']
+            data = json_loads(data)['content']
             data = self.cm.ph.getDataBeetwenNodes(data, ('<section', '>', 'az_list'), ('</section', '>'))[1]
             
             data = re.sub("<!--[\s\S]*?-->", "", data)
@@ -294,7 +277,7 @@ class C3player(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("C3player.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
-        url = self.getFullUrl('/player_2015/assets/ajax/search.php')
+        url = self.getFullUrl('/player/assets/ajax/search.php')
         post_data = {'queryString':searchPattern, 'limit':100}
         
         sts, data = self.cm.getPage(url, post_data=post_data)
@@ -332,39 +315,46 @@ class C3player(CBaseHostClass):
                 SetIPTVPlayerLastHostError(errorMsg)
             if embedToken == '' and config.plugins.iptvplayer.tv3player_use_web_proxy.value:
                 # http://getproxi.es/IE-proxies/
-                proxy = 'http://ruproxy.herokuapp.com/index.php?q={0}&hl=e1'.format(urllib.quote(cItem['url']))
+                proxy = 'http://ruproxy.herokuapp.com/index.php?q={0}&hl=2e1'.format(urllib.quote_plus(cItem['url']))
                 params = {'header':dict(self.HEADER)}
                 params['header']['Referer'] = proxy
-                #params['header']['cookie_items'] = {'flags':'2e5'}
+                params.update({'cookie_items':{'flags':'2e1'}, 'use_cookie':True})
                 sts, data = self.cm.getPage(proxy, params)
                 if not sts: return []
                 printDBG("+++++++++++++++++++++++++++++++++++++++")
                 printDBG(data)
                 printDBG("+++++++++++++++++++++++++++++++++++++++")
                 embedToken = self.cm.ph.getSearchGroups(data, '''['"]?embedToken['"]?\s*?:\s*?['"](https?://[^'^"]+?)['"]''')[0]
-            
+            drmProtection = False
             if embedToken != '':
                 parsedUri = urlparse(embedToken)
                 auth = parsedUri.path.split('/embed_token/', 1)[-1].split('/')
                 if len(auth) > 1:
-                    url = 'https://player.ooyala.com/sas/player_api/v2/authorization/embed_code/%s/%s?embedToken=%s&device=html5&domain=www.tv3.ie&auth_token=' % (auth[0], auth[1], urllib.quote(embedToken) )
+                    url = 'https://player.ooyala.com/sas/player_api/v2/authorization/embed_code/%s/%s?embedToken=%s&device=html5&domain=www.tv3.ie&auth_token=' % (auth[0], auth[1], urllib.quote_plus(embedToken) )
                     sts, data = self.cm.getPage(url)
                     if not sts: return []
                     try:
-                        printDBG(data)
-                        data = byteify(json.loads(data))
+                        drmProtection = False
+                        #printDBG(data)
+                        data = json_loads(data)
                         for item in data['authorization_data'][auth[1]]['streams']:
                             if item['url']['format'] == 'encoded':
                                 url = base64.b64decode(item['url']['data'])
                             else:
                                 url = item['url']['data']
                             if item['delivery_type'] == 'hls':
+                                if item.get('drm'):
+                                    drmProtection = True
                                 hlsLinksTab = getDirectM3U8Playlist(url, checkExt=True, checkContent=True, sortWithMaxBitrate=999999999)
                             elif item['delivery_type'] == 'hds':
                                 hdsLinksTab = getF4MLinksWithMeta(url, checkExt=False, sortWithMaxBitrate=999999999)
                     except Exception:
                         printExc()
-        
+
+            printDBG(hlsLinksTab)
+            if drmProtection:
+                SetIPTVPlayerLastHostError(_('Link protected with DRM.'))
+                return []
         for idx in range(len(hlsLinksTab)):
             hlsLinksTab[idx]['url'] = strwithmeta(hlsLinksTab[idx]['url'], {'iptv_proto':'m3u8'})
         

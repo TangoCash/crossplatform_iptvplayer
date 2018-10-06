@@ -51,12 +51,31 @@ class WgetDownloader(BaseDownloader):
         self.maxContinueRetry = 0
         self.downloadCmd = ''
         self.remoteContentType = None
+        self.lastErrorCode = None
+        self.lastErrorDesc = ''
         
     def __del__(self):
         printDBG("WgetDownloader.__del__ ")
         
     def getName(self):
         return "wget"
+    
+    def getLastError(self):
+        return self.lastErrorCode, self.lastErrorDesc
+    
+    def _setLastError(self, code):
+        # map Exit Status to message - https://www.gnu.org/software/wget/manual/html_node/Exit-Status.html
+        self.lastErrorCode = code
+        if code == 0: self.lastErrorDesc = "No problems occurred."
+        elif code == 1: self.lastErrorDesc = "Generic error code."
+        elif code == 2: self.lastErrorDesc = "Parse error."
+        elif code == 3: self.lastErrorDesc = "File I/O error."
+        elif code == 4: self.lastErrorDesc = "Network failure."
+        elif code == 5: self.lastErrorDesc = "SSL verification failure."
+        elif code == 6: self.lastErrorDesc = "Username/password authentication failure."
+        elif code == 7: self.lastErrorDesc = "Protocol errors."
+        elif code == 8: self.lastErrorDesc = "Server issued an error response."
+        else: self.lastErrorDesc = 'Unknown error code.'
 
     def isWorkingCorrectly(self, callBackFun):
         self.iptv_sys = iptv_system( DMHelper.GET_WGET_PATH() + " -V 2>&1 ", boundFunction(self._checkWorkingCallBack, callBackFun) )
@@ -173,6 +192,8 @@ class WgetDownloader(BaseDownloader):
             self.curContinueRetry += 1
             self.console.execute( E2PrioFix( self.downloadCmd ) )
             return
+        
+        self._setLastError(code)
         
         # break circular references
         self.console_appClosed_conn  = None

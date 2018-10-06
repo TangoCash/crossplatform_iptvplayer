@@ -217,14 +217,10 @@ class CBaseSubProviderClass:
         ret = iptv_execute(1)(cmd)
         printDBG("iptv_execute cmd_ret sts[%s] code[%s] data[%s]" % (ret.get('sts', ''), ret.get('code', ''), ret.get('data', '')))
         return ret
-        
+
     @staticmethod 
     def cleanHtmlStr(str):
-        str = str.replace('<', ' <')
-        str = str.replace('&nbsp;', ' ')
-        str = clean_html(str)
-        str = str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        return CParsingHelper.removeDoubles(str, ' ').strip()
+        return CParsingHelper.cleanHtmlStr(str)
 
     @staticmethod 
     def getStr(v, default=''):

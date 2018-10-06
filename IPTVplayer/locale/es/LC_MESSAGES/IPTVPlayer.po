@@ -86,21 +86,6 @@ msgstr "    Tamaño del icono de servicio"
 msgid "    Video buffer size [MB]"
 msgstr "    Tamaño buffer de video [MB]"
 
-msgid "  alltubetv login:"
-msgstr "  alltubetv Login:"
-
-msgid "  alltubetv password:"
-msgstr "  alltubetv Password:"
-
-msgid " (chunk %s)"
-msgstr " (trozo %s)"
-
-msgid " - mobile broadcast url"
-msgstr " - URL de transmisión móvil"
-
-msgid " Audio buffer size [KB]"
-msgstr " Tamaño buffer de audio [KB]"
-
 msgid " Last.fm login:"
 msgstr " Last.fm Login:"
 
@@ -109,9 +94,6 @@ msgstr " Password"
 
 msgid " Username or Email"
 msgstr " Nombre de usuario o EMail"
-
-msgid " Video buffer size [MB]"
-msgstr " Tamaño buffer de video [MB]"
 
 msgid ""
 " has not been detected. \n"
@@ -256,9 +238,6 @@ msgstr "¿Está seguro que desea eliminar el archivo \"%s\"?"
 
 msgid "Aspect"
 msgstr "Aspecto"
-
-msgid "Audio buffer size [KB]"
-msgstr "Tamaño buffer de audio [KB]"
 
 msgid "Auto"
 msgstr "Automático"

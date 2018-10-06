@@ -3,9 +3,9 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetLogoDir, GetCookieDir, byteify, rm
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getF4MLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -13,23 +13,15 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 # FOREIGN import
 ###################################################
 import re
-import time
-import urllib
-import urllib2
-import string
-import base64
 try:    import json
 except Exception: import simplejson as json
-from datetime import datetime
-from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -57,7 +49,7 @@ def GetConfigList():
 def gettytul():
     return 'https://serienstream.to/'
 
-class SerienStreamTo(CBaseHostClass):
+class SerienStreamTo(CBaseHostClass, CaptchaHelper):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'SerienStreamTo.tv', 'cookie':'serienstreamto.cookie'})
@@ -71,7 +63,9 @@ class SerienStreamTo(CBaseHostClass):
         self.MAIN_URL = 'https://s.to/'
         self.DEFAULT_ICON_URL = 'https://s.to/public/img/facebook.jpg'
         
-        self.MAIN_CAT_TAB = [{'category':'list_abc',          'title': _('A-Z'),                          'url':self.MAIN_URL                       },
+        
+        self.MAIN_CAT_TAB = [{'category':'all_series',        'title': 'Alle Serien',                     'url':self.getFullUrl('/serien-alphabet') },
+                             {'category':'list_abc',          'title': _('A-Z'),                          'url':self.MAIN_URL                       },
                              {'category':'list_genres',       'title': _('Genres'),                       'url':self.MAIN_URL                       },
                              {'category':'list_items',        'title': _('New'),                          'url':self.getFullUrl('/neu')             },
                              {'category':'list_items',        'title': _('Popular'),                      'url':self.getFullUrl('/beliebte-serien') },
@@ -86,9 +80,14 @@ class SerienStreamTo(CBaseHostClass):
         self.password = ''
         self.loggedIn = None
         
+        self.ALL_SERIES_TAB = [{'category':'all_letters',  'title': 'Alphabet',  'url':self.getFullUrl('/serien-alphabet') },
+                               {'category':'all_genres',   'title': 'Genres',    'url':self.getFullUrl('/serien-genres')   },]
+        
+        self.allCache = {'genres_list':[], 'genres_keys':{}, 'letters_list':[], 'letters_keys':{}}
+        
     def getPage(self, baseUrl, params={}, post_data=None):
         if params == {}: params = dict(self.defaultParams)
-        params['cloudflare_params'] = {'domain':self.up.getDomain(self.MAIN_URL), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self.getFullUrl}
+        params['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
        
     def refreshCookieHeader(self):
@@ -130,12 +129,74 @@ class SerienStreamTo(CBaseHostClass):
         params = dict(cItem)
         params['category'] = nextCategory
         self.listsTab(tab, params)
+        
+    def listsAllLetters(self, cItem, nextCategory):
+        printDBG("SerienStreamTo.listsAllLetters")
+        if 0 == len(self.allCache['letters_list']):
+            sts, data = self.getPage(cItem['url'])
+            if not sts: return
+            self.setMainUrl(data.meta['url'])
+            data = self.cm.ph.getDataBeetwenMarkers(data, 'seriesGenreList', '</ul>', False)[1]
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
+            for item in data:
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                title = self.cleanHtmlStr(item)
+                letter = title.decode('utf-8')[0].upper()
+                if not letter.isalpha():
+                    letter = '#'
+                letter = letter.encode('utf-8')
+                if letter not in self.allCache['letters_list']:
+                    self.allCache['letters_list'].append(letter)
+                    self.allCache['letters_keys'][letter] = []
+                self.allCache['letters_keys'][letter].append({'url':url, 'title':title})
+        
+        for letter in self.allCache['letters_list']:
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':letter, 'all_key':letter, 'all_mode':'letters'})
+            self.addDir(params)
+    
+    def listsAllGenres(self, cItem, nextCategory):
+        printDBG("SerienStreamTo.listsAllGenres")
+        if 0 == len(self.allCache['genres_list']):
+            sts, data = self.getPage(cItem['url'])
+            if not sts: return
+            self.setMainUrl(data.meta['url'])
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'seriesGenreList', '</ul>', False)
+            for section in data:
+                genre = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(section, '<h3', '</h3>')[1])
+                section = self.cm.ph.getAllItemsBeetwenMarkers(section, '<li', '</li>')
+                for item in section:
+                    url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
+                    title = self.cleanHtmlStr(item)
+                    if genre not in self.allCache['genres_list']:
+                        self.allCache['genres_list'].append(genre)
+                        self.allCache['genres_keys'][genre] = []
+                    self.allCache['genres_keys'][genre].append({'url':url, 'title':title})
+        
+        for genre in self.allCache['genres_list']:
+            params = dict(cItem)
+            params.update({'category':nextCategory, 'title':genre, 'all_key':genre, 'all_mode':'genres'})
+            self.addDir(params)
+    
+    def listsAllItems(self, cItem, nextCategory):
+        printDBG("SerienStreamTo.listsAllItems")
+        key  = cItem['all_key']
+        mode = cItem['all_mode']
+        for item in self.allCache['%s_keys' % mode][key]:
+            params = dict(cItem)
+            params.update(item)
+            params.update({'category':nextCategory, 'good_for_fav':True})
+            self.addDir(params)
     
     def listItems(self, cItem, nextCategory):
         printDBG("SerienStreamTo.listItems")
+        page = cItem.get('page', 1)
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        
+        nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pagination'), ('</div', '>'), False)[1]
+        nextPage = self.getFullUrl( self.cm.ph.getSearchGroups(nextPage, '''<a[^>]*?href=['"]([^'^"]+?)['"][^>]*?>%s<''' % (page + 1))[0] )
         
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="seriesListContainer', '<div class="cf">', withMarkers=True)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<a ', '</a>', withMarkers=True)
@@ -148,6 +209,11 @@ class SerienStreamTo(CBaseHostClass):
             desc   = self.cleanHtmlStr(item)
             params = dict(cItem)
             params.update({'category':nextCategory, 'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':desc})
+            self.addDir(params)
+        
+        if nextPage != '':
+            params = dict(cItem)
+            params.update({'good_for_fav':False, 'title':_('Next page'), 'url':nextPage, 'page':page + 1, 'desc':''})
             self.addDir(params)
             
     def listSeasons(self, cItem, nextCategory):
@@ -381,6 +447,14 @@ class SerienStreamTo(CBaseHostClass):
     #MAIN MENU
         if name == None:
             self.listsTab(self.MAIN_CAT_TAB, {'name':'category'})
+        elif 'all_series' == category:
+            self.listsTab(self.ALL_SERIES_TAB, {'name':'category'})
+        elif 'all_letters' == category:
+            self.listsAllLetters(self.currItem, 'all_items')
+        elif 'all_genres' == category:
+            self.listsAllGenres(self.currItem, 'all_items')
+        elif 'all_items' == category:
+            self.listsAllItems(self.currItem, 'list_seasons')
         elif 'list_abc' == category:
             self.listFilter(self.currItem, 'list_items', 'abc')
         elif 'list_genres' == category:
@@ -406,5 +480,4 @@ class SerienStreamTo(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        CHostBase.__init__(self, SerienStreamTo(), True, []) #[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO]
-
+        CHostBase.__init__(self, SerienStreamTo(), True, [])

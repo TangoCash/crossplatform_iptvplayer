@@ -2,11 +2,13 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -17,22 +19,8 @@ import time
 import re
 import hashlib
 import urllib
-import string
 import random
-import base64
 from datetime import datetime
-from hashlib import md5
-from copy import deepcopy
-try:    import json
-except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
 ###################################################
 
 ###################################################
@@ -60,11 +48,14 @@ class SpiegelTv(CBaseHostClass):
         self.cacheLinks    = {}
         self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.oneconfig = {'client_id':'748'}
-        
+
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if addParams == {}: addParams = dict(self.defaultParams)
         return self.cm.getPage(baseUrl, addParams, post_data)
-    
+
+    def getFullIconUrl(self, icon, baseUrl=None):
+        return CBaseHostClass.getFullIconUrl(self, icon.replace('.webp', '.jpg'), baseUrl)
+
     def listMainMenu(self, cItem):
         printDBG("SpiegelTv.listMainMenu")
         sts, data = self.getPage(self.getMainUrl())
@@ -139,10 +130,10 @@ class SpiegelTv(CBaseHostClass):
                 jscode.append(item)
                 break
         jscode.append('print(JSON.stringify(_oneconfig));')
-        ret = iptv_js_execute( '\n'.join(jscode) )
+        ret = js_execute( '\n'.join(jscode) )
         if ret['sts'] and 0 == ret['code']:
             try:
-                self.oneconfig.update(byteify(json.loads(ret['data'].strip()), '', True))
+                self.oneconfig.update(json_loads(ret['data'].strip(), '', True))
             except Exception:
                 printExc()
                 
@@ -172,7 +163,7 @@ class SpiegelTv(CBaseHostClass):
             sts, data = self.getPage(url, urlParams, post_data)
             if not sts: return
             
-            self.oneconfig['session_data'] = byteify(json.loads(data), '', True)['result']
+            self.oneconfig['session_data'] = json_loads(data, '', True)['result']
             self.oneconfig['session_data']['device_id'] = deviceId
         except Exception:
             printExc()
@@ -214,7 +205,7 @@ class SpiegelTv(CBaseHostClass):
             
             url = 'https://api.nexx.cloud/v3/%s/playlists/%s/%s' % (self.oneconfig['client_id'], op, playlistId)
             sts, data = self.getPage(url, urlParams, post_data)
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['result']['itemdata']:
                 icon = item['imagedata']['thumb']
                 url = self.getFullUrl('/videos/%s-%s' % (item['general']['ID'], item['general']['slug']))
@@ -232,7 +223,26 @@ class SpiegelTv(CBaseHostClass):
         
     def listItems(self, cItem):
         printDBG("SpiegelTv.listItems [%s]" % cItem)
-        
+
+        if '/videos/' in cItem.get('url', ''):
+            sts, data = self.getPage(cItem['url'])
+            if sts and 'playerholder' in data:
+                data = self.cm.ph.getDataBeetwenNodes(data, ('<section', '>', 'innercontent'), ('<span', '>', 'vtiledetails'))[1]
+                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h1', '</h1>')[1])
+                icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(data, '''<img[^>]*?\ssrc=['"]([^'^"]+?)['"]''', 1, True)[0])
+                if icon:
+                    desc = []
+                    tmp = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<h2', '</h2>')[1])
+                    if tmp: desc.append(tmp)
+
+                    tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'vreddesc'), ('</div', '>'), False)
+                    for t in tmp:
+                        t = self.cleanHtmlStr(t)
+                        if t: desc.append(t)
+
+                    self.addVideo(MergeDicts(cItem, {'title':title, 'icon':icon, 'desc':'[/br]'.join(desc)}))
+                    return
+
         page = cItem.get('page', 0)
         if page == 0:
             if cItem.get('url', '').endswith('-livestream'):
@@ -252,7 +262,7 @@ class SpiegelTv(CBaseHostClass):
             post_data = {'cid':self.oneconfig['cid'], 'client':self.oneconfig['client_id'], 'method':method, 'param':param, 'start':start, 'cgw':self.oneconfig['gw'], 'isu':'0', 'uhs':'0', 'agc':'0', 'wbp':'0', 'cdlang':self.oneconfig['language']}
             sts, data = self.getPage(url, post_data=post_data)
             if not sts: return
-            data = byteify(json.loads(data))['contents']
+            data = json_loads(data)['contents']
             printDBG(data)
             nextPageParams = []
             tmp = self.cm.ph.getDataBeetwenMarkers(data, 'navigatemore(', ')', False)[1].split(',')
@@ -340,7 +350,7 @@ class SpiegelTv(CBaseHostClass):
             sts, data = self.getPage(url, urlParams, post_data)
             if not sts: return
             
-            data = byteify(json.loads(data), '', True)['result']
+            data = json_loads(data, '', True)['result']
             try: protectionToken = data['protectiondata']['token']
             except Exception: protectionToken = None
             language = data['general'].get('language_raw') or ''

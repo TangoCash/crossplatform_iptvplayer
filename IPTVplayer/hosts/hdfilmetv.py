@@ -2,41 +2,22 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, CSearchHistoryHelper, GetDefaultLang, remove_html_markup, GetLogoDir, GetCookieDir, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, RetHost, ArticleContent
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-from datetime import timedelta
-import time
 import re
 import urllib
-import unicodedata
 import base64
 try:    import json
 except Exception: import simplejson as json
 from copy import deepcopy
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
 ###################################################
 
 
@@ -44,7 +25,7 @@ def gettytul():
     return 'http://hdfilme.tv/'
 
 class HDFilmeTV(CBaseHostClass):
-    USER_AGENT = 'curl/7' #'Mozilla/5.0'
+    USER_AGENT = 'Mozilla / 5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebkit / 538.1 (KHTML, podobnie jak Gecko) SamsungBrowser / 1.1 TV Safari / 538.1'
     HEADER = {'User-Agent': USER_AGENT, 'Accept': 'text/html'}
     AJAX_HEADER = dict(HEADER)
     AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
@@ -233,18 +214,24 @@ class HDFilmeTV(CBaseHostClass):
             if sts:
                 try:
                     tmp = base64.b64decode(tmp)
-                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    printDBG("+++")
                     printDBG(tmp)
-                    printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                    printDBG("+++")
                     tmp = byteify( json.loads(tmp) )
                     for item in tmp['playinfo']:
                         try:
-                            if 'mp4' not in item.get('type', item.get('mine_type')): continue
+                            type = item.get('type', item.get('mine_type')).lower()
                         except Exception:
-                            if not str(item['file']).lower().split('?', 1)[0].endswith('.mp4'): continue
+                            type = str(item['file']).split('?', 1)[0].rsplit('.', 1)[-1].lower()
+                            
                         url = self.getFullUrl(str(item['file'])) 
-                        url = strwithmeta(url, {'Referer':self.getMainUrl()})
-                        urlTab.append({'name':str(item['label']), 'url':url})
+                        url = strwithmeta(url, {'Accept':'*/*', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()[:-1], 'User-Agent':self.defaultParams['header']['User-Agent']})
+                        printDBG(">> TYPE: " + type)
+                        if 'mp4' in type or 'flv' in type:
+                            urlTab.append({'name':str(item['label']), 'url':url})
+                        elif 'hls' in type or 'm3u8' in type:
+                            url.meta['iptv_m3u8_seg_download_retry'] = 10
+                            urlTab.extend(getDirectM3U8Playlist(url, checkExt=False, checkContent=True, sortWithMaxBitrate=999999999))
                 except Exception:
                     printExc()
             if len(urlTab):
@@ -252,9 +239,9 @@ class HDFilmeTV(CBaseHostClass):
             
             googleUrls = self.cm.ph.getSearchGroups(data, '''var hdfilme[^=]*?=[^[]*?(\[[^;]+?);''')[0].strip()
             if '' == googleUrls: googleUrls = self.cm.ph.getSearchGroups(data, '''[\s]['"]?sources['"]?[^=^:]*?[=:][\s]*[^[]*?(\[[^]]+?\])''')[0].strip()
-            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG("+++")
             printDBG(googleUrls)
-            printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            printDBG("+++")
             
             if googleUrls != '':
                 try:
@@ -330,7 +317,7 @@ class HDFilmeTV(CBaseHostClass):
         descTabMap = {"Genre":                   "genre",
                       "IMDB":                    "rating",
                       "Bewertung":               "rated",
-                      "Veröffentlichungsjahr":   "year",
+                      "VerÃ¶ffentlichungsjahr":   "year",
                       "Regisseur":               "director",
                       "Schauspieler":            "actors",
                       "Staat":                   "country",

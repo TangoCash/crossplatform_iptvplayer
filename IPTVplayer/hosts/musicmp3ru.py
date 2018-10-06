@@ -2,47 +2,23 @@
 ###################################################
 # LOCAL import
 ###################################################
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
-from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, RetHost, CUrlItem, ArticleContent
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, byteify, rm, NextDay, PrevDay
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
+from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
-import urlparse
-import time
 import re
 import urllib
-import string
-import random
-import base64
-from datetime import datetime, timedelta
-from hashlib import md5
-from copy import deepcopy
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
 ###################################################
 
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper, iptv_js_execute
-###################################################
-
-###################################################
-# Config options for HOST
-###################################################
-
-def GetConfigList():
-    optionList = []
-    return optionList
-###################################################
 def gettytul():
     return 'https://musicmp3.ru/'
 
@@ -64,10 +40,7 @@ class MusicMp3Ru(CBaseHostClass):
         if addParams == {}: addParams = dict(self.defaultParams)
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getMoreItem(self, cUrl, data):
@@ -299,7 +272,7 @@ class MusicMp3Ru(CBaseHostClass):
         jscode = list(self.jscode)
         jscode[1] = jscode[1] % (id[5:] + cookieVal[8:]) 
         jscode = '\n'.join(jscode)
-        ret = iptv_js_execute( jscode )
+        ret = js_execute( jscode )
         if ret['sts'] and 0 == ret['code']:
             url = playbackUrl + '/' + ret['data'].strip() + "/" + rel
             return [{'name':'direct', 'url':strwithmeta(url, {'User-Agent':self.USER_AGENT, 'Referer':self.getMainUrl(), 'Cookie':'SessionId=%s;' % cookieVal}), 'need_resolve':0}]
