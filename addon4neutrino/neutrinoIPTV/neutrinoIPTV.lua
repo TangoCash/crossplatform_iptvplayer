@@ -67,7 +67,7 @@ function runPythonHost(id)
 		n:runScript(pluginPath .. "luaScripts/pythonHost.lua", id, pluginPath, conf["PlayerMode"], switchYesNoLang(conf["StopTV"]), messagesFile, 
 				switchYesNoLang(conf["DelBuffer"])
 		)
-		os.execute("/usr/ntrino/bin/pzapit -rz")
+		--os.execute("/usr/ntrino/bin/pzapit -rz")
 	else
 		messagebox.exec{title= MsgBoxTitleError, text=disabledPython, buttons={ "ok" }, has_shadow=true }
 	end
