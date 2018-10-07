@@ -6,7 +6,7 @@ function doStopLiveTV(myAction)
 	if myAction == nil then
 		return
 	elseif myAction == 'yes' then
-		os.execute("/usr/ntrino/bin/pzapit -p") --stop liveTV to speedup
+		os.execute("/usr/bin/pzapit -p") --stop liveTV to speedup
 	end
 end
 	
@@ -37,7 +37,7 @@ function assignDirectKey(d)
 end
 
 function printDBG( myText )
-	local myDBGfile = io.open("/hdd/neutrinoIPTV.log", "a")
+	local myDBGfile = io.open("/media/hdd/neutrinoIPTV.log", "a")
 	if myDBGfile == nil then
 		local fakeError = 1
 	else

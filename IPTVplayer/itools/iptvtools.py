@@ -583,7 +583,7 @@ def printDBG( DBGtxt ):
         print(DBGtxt)
     elif DBG == 'debugfile':
         try:
-            f = open('/hdd/iptv.dbg', 'a')
+            f = open('/media/hdd/iptv.dbg', 'a')
             f.write(DBGtxt + '\n')
             f.close
         except Exception:

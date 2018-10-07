@@ -509,8 +509,8 @@ def getCMD(cmdFileName):
 # debugs
 def clearLogsPaths():
     currTime   = datetime.now()
-    if os.access('/hdd', os.W_OK):
-        logPath='/hdd'
+    if os.access('/media/hdd', os.W_OK):
+        logPath='/media/hdd'
     else:
         logPath='/tmp'
     try:

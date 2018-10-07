@@ -13,7 +13,7 @@ PluginLanguagePath = "Extensions/IPTVPlayer/locale"
 gSetIPTVPlayerLastHostError = ""
 
 def localeInit():
-    lang = 'pl' #TO DO language.getLanguage()[:2] # getLanguage returns e.g. "fi_FI" for "language_country"
+    lang = 'de' #TO DO language.getLanguage()[:2] # getLanguage returns e.g. "fi_FI" for "language_country"
     os.environ["LANGUAGE"] = lang # Enigma doesn't set this (or LC_ALL, LC_MESSAGES, LANG). gettext needs it!
     print(PluginLanguageDomain + " set language to " + lang)
     gettext.bindtextdomain(PluginLanguageDomain, resolveFilename(SCOPE_PLUGINS, PluginLanguagePath))

@@ -68,8 +68,8 @@ end
 -- ###################################################### E2 settings ########################################################
 confE2file="/var/tuxbox/config/E2settings.conf"
 
-NaszaSciezka="/hdd/movie/"
-SciezkaCache="/hdd/IPTVCache/"
+NaszaSciezka="/media/hdd/movie/"
+SciezkaCache="/media/hdd/IPTVCache/"
 
 if fileExists("/etc/enigma2/settings") then
     os.execute('mv -f /etc/enigma2/settings ' .. confE2file)

@@ -67,7 +67,7 @@ function runPythonHost(id)
 		n:runScript(pluginPath .. "luaScripts/pythonHost.lua", id, pluginPath, conf["PlayerMode"], switchYesNoLang(conf["StopTV"]), messagesFile, 
 				switchYesNoLang(conf["DelBuffer"])
 		)
-		--os.execute("/usr/ntrino/bin/pzapit -rz")
+		os.execute("/usr/bin/pzapit -rz")
 	else
 		messagebox.exec{title= MsgBoxTitleError, text=disabledPython, buttons={ "ok" }, has_shadow=true }
 	end
@@ -160,12 +160,12 @@ function MainMenu()
 	if fileExists(NaszaSciezka) then
 		mm:addItem{type="filebrowser", id="NaszaSciezkaID", value= NaszaSciezka, name= MMNaszaSciezka, dir_mode= 1, action="setE2setting"}
 	else
-		mm:addItem{type="filebrowser", id="NaszaSciezkaID", value= "/hdd/movie/", name= MMNaszaSciezka, dir_mode= 1, action="setE2setting"}
+		mm:addItem{type="filebrowser", id="NaszaSciezkaID", value= "/media/hdd/movie/", name= MMNaszaSciezka, dir_mode= 1, action="setE2setting"}
 	end
 	if fileExists(SciezkaCache) then
 		mm:addItem{type="filebrowser", id="SciezkaCacheID", value= SciezkaCache, name= MMSciezkaCache, dir_mode= 1, action="setE2setting"}
 	else
-		mm:addItem{type="filebrowser", id="SciezkaCacheID", value= "/hdd/IPTVCache/", name= MMSciezkaCache, dir_mode= 1, action="setE2setting"}
+		mm:addItem{type="filebrowser", id="SciezkaCacheID", value= "/media/hdd/IPTVCache/", name= MMSciezkaCache, dir_mode= 1, action="setE2setting"}
 	end
 	
         mm:addItem{type="separatorline"}
