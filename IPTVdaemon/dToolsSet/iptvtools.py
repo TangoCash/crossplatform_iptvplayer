@@ -255,7 +255,10 @@ def GetPyScriptCmd(name):
                 cmd = '%s %s' % (pyPath, baseName)
                 break
     return cmd
-    
+
+def GetJSScriptFile(file):
+    return resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/jsscripts/') + file
+
 def GetUchardetPath():
     return config.plugins.iptvplayer.uchardetpath.value
     
@@ -294,7 +297,42 @@ def GetCookieDir(file = ''):
             mkdirs(cookieDir)
     except Exception: printExc()
     return cookieDir + file
-    
+
+###########################
+gE2iPlayerTempJSCache = None
+def SetTmpJSCacheDir():
+    global gE2iPlayerTempJSCache
+    gE2iPlayerTempJSCache = '/tmp/e2iplayer_js_cache/'
+    mkdirs(gE2iPlayerTempJSCache)
+
+def ClearTmpJSCacheDir():
+    global gE2iPlayerTempJSCache
+    if gE2iPlayerTempJSCache != None:
+        try:
+            for file in os.listdir( gE2iPlayerTempJSCache ):
+                rm(gE2iPlayerTempJSCache + '/' + file)
+        except Exception:
+            printExc()
+    gE2iPlayerTempJSCache = None
+
+def TestTmpJSCacheDir():
+    path = GetJSCacheDir(forceFromConfig=True)
+    if not os.path.isdir(path):
+        mkdirs(path, True)
+    with open(path + ".rw_test", 'w') as f:
+        f.write("test")
+
+def GetJSCacheDir(file = '', forceFromConfig=False):
+    global gE2iPlayerTempJSCache
+    if gE2iPlayerTempJSCache == None or forceFromConfig: cookieDir = config.plugins.iptvplayer.SciezkaCache.value + '/JSCache/'
+    else: cookieDir = gE2iPlayerTempJSCache
+    try:
+        if not os.path.isdir(cookieDir):
+            mkdirs(cookieDir)
+    except Exception: printExc()
+    return cookieDir + file
+##############################
+
 def GetTmpDir(file = ''):
     path = config.plugins.iptvplayer.NaszaTMP.value
     path = path.replace('//', '/')
@@ -1314,3 +1352,9 @@ def GetE2VideoMode():
     
 def SetE2VideoMode(value):
     return SetE2OptionByFile('/proc/stb/video/videomode', value)
+
+def MergeDicts(*dict_args):
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
