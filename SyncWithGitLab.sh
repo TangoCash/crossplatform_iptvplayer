@@ -1,6 +1,7 @@
 #!/bin/bash
-
-publicGitRoot=$(pwd)
+UPD=$1
+[ "$UPD" == "" ] && UPD=$(pwd)
+publicGitRoot=$UPD
 daemonDir=$publicGitRoot/IPTVdaemon
 KaddonDir=$publicGitRoot/addon4KODI/neutrinoIPTV
 NpluginDir=$publicGitRoot/addon4neutrino/neutrinoIPTV
