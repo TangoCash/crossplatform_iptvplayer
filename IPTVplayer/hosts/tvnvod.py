@@ -291,7 +291,7 @@ class TvnVod(CBaseHostClass):
                         if '' != tmp:
                             tmp = time.strptime(tmp, "%Y-%m-%d %H:%M")
                             if tmp > time.localtime():
-                                title += _(" (planowany)")
+                                title += " (planowany)"
                     except Exception:
                         printExc()
                     

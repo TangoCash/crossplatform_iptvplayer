@@ -313,7 +313,18 @@ class Key(BasePathMixin):
 
         return '#EXT-X-KEY:' + ','.join(output)
 
+class AudioStream(BasePathMixin):
+    def __init__(self, uri, name, language, base_uri):
 
+        self.uri = uri
+        self.base_uri = base_uri
+        self.language = language
+        self.name = name
+
+    def __str__(self):
+        # ToDO
+        return ''
+        
 class Playlist(BasePathMixin):
     '''
     Playlist object representing a link to a variant M3U8 with a specific bitrate.
@@ -322,7 +333,8 @@ class Playlist(BasePathMixin):
 
     More info: http://tools.ietf.org/html/draft-pantos-http-live-streaming-07#section-3.3.10
     '''
-    def __init__(self, uri, stream_info, base_uri):
+    def __init__(self, uri, stream_info, alt_audio_streams, base_uri):
+    
         self.uri = uri
         self.base_uri = base_uri
 
@@ -340,6 +352,8 @@ class Playlist(BasePathMixin):
                                       program_id=stream_info.get('program_id'),
                                       resolution=resolution_pair,
                                       codecs=stream_info.get('codecs'))
+        self.alt_audio_streams = [ AudioStream(base_uri=self.base_uri, uri=alt_audio_stream.get('uri'), name=alt_audio_stream.get('name'), language=alt_audio_stream.get('language'))
+                                    for alt_audio_stream in alt_audio_streams ]
 
     def __str__(self):
         stream_inf = []

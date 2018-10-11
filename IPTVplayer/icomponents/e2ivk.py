@@ -6,7 +6,7 @@
 #
 # 
 from Screens.Screen import Screen
-from Components.ActionMap import ActionMap
+from Components.ActionMap import NumberActionMap
 from enigma import ePoint, gFont, gRGB, eListboxPythonMultiContent, eListbox, gFont, RT_HALIGN_LEFT, RT_HALIGN_RIGHT, RT_VALIGN_CENTER, getDesktop
 from Tools.LoadPixmap import LoadPixmap
 from Tools.Directories import fileExists
@@ -22,6 +22,21 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.iptvlist import IPTVListComponentBase
 from Plugins.Extensions.IPTVPlayer.icomponents.e2isimpledownloader import SingleFileDownloaderWidget
+
+
+class E2iInput(Input):
+    def __init__(self, *args, **kwargs):
+        self.e2iTimeoutCallback = None
+        Input.__init__(self, *args, **kwargs)
+
+    def timeout(self, *args, **kwargs):
+        callCallback = False
+        try: callCallback = True if self.lastKey != -1 else False
+        except Exception:  printExc()
+        try: Input.timeout(self, *args, **kwargs)
+        except Exception: printExc()
+        if self.e2iTimeoutCallback:
+            self.e2iTimeoutCallback()
 
 class E2iVKSelectionList(IPTVListComponentBase):
     ICONS_FILESNAMES = {'on' : 'radio_button_on.png', 'off' : 'radio_button_off.png'}
@@ -223,13 +238,13 @@ class E2iVirtualKeyBoard(Screen):
         self.skin = self.prepareSkin()
 
         Screen.__init__(self, session)
-
         self.onLayoutFinish.append(self.setGraphics)
         self.onShown.append(self.onWindowShow)
         self.onClose.append(self.__onClose)
 
-        self["actions"] = ActionMap(["WizardActions", "DirectionActions", "ColorActions", "E2iPlayerVKActions"],
+        self["actions"] = NumberActionMap(["WizardActions", "DirectionActions", "ColorActions", "E2iPlayerVKActions", "KeyboardInputActions", "InputBoxActions", "InputAsciiActions"],
         {
+            "gotAsciiCode": self.keyGotAscii,
             "ok":        self.keyOK,
             "ok_repeat": self.keyOK,
             "back":      self.keyBack,
@@ -242,7 +257,21 @@ class E2iVirtualKeyBoard(Screen):
             "green":     self.keyGreen,
             "yellow":    self.keyYellow,
             "blue":      self.keyBlue,
-        }, -1)
+            "deleteBackward": self.backClicked,
+            "deleteForward":  self.forwardClicked,
+            "pageUp":         self.cursorRight,
+            "pageDown":       self.cursorLeft,
+            "1": self.keyNumberGlobal,
+            "2": self.keyNumberGlobal,
+            "3": self.keyNumberGlobal,
+            "4": self.keyNumberGlobal,
+            "5": self.keyNumberGlobal,
+            "6": self.keyNumberGlobal,
+            "7": self.keyNumberGlobal,
+            "8": self.keyNumberGlobal,
+            "9": self.keyNumberGlobal,
+            "0": self.keyNumberGlobal,
+        }, -2)
 
         # Left list
         self['left_header'] = Label(" ")
@@ -278,13 +307,13 @@ class E2iVirtualKeyBoard(Screen):
         self.header = title if title else _('Enter the text')
         self.startText = text
         
-        self["text"] = Input(text="")
+        self["text"] = E2iInput(text="")
         self["header"] = Label(" ")
 
         self.colMax = len(self.KEYIDMAP[0])
         self.rowMax = len(self.KEYIDMAP)
 
-        self.rowIdx = 1
+        self.rowIdx = 0
         self.colIdx = 0
 
         self.colors = {'normal':gRGB(int('ffffff', 0x10)), 'selected':gRGB(int('39b54a', 0x10)), 'deadkey':gRGB(int('0275a0', 0x10)), 'ligature':gRGB(int('ed1c24', 0x10)), 'inactive':gRGB(int('979697', 0x10))}
@@ -298,6 +327,7 @@ class E2iVirtualKeyBoard(Screen):
 
     def __onClose(self):
         self.onClose.remove(self.__onClose)
+        self["text"].e2iTimeoutCallback = None
         if self.autocomplete:
             self.autocomplete.term()
 
@@ -305,7 +335,7 @@ class E2iVirtualKeyBoard(Screen):
             config.plugins.iptvplayer.osk_layout.value = self.selectedVKLayoutId
             config.plugins.iptvplayer.osk_layout.save()
             configfile.save()
-        
+
     def getKeyboardLayoutItem(self, vkLayoutId):
         retItem = None
         for item in self.ALL_VK_LAYOUTS:
@@ -367,6 +397,7 @@ class E2iVirtualKeyBoard(Screen):
     
     def setGraphics(self):
         self.onLayoutFinish.remove(self.setGraphics)
+        self["text"].e2iTimeoutCallback = self.textUpdated
         
         for i in range(0, 63):
             key = self.graphicsMap.get(str(i), 'k')
@@ -727,6 +758,7 @@ class E2iVirtualKeyBoard(Screen):
         self['left_list'].setSelectionState(True)
 
     def setFocus(self, focus):
+        self['text'].timeout()
         if self.focus != focus:
             if self.focus == self.FOCUS_LANGUAGES:
                 self['left_list'].setSelectionState(False)
@@ -892,6 +924,40 @@ class E2iVirtualKeyBoard(Screen):
                 item.instance.moveSelection(item.instance.pageDown)
         else:
             return 0
+
+    def cursorRight(self):
+        if self.focus == self.FOCUS_KEYBOARD:
+            self.handleKeyId(62)
+        else:
+            return 0
+
+    def cursorLeft(self):
+        if self.focus == self.FOCUS_KEYBOARD:
+            self.handleKeyId(61)
+        else:
+            return 0
+
+    def backClicked(self):
+        if self.focus == self.FOCUS_KEYBOARD:
+            self.handleKeyId(15)
+        else:
+            return 0
+
+    def forwardClicked(self):
+        if self.focus == self.FOCUS_KEYBOARD:
+            self.handleKeyId(29)
+        else:
+            return 0
+
+    def keyNumberGlobal(self, number):
+        if self.currentKeyId == 0:
+            try: self["text"].number(number)
+            except Exception: printExc()
+
+    def keyGotAscii(self):
+        if self.currentKeyId == 0:
+            try: self["text"].handleAscii(getPrevAsciiCode())
+            except Exception: printExc()
 
     def setSuggestionVisible(self, visible):
         if self.isAutocompleteEnabled and self.isSuggestionVisible != visible:

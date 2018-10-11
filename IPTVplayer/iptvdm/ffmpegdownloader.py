@@ -22,11 +22,6 @@ from enigma import eConsoleAppContainer
 from time import sleep
 import re
 import datetime
-try:
-    try:    import json
-    except Exception: import simplejson as json
-except Exception:
-    printExc()
 ###################################################
 
 ###################################################
@@ -127,7 +122,7 @@ class FFMPEGDownloader(BaseDownloader):
         else:
             cmdTab.extend(['-i', url])
         
-        cmdTab.extend(['-c:v', 'copy', '-c:a', 'copy', '-f', self.ffmpegOutputContener, self.filePath])
+        cmdTab.extend(['-c:v', 'copy', '-c:a', 'copy', '-f', tmpUri.meta.get('ff_out_container', self.ffmpegOutputContener), self.filePath])
         
         self.fileCmdPath = self.filePath + '.iptv.cmd'
         rm(self.fileCmdPath)

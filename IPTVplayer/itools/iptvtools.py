@@ -583,7 +583,7 @@ def printDBG( DBGtxt ):
         print(DBGtxt)
     elif DBG == 'debugfile':
         try:
-            f = open('/media/hdd/iptv.dbg', 'a')
+            f = open('/hdd/iptv.dbg', 'a')
             f.write(DBGtxt + '\n')
             f.close
         except Exception:
@@ -1124,8 +1124,8 @@ class CSearchHistoryHelper():
                 uniqHistoryList.append(i)
         historyList = uniqHistoryList
 
-        # save file without duplicates
-        if orgLen > len(historyList):
+        # strip file if it has to big overhead
+        if orgLen - len(historyList) > 50:
             self._saveHistoryList(historyList)
         
         # now type also can be stored
@@ -1152,12 +1152,12 @@ class CSearchHistoryHelper():
                 value = itemValue
                 if None != itemType:
                     value = value + self.TYPE_SEP + itemType
-                file.write(value + '\n')
+                value = value if type(u'') == type(value) else value.decode('utf-8', 'replace')
+                file.write(value + u'\n')
                 printDBG('Added pattern: "%s"' % itemValue) 
                 file.close
         except Exception:
             printExc('CSearchHistoryHelper.addHistoryItem EXCEPTION')
-
 
     def _saveHistoryList(self, list):
         printDBG('CSearchHistoryHelper._saveHistoryList to file = "%s"' % self.PATH_FILE)
@@ -1169,20 +1169,12 @@ class CSearchHistoryHelper():
             file.close
         except Exception:
             printExc('CSearchHistoryHelper._saveHistoryList EXCEPTION')
-    
+
     @staticmethod
     def saveLastPattern(pattern):
         filePath = GetSearchHistoryDir("pattern")
-        sts = False
-        try:
-            file = codecs.open(filePath, 'w', 'utf-8', 'replace')
-            file.write(pattern)
-            file.close
-            sts = True
-        except Exception:
-            printExc()
-        return sts
-        
+        return WriteTextFile(filePath, pattern.replace('\n', '').replace('\r', ''))
+
     @staticmethod
     def loadLastPattern():
         filePath = GetSearchHistoryDir("pattern")
@@ -1201,12 +1193,13 @@ def ReadTextFile(filePath, encode='utf-8', errors='ignore'):
     except Exception:
         printExc()
     return sts, ret
-    
+
 def WriteTextFile(filePath, text, encode='utf-8', errors='ignore'):
     sts = False
     try:
+        toSave = text if type(u'') == type(text) else text.decode('utf-8', errors)
         file = codecs.open(filePath, 'w', encode, errors)
-        file.write(text)
+        file.write(toSave)
         file.close()
         sts = True
     except Exception:

@@ -215,11 +215,7 @@ class HasBahCa(CBaseHostClass):
             params['header']['Referer'] = proxy
             url = proxy
         return self.cm.getPage(url, params, post_data)
-        
-    def _cleanHtmlStr(self, str):
-        str = str.replace('<', ' <').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        return self.cm.ph.removeDoubles(clean_html(str), ' ').strip()
-        
+
     def _getJItemStr(self, item, key, default=''):
         v = item.get(key, None)
         if None == v:
@@ -280,8 +276,8 @@ class HasBahCa(CBaseHostClass):
         if login == '' and password == '':
             sts, data = self.getPage('http://hasbahcaiptv.com/page.php?seite=Passwort.html')
             if sts:
-                login    = self._cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Downloads Login', '</h3>', False)[1])
-                password = self._cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Downloads Pass', '</h3>', False)[1])
+                login    = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Downloads Login', '</h3>', False)[1])
+                password = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, 'Downloads Pass', '</h3>', False)[1])
                 self.hasbahcaiptv['login']    = login.replace('&nbsp;','').replace('\xc2\xa0','').strip() 
                 self.hasbahcaiptv['password'] = password.replace('&nbsp;','').replace('\xc2\xa0', '').strip()
             
@@ -295,12 +291,12 @@ class HasBahCa(CBaseHostClass):
             if 'text.png' in item:  name = 'm3u' 
             elif 'dir.png' in item: name = 'HasBahCa' 
             else: continue
-            desc    = self.cm.ph.removeDoubles(clean_html(item.replace('>', '> ')).replace('\t', ' '), ' ')
+            desc    = self.cleanHtmlStr(item)
             new_url = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
             title   = new_url
             printDBG("listHasBahCa new_url[%s]" % new_url)
             if title[-1] != '/':  title = title.split('/')[-1]
-            title   = self._cleanHtmlStr(item) #title.split('dir=')[-1]
+            title   = self.cleanHtmlStr(item) #title.split('dir=')[-1]
 
             if new_url.startswith('.'): 
                 if 'm3u' == name: new_url = BASE_URL + new_url[2:]

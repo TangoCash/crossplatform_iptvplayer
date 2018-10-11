@@ -226,16 +226,16 @@ class SeriesOnlineIO(CBaseHostClass):
         episodeKeys = []
         episodeLinks = {}
         
-        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG("+++")
         printDBG(tab)
-        printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        printDBG("+++")
         
         for item in tab:
             title = item['title'].upper()
             title = title.replace('EPISODE', ' ')
             title = title.replace(' 0', ' ')
             if 'TRAILER' not in title: title = 'Episode ' + title
-            title = self.cm.ph.removeDoubles(title, ' ')
+            title = self.cleanHtmlStr(title)
             if title not in episodeKeys:
                 episodeLinks[title] = []
                 episodeKeys.append(title)

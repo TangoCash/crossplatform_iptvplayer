@@ -27,8 +27,8 @@ except Exception: import simplejson as json
 ###################################################
 # Config options for HOST
 ###################################################
-config.plugins.iptvplayer.skylinewebcams_lang = ConfigSelection(default = "en", choices = [("en", _("en")), ("it", _("it")), ("es", _("es")), ("de", _("de")), ("fr", _("fr")),
-                                                                                           ("el", _("el")), ("hr", _("hr")), ("sl", _("sl")), ("zh", _("zh"))])
+config.plugins.iptvplayer.skylinewebcams_lang = ConfigSelection(default = "en", choices = [("en", "en"), ("it", "it"), ("es", "es"), ("de", "de"), ("fr", "fr"),
+                                                                                           ("el", "el"), ("hr", "hr"), ("sl", "sl"), ("zh", "zh")])
 
 def GetConfigList():
     optionList = []

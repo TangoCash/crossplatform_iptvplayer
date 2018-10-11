@@ -77,7 +77,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
         self.onChangedEntry = [ ]
         self.list = [ ]
         ConfigListScreen.__init__(self, self.list, session = session, on_change = self.changedEntry)
-        self.setup_title = (_("IPTV Player - settings"))
+        self.setup_title = (_("E2iPlayer - settings"))
 
         self["key_green"] = Label(_("Save"))
         self["key_ok"] = Label(_(" "))
@@ -126,7 +126,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
             self["config"].onSelectionChanged.remove(self.onSelectionChanged)
 
     def layoutFinished(self):
-        self.setTitle(_("IPTV Player - settings"))
+        self.setTitle(_("E2iPlayer - settings"))
         if not self.onSelectionChanged in self["config"].onSelectionChanged:
             self["config"].onSelectionChanged.append(self.onSelectionChanged)
         self.runSetup()

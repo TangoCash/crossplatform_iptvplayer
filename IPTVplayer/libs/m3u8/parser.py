@@ -14,6 +14,7 @@ ext_x_allow_cache = '#EXT-X-ALLOW-CACHE'
 ext_x_endlist = '#EXT-X-ENDLIST'
 extinf = '#EXTINF'
 ext_x_program_date_time = '#EXT-X-PROGRAM-DATE-TIME'
+ext_x_media = '#EXT-X-MEDIA'
 
 '''
 http://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.2
@@ -30,6 +31,7 @@ def parse(content):
         'is_endlist': False,
         'playlists': [],
         'segments': [],
+        'alt_media': {},
         }
 
     state = {
@@ -48,7 +50,8 @@ def parse(content):
             _parse_simple_parameter(line, data)
         elif line.startswith(ext_x_allow_cache):
             _parse_simple_parameter(line, data)
-
+        elif line.startswith(ext_x_media):
+            _parse_alternate_media(line, data)
         elif line.startswith(ext_x_key):
             _parse_key(line, data)
 
@@ -107,13 +110,39 @@ def _parse_stream_inf(line, data, state):
     if 'codecs' in stream_info:
         stream_info['codecs'] = remove_quotes(stream_info['codecs'])
 
+    if 'audio' in stream_info:
+        stream_info['audio'] = remove_quotes(stream_info['audio'])
+
     data['is_variant'] = True
     state['stream_info'] = stream_info
 
-def _parse_variant_playlist(line, data, state):
-    playlist = {'uri': line,
-                'stream_info': state.pop('stream_info')}
+def _parse_alternate_media(line, data):
+    params = ATTRIBUTELISTPATTERN.split(line.replace(ext_x_media + ':', ''))[1::2]
 
+    normalize_params = {}
+    for param in params:
+        name, value = param.split('=', 1)
+        normalize_params[normalize_attribute(name)] = remove_quotes(value)
+
+    group = remove_quotes(normalize_params.pop('group_id', None))
+    if group:
+        if group not in data['alt_media']:
+            data['alt_media'][group] = []
+        data['alt_media'][group].append(normalize_params)
+
+def _parse_variant_playlist(line, data, state):
+    stream_info = state.pop('stream_info')
+    playlist = {'uri': line,
+                'stream_info': stream_info,
+                'alt_audio_streams': []}
+    try:
+        alt_audio_streams = []
+        for item in data['alt_media'][stream_info['audio']]:
+            if item['type'].lower() == 'audio':
+                alt_audio_streams.append(item)
+        playlist['alt_audio_streams'] = alt_audio_streams
+    except Exception:
+        pass
     data['playlists'].append(playlist)
 
 def _parse_simple_parameter(line, data, cast_to=str):

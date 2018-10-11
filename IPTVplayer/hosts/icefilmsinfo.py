@@ -17,7 +17,7 @@ import urllib
 import random
 try:    import json
 except Exception: import simplejson as json
-from Components.config import config, ConfigSelection, getConfigListEntry
+from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
@@ -26,10 +26,12 @@ from Components.config import config, ConfigSelection, getConfigListEntry
 config.plugins.iptvplayer.icefilmsinfo_proxy = ConfigSelection(default = "None", choices = [("None",         _("None")),
                                                                                             ("proxy_1",  _("Alternative proxy server (1)")),
                                                                                             ("proxy_2",  _("Alternative proxy server (2)"))])
-
+config.plugins.iptvplayer.icefilmsinfo_alt_domain = ConfigText(default = "", fixed_size = False)
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry(_("Use proxy server:"), config.plugins.iptvplayer.icefilmsinfo_proxy))
+    if config.plugins.iptvplayer.icefilmsinfo_proxy.value == 'None':
+        optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.icefilmsinfo_alt_domain))
     return optionList
 ###################################################
 
@@ -42,17 +44,24 @@ class IceFilms(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'IceFilms.tv', 'cookie':'IceFilms.cookie'})
-        self.HEADER = {'User-Agent':'Mozilla/5.0', 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}
+        self.USER_AGENT = 'Mozilla/5.0'
+        self.HEADER = {'User-Agent':self.USER_AGENT, 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         self.cm.HEADER = self.HEADER # default header
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.DEFAULT_ICON_URL = 'http://whatyouremissing.weebly.com/uploads/1/9/6/3/19639721/144535_orig.jpg'
         self.MAIN_URL = None
-        
+
     def selectDomain(self):
-        for domain in ['http://www.icefilms.info/', 'https://icefilms.unblocked.at/']:
-            sts, data = self.cm.getPage(domain)
+        domains = ['http://www.icefilms.info/', 'https://icefilms.unblocked.gdn/', 'https://icefilms.unblocked.at/']
+        domain = config.plugins.iptvplayer.icefilmsinfo_alt_domain.value.strip()
+        if self.cm.isValidUrl(domain):
+            if domain[-1] != '/': domain += '/'
+            domains.insert(0, domain)
+
+        for domain in domains:
+            sts, data = self.getPage(domain)
             if sts and  'donate.php' in data:
                 if self.setMainUrl(self.cm.meta['url']):
                     break
@@ -70,10 +79,14 @@ class IceFilms(CBaseHostClass):
         self.cacheFilters = {}
         self.cacheLinks = {}
         self.cacheSeries = {}
-        
-    def getPage(self, url, addParams = {}, post_data = None):
+
+    def getPage(self, baseUrl, addParams = {}, post_data = None):
+        if addParams == {}: addParams = dict(self.defaultParams)
+
+        origBaseUrl = baseUrl
+        baseUrl = self.cm.iriToUri(baseUrl)
+
         proxy = config.plugins.iptvplayer.icefilmsinfo_proxy.value
-        printDBG(">> " + proxy)
         if proxy != 'None':
             if proxy == 'proxy_1':
                 proxy = config.plugins.iptvplayer.alternative_proxy1.value
@@ -81,9 +94,10 @@ class IceFilms(CBaseHostClass):
                 proxy = config.plugins.iptvplayer.alternative_proxy2.value
             addParams = dict(addParams)
             addParams.update({'http_proxy':proxy})
-        
-        return self.cm.getPage(url, addParams, post_data)
-        
+
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
+        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+
     def _getAttrVal(self, data, attr):
         val = self.cm.ph.getSearchGroups(data, '[<\s][^>]*' + attr + '=([^\s^>]+?)[\s>]')[0].strip()
         if len(val) > 2:

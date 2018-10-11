@@ -364,5 +364,5 @@ class IPTVEmbeddedSubtitlesHandler:
         
 if __name__ == "__main__":
     obj = IPTVSubtitlesHandler()
-    obj.loadSubtitles('/media/hdd/_Back.To.The.Future[1985]DvDrip-aXXo.pl.srt')
+    obj.loadSubtitles('/hdd/_Back.To.The.Future[1985]DvDrip-aXXo.pl.srt')
     obj.getSubtitles(10000)

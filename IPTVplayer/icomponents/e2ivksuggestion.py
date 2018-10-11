@@ -11,12 +11,12 @@ from enigma import eTimer
 
 class AutocompleteSearch:
 
-    def __init__(self, provider):
+    def __init__(self, provider, historyList=[]):
         printDBG( "AS.__init__" )
 
         self.lock = threading.Lock()
         self.event = threading.Event()
-        
+
         self.run = True
         self.workThread = None
         self.requestParams = {}
@@ -24,12 +24,19 @@ class AutocompleteSearch:
 
         self.lastSuggestions = None
         self.lastStamp = -1
-        
+
         self.timer = eTimer()
         self.timer_conn = None
         self.timer_started = False
         self.callback = None
         self.provider = provider
+
+        self.historyList = []
+        for item in historyList:
+            try:
+                self.historyList.append((item.decode('utf-8').lower(), item))
+            except Exception:
+                printExc()
 
     def __del__(self):
         printDBG( "AS.__del__")
@@ -102,6 +109,15 @@ class AutocompleteSearch:
                 self.event.clear()
 
             if stamp != prevStamp:
+                if self.historyList:
+                    try:
+                        text = text.decode('utf-8').lower()
+                        for item in self.historyList:
+                            if item[0] == text:
+                                retList.append(item[1])
+                    except Exception:
+                        printExc()
+
                 try:
                     retList = provider.getSuggestions(text, locale)
                 except Exception:

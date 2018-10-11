@@ -263,7 +263,7 @@ msgstr "Übertragungen"
 msgid "Browse"
 msgstr "Blättern"
 
-msgid "Buffer path"
+msgid "Buffering location"
 msgstr "Puffer-Verzeichnis"
 
 msgid "CATEGORY"
@@ -385,8 +385,8 @@ msgstr "Standard Video-Verfahren für 4:3"
 msgid "Default video aspect ratio"
 msgstr "Standard Seitenverhältnis"
 
-msgid "Default video policy"
-msgstr "Standard Video-Verfahren"
+msgid "Default video policy for 16:9"
+msgstr "Standard Video-Verfahren für 16:9"
 
 msgid "Default video quality:"
 msgstr "Standard Video Qualität:"
@@ -628,7 +628,7 @@ msgstr "Ende"
 msgid "External movie player config"
 msgstr "Externen Movie Player konfigurieren"
 
-msgid "Info Banner timeout"
+msgid "Info bar timeout"
 msgstr "Timeout der Infobar"
 
 msgid "Use software decoder for the %s"
@@ -763,7 +763,7 @@ msgstr "IPTV - Рlayer Modus"
 msgid "IPTV - the recorder mode"
 msgstr "IPTV - Aufnahme Modus"
 
-msgid "IPTV Player - settings"
+msgid "E2iPlayer - settings"
 msgstr "E2iPlayer - Konfiguration"
 
 msgid "IPTV Player HD version %s"
@@ -933,8 +933,8 @@ msgstr "Live Kanäle"
 msgid "Load"
 msgstr "Laden"
 
-msgid "Load automatically the subtitle from file with the same name"
-msgstr "Lade Untertitel automatisch aus Datei selben Namens"
+msgid "Automatically turn on external subtitles"
+msgstr "Externe Untertitel automatisch einblenden"
 
 msgid "Loading"
 msgstr "Laden"
@@ -1282,7 +1282,7 @@ msgstr "Aktuell"
 msgid "Recorder > Player"
 msgstr "Rekorder > Player"
 
-msgid "Records path"
+msgid "Downloads location"
 msgstr "Aufnahme-Verzeichnis"
 
 msgid "Refresh"
@@ -3724,7 +3724,7 @@ msgid "RAM buffer size [MB] for network protocols"
 msgstr "RAM-Puffer in [MB] für Online-Inhalte"
 
 msgid "RAM buffer size [MB] for local files"
-msgstr "RAM-Puffer in [MB] für Lokal-Inhalte"
+msgstr "RAM-Puffer in [MB] für Lokale-Inhalte"
 
 msgid "Please wait for initialization data."
 msgstr "Bitte warten Sie auf die Initialisierungsdaten."
@@ -3736,10 +3736,10 @@ msgid "Whole file must be downloaded to start playback!"
 msgstr "Die gesamte Datei muss heruntergeladen werden, um die Wiedergabe zu starten!"
 
 msgid "You can use external eplayer to start playback faster."
-msgstr ""
+msgstr "Sie können den externen Eplayer verwenden, um die Wiedergabe schneller zu starten."
 
 msgid "Failed to gzip."
-msgstr ""
+msgstr "Gzip fehlgeschlagen."
 
 msgid "Please visit \"%s\" and confirm that you are human."
 msgstr "Bitte besuchen Sie \"%s\" um zu bestätigen, dass Sie ein Mensch sind."
@@ -3936,8 +3936,8 @@ msgstr "24 Stunden-Format "
 msgid "12 hour format "
 msgstr "12 Stunden-Format "
 
-msgid "Info Banner clock format"
-msgstr "Infobar Uhr-Format"
+msgid "Info bar clock format"
+msgstr "Infobar Uhr-Anzeige"
 
 msgid "Inject black iframe at video playback finish"
 msgstr "Schwarzes Iframe am Wiedergabeende einfügen"
@@ -3984,31 +3984,44 @@ msgid "Load of the Virtual Keyboard layout \"%s\" failed due to the following er
 msgstr "Das Laden des Layouts der virtuellen Tastatur \"%s\" ist aufgrund des folgenden Fehlers fehlgeschlagen: \"%s\""
 
 msgid "\"%s\" Virtual Keyboard layout not available."
-msgstr "\"%s\" virtuelle Tastatur-Layout nicht verfügbar."
+msgstr "Das virtuelle \"%s\" Tastatur-Layout ist nicht vorhanden."
 
 msgid "Do you want to download \"%s\" Virtual Keyboard layout now?"
-msgstr "Möchten Sie das \"%s\" virtuelle Tastatur-Layout jetzt herunterladen?"
+msgstr "Möchten Sie das virtuelle \"%s\" Tastatur-Layout jetzt herunterladen?"
 
 msgid "Do you want to try to re-download \"%s\" Virtual Keyboard layout?"
-msgstr "Möchten Sie versuchen das \"%s\" virtuelle Tastatur-Layout erneut herunterzuladen?"
+msgstr "Möchten Sie versuchen das virtuelle \"%s\" Tastatur-Layout erneut herunterzuladen?"
 
-msgid "    Allow suggestions"
-msgstr "    Erlaube Suchvorschläge"
+msgid "    Show suggestions"
+msgstr "    Zeige Suchvorschläge"
 
 msgid "    Default suggestions provider"
 msgstr "    Standard Suchmaschine"
 
 msgid "Filmstarts Suggestions"
-msgstr "Filmstarts Ergebnisse"
+msgstr "Filmstarts Vorschläge"
 
 msgid "Filmweb Suggestionss"
-msgstr "Filmweb Ergebnisse"
+msgstr "Filmweb Vorschläge"
 
 msgid "IMDb Suggestions"
-msgstr "IMDb Ergebnisse"
+msgstr "IMDb Vorschläge"
 
 msgid "Youtube Suggestions"
-msgstr "Youtube Ergebnisse"
+msgstr "Youtube Vorschläge"
 
 msgid "Google Suggestions"
-msgstr "Google Ergebnisse"
+msgstr "Google Vorschläge"
+
+msgid ""
+"\n"
+"For more info please ask %s "
+msgstr ""
+"\n"
+"Für weitere Informationen fragen Sie bitte %s "
+
+msgid "It improves json data parsing.\n"
+msgstr "Es verbessert das JSON Daten Parsing.\n"
+
+msgid "The default aspect ratio for the external player"
+msgstr "Standard Seitenverhältnis für externen Player"

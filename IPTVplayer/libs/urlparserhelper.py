@@ -357,7 +357,7 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'mmsh'
     return retUrl
 
-def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False, sortWithMaxBitrate=-1):
+def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False, sortWithMaxBitrate=-1, mergeAltAudio=False):
     if checkExt and not M3U8Url.split('?', 1)[0].endswith('.m3u8'):
         return []
         
@@ -406,13 +406,21 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                         item['codecs'] = ','.join(codecs)
                 except Exception:
                     item['codecs'] = None
-                
-                item['name']  = "bitrate: %s res: %dx%d %s" % ( item['bitrate'], \
-                                                                item['width'],    \
-                                                                item['height'],  \
-                                                                item['codecs'] )
-                retPlaylists.append(item)
-            
+                    
+                item['name']  = "bitrate: %s res: %dx%d %s" % (item['bitrate'], \
+                                                               item['width'], \
+                                                               item['height'], \
+                                                               item['codecs'] )
+                if mergeAltAudio and playlist.alt_audio_streams and item['url'].meta.get('iptv_proto') == 'm3u8':
+                    for audio_stream in playlist.alt_audio_streams:
+                        audioUrl = strwithmeta(audio_stream.absolute_uri, item['url'].meta)
+                        item['name'] = '[%s] %s' % (audio_stream.name, item['name'])
+                        item['url'] = decorateUrl("merge://audio_url|video_url", {'audio_url':audioUrl, 'video_url':item['url'], 'ff_out_container':'mpegts'})
+                        retPlaylists.append(item)
+                else:
+                    item['ald_audio_streams'] = playlist.alt_audio_streams
+                    retPlaylists.append(item)
+        
             if sortWithMaxBitrate > -1:
                 def __getLinkQuality( itemLink ):
                     try:

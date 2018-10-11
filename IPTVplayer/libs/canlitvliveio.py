@@ -8,15 +8,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCooki
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
-
-###################################################
-# FOREIGN import
-###################################################
-try:    import json
-except Exception: import simplejson as json
-
-############################################
 
 
 class CanlitvliveIoApi(CBaseHostClass):
@@ -87,8 +80,9 @@ class CanlitvliveIoApi(CBaseHostClass):
         
         category = cItem.get('priv_category', None)
         if category == None:
-            itemsList.append({'name':cItem['name'], 'priv_category':'tv',    'type':'dir', 'title':_('TV'),    'url':self.MAIN_URL_TV,    'desc':self.MAIN_URL_TV,    'icon':self.DEFAULT_ICON_URL})
-            itemsList.append({'name':cItem['name'], 'priv_category':'radio', 'type':'dir', 'title':_('RADIO'), 'url':self.MAIN_URL_RADIO, 'desc':self.MAIN_URL_RADIO, 'icon':self.DEFAULT_ICON_URL})
+            itemsList.append({'name':cItem['name'], 'priv_category':'tv',    'type':'video', 'title':'TELE 1',   'url':'https://tele1.com.tr/canli-yayin/',    'desc':'https://tele1.com.tr/canli-yayin/',    'icon':'https://i0.wp.com/tele1.com.tr/wp-content/uploads/2016/11/tele1_logo_yeni.png'})
+            itemsList.append({'name':cItem['name'], 'priv_category':'tv',    'type':'dir',   'title':_('TV'),    'url':self.MAIN_URL_TV,    'desc':self.MAIN_URL_TV,    'icon':self.DEFAULT_ICON_URL})
+            itemsList.append({'name':cItem['name'], 'priv_category':'radio', 'type':'dir',   'title':_('RADIO'), 'url':self.MAIN_URL_RADIO, 'desc':self.MAIN_URL_RADIO, 'icon':self.DEFAULT_ICON_URL})
             return itemsList
         elif category == 'tv':
             self.MAIN_URL = self.MAIN_URL_TV
@@ -104,10 +98,15 @@ class CanlitvliveIoApi(CBaseHostClass):
     def getVideoLink(self, cItem):
         printDBG("CanlitvliveIoApi.getVideoLink")
         urlsTab = []
-        
+
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return urlsTab
-        
+
+        if '/tele1.' in cItem['url']:
+            data = ph.find(data, ('<div', '>', 'video-player'), '</div>', flags=ph.IGNORECASE)[1]
+            url = self.cm.getFullUrl(ph.search(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', flags=ph.IGNORECASE)[0], self.cm.meta['url'])
+            return self.up.getVideoLinkExt(strwithmeta(url, {'Referer':self.cm.meta['url']}))
+
         hlsUrl = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
         printDBG("hlsUrl||||||||||||||||| " + hlsUrl)
         if hlsUrl != '':

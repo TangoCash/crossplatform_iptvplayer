@@ -25,8 +25,8 @@ class VideoPenny(CBaseHostClass):
  
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'video.penny.ie', 'cookie':'video.penny.ie.cookie'})
-        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0'
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language':'pl,en-US;q=0.7,en;q=0.3', 'Accept-Encoding':'gzip, deflate', 'Upgrade-Insecure-Requests':'1', 'Connection':'keep-alive'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
@@ -36,7 +36,7 @@ class VideoPenny(CBaseHostClass):
         self.cachePrograms = []
         self.cacheLast = {}
 
-        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'cookie_items':{'retina':'1'}}
+        self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self._getHeaders = None
         self.mainPageReceived = False
         self.timestam = 0
@@ -60,12 +60,21 @@ class VideoPenny(CBaseHostClass):
         
     def getPage(self, baseUrl, addParams = {}, post_data = None):
         if not self.mainPageReceived:
+            rm(self.COOKIE_FILE)
             requestUrl = self.getMainUrl()
             sts, data = self._getPage(self.getMainUrl(), addParams, post_data)
-            self.mainPageReceived = True
             if sts:
                 self.setMainUrl(self.cm.meta['url'])
-            if baseUrl == requestUrl: return  sts, data
+                self.defaultParams['cookie_items'] = {'retina':'1'}
+            self.mainPageReceived = True
+            #cUrl = self.cm.meta['url']
+            #elements = re.compile(r'''src=(['"])([^\1]+?)(?:\1)''', re.I).findall(data)
+            #for it in elements:
+            #    it = self.cm.getFullUrl(it[1], cUrl)
+            #    self._getPage(it, addParams)
+
+            if baseUrl == requestUrl:
+                return  sts, data
         return self._getPage(baseUrl, addParams, post_data)
 
     def getFullUrl(self, url):

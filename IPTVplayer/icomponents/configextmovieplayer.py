@@ -40,7 +40,7 @@ config.plugins.iptvplayer.dts_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.wma_software_decode = ConfigYesNo(default = True)
 config.plugins.iptvplayer.mp3_software_decode = ConfigYesNo(default = False)
 config.plugins.iptvplayer.stereo_software_decode = ConfigYesNo(default = False)
-config.plugins.iptvplayer.software_decode_as = ConfigSelection(default = "pcm", choices = [("pcm", _("PCM")), ("lpcm", _("LPCM"))])
+config.plugins.iptvplayer.software_decode_as = ConfigSelection(default = "pcm", choices = [("pcm", "PCM"), ("lpcm", "LPCM")])
 config.plugins.iptvplayer.aac_mix = ConfigSelection(default = None, choices = [(None, _("from E2 settings"))])
 config.plugins.iptvplayer.ac3_mix = ConfigSelection(default = None, choices = [(None, _("from E2 settings"))])
 
@@ -295,7 +295,7 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
         
         list.append(getConfigListEntry(_("Remember last watched position"), config.plugins.iptvplayer.remember_last_position))
         if 1980 >= 800:
-            list.append(getConfigListEntry(_("Info Banner clock format"), config.plugins.iptvplayer.extplayer_infobanner_clockformat))
+            list.append(getConfigListEntry(_("Info bar clock format"), config.plugins.iptvplayer.extplayer_infobanner_clockformat))
         list.append(getConfigListEntry(_("Create LCD/VFD summary screen"), config.plugins.iptvplayer.extplayer_summary))
         if 1:#IsExecutable(config.plugins.iptvplayer.exteplayer3path.value):
             list.append(getConfigListEntry(_("----------------- External exteplayer3 options -----------------"), config.plugins.iptvplayer.fakeExtePlayer3))
@@ -316,16 +316,16 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
         if self.aac_mix_avaliable:
             list.append(getConfigListEntry(_("AAC downmix mode"), config.plugins.iptvplayer.aac_mix))
             
-        list.append(getConfigListEntry(_("Info Banner timeout"), config.plugins.iptvplayer.extplayer_infobar_timeout))
+        list.append(getConfigListEntry(_("Info bar timeout"), config.plugins.iptvplayer.extplayer_infobar_timeout))
         
         if self.aspect_avaliable:
             list.append(getConfigListEntry(_("Default video aspect ratio"), config.plugins.iptvplayer.extplayer_aspect) )
         if self.policy_avaliable:
-            list.append(getConfigListEntry(_("Default video policy"), config.plugins.iptvplayer.extplayer_policy) )
+            list.append(getConfigListEntry(_("Default video policy for 16:9"), config.plugins.iptvplayer.extplayer_policy) )
         if self.policy2_avaliable:
             list.append(getConfigListEntry(_("Default video policy for 4:3"), config.plugins.iptvplayer.extplayer_policy2) )
         
-        list.append(getConfigListEntry(_("Load automatically the subtitle from file with the same name"), config.plugins.iptvplayer.extplayer_subtitle_auto_enable) )
+        list.append(getConfigListEntry(_("Automatically turn on external subtitles"), config.plugins.iptvplayer.extplayer_subtitle_auto_enable) )
         list.append(getConfigListEntry(_("Subtitle line wrapping"), config.plugins.iptvplayer.extplayer_subtitle_wrapping_enabled) )
         list.append(getConfigListEntry(_("Subtitle font"), config.plugins.iptvplayer.extplayer_subtitle_font) )
         list.append(getConfigListEntry(_("Subtitle font size"), config.plugins.iptvplayer.extplayer_subtitle_font_size) )

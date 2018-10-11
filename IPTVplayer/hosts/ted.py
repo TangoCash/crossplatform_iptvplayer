@@ -4,18 +4,20 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetDefaultLang, CSelOneLink
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm, GetDefaultLang, CSelOneLink
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
+import re
 import urllib
 from datetime import timedelta
 from urlparse import  urljoin
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 
@@ -50,11 +52,8 @@ class TED(CBaseHostClass):
         if addParams == {}:
             addParams = dict(self.defaultParams)
         
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
         
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        addParams['cloudflare_params'] = { 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullUrl(self, url):
@@ -166,7 +165,7 @@ class TED(CBaseHostClass):
                 sts, data = self.getPage(url, httpParams)
                 if not sts: continue
                 try:
-                    data = byteify(json.loads(data))
+                    data = json_loads(data)
                     for item in data:
                         params = {'title':item['label'], 'f_topics':item['value']}
                         self.cacheAllTopics.append(params)
@@ -205,7 +204,7 @@ class TED(CBaseHostClass):
             try:
                 userLang = GetDefaultLang()
                 promotItem = None
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 for item in data:
                     params = {'title':item['label'], 'f_language':item['value']}
                     if item['value'] == userLang:
@@ -231,7 +230,7 @@ class TED(CBaseHostClass):
                 sts, data = self.getPage(url, httpParams)
                 if not sts: continue
                 try:
-                    data = byteify(json.loads(data))
+                    data = json_loads(data)
                     for item in data:
                         params = {'title':item['label'], 'f_event':item['value'], 'f_year':item['year']}
                         self.cacheAllEvents.append(params)
@@ -343,7 +342,7 @@ class TED(CBaseHostClass):
         if not sts: return
         nextPage = False
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             if page < data['metadata']['pageCount']: nextPage = True
             for item in data['records']:
                 url   = self.getFullUrl(item['url'])
@@ -441,7 +440,7 @@ class TED(CBaseHostClass):
             try:
                 if not self.cm.isValidUrl(url): return
                 if 'width' in item and 'height' in item:
-                    name = '%sx%s' % (item['width'], item['height'])
+                    name = '%sx%s (%s)' % (item['width'], item['height'], item['bitrate'])
                 else:
                     name = item.get('name', str(item['bitrate']))
                 bitrate = item['bitrate']
@@ -451,8 +450,8 @@ class TED(CBaseHostClass):
         
         tmp = self.cm.ph.getDataBeetwenMarkers(data, 'talkPage.init",', ')<', False)[1]
         try:
-            playerData = byteify(json.loads(tmp))['__INITIAL_DATA__']
-            tmp = playerData['media'].get('internal', {})
+            playerData = json_loads(tmp)['__INITIAL_DATA__']
+            tmp = playerData.get('media', {}).get('internal', {})
             for key in tmp:
                 bitrate = self.cm.ph.getSearchGroups(key, '([0-9]+)k')[0]
                 if bitrate == '': continue
@@ -469,13 +468,28 @@ class TED(CBaseHostClass):
                 if not url.startswith('mp4:'): continue
                 url = 'https://pc.tedcdn.com/' + url[4:]
                 _addLinkItem(urlTab, item, url)
-            
-            if 0 == len(urlTab):
-                h264Tab = tmp['resources'].get('h264', [])
-                if h264Tab == None: h264Tab = []
-                for item in h264Tab:
-                    _addLinkItem(urlTab, item, item['file'])
-            
+
+            h264Tab = tmp['resources'].get('h264', [])
+            if h264Tab == None: h264Tab = []
+            for item in h264Tab:
+                _addLinkItem(urlTab, item, item['file'])
+
+            if len(h264Tab) == 1:
+                reObj = re.compile('[/\-\.]([0-9]+k)\.')
+                baseMp4Url = urlTab[-1]['url']
+                baseBitrate = ph.search(baseMp4Url, reObj)[0]
+                hlsItem = tmp['resources'].get('hls', {})
+                if hlsItem == None: hlsItem = {}
+                url = hlsItem.get('stream', '')
+                if url == None: url = ''
+
+                tmp = getDirectM3U8Playlist(self.cm.getFullUrl(url, self.cm.meta['url']), checkExt=False)
+                for item in tmp:
+                    bitrate = ph.search(item['url'], reObj)[0]
+                    url = baseMp4Url.replace(baseBitrate, bitrate)
+                    printDBG(">> %s %s" % (baseMp4Url, url))
+                    _addLinkItem(urlTab, item, url)
+
             def __getLinkQuality( itemLink ):
                 try: return int(itemLink['bitrate'])
                 except Exception: return 0

@@ -131,7 +131,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2018.09.09"
+    infoversion = "2018.10.11"
     inforemote  = "0.0.0"
     currList = []
     SEARCH_proc = ''
@@ -200,8 +200,8 @@ class Host:
             return videoUrls
 
     def _cleanHtmlStr(self, str):
-            str = self.cm.ph.replaceHtmlTags(str, ' ').replace('\n', ' ')
-            return clean_html(self.cm.ph.removeDoubles(str, ' ').replace(' )', ')').strip()) 
+        str = str.replace('<', ' <').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+        return clean_html(str).strip()
 
     def getPage(self, baseUrl, cookie_domain, cloud_domain, params={}, post_data=None):
         COOKIEFILE = os_path.join(GetCookieDir(), cookie_domain)

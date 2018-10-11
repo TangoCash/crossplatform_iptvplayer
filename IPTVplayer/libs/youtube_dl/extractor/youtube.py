@@ -17,7 +17,7 @@ class CYTSignAlgoExtractor:
     # MAX RECURSION Depth for security
     MAX_REC_DEPTH = 5
     RE_FUNCTION_NAMES = re.compile('[ =(,]([a-zA-Z$]+?)\([a-z0-9,]*?\)')
-    RE_OBJECTS = re.compile('(\w+?)\.(\w+?)\(')
+    RE_OBJECTS = re.compile('[ =(,;]([a-zA-Z$]+?)\.([a-zA-Z$]+?)\(')
 
     def __init__(self, cm):
         self.cm = cm
@@ -106,7 +106,7 @@ class CYTSignAlgoExtractor:
         decSignatures = []
         code = ''
         jsname = 'ytsigndec'
-        jshash = 'hash5_' + playerUrl.split('://', 1)[-1]
+        jshash = 'hash6_' + playerUrl.split('://', 1)[-1]
         if not is_js_cached(jsname, jshash):
         
             # get main function

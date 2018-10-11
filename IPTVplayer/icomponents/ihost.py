@@ -661,7 +661,11 @@ class CBaseHostClass:
             if type == 'dir': self.addDir(params)
             elif type == 'marker': self.addMarker(params)
             else: self.addVideo(params)
-    
+
+    def listSubItems(self, cItem):
+        printDBG("CBaseHostClass.listSubItems")
+        self.currList = cItem['sub_items']
+
     def listToDir(self, cList, idx):
         return self.cm.ph.listToDir(cList, idx)
     

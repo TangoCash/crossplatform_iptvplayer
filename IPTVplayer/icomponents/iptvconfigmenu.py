@@ -51,7 +51,7 @@ config.plugins.iptvplayer.showinextensions   = ConfigYesNo(default = True)
 config.plugins.iptvplayer.showinMainMenu     = ConfigYesNo(default = False)
 config.plugins.iptvplayer.ListaGraficzna     = ConfigYesNo(default = False)
 config.plugins.iptvplayer.group_hosts        = ConfigYesNo(default = True)
-config.plugins.iptvplayer.NaszaSciezka       = ConfigDirectory(default = "/media/hdd/movie/") #, fixed_size = False)
+config.plugins.iptvplayer.NaszaSciezka       = ConfigDirectory(default = "/hdd/movie/") #, fixed_size = False)
 config.plugins.iptvplayer.bufferingPath      = ConfigDirectory(default = config.plugins.iptvplayer.NaszaSciezka.value) #, fixed_size = False)
 config.plugins.iptvplayer.buforowanie        = ConfigYesNo(default = False)
 config.plugins.iptvplayer.buforowanie_m3u8   = ConfigYesNo(default = True)
@@ -131,7 +131,7 @@ config.plugins.iptvplayer.alternativeARMV5TMoviePlayer  = ConfigSelection(defaul
 
 # end with buffering mode players
 
-config.plugins.iptvplayer.SciezkaCache = ConfigDirectory(default = "/media/hdd/IPTVCache/") #, fixed_size = False)
+config.plugins.iptvplayer.SciezkaCache = ConfigDirectory(default = "/hdd/IPTVCache/") #, fixed_size = False)
 config.plugins.iptvplayer.NaszaTMP = ConfigDirectory(default = "/tmp/") #, fixed_size = False)
 config.plugins.iptvplayer.ZablokujWMV = ConfigYesNo(default = True)
 
@@ -150,7 +150,7 @@ config.plugins.iptvplayer.opensuborg_password = ConfigText(default="", fixed_siz
 config.plugins.iptvplayer.napisy24pl_login    = ConfigText(default="", fixed_size = False)
 config.plugins.iptvplayer.napisy24pl_password = ConfigText(default="", fixed_size = False)
 
-config.plugins.iptvplayer.debugprint = ConfigSelection(default = "", choices = [("", _("no")),("console", _("yes, to console")),("debugfile", _("yes, to file /media/hdd/iptv.dbg"))]) 
+config.plugins.iptvplayer.debugprint = ConfigSelection(default = "", choices = [("", _("no")),("console", _("yes, to console")),("debugfile", _("yes, to file /hdd/iptv.dbg"))]) 
 
 #icons
 config.plugins.iptvplayer.IconsSize = ConfigSelection(default = "100", choices = [("135", "135x135"),("120", "120x120"),("100", "100x100")]) 

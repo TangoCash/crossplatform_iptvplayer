@@ -242,7 +242,8 @@ class IPTVExtMoviePlayer(Screen):
             </screen>""" 
 
         if self.clockFormat:
-            clockWidget = '<widget name="clockTime"        noWrap="1" position="37,69"        size="100,40"   zPosition="3" transparent="1" foregroundColor="white"   backgroundColor="#251f1f1f" font="Regular;24" halign="center"  valign="center" />'
+            clockFontSize = 30 if 1980 == 1920 else 24
+            clockWidget = '<widget name="clockTime" noWrap="1" position="37,69" size="100,40" zPosition="3" transparent="1" foregroundColor="white" backgroundColor="#251f1f1f" font="Regular;%d" halign="center" valign="center" />' % clockFontSize
         else:
             clockWidget = ''
         

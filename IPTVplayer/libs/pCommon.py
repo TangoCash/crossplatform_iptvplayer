@@ -8,7 +8,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, rm, UsePyCurl
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import IsMainThread, IsThreadTerminated, SetThreadKillable
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.libs import ph
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
@@ -195,29 +194,6 @@ class CParsingHelper:
         if not caseSensitive: flags |= ph.IGNORECASE
         return ph.rfindall(data, node1, node2, flags, limits=numNodes)
 
-    @staticmethod
-    def removeDoubles(data, pattern):
-        while -1 < data.find(pattern+pattern) and '' != pattern:
-            data = data.replace(pattern+pattern, pattern)
-        return data 
-
-    @staticmethod
-    def replaceHtmlTags(s, replacement=''):
-        tag = False
-        quote = False
-        out = ""
-        for c in s:
-                if c == '<' and not quote:
-                    tag = True
-                elif c == '>' and not quote:
-                    tag = False
-                    out += replacement
-                elif (c == '"' or c == "'") and tag:
-                    quote = not quote
-                elif not tag:
-                    out = out + c
-        return re.sub('&\w+;', ' ',out)
-        
     # this method is useful only for developers 
     # to dump page code to the file
     @staticmethod
@@ -246,32 +222,14 @@ class CParsingHelper:
             else: # pure ASCII character
                 ret_str.append(item)
         return ''.join(ret_str).encode('utf-8')
-        
+
     @staticmethod
     def isalpha(txt, idx=None):
         return CParsingHelper.getNormalizeStr(txt, idx).isalpha()
 
-    STRIP_HTML_TAGS_C = None
     @staticmethod 
     def cleanHtmlStr(str):
-        if None == CParsingHelper.STRIP_HTML_TAGS_C:
-            CParsingHelper.STRIP_HTML_TAGS_C = False
-            try:
-                from Plugins.Extensions.IPTVPlayer.libs.iptvsubparser import _subparser as p
-                if 'strip_html_tags' in dir(p):
-                    CParsingHelper.STRIP_HTML_TAGS_C = p
-            except Exception:
-                printExc()
-
-        if CParsingHelper.STRIP_HTML_TAGS_C and type(u' ') != type(str):
-            return CParsingHelper.STRIP_HTML_TAGS_C.strip_html_tags(str)
-
-        str = str.replace('<', ' <')
-        str = str.replace('&nbsp;', ' ')
-        str = str.replace('&nbsp', ' ')
-        str = clean_html(str)
-        str = str.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        return CParsingHelper.removeDoubles(str, ' ').strip()
+        return ph.clean_html(str)
 
 class common:
     HOST   = 'Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0'
@@ -347,7 +305,23 @@ class common:
     @staticmethod
     def isValidUrl(url):
         return url.startswith('http://') or url.startswith('https://')
-    
+
+    @staticmethod
+    def buildHTTPQuery(query):
+        def _process(query, data, key_prefix):
+            if isinstance(data, dict):
+                for key, value in data.iteritems():
+                    key = '%s[%s]' % (key_prefix, key) if key_prefix else key
+                    _process(query, value, key)
+            elif isinstance(data, list):
+                for idx in range(len(data)):
+                    _process(query, data[idx], '%s[%s]' % (key_prefix, idx))
+            else:
+                query.append((key_prefix, data))
+        _query = []
+        _process(_query, query, '')
+        return _query
+
     def __init__(self, proxyURL= '', useProxy = False, useMozillaCookieJar=True):
         self.proxyURL = proxyURL
         self.useProxy = useProxy
@@ -544,7 +518,7 @@ class common:
 
         def _bodyFunction(toWriteData):
             # we started receiving body data so all headers are available
-            # so we can check it if needed
+            # so we can check them if needed
             if firstAttempt[0]:
                 firstAttempt[0] = False
                 if 'check_maintype' in params and \

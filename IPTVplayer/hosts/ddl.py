@@ -27,8 +27,8 @@ config.plugins.iptvplayer.ddlme_proxy = ConfigSelection(default = "None", choice
                                                                                      ("proxy_1",  _("Alternative proxy server (1)")),
                                                                                      ("proxy_2",  _("Alternative proxy server (2)"))])
 config.plugins.iptvplayer.ddlme_lang = ConfigSelection(default = "", choices = [("",   _("default")),
-                                                                                ("de", _("de")),
-                                                                                ("en", _("en"))])
+                                                                                ("de", "de"),
+                                                                                ("en", "en")])
 
 def GetConfigList():
     optionList = []
