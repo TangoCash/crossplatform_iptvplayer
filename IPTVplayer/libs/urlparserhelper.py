@@ -357,7 +357,7 @@ def decorateUrl(url, metaParams={}):
             retUrl.meta['iptv_proto'] = 'mmsh'
     return retUrl
 
-def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False, sortWithMaxBitrate=-1, mergeAltAudio=False):
+def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParams={}, checkContent=False, sortWithMaxBitrate=-1, mergeAltAudio=True):
     if checkExt and not M3U8Url.split('?', 1)[0].endswith('.m3u8'):
         return []
         
@@ -415,10 +415,10 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                     for audio_stream in playlist.alt_audio_streams:
                         audioUrl = strwithmeta(audio_stream.absolute_uri, item['url'].meta)
                         item['name'] = '[%s] %s' % (audio_stream.name, item['name'])
-                        item['url'] = decorateUrl("merge://audio_url|video_url", {'audio_url':audioUrl, 'video_url':item['url'], 'ff_out_container':'mpegts'})
+                        item['url'] = decorateUrl("merge://audio_url|video_url", {'audio_url':audioUrl, 'video_url':item['url'], 'ff_out_container':'mpegts', 'prefered_merger':'hlsdl'})
                         retPlaylists.append(item)
                 else:
-                    item['ald_audio_streams'] = playlist.alt_audio_streams
+                    item['alt_audio_streams'] = playlist.alt_audio_streams
                     retPlaylists.append(item)
         
             if sortWithMaxBitrate > -1:

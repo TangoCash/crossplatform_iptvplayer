@@ -6,6 +6,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -13,8 +15,6 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 def gettytul():
@@ -74,7 +74,7 @@ class MeczykiPL(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             data = data['shortcuts']
             keys = list(data.keys())
             keys.sort(reverse=True)
@@ -99,7 +99,7 @@ class MeczykiPL(CBaseHostClass):
         if not sts: return
         
         try:
-            if len(byteify(json.loads(data))['shortcuts'].keys()):
+            if len(json_loads(data)['shortcuts'].keys()):
                 params = dict(cItem)
                 params.update({'good_for_fav':False, 'title':_('Next page'), 'page':page+1})
                 self.addDir(params)
@@ -111,15 +111,20 @@ class MeczykiPL(CBaseHostClass):
         
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
-        
+
+        #reObj = re.compile('<[\s/]*?br[\s/]*?>', re.IGNORECASE)
         titles = []
-        tmp = self.cm.ph.getDataBeetwenMarkers(data, '<div class="video-watch">', '</div>')[1].split('<BR>')
-        for title in tmp:
-            title = self.cleanHtmlStr(title) 
-            if title != '': titles.append(title)
-        
+        tmp = ph.find(data, ('<div', '>', 'video-watch'), ('<div', '>', 'content-box-title'))[1]
+        tmp = ph.rfindall(tmp, '</div>', ('<div', '>', 'video-watch'), flags=0)
+        for item in tmp:
+            #item = reObj.split(item)
+            item = item.split('</div>', 1)
+            title = self.cleanHtmlStr(item[0])
+            desc = self.cleanHtmlStr(item[-1])
+            titles.append((title, desc))
+
         tmp = re.compile('''['"]([^'^"]*?//config\.playwire\.com[^'^"]+?\.json)['"]''').findall(data)
-        tmp.extend(re.compile('<iframe[^>]+?src="([^"]+?)"').findall(data))
+        tmp.extend(re.compile('''<iframe[^>]+?src=['"]([^"]+?)['"]''').findall(data))
         tmp.extend(re.compile('''<a[^>]+?href=['"](https?://[^'^"]*?ekstraklasa.tv[^'^"]+?)['"]''').findall(data))
         tmp.extend(re.compile('''<a[^>]+?href=['"](https?://[^'^"]*?polsatsport.pl[^'^"]+?)['"]''').findall(data))
         
@@ -128,10 +133,14 @@ class MeczykiPL(CBaseHostClass):
             if not self.cm.isValidUrl(url): continue
             if 'playwire.com' not in url and  self.up.checkHostSupport(url) != 1: continue
             title = cItem['title']
-            if len(titles) == len(tmp): title += ' - ' + titles[idx]
+            desc = ''
+            if len(titles) == len(tmp): 
+                if titles[idx][0]:
+                    title += ' - ' + titles[idx][0]
+                desc = titles[idx][1]
             
             params = dict(cItem)
-            params.update({'good_for_fav': False, 'title':title, 'url':url})
+            params.update({'good_for_fav': False, 'title':title, 'url':url, 'desc':titles[idx][1]})
             self.addVideo(params)
     
     def getLinksForVideo(self, cItem):
@@ -142,7 +151,7 @@ class MeczykiPL(CBaseHostClass):
             sts, data = self.cm.getPage(videoUrl)
             if not sts: return []
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 if 'content' in data:
                     url = data['content']['media']['f4m']
                 else:
@@ -171,39 +180,6 @@ class MeczykiPL(CBaseHostClass):
             urlTab.extend(self.up.getVideoLinkExt(videoUrl))
         return urlTab
 
-        
-    def getVideoLinks(self, videoUrl):
-        printDBG("OkGoals.getVideoLinks [%s]" % videoUrl)
-        urlTab = []
-        return urlTab
-    
-    def getFavouriteData(self, cItem):
-        printDBG('MeczykiPL.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('MeczykiPL.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('MeczykiPL.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -235,5 +211,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, MeczykiPL(), True, [])
-
-    

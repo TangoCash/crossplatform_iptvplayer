@@ -37,5 +37,5 @@ def loads(input, noneReplacement=None, baseTypesAsString=False, utf8=True):
 
     return out
 
-def dumps(input):
-    return json.dumps(input)
+def dumps(input, *args, **kwargs):
+    return json.dumps(input, *args, **kwargs)

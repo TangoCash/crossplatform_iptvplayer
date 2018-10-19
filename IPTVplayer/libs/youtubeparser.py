@@ -128,7 +128,7 @@ class YouTubeParser():
                         if len(hlsList):
                             dashList = []
                             for item in hlsList:
-                                item['format'] = "%sx%s" % (item.get('heigth', 0), item.get('with', 0))
+                                item['format'] = "%sx%s" % (item.get('with', 0), item.get('heigth', 0))
                                 item['ext']  = "m3u8"
                                 item['m3u8'] = True
                                 retList.append(item)

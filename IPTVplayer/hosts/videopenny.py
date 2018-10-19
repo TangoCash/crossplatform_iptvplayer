@@ -77,8 +77,8 @@ class VideoPenny(CBaseHostClass):
                 return  sts, data
         return self._getPage(baseUrl, addParams, post_data)
 
-    def getFullUrl(self, url):
-        url = CBaseHostClass.getFullUrl(self, url)
+    def getFullUrl(self, url, curUrl=None):
+        url = CBaseHostClass.getFullUrl(self, url, curUrl)
         try: url.encode('ascii')
         except Exception: url = urllib.quote(url, safe="/:&?%@[]()*$!+-=|<>;")
         return url

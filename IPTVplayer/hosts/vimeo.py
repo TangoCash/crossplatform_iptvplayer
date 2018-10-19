@@ -4,7 +4,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
 ###################################################
 
 ###################################################
@@ -13,17 +15,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 import re
 import urllib
 from datetime import  timedelta
-try:    import json
-except Exception: import simplejson as json
 ###################################################
-
-
-###################################################
-# E2 GUI COMMPONENTS 
-###################################################
-from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-###################################################
-
 
 def gettytul():
     return 'https://vimeo.com/'
@@ -43,8 +35,8 @@ class SuggestionsProvider:
         sts, data = self.cm.getPage(url)
         if sts:
             retList = []
-            for item in json.loads(data)['options']:
-                retList.append(item['text'].encode('UTF-8'))
+            for item in json_loads(data)['options']:
+                retList.append(item['text'])
             return retList 
         return None
 
@@ -116,21 +108,21 @@ class VimeoCom(CBaseHostClass):
             sts, data = self.getPage(cItem['url'])
             if not sts: return
             self._fillApiData(data)
-        
+
         sts, data = self.getPage(cItem['url'] + '/videos')
         if not sts: return
         self._fillApiData(data)
-        
+
         url = self.api.get('url', '') + 'search?_video_override=true&filter_type=clip&c=b&filter_category=%s&fields=facets.type' % cItem.get('f_cat', '')
         params = dict(self.defaultParams)
         params['header'] = self.AJAX_HEADER
         params['header']['Authorization'] = 'jwt %s' % (self.api.get('jwt', ''))
-        
+
         sts, data = self.getPage(url, params)
         if not sts: return
-        
+
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['facets']['type']['options'][::-1]:
                 if item['total'] == 0: continue
                 if item['name'] == 'ondemand': continue
@@ -144,28 +136,28 @@ class VimeoCom(CBaseHostClass):
                 self.addDir(params)
         except Exception:
             printExc()
-            
+
     def listSubCategories(self, cItem, nextCategory):
         printDBG("VimeoCom.listSubCategories [%s]" % cItem)
-        
+
         sts, data = self.getPage(cItem['url'])
         if not sts: return
         self._fillApiData(data)
-        
+
         url = self.api.get('url', '') + 'search?_video_override=true&filter_type=%s&page=1&per_page=1&c=b&facets=true&filter_category=%s&fields=search_web' % (cItem.get('f_type', ''), cItem.get('f_cat', ''))
         params = dict(self.defaultParams)
         params['header'] = self.AJAX_HEADER
         params['header']['Authorization'] = 'jwt %s' % (self.api.get('jwt', ''))
-        
+
         sts, data = self.getPage(url, params)
         if not sts: return
-        
+
         params = dict(cItem)
         params.update({'good_for_fav':False, 'category':nextCategory, 'title':_('Any')})
         self.addDir(params)
-        
+
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['facets']['subcategory']['options']:
                 title = self.cleanHtmlStr(item['text'])
                 type  = item['name']
@@ -176,7 +168,7 @@ class VimeoCom(CBaseHostClass):
                 self.addDir(params)
         except Exception:
             printExc()
-            
+
     def listSort(self, cItem, nextCategory):
         printDBG("VimeoCom.listSort [%s]" % cItem)
         
@@ -187,7 +179,7 @@ class VimeoCom(CBaseHostClass):
         data = self.cm.ph.getSearchGroups(data, '''"%s"\:\{"identifier"[^;]+?"sorts"\:\{([^;]+?\})\},''' % cItem.get('f_type', ''))[0]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '{', '}')
         try:
-            data = byteify(json.loads('[%s]' % ','.join(data)))
+            data = json_loads('[%s]' % ','.join(data))
             for item in data:
                 title = self.cleanHtmlStr(item['label'])
                 params = dict(cItem)
@@ -222,7 +214,7 @@ class VimeoCom(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             printDBG(data)
             for item in data['data']:
                 type = item['type']

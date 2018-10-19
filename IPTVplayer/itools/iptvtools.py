@@ -8,7 +8,6 @@
 ###################################################
 # LOCAL import
 ###################################################
-
 ###################################################
  
 ###################################################
@@ -28,8 +27,6 @@ import sys
 import os
 import stat
 import codecs
-try:    import json
-except Exception: import simplejson as json
 import datetime
 
 SERVER_DOMAINS = {'vline':'http://iptvplayer.vline.pl/', 'gitlab':'http://www.iptvplayer.gitlab.io/'}
@@ -678,13 +675,15 @@ def GetHostsList(fromList=True, fromHostFolder=True, useCache=True):
     return lhosts
 
 def GetHostsAliases():
+    from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
     ret = {}
     try:
         HOST_PATH = resolveFilename(SCOPE_PLUGINS, 'Extensions/IPTVPlayer/hosts/')
         sts, data = ReadTextFile(HOST_PATH + '/aliases.txt')
         if sts:
-            data = byteify(json.loads(data), '', True)
-            ret = dict(data)
+            data = json_loads(data)
+            if isinstance(data, dict):
+                ret = data
     except Exception:
         printExc()
     return ret
@@ -1223,6 +1222,7 @@ class CMoviePlayerPerHost():
         self.save()
         
     def load(self):
+        from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
         sts, ret = False, ''
         try:
             if not os.path.isfile(self.filePath):
@@ -1232,15 +1232,16 @@ class CMoviePlayerPerHost():
                 ret = file.read().encode('utf-8', 'ignore')
                 file.close()
                 activePlayer = {}
-                ret = json.loads(ret)
+                ret = json_loads(ret)
                 activePlayer['buffering'] = ret['buffering']
-                activePlayer['player'] = CFakeMoviePlayerOption(ret['player']['value'].encode('utf-8'), ret['player']['text'].encode('utf-8'))
+                activePlayer['player'] = CFakeMoviePlayerOption(ret['player']['value'], ret['player']['text'])
                 self.activePlayer  = activePlayer
                 sts = True
         except Exception: printExc()
         return sts, ret
         
     def save(self):
+        from Plugins.Extensions.IPTVPlayer.libs.e2ijson import dumps as json_dumps
         sts = False
         try:
             if {} == self.activePlayer and os.path.isfile(self.filePath):
@@ -1249,7 +1250,7 @@ class CMoviePlayerPerHost():
                 data = {}
                 data['buffering'] = self.activePlayer['buffering']
                 data['player']    = {'value':self.activePlayer['player'].value, 'text':self.activePlayer['player'].getText()}
-                data = json.dumps(data).encode('utf-8')
+                data = json_dumps(data).encode('utf-8')
                 file = codecs.open(self.filePath, 'w', 'utf-8', 'replace')
                 file.write(data)
                 file.close

@@ -7,6 +7,7 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHost
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import  CParsingHelper
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -14,8 +15,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import base64
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 def gettytul():
@@ -47,7 +46,7 @@ class AlltubeTV(CBaseHostClass):
         self.episodesCache = []
         self.cacheLinks = {}
         self._myFun = None
-        
+
     def getPage(self, baseUrl, params={}, post_data=None):
         if params == {}: params = dict(self.defaultParams)
         params['cloudflare_params'] = {'domain':'alltube.pl', 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':self.getFullUrl}
@@ -398,7 +397,7 @@ class AlltubeTV(CBaseHostClass):
         url  = self.getFullUrl('/jsverify.php?op=tag')
         sts, data = self.getPage(url)
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID'])
             d = {};
             for i in range(len(data['key'])):

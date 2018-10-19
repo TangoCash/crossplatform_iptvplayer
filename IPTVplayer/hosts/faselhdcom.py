@@ -4,9 +4,10 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -15,20 +16,18 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 import urlparse
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 
 def gettytul():
-    return 'https://faselhd.com/'
+    return 'https://faselhd.co/'
 
 class FaselhdCOM(CBaseHostClass):
     
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'faselhd.com', 'cookie':'faselhd.com.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.MAIN_URL = 'https://www.faselhd.com/'
+        self.MAIN_URL = 'https://www.faselhd.co/'
         self.DEFAULT_ICON_URL = self.getFullUrl('https://i2.wp.com/www.faselhd.com/wp-content/themes/adbreak/images/logo.png')
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Origin':self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
@@ -46,12 +45,14 @@ class FaselhdCOM(CBaseHostClass):
         if addParams == {}: addParams = dict(self.defaultParams)
         origBaseUrl = baseUrl
         baseUrl = self.cm.iriToUri(baseUrl)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urlparse.urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
-        return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-        
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
+        sts, data = self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+        if sts and 'http-equiv="refresh"' in data:
+            url = ph.find(data, ('<meta', '>', 'http-equiv="refresh"'))[1]
+            url = self.getFullUrl(ph.getattr(url.replace(';', ' '), 'URL'), self.cm.meta['url'])
+            return self.cm.getPageCFProtection(url, addParams, post_data)
+        return sts, data
+
     def getFullIconUrl(self, url):
         url =  CBaseHostClass.getFullIconUrl(self, url)
         if url != '' and self.up.getDomain(url) in self.getMainUrl():
@@ -83,6 +84,8 @@ class FaselhdCOM(CBaseHostClass):
             for item in cTree['list']:
                 title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item['dat'], '<a', '</a>')[1])
                 url   = self.getFullUrl(self.cm.ph.getSearchGroups(item['dat'], '''href=['"]([^'^"]+?)['"]''')[0])
+                if '/promo' in url:
+                    return
                 if 'list' not in item:
                     if self.cm.isValidUrl(url) and title != '':
                         params = dict(cItem)
@@ -101,6 +104,7 @@ class FaselhdCOM(CBaseHostClass):
         
         sts, data = self.getPage(cItem['url'])
         if not sts: return
+        baseData = data
         
         nextPage = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'pagination'), ('</div', '>'))[1]
         nextPage = self.getFullUrl(self.cm.ph.getSearchGroups(nextPage, '''<a[^>]+?href=['"]([^'^"]+?)['"][^>]*?>%s<''' % (page + 1))[0])
@@ -126,19 +130,31 @@ class FaselhdCOM(CBaseHostClass):
                     if label != '': desc.append('%s %s' %(label, t))
                     else: desc.append(t)
             
-            params = dict(cItem)
-            params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
-            if nextCategory == '' or cItem.get('f_list_episodes'):
-                self.addVideo(params)
+            if '/seasons/' in self.cm.meta['url'] and not cItem.get('sub_view'):
+                title = '%s - %s' % (cItem['title'], title)
+                self.addDir(MergeDicts(cItem, {'url':url, 'title':title, 'sub_view':True}))
             else:
-                params['category'] = nextCategory
-                self.addDir(params)
-        
+                params = dict(cItem)
+                params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon, 'desc':'[/br]'.join(desc)})
+                if nextCategory == '' or cItem.get('f_list_episodes'):
+                    self.addVideo(params)
+                else:
+                    params['category'] = nextCategory
+                    self.addDir(params)
+
+        if not cItem.get('sub_view'):
+            data = ph.findall(baseData, ('<span', '>', 'sub-view'), '</span>')
+            for item in data:
+                if 'display:none' in item: continue
+                url = self.getFullUrl(ph.getattr(item, 'href'), self.cm.meta['url'])
+                title = '%s - %s' % (cItem['title'], ph.clean_html(item))
+                self.addDir(MergeDicts(cItem, {'url':url, 'title':title, 'sub_view':True}))
+
         if self.cm.isValidUrl(nextPage):
             params = dict(cItem)
             params.update({'good_for_fav':False, 'title':_("Next page"), 'url':nextPage, 'page':page+1})
             self.addDir(params)
-        
+
     def exploreItem(self, cItem, nextCategory):
         printDBG("FaselhdCOM.exploreItem")
         

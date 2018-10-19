@@ -4,8 +4,10 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -13,8 +15,6 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Play
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 
@@ -42,8 +42,8 @@ class LuxVeritatisPL(CBaseHostClass):
         if addParams == {}: addParams = dict(self.defaultParams)
         return self.cm.getPage(baseUrl, addParams, post_data)
         
-    def getFullUrl(self, url):
-        url = CBaseHostClass.getFullUrl(self, url)
+    def getFullUrl(self, url, curUrl=None):
+        url = CBaseHostClass.getFullUrl(self, url, curUrl)
         return url.replace('&amp;', '&')
     
     def listMainMenu(self, cItem):
@@ -65,7 +65,7 @@ class LuxVeritatisPL(CBaseHostClass):
         sts, data = self.getPage(self.getFullUrl('/wp-admin/admin-ajax.php'), post_data={'action':'terazNaAntenie'})
         if sts:
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 desc = '%s, %s[/br]%s' % (data.get('godz', ''), data.get('goscie', ''), data.get('opis', ''))
             except Exception:
                 printExc()
@@ -279,14 +279,26 @@ class LuxVeritatisPL(CBaseHostClass):
         if 'radiomaryja.pl' in url and url.endswith('/live/'):
             sts, data = self.getPage(url)
             if not sts: return
-            url = self.cm.ph.getSearchGroups(data, '''<a[^>]+?href=['"](https?://[^>]+?\.m3u8(?:\?[^'^"]*?)?)['"]''')[0]
-            return getDirectM3U8Playlist(url, checkContent=True)
+            url = ph.search(data, '''<a[^>]+?href=['"](https?://[^>]+?\.pls(?:\?[^'^"]*?)?)['"]''')[0]
+            if url:
+                sts, tmp = self.getPage(url)
+                if sts:
+                    tmp = re.compile('''(File[0-9]+?)=(https?://.+)''').findall(tmp)
+                    for item in tmp:
+                        linksTab.append({'name':item[0], 'url':item[1], 'need_resolve':0})
+            url = ph.find(data, ('<a', '>', '/live2'))[1]
+            url = self.getFullUrl(ph.getattr(url, 'href'))
+            if url:
+                sts, data = self.getPage(url)
+                if not sts: return linksTab
+            url = ph.search(data, '''<a[^>]+?href=['"](https?://[^>]+?\.m3u8(?:\?[^'^"]*?)?)['"]''')[0]
+            linksTab.extend( getDirectM3U8Playlist(url, checkContent=True) )
         elif 'tv-trwam' in url:
             sts, data = self.getPage(url)
             if not sts: return
             data = self.cm.ph.getSearchGroups(data, '''sources\s*?:\s*?(\[[^\]]+?\])''')[0]
             try:
-                data = byteify(json.loads(data))
+                data = json_loads(data)
                 hlsTab = []
                 dashTab = []
                 mp4Tab = []

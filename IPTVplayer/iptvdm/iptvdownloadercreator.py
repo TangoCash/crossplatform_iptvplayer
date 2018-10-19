@@ -60,7 +60,9 @@ def DownloaderCreator(url):
     elif iptv_proto in ['https', 'http']:
         downloader = WgetDownloader()
     elif 'merge' == iptv_proto:
-        if IsExecutable('ffmpeg') and config.plugins.iptvplayer.cmdwrappath.value != '':
+        if url.meta.get('prefered_merger') == 'hlsdl' and config.plugins.iptvplayer.hlsdlpath.value != '' and config.plugins.iptvplayer.prefer_hlsdl_for_pls_with_alt_media.value:
+            downloader = HLSDownloader()
+        elif IsExecutable('ffmpeg') and config.plugins.iptvplayer.cmdwrappath.value != '':
             downloader = FFMPEGDownloader()
         else:
             downloader = MergeDownloader()

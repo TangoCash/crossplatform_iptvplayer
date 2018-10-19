@@ -4,9 +4,11 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -18,8 +20,6 @@ import urllib
 import string
 import math
 import random
-try:    import json
-except Exception: import simplejson as json
 from datetime import datetime
 from hashlib import md5
 from Components.config import config, ConfigText, getConfigListEntry
@@ -224,12 +224,14 @@ class TreeTv(CBaseHostClass):
         data = re.sub("<!--[\s\S]*?-->", "", data)
         
         # trailer
-        item = self.cm.ph.getDataBeetwenMarkers(data, '<div class="buttons film">', '</div>')[1]
+        item = ph.find(data, ('<div ', '>', 'film_play_button'), '</div>')[1]
         url    = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
         title  = self.cleanHtmlStr(item)
         if self.cm.isValidUrl(url):
             self.addVideo({'good_for_fav': False, 'title':title, 'icon':cItem['icon'], 'urls':[{'name':'', 'url':url}]})
-        
+
+        printDBG(data)
+
         keyTab = []
         linksTab = {}
         marker = '<div class="accordion_item">'
@@ -305,7 +307,7 @@ class TreeTv(CBaseHostClass):
         if not sts: return []
         data = re.sub("<!--[\s\S]*?-->", "", data)
         
-        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0].replace('\t', ''))
         
         if 1 == self.up.checkHostSupport(url):
             return self.up.getVideoLinkExt(url)
@@ -351,7 +353,7 @@ class TreeTv(CBaseHostClass):
                     printDBG("++++++++++++++")
                     printDBG(data)
                     printDBG("++++++++++++++")
-                    serverData = byteify(json.loads(data))
+                    serverData = json_loads(data)
                 else:
                     break
                 
@@ -405,44 +407,25 @@ class TreeTv(CBaseHostClass):
         except Exception:
             printExc()
         return urlTab
-        
-    def getFavouriteData(self, cItem):
-        printDBG('TreeTv.getFavouriteData')
-        return json.dumps(cItem)
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('TreeTv.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('TreeTv.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
 
     def tryTologin(self, login, password):
         printDBG('tryTologin start')
         connFailed = _('Connection to server failed!')
-        
-        loginUrl = self.getFullUrl('users/index/auth')
-        
+
         rm(self.COOKIE_FILE)
-        sts, data = self.getPage(loginUrl, self.defaultParams)
-        if not sts: return False, connFailed 
-        
-        post_data = {"mail":login, "pass":password, "social":"0"}
         params = dict(self.defaultParams)
+        params['use_new_session'] = True
+
+        sts, data = self.getPage(self.getMainUrl(), params)
+        if not sts: return False, connFailed 
+        self.setMainUrl(self.cm.meta['url'])
+
+        loginUrl = self.getFullUrl('users/index/auth')
+
+        post_data = {"mail":login, "pass":password, "social":"0", 'from':'def'}
         HEADER = dict(self.AJAX_HEADER)
-        HEADER['Referer'] = self.MAIN_URL
+        HEADER['Referer'] = self.cm.getBaseUrl(self.cm.meta['url'])
+        HEADER['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
         params.update({'header':HEADER})
         
         # login
@@ -450,8 +433,8 @@ class TreeTv(CBaseHostClass):
         if not sts: return False, connFailed
         
         # check if logged
-        sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
-        if not sts: return False, connFailed 
+        #sts, data = self.getPage(self.MAIN_URL, self.defaultParams)
+        #if not sts: return False, connFailed 
         
         if '"ok"' in data:
             return True, 'OK'
@@ -469,7 +452,7 @@ class TreeTv(CBaseHostClass):
            '' != config.plugins.iptvplayer.treetv_password.value.strip():
             loggedIn, msg = self.tryTologin(config.plugins.iptvplayer.treetv_login.value, config.plugins.iptvplayer.treetv_password.value)
             if not loggedIn:
-                self.sessionEx.open(MessageBox, 'Problem z zalogowaniem użytkownika "%s".' % config.plugins.iptvplayer.treetv_login.value, type = MessageBox.TYPE_INFO, timeout = 10 )
+                self.sessionEx.open(MessageBox, _('User login "%s" failed.') % config.plugins.iptvplayer.treetv_login.value, type = MessageBox.TYPE_INFO, timeout = 10 )
             else:
                 self.login    = config.plugins.iptvplayer.treetv_login.value
                 self.password = config.plugins.iptvplayer.treetv_password.value

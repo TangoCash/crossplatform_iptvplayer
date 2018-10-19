@@ -10,6 +10,7 @@ from time import sleep as time_sleep
 from os import remove as os_remove, path as os_path
 from urllib import quote as urllib_quote
 from random import shuffle as random_shuffle
+import traceback
 
 ####################################################
 #                   E2 components
@@ -50,7 +51,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import FreeSpace as iptvt
                                                           CMoviePlayerPerHost, GetFavouritesDir, CFakeMoviePlayerOption, GetAvailableIconSize, \
                                                           GetE2VideoModeChoices, GetE2VideoMode, SetE2VideoMode, TestTmpCookieDir, TestTmpJSCacheDir,\
                                                           ClearTmpCookieDir, ClearTmpJSCacheDir, SetTmpCookieDir, SetTmpJSCacheDir,\
-                                                          GetEnabledHostsList, SaveHostsOrderList, GetUpdateServerUri
+                                                          GetEnabledHostsList, SaveHostsOrderList, GetUpdateServerUri, GetHostsAliases, formatBytes
 from Plugins.Extensions.IPTVPlayer.itools.iptvhostgroups import IPTVHostsGroups
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvbuffui import E2iPlayerBufferingWidget
@@ -228,7 +229,7 @@ class E2iPlayerWidget(Screen):
             if not os_path.exists(config.plugins.iptvplayer.SciezkaCache.value):
                 iptvtools_mkdirs(config.plugins.iptvplayer.SciezkaCache.value)
 
-            if iptvtools_FreeSpace(config.plugins.iptvplayer.SciezkaCache.value,10):
+            if iptvtools_FreeSpace(config.plugins.iptvplayer.SciezkaCache.value, 10):
                 self.iconMenager = IconMenager(True)
             else:
                 self.showMessageNoFreeSpaceForIcon = True
@@ -344,7 +345,8 @@ class E2iPlayerWidget(Screen):
         self.downloadable = False
         self.colorEnabled = parseColor("#FFFFFF")
         self.colorDisabled = parseColor("#808080")
-    
+
+        self.hostsAliases = GetHostsAliases()
     #end def __init__(self, session):
     
     def updateDownloadButton(self):
@@ -374,13 +376,11 @@ class E2iPlayerWidget(Screen):
         self["statustext"].setText(msg)
         
     def __del__(self):
-        printDBG("E2iPlayerWidget.__del__ --------------------------")
+        printDBG("E2iPlayerWidget.__del__")
 
     def __onClose(self):
         self.session.nav.playService(self.currentService)
         self["list"].disconnectSelChanged(self.onSelectionChanged)
-        #self["list"] = None
-        #self["actions"] = None
         if None != self.checkUpdateConsole: self.checkUpdateConsole.terminate()
         if None != self.iconMenager:
             self.iconMenager.setUpdateCallBack(None)
@@ -394,10 +394,10 @@ class E2iPlayerWidget(Screen):
         self.decodeCoverTimer = None
         self.spinnerTimer_conn = None
         self.spinnerTimer = None
-           
+
         try:
             self.stopAutoPlaySequencer()
-            self.autoPlaySeqTimer_conn = None         
+            self.autoPlaySeqTimer_conn = None
             self.autoPlaySeqTimer = None
         except Exception:
             printExc()
@@ -534,7 +534,7 @@ class E2iPlayerWidget(Screen):
                 if isinstance(item.retValue[1], asynccall.CPQParamsWrapper): getattr(self, method)(*item.retValue[1])
                 else: getattr(self, item.clientFunName)(item.retValue[1])
             else:
-                printDBG('>>>>>>>>>>>>>>> doProcessProxyQueueItem callback from old workThread[%r][%s]' % (self.workThread, item.retValue))
+                printDBG('doProcessProxyQueueItem callback from old workThread[%r][%s]' % (self.workThread, item.retValue))
         except Exception: printExc()
             
     def getArticleContentCallback(self, thread, ret):
@@ -1193,8 +1193,10 @@ class E2iPlayerWidget(Screen):
         brokenHostList = []
         for hostName in hostsList:
             try:
-                _temp = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['gettytul'], -1)
-                title = _temp.gettytul()
+                title = self.hostsAliases.get('host'+hostName, '')
+                if not title:
+                    _temp = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['gettytul'], -1)
+                    title = _temp.gettytul()
             except Exception:
                 printExc('get host name exception for host "%s"' % hostName)
                 brokenHostList.append('host'+hostName)
@@ -1253,12 +1255,15 @@ class E2iPlayerWidget(Screen):
         for hostName in sortedList:
             if IsHostEnabled(hostName):
                 try:
-                    _temp = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['gettytul'], -1)
-                    title = _temp.gettytul()
+                    title = self.hostsAliases.get('host'+hostName, '')
+                    if not title:
+                        _temp = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['gettytul'], -1)
+                        title = _temp.gettytul()
                 except Exception:
                     printExc('get host name exception for host "%s"' % hostName)
                     brokenHostList.append('host'+hostName)
-                    continue # do not use default name if import name will failed
+                    continue
+
                 # The 'http...' in host titles is annoying on regular choiceBox and impacts sorting.
                 # To simplify choiceBox usage and clearly show service is a webpage, list is build using the "<service name> (<service URL>)" schema.
                 if (config.plugins.iptvplayer.ListaGraficzna.value == False or 0 == GetAvailableIconSize()) and title[:4] == 'http':
@@ -1442,11 +1447,15 @@ class E2iPlayerWidget(Screen):
                 printDBG("Host [%r] does not inherit from IHost" % self.hostName)
                 self.close()
                 return
-        except Exception:
-            printExc( 'Cannot import class IPTVHost for host [%r]' %  self.hostName)
-            self.close()
+        except Exception as e:
+            printExc('Cannot import class IPTVHost for host [%r]' %  self.hostName)
+            errorMessage = [_('Loading %s failed due to following error:') % self.hostName]
+            elines = traceback.format_exc().splitlines()
+            errorMessage.append("%s" % '\n'.join(elines[-3:]))
+            self.session.open(MessageBox, '\n'.join(errorMessage), type=MessageBox.TYPE_ERROR, timeout=10)
+            self.setStatusTex(_("Failed: %s") %  e)
             return
-            
+
         try: protectedByPin = self.host.isProtectedByPinCode()
         except Exception: protected = False # should never happen
         
@@ -1523,15 +1532,14 @@ class E2iPlayerWidget(Screen):
             #call manualy selectLinksCallback - start VIDEO without links selection
             arg = []
             arg.append(" ") #name of item - not displayed so empty
-            arg.append(links[0].url) #url to VIDEO
-            arg.append(links[0].urlNeedsResolve) # if 1 this links should be resolved
+            arg.append(links[0].url)
+            arg.append(links[0].urlNeedsResolve)
             self.selectLinksCallback(arg)
             return
 
         #options.sort(reverse=True)
         self.session.openWithCallback(self.selectLinksCallback, ChoiceBox, title=_("Select link"), list = options)
 
-        
     def selectLinksCallback(self, retArg):
         # retArg[0] - name
         # retArg[1] - url src
@@ -1594,7 +1602,7 @@ class E2iPlayerWidget(Screen):
         protocol = url.meta.get('iptv_proto', '')
         
         fileExtension = ''
-        tmp = url.lower().split('?')[0]
+        tmp = url.lower().split('?', 1)[0]
         for item in ['avi', 'flv', 'mp4', 'ts', 'mov', 'wmv', 'mpeg', 'mpg', 'mkv', 'vob', 'divx', 'm2ts', 'mp3', 'm4a', 'ogg', 'wma', 'fla', 'wav', 'flac']:
             if tmp.endswith('.'+item):
                 fileExtension = '.'+item
@@ -1654,24 +1662,37 @@ class E2iPlayerWidget(Screen):
             if blocked:
                 self.session.open(MessageBox, reaseon, type = MessageBox.TYPE_INFO, timeout = 10)
                 return
-            
-            if url.startswith('file://'):
-                isBufferingMode = False
-            else:
-                isBufferingMode = self.activePlayer.get('buffering', self.checkBuffering(url))
-            
+
+            isBufferingMode = False if url.startswith('file://') else self.activePlayer.get('buffering', self.checkBuffering(url))
             bufferingPath = config.plugins.iptvplayer.bufferingPath.value
             downloadingPath = config.plugins.iptvplayer.NaszaSciezka.value
-            if not recorderMode:
-                destinationPath = config.plugins.iptvplayer.bufferingPath.value
-            else:
-                destinationPath = config.plugins.iptvplayer.NaszaSciezka.value
-            
-            if (recorderMode or isBufferingMode) and not iptvtools_FreeSpace(destinationPath, 500):
-                self.stopAutoPlaySequencer()
-                self.session.open(MessageBox, _("There is no free space on the drive [%s].") % destinationPath, type=MessageBox.TYPE_INFO, timeout=10)
-            elif recorderMode:
-                global gDownloadManager
+            destinationPath = downloadingPath if recorderMode else bufferingPath
+
+            if recorderMode or isBufferingMode:
+                errorTab = []
+                if not os_path.exists(destinationPath):
+                    iptvtools_mkdirs(destinationPath)
+
+                if not os_path.isdir(destinationPath):
+                    errorTab.append(_("Directory \"%s\" does not exists.") % destinationPath)
+                    errorTab.append(_("Please set valid %s in the %s configuration.") % (_("downloads location") if recorderMode else _("buffering location"), 'E2iPlayer'))
+                else:
+                    requiredSpace = 3*512*1024*1024 # 1,5 GB
+                    availableSpace = iptvtools_FreeSpace(destinationPath, requiredSpace=None, unitDiv=1)
+                    if requiredSpace > availableSpace:
+                        errorTab.append(_("There is no enough free space in the folder \"%s\".") % destinationPath)
+                        errorTab.append(_("\tDisk space required: %s") % formatBytes(requiredSpace))
+                        errorTab.append(_("\tDisk space available: %s") % formatBytes(availableSpace))
+
+                if errorTab:
+                    errorTab.append("\n")
+                    errorTab.append(_("Tip! You can connect USB flash drive to fix this problem."))
+                    self.stopAutoPlaySequencer()
+                    self.session.open(MessageBox, '\n'.join(errorTab), type=MessageBox.TYPE_INFO, timeout=10)
+                    return
+
+            global gDownloadManager
+            if recorderMode:
                 if None != gDownloadManager:
                     if IsUrlDownloadable(url):
                         fullFilePath = downloadingPath + '/' + titleOfMovie + fileExtension
@@ -1704,7 +1725,6 @@ class E2iPlayerWidget(Screen):
                 
                 self.writeCurrentTitleToFile(titleOfMovie)
                 if isBufferingMode:
-                    global gDownloadManager
                     self.session.nav.stopService()
                     player = self.activePlayer.get('player', self.getMoviePlayer(True, self.useAlternativePlayer))
                     self.session.openWithCallback(self.leaveMoviePlayer, E2iPlayerBufferingWidget, url, bufferingPath, downloadingPath, titleOfMovie, player.value, self.bufferSize, gstAdditionalParams, gDownloadManager, fileExtension)

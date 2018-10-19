@@ -84,11 +84,21 @@ class HLSDownloader(BaseDownloader):
         
         if 'iptv_m3u8_seg_download_retry' in meta:
             addParams += ' -w %s ' % meta['iptv_m3u8_seg_download_retry']
-        
-        cmd = DMHelper.getBaseHLSDLCmd(self.downloaderParams) + (' "%s"' % self.url) + addParams + (' -o "%s"' % self.filePath) + ' > /dev/null'
+            
+        if self.url.startswith("merge://"):
+            try:
+                urlsKeys = self.url.split('merge://', 1)[1].split('|')
+                url = meta[urlsKeys[-1]]
+                addParams += ' -a "%s" ' % meta[urlsKeys[0]]
+            except Exception:
+                printExc()
+        else:
+            url = self.url
+
+        cmd = DMHelper.getBaseHLSDLCmd(self.downloaderParams) + (' "%s"' % url) + addParams + (' -o "%s"' % self.filePath) + ' > /dev/null'
 
         printDBG("HLSDownloader::start cmd[%s]" % cmd)
-        
+
         self.console = eConsoleAppContainer()
         self.console_appClosed_conn = eConnectCallback(self.console.appClosed, self._cmdFinished)
         self.console_stderrAvail_conn = eConnectCallback(self.console.stderrAvail, self._dataAvail)

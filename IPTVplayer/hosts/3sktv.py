@@ -4,18 +4,21 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm, MergeDicts
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import re
+import urllib
 from urlparse import urlparse
 ###################################################
 
 def gettytul():
-    return 'http://3sk.tv/'
+    return 'http://33sk.tv/'
 
 class C3skTv(CBaseHostClass):
  
@@ -23,7 +26,7 @@ class C3skTv(CBaseHostClass):
         CBaseHostClass.__init__(self, {'history':'3sk.tv', 'cookie':'3sk.tv.cookie'})
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://www.3sk.tv/images/logo-footer.png'
+        self.DEFAULT_ICON_URL = 'http://33sk.tv/images/logo-footer.png'
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT':'1', 'Accept':'text/html', 'Accept-Encoding':'gzip, deflate'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'*/*'} )
@@ -38,7 +41,7 @@ class C3skTv(CBaseHostClass):
         return self.cm.getPage(baseUrl, addParams, post_data)
         
     def selectDomain(self):
-        domain = 'http://www.3sk.tv/'
+        domain = 'http://33sk.tv/'
         addParams = dict(self.defaultParams)
         addParams['with_metadata'] = True
         
@@ -71,7 +74,10 @@ class C3skTv(CBaseHostClass):
                 params = dict(cItem)
                 params.update({'good_for_fav':False, 'category':nextCategory, 'title':title, 'url':url})
                 self.addDir(params)
-        #self.listsTab(self.MAIN_CAT_TAB, cItem)
+        MAIN_CAT_TAB = [{'category':'search',         'title': _('Search'),       'search_item':True       },
+                        {'category':'search_history', 'title': _('Search history'),                        }]
+        self.listsTab(MAIN_CAT_TAB, cItem)
+
         
     def listItems(self, cItem):
         printDBG("C3skTv.listItems")
@@ -204,7 +210,65 @@ class C3skTv(CBaseHostClass):
                         break
         
         return self.up.getVideoLinkExt(videoUrl)
-        
+
+    def listSearchResult(self, cItem, searchPattern=None, searchType=None):
+        marker = 'google.search.Search.csqr2538'
+        page = cItem.get('page', 0)
+        if page == 0:
+            url = self.getFullUrl('/search.htm?q=%s&btnG=' % urllib.quote(searchPattern))
+            sts, data = self.getPage(url)
+            if not sts: return
+            cx = ph.search(data, '''var\s+?cx\s*?=\s*?['"]([^'^"]+?)['"]''')[0]
+            url = 'http://cse.google.com/cse.js?cx=' + cx
+            sts, data = self.getPage(url)
+            if not sts: return
+            tmp = ph.find(data, ')(', ');', flags=0)[1]
+            try:
+                tmp = json_loads(tmp)
+                url = tmp['protocol'] + '://' + tmp['uds'] + '/' +  tmp['loaderPath']
+                url += '?autoload=%7B%22modules%22%3A%5B%7B%22name%22%3A%22search%22%2C%22version%22%3A%221.0%22%2C%22callback%22%3A%22__gcse.scb%22%2C%22style%22%3A%22http%3A%2F%2Fwww.google.com%2Fcse%2Fstatic%2Fstyle%2Flook%2Fv2%2Fdefault.css%22%2C%22language%22%3A%22'
+                url += tmp['language'] + '%22%7D%5D%7D'
+                lang = tmp['language']
+                token = tmp['cse_token']
+                sts, tmp = self.getPage(url)
+                if not sts: return
+                hash = ph.search(tmp, '''google\.search\.JSHash\s*?=\s*?['"]([^'^"]+?)['"]''')[0]
+
+                baseUrl = 'https://cse.google.com/cse/element/v1?rsz=filtered_cse&num=10&hl='
+                baseUrl += lang + '&source=gcsc&gss=.tv&sig=' + hash + '&start={0}&cx=' + cx
+                baseUrl += '&q=dead&safe=off&cse_tok=' + token + '&googlehost=www.google.com&callback=' + marker
+            except Exception:
+                printExc()
+        else:
+            baseUrl = cItem['url']
+
+        url = baseUrl.format(str(page*10))
+        sts, data = self.getPage(url)
+        if not sts: return
+
+        try:
+            data = data.strip()
+            data = json_loads(data[data.find(marker) + len(marker)+1:-2])
+            for item in data['results']:
+                url = item['unescapedUrl']
+
+                if 'forumdisplay.php' in url:
+                    nextCategory = 'list_threads'
+                elif 'showthread.php' in url:
+                    nextCategory = 'list_thread'
+                else:
+                    continue
+
+                title = item['titleNoFormatting']
+                desc = item['contentNoFormatting']
+
+                self.addDir(MergeDicts(cItem, {'good_for_fav':True, 'category':nextCategory, 'title':title, 'url':url, 'desc':desc}))
+            page += 1
+            if page*10 < int(data['cursor']['resultCount']):
+                self.addDir(MergeDicts(cItem, {'good_for_fav':False, 'title':_('Next page'), 'url':baseUrl, 'page':page}))
+        except Exception:
+            printExc()
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -229,6 +293,14 @@ class C3skTv(CBaseHostClass):
             self.listThread(self.currItem)
         elif category == 'list_items':
             self.listItems(self.currItem)
+    #SEARCH
+        elif category in ["search"]:
+            cItem = dict(self.currItem)
+            cItem.update({'search_item':False, 'name':'category'}) 
+            self.listSearchResult(cItem, searchPattern, searchType)
+    #HISTORIA SEARCH
+        elif category == "search_history":
+            self.listsHistory({'name':'history', 'category': 'search'}, 'desc', _("Type: "))
         else:
             printExc()
         

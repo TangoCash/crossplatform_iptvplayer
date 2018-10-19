@@ -20,12 +20,12 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import unpackJSPlayerPar
 
 
 def gettytul():
-    return 'http://streamcomplet.me/'
+    return 'https://streamcomplet.me/'
 
 class StreamComplet(CBaseHostClass):
-    MAIN_URL    = 'http://www.streamcomplet.me/'
+    MAIN_URL    = 'https://www.streamcomplet.me/'
     SRCH_URL    = MAIN_URL + '?s='
-    DEFAULT_ICON_URL = 'http://streamcomplet.me/wp-content/themes/streaming/logo/logo.png'
+    DEFAULT_ICON_URL = 'https://streamcomplet.me/wp-content/themes/streaming/logo/logo.png'
     
     MAIN_CAT_TAB = [{'category':'categories',     'title': _('Categories'),     'icon':DEFAULT_ICON_URL, 'filters':{}},
                     {'category':'search',         'title': _('Search'),         'icon':DEFAULT_ICON_URL, 'search_item':True},
@@ -35,28 +35,10 @@ class StreamComplet(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'StreamComplet', 'cookie':'StreamComplet.cookie'})
         self.cacheFilters = {}
-        self.USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko" #"Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
+        self.USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"
         self.USER_AGENT2 = "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/44.0 (Chrome)"
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        
-    def _getFullUrl(self, url):
-        mainUrl = self.MAIN_URL
-        if 0 < len(url) and not url.startswith('http'):
-            url = mainUrl + url
-        if not mainUrl.startswith('https://'):
-            url = url.replace('https://', 'http://')
-        return url
-        
-    def listsTab(self, tab, cItem, type='dir'):
-        printDBG("StreamComplet.listsTab")
-        for item in tab:
-            params = dict(cItem)
-            params.update(item)
-            params['name']  = 'category'
-            if type == 'dir':
-                self.addDir(params)
-            else: self.addVideo(params)
 
     def listCategories(self, cItem, category):
         printDBG("StreamComplet.listCategories")
@@ -68,7 +50,7 @@ class StreamComplet(CBaseHostClass):
         data = re.compile('<a href="([^"]+?)"[^>]*?>([^<]+?)<').findall(data)
         for item in data:
             params = dict(cItem)
-            params.update({'category':category, 'title':item[1].strip(), 'url':self._getFullUrl(item[0])})
+            params.update({'category':category, 'title':item[1].strip(), 'url':self.getFullUrl(item[0])})
             self.addDir(params)
     
     def listItems(self, cItem):
@@ -104,7 +86,7 @@ class StreamComplet(CBaseHostClass):
             if title == '': continue
             icon  = self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0]
             desc  = self.cleanHtmlStr( item )
-            params.update({'title':title, 'icon':self._getFullUrl(icon), 'desc':desc, 'url':self._getFullUrl(url)})
+            params.update({'title':title, 'icon':self.getFullUrl(icon), 'desc':desc, 'url':self.getFullUrl(url)})
             self.addVideo(params)
         
         if nextPage:

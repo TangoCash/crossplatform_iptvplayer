@@ -281,6 +281,7 @@ class common:
         
     @staticmethod
     def getFullUrl(url, mainUrl='http://fake/'):
+        if not url: return ''
         if url.startswith('./'):
             url = url[1:]
 

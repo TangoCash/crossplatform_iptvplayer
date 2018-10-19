@@ -4,8 +4,9 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem, ArticleContent, RetHost, CUrlItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, GetLogoDir
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, MergeDicts
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -15,8 +16,6 @@ import re
 import urllib
 import time
 import random
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, getConfigListEntry
 ###################################################
 
@@ -52,12 +51,12 @@ class Ekstraklasa(CBaseHostClass):
                       {'name': 'Magazyn', 'navi': 'magazyny/magazyn-ekstraklasy'},
                     ]
     ETV_CATEGORY  = 'etv_category'
-    ETV_FORMAT    = 'mp4'
     MAIN_URL = ETV_MAIN_URL
     def __init__(self):
         printDBG("Ekstraklasa.__init__")
         CBaseHostClass.__init__(self, {'proxyURL': config.plugins.iptvplayer.proxyurl.value, 'useProxy': config.plugins.iptvplayer.ekstraklasa_proxy.value})
-    
+        self.DEFAULT_ICON_URL = 'http://footballtripper.com/wp-content/themes/ft/flags/Ekstraklasa-flag.png'
+
     def listsCategories_ETV(self):
         printDBG("Ekstraklasa.listsCategories_ETV")
         
@@ -67,7 +66,6 @@ class Ekstraklasa(CBaseHostClass):
                        'url'      : Ekstraklasa.ETV_MAIN_URL + item['navi'],
                        'title'    : item['name'],
                        'desc'     : 'ekstraklasa.tv',
-                       'icon'     : 'http://footballtripper.com/wp-content/themes/ft/flags/Ekstraklasa-flag.png',
                        'depth'    : 0,
                        'host'     : 'ekstraklasa.tv'
                      }  
@@ -75,14 +73,18 @@ class Ekstraklasa(CBaseHostClass):
 
     def listsCategory_ETV(self, cItem):
         printDBG("Ekstraklasa.listsCategory_ETV")
+        page = cItem.get('page', 0)
+        url = cItem['url']
+        if page > 0: url += str(page)
+
         ITEM_MARKER = '<div class="listItem'
-        sts, data = self.cm.getPage(cItem['url'])
+        sts, data = self.cm.getPage(url)
         if not sts: return
-        printDBG('----------------------------------------')
-        
+        moreData = ph.find(data, ('<div', '>', 'data-preset'))[1]
+
         # check if we should check for sub categories
         if 0 == cItem['depth']:
-            subMenuData  = self.cm.ph.getDataBeetwenMarkers(data, '<ul class="subMenu">', '</ul>', False)[1]
+            subMenuData  = ph.find(data, ('<ul', '>', 'subMenu'), '</ul>', flags=0)[1]
             subMenuData  = re.compile('<a[ ]+?href="(http[^">]+?)"[ ]*?>([^<]+?)</a>').findall(subMenuData)
             if 0 < len(subMenuData):
                 params = dict(cItem)
@@ -93,116 +95,62 @@ class Ekstraklasa(CBaseHostClass):
                     params.update({'url':item[0], 'title': self.cleanHtmlStr(item[1]), 'depth':1, })
                     self.addDir(params)
                 return
-        
+
         data = self.cm.ph.getDataBeetwenMarkers(data, ITEM_MARKER, '<script')[1]
-        moreData = self.cm.ph.getSearchGroups(data, "id=\"moredata\" value='([^']+?)'")[0]
-        
+
         data = data.split(ITEM_MARKER)
         del data[0]
         for item in data:
-            icon  = self.cm.ph.getSearchGroups(item, '<img[^>]+?data-original="([^"]+?)"')[0]
-            title = self.cm.ph.getDataBeetwenMarkers(item, '<h3 class="itemTitle">', '</h3>', False)[1].strip() + ', ' +self.cm.ph.getDataBeetwenMarkers(item, '<div class="datePublished">', '</div>', False)[1].strip()
-            # self.cm.ph.getDataBeetwenMarkers(item, '<div class="itemLead hyphenate">', '</div>', False)[1]
+            icon  = ph.search(item, '<img[^>]+?data-original="([^"]+?)"')[0]
+            title = ph.find(item, '<h3 class="itemTitle">', '</h3>', flags=0)[1].strip() + ', ' + ph.find(item, '<div class="datePublished">', '</div>', flags=0)[1].strip()
             desc  = self.cleanHtmlStr(ITEM_MARKER + item)
             url   = self.cm.ph.getSearchGroups(item, '<a href="([^"]+?)" title="([^"]+?)"', 2)[0]
-            params = {'title':title, 'url':url, 'icon':icon, 'desc': desc, 'host':'ekstraklasa.tv'}
+            params = {'title':ph.clean_html(title), 'url':url, 'icon':icon, 'desc': desc, 'host':'ekstraklasa.tv'}
             self.addVideo(params)
-            #if "mediaType mediaVideo" in item:
-            #    self.addVideo(params)
-            #else:
-            #    self.addArticle(params)
-        # checkNewItemsAvailability
-        a = len(data)
-        if '' != moreData and 0 < a:
+
+        if page == 0 and moreData and len(self.currList):
             try:
-                # check if there are more data
-                moreData  = json.loads(moreData)
-                prevLimit = moreData['limit']
-                moreData['offset'] += a
-                moreData['limit']   = 1 
-                moreData = {'params':moreData}
-                url = urllib.quote(json.dumps(moreData, sort_keys=False, separators=(',', ':')))
-                url = Ekstraklasa.ETV_MAIN_URL + '_cdf/api?json=' + url + '&____presetName=liststream'
-                sts, data = self.cm.getPage(url)
-                if ITEM_MARKER in data:
-                    moreData['params']['limit']   = prevLimit 
-                    url = urllib.quote(json.dumps(moreData, sort_keys=False, separators=(',', ':')))
-                    url = Ekstraklasa.ETV_MAIN_URL + '_cdf/api?json=' + url + '&____presetName=liststream'
-                    params = dict(cItem)
-                    params.update({'title':'Następna strona', 'url':url })
-                    self.addDir(params)
+                url = self.getFullUrl(ph.getattr(moreData, 'data-preset').replace('&amp;', '&'), self.cm.meta['url'])
+                page = int(ph.getattr(moreData, 'data-page'))
+                if url: self.addDir(MergeDicts(cItem, {'title':_('Next page'), 'url':url, 'page':page}))
             except Exception:
                 printExc()
+        elif page > 0 and len(self.currList):
+            self.addDir(MergeDicts(cItem, {'title':_('Next page'), 'page':page+1}))
         # list items
-        
-    def getVideoTab_ETV(self, ckmId):
-        printDBG("Ekstraklasa.getVideoTab_ETV ckmId[%r]" % ckmId )
-        tm = str(int(time.time() * 1000))
-        jQ = str(random.randrange(562674473039806,962674473039806))
-        authKey = 'FDF9406DE81BE0B573142F380CFA6043'
-        contentUrl = 'http://qi.ckm.onetapi.pl/?callback=jQuery183040'+ jQ + '_' + tm + '&body%5Bid%5D=' + authKey + '&body%5Bjsonrpc%5D=2.0&body%5Bmethod%5D=get_asset_detail&body%5Bparams%5D%5BID_Publikacji%5D=' + ckmId + '&body%5Bparams%5D%5BService%5D=ekstraklasa.onet.pl&content-type=application%2Fjsonp&x-onet-app=player.front.onetapi.pl&_=' + tm
-        sts, data = self.cm.getPage(contentUrl)
-        valTab = []
-        if sts:
-            try:
-                #extract json
-                result = json.loads(data[data.find("(")+1:-2])
-                strTab = []
-                valTab = []
-                for items in result['result']['0']['formats']['wideo']:
-                    for i in range(len(result['result']['0']['formats']['wideo'][items])):
-                        strTab.append(items)
-                        strTab.append(result['result']['0']['formats']['wideo'][items][i]['url'].encode('UTF-8'))
-                        if result['result']['0']['formats']['wideo'][items][i]['video_bitrate']:
-                            strTab.append(int(float(result['result']['0']['formats']['wideo'][items][i]['video_bitrate'])))
-                        else:
-                            strTab.append(0)
-                        valTab.append(strTab)
-                        strTab = []
-            except Exception:
-                printExc()
-        return valTab
 
     def getLinks_ETV(self, url):
         printDBG("Ekstraklasa.getLinks_ETV url[%r]" % url )
-        videoUrls = []
-        tries = 0
-        while tries < 2:
-            tries += 1
-            sts, data = self.cm.getPage(url)
-            if not sts: return videoUrls
-            ckmId = self.cm.ph.getSearchGroups(data, 'data-params-mvp="([^"]+?)"')[0]
-            if '' == ckmId: ckmId = self.cm.ph.getSearchGroups(data, 'id="mvp:([^"]+?)"')[0]
-            if '' == ckmId: ckmId = self.cm.ph.getSearchGroups(data, 'data\-mvp="([^"]+?)"')[0]
-            if '' != ckmId: 
-                videoUrls = self.getVideoTab_ETV(ckmId)
-                break
-            tmp = self.cm.ph.getDataBeetwenMarkers(data, 'pulsembed_embed', '</div>')[1]
-            url = self.cm.ph.getSearchGroups(tmp, 'href="([^"]+?)"')[0]
-            if url == '':
-                tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'embeddedApp'), ('</div', '>'), False)[1]
-                tmp = self.cleanHtmlStr(self.cm.ph.getSearchGroups(tmp, '''data\-params=['"]([^'^"]+?)['"]''')[0])
-                try:
-                    tmp = json.loads(tmp)['parameters']['embedCode'].encode('utf-8')
-                    url = self.cm.getFullUrl(self.cm.ph.getSearchGroups(tmp, 'data\-src="([^"]+?)"')[0], self.cm.meta['url'])
-                except Exception:
-                    printExc()
-        return videoUrls
+        return self.up.getVideoLinkExt(url)
 
-    def getDescription_ETV(self, url):
-        printDBG("Ekstraklasa.getDescription url[%r]" % url )
-        content = {}
-        sts, data = self.cm.getPage(url)
-        if sts:
-            desc  = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(data, '<div id="lead">', '</div>', False)[1])
-            title = self.cm.ph.getDataBeetwenMarkers(data, '<title>', '</title>', False)[1].strip()
-            data  = self.cm.ph.getDataBeetwenMarkers(data, '<div id="leadMedia">', '</div>', False)[1].strip()
-            icon  = self.cm.ph.getSearchGroups(data, 'src="([^"]+?)"')[0]
-            content = { 'title': title,
-                        'desc' : desc,
-                        'icon' : icon,
-                      }
-        return content
+    def getArticleContent(self, cItem):
+        printDBG("Ekstraklasa.getArticleContent [%s]" % cItem)
+        retTab = []
+        itemsList = []
+
+        sts, data = self.cm.getPage(cItem['url'])
+        if not sts: return []
+
+        title = cItem['title']
+        icon = cItem.get('icon', self.DEFAULT_ICON_URL)
+        desc = cItem.get('desc', '')
+
+        data = ph.find(data, ('<script', '>', 'ld+json'), '</script>', flags=0)[1]
+        try:
+            data = json_loads(data)
+            title = ph.clean_html(data['headline'])
+            icon = self.getFullIconUrl(data['image']['url'], self.cm.meta['url'])
+            desc = ph.clean_html(data['description'])
+            itemsList.append((_('Author'), data['author']['name']))
+            itemsList.append((_('Published'), data['datePublished'].split('+', 1)[0]))
+        except Exception:
+            printExc()
+
+        if title: title = cItem['title']
+        if icon:  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
+        if desc:  desc = cItem.get('desc', '')
+        
+        return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':{'custom_items_list':itemsList}}]
     
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('Ekstraklasa..handleService start')
@@ -225,104 +173,30 @@ class IPTVHost(CHostBase):
     def __init__(self):
         CHostBase.__init__(self, Ekstraklasa(), False)
 
-    def getLogoPath(self):
-        return RetHost(RetHost.OK, value = [GetLogoDir('ekstraklasatvlogo.png')])
-        
-    def getArticleContent(self, Index = 0):
-        listLen = len(self.host.currList)
-        if listLen < Index and listLen > 0:
-            printDBG( "ERROR getArticleContent - current list is to short len: %d, Index: %d" % (listLen, Index) )
-            return RetHost(RetHost.ERROR, value = [])
-        if 'ekstraklasa.tv' in self.host.currList[Index].get('host', ''): 
-            content = self.host.getDescription_ETV(self.host.currList[Index]['url'])
-        elif 'ekstraklasa.org' in self.host.currList[Index].get('host', ''):
-            content = {}
-        
-        title  = content.get('title', '')
-        text   = content.get('desc', '')
-        images = [ {'title':'', 'author': '', 'url': content.get('icon', '')} ]
-        
-        return RetHost(RetHost.OK, value = [ArticleContent(title = title, text = text, images =  images)])
-
     def getLinksForVideo(self, Index = 0, selItem = None):
         listLen = len(self.host.currList)
         if listLen < Index and listLen > 0:
             printDBG( "ERROR getLinksForVideo - current list is to short len: %d, Index: %d" % (listLen, Index) )
             return RetHost(RetHost.ERROR, value = [])
         retlist = []
-        if 'ekstraklasa.tv' in self.host.currList[Index].get('host', ''):        
+        if 'ekstraklasa.tv' in self.host.currList[Index].get('host', ''):
             tab = self.host.getLinks_ETV(self.host.currList[Index].get('url', ''))
-            
-            tmp = tab
-            tab = []
-            for item in tmp:
-                if item[0] == Ekstraklasa.ETV_FORMAT:
-                    tab.append(item)
-            
+
             def __getLinkQuality( itemLink ):
-                return int(itemLink[2])
-            
+                return int(itemLink['bitrate'])
+
             maxRes = int(config.plugins.iptvplayer.ekstraklasa_defaultformat.value) * 1.1
             tab = CSelOneLink(tab, __getLinkQuality, maxRes).getSortedLinks()
             printDBG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>. tab[%s]" % tab)
-            if config.plugins.iptvplayer.ekstraklasa_usedf.value and 0 < len(tab):
+            if config.plugins.iptvplayer.ekstraklasa_usedf.value and len(tab):
                 tab = [tab[0]]
-            
+
             for item in tab:
-                nameLink = "type: %s \t bitrate: %s" % (item[0], item[2])
-                url = item[1]
-                retlist.append(CUrlItem(nameLink.encode('utf-8'), url.encode('utf-8'), 0))
+                retlist.append(CUrlItem(item['name'], item['url'], 0))
         elif 'ekstraklasa.org' in self.host.currList[Index].get('host', ''):
             pass
         return RetHost(RetHost.OK, value = retlist)
     # end getLinksForVideo
-    
-    def getResolvedURL(self, url):
-        # resolve url to get direct url to video file
-        url = self.host.resolveLink(url)
-        urlTab = []
-        if isinstance(url, basestring) and url.startswith('http'):
-            urlTab.append(url)
-        return RetHost(RetHost.OK, value = urlTab)
 
-    def convertList(self, cList):
-        hostList = []
-        searchTypesOptions = []
-        
-        for cItem in cList:
-            hostLinks = []
-            type = CDisplayListItem.TYPE_UNKNOWN
-            possibleTypesOfSearch = None
-
-            if cItem['type'] == 'category':
-                if cItem['title'] == 'Wyszukaj':
-                    type = CDisplayListItem.TYPE_SEARCH
-                    possibleTypesOfSearch = searchTypesOptions
-                else:
-                    type = CDisplayListItem.TYPE_CATEGORY
-            elif cItem['type'] == 'video':
-                type = CDisplayListItem.TYPE_VIDEO
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-            elif cItem['type'] == 'article':
-                type = CDisplayListItem.TYPE_ARTICLE
-                url = cItem.get('url', '')
-                if '' != url:
-                    hostLinks.append(CUrlItem("Link", url, 1))
-                
-            title       =  cItem.get('title', '')
-            description =  clean_html(cItem.get('desc', ''))
-            icon        =  self.host.getFullUrl(cItem.get('icon', ''))
-            
-            hostItem = CDisplayListItem(name = title,
-                                        description = description,
-                                        type = type,
-                                        urlItems = hostLinks,
-                                        urlSeparateRequest = 1,
-                                        iconimage = icon,
-                                        possibleTypesOfSearch = possibleTypesOfSearch)
-            hostList.append(hostItem)
-
-        return hostList
-    # end convertList
+    def withArticleContent(self, cItem):
+        return True if 'video' == cItem.get('type') else False

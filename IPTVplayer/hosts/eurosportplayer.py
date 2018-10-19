@@ -4,10 +4,11 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, NextDay, PrevDay
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm, NextDay, PrevDay
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 ###################################################
 
 ###################################################
@@ -16,8 +17,6 @@ from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 import time
 import urllib
 from datetime import datetime, timedelta
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
@@ -156,13 +155,13 @@ class EuroSportPlayer(CBaseHostClass):
         if ret['sts'] and 0 == ret['code']:
             data = ret['data'].strip()
             try:
-                serverApiData = byteify(json.loads(data))
+                serverApiData = json_loads(data)
                 clientId = serverApiData['server_path']['sdk']['clientId']
                 env = serverApiData['server_path']['sdk']['environment']
                 url = 'https://bam-sdk-configs.mlbam.net/v0.1/%s/browser/v2.1/windows/chrome/%s.json' % (clientId, env)
                 sts, data = self.getPage(url)
                 if not sts: return False
-                serverApiData['prod'] =  byteify(json.loads(data))
+                serverApiData['prod'] = json_loads(data)
             except Exception:
                 printExc()
                 return
@@ -193,7 +192,7 @@ class EuroSportPlayer(CBaseHostClass):
             printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             printDBG(data)
             printDBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-            self.tokenData.update(byteify(json.loads(data)))
+            self.tokenData.update(json_loads(data))
             self.tokenData['timeout'] = time.time() + self.tokenData['expires_in'] # expires_in - in seconds
             bRet = True
         except Exception:
@@ -302,7 +301,7 @@ class EuroSportPlayer(CBaseHostClass):
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data['data']['sports_filter']['list']:
                 sportId = item['sport']
                 icon = item['logoImage'][-1]['rawImage']
@@ -319,13 +318,13 @@ class EuroSportPlayer(CBaseHostClass):
         try:
             sportId = cItem['f_sport_id']
             variables = {"must":[{"attributeName":"category","values":["%s" % sportId]}],"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder']}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/ondemand/counts/bycategory?variables=' + urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/ondemand/counts/bycategory?variables=' + urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
             totall = 0
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in [('replays', 'Ondemand_Subnav_Replay'), ('highlights', 'Ondemand_Subnav_Highlights'), ('news', 'Ondemand_Subnav_News')]:
                 try:
                     vodType = item[0]
@@ -362,17 +361,17 @@ class EuroSportPlayer(CBaseHostClass):
             else:
                 variables = {"pageSize":30,"page":page,"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder'],"category":"%s" % sportId}
                 url += '/category?variables='
-            url += urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url += urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
             if vodType == 'all':
-                data = byteify(json.loads(data))['data']['bucket']
+                data = json_loads(data)['data']['bucket']
                 all  = data['meta']['hits']
                 data = data['aggs'][0]['buckets'][0]
             else:
-                data = byteify(json.loads(data))['data']['query']
+                data = json_loads(data)['data']['query']
                 all  = data['meta']['hits']
             
             NOW = datetime.now()
@@ -391,12 +390,12 @@ class EuroSportPlayer(CBaseHostClass):
         printDBG("EuroSportPlayer.listOnAir [%s]" % cItem)
         try:
             variables = {"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder']}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/Airings/onAir?variables=' + urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/Airings/onAir?variables=' + urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             NOW = datetime.now()
             for item in data['data']['Airings']:
                 self._addItem(cItem, item, NOW)
@@ -416,12 +415,12 @@ class EuroSportPlayer(CBaseHostClass):
             else: type = ''
             
             variables = {"include_images":True,"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder']}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/%sOlympicsEventPageAll?variables=%s' % (type, urllib.quote(json.dumps(variables, separators=(',', ':'))))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/%sOlympicsEventPageAll?variables=%s' % (type, urllib.quote(json_dumps(variables, separators=(',', ':'))))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             data['data']['EventPageAll'].sort(key=lambda item: item['eventDetails'][0]['title'])
             for item in data['data']['EventPageAll']:
                 title = self.cleanHtmlStr(item['eventDetails'][0]['title'])
@@ -451,12 +450,12 @@ class EuroSportPlayer(CBaseHostClass):
         try:
             contentId = cItem['f_content_id']
             variables = {"contentId":contentId,"include_media":True,"include_images":True,"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder']}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/EventPageByContentId?variables=' + urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/EventPageByContentId?variables=' + urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             name = cItem['category'].split('_', 1)[-1]
             if name == 'airings': fType = ''
             else: fType = 'VIDEO'
@@ -517,12 +516,12 @@ class EuroSportPlayer(CBaseHostClass):
             sData = cItem.pop('f_sdate')
             eData = cItem.pop('f_edate')
             variables = {"startDate":_dateStr(sData - self.OFFSET),"endDate":_dateStr(eData - self.OFFSET),"uiLang":self.serverApiData['locale']['language'],"mediaRights":["GeoMediaRight"],"preferredLanguages":self.serverApiData['locale']['languageOrder']}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/Airings/DateRange?variables=' + urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/eurosport/web/Airings/DateRange?variables=' + urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             
             data['data']['Airings'].sort(key=lambda item: item['startDate']) #, reverse=True)
             
@@ -539,12 +538,12 @@ class EuroSportPlayer(CBaseHostClass):
         try:
             page = cItem.get('page', 1)
             variables = {"index":"eurosport_global","preferredLanguages":["pl","en"],"uiLang":"pl","mediaRights":["GeoMediaRight"],"page":page,"pageSize":20,"q":cItem['f_query'],"type":["Video","Airing","EventPage"],"include_images":True}
-            url = self.serverApiData['server_path']['search'] + '/persisted/query/core/sitesearch?variables=' + urllib.quote(json.dumps(variables, separators=(',', ':')))
+            url = self.serverApiData['server_path']['search'] + '/persisted/query/core/sitesearch?variables=' + urllib.quote(json_dumps(variables, separators=(',', ':')))
             
             sts, data = self.getJSPage(url)
             if not sts: return
             
-            data = byteify(json.loads(data))['data']['sitesearch']
+            data = json_loads(data)['data']['sitesearch']
             NOW = datetime.now()
             for item in data['hits']:
                 self._addItem(cItem, item['hit'], NOW)
@@ -609,7 +608,7 @@ class EuroSportPlayer(CBaseHostClass):
                     GetIPTVNotify().push(msg, 'error', 10)
                     return False
                 else:
-                    data = byteify(json.loads(data))
+                    data = json_loads(data)
                     printDBG(data)
                     self.tokenData['access_code'] = data['code']
                     self.tokenData['access_timeout'] = time.time() + (data['exp'] - data['iat']) / 1000.0
@@ -647,8 +646,8 @@ class EuroSportPlayer(CBaseHostClass):
             for urlItem in  playbackUrls:
                 url = urlItem['href'].replace('{scenario}', 'browser~unlimited')
                 sts, data = self.getJSPage(url)
-                data = byteify(json.loads(data))['stream']
-                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++")
+                data = json_loads(data)['stream']
+                printDBG("+++")
                 printDBG(data)
                 for item in [('slide', 'slide'), ('complete', 'complete')]:
                     if item[0] not in data: continue

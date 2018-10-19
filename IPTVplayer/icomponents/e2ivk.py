@@ -124,18 +124,21 @@ class E2iVirtualKeyBoard(Screen):
         # full screen
         sz_w = 1980 
         sz_h = getDesktop(0).size().height()
-        
+
         self.fullHD = 1980 == 1920
-        
+
         bw = 70 if self.fullHD else 50
         bh = 70 if self.fullHD else 50
         inputFontSize = 33 if self.fullHD else 26
         headerFontSize = 25 if self.fullHD else 20
-        
+
         x = (sz_w - 15*bw) / 2
         y = sz_h - 7*bh
-        
-        skinTab = ["""<screen position="center,center" size="%d,%d" title="E2iPlayer virtual keyboard">""" %( sz_w, sz_h ) ]
+
+        bg_color = config.plugins.iptvplayer.osk_background_color.value
+        bg_color = ' backgroundColor="%s" ' % bg_color if bg_color else ''
+
+        skinTab = ["""<screen position="center,center" size="%d,%d" title="E2iPlayer virtual keyboard" %s >""" %( sz_w, sz_h, bg_color ) ]
         
         def _addPixmapWidget(name, x, y, w, h, p):
             skinTab.append('<widget name="%s" zPosition="%d" position="%d,%d" size="%d,%d" transparent="1" alphatest="blend" />' % (name, p, x, y, w, h))

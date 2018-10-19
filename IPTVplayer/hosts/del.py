@@ -212,10 +212,6 @@ class Del(CBaseHostClass):
         
         CBaseHostClass.endHandleService(self, index, refresh)
 
-    def getSuggestionsProvider(self, index):
-        printDBG('Del.getSuggestionsProvider')
-        return SuggestionsProvider()
-
 class IPTVHost(CHostBase):
 
     def __init__(self):

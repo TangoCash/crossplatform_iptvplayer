@@ -32,6 +32,7 @@ class HdgoccParser():
 
     def getFullUrl(self, url, pathUrl):
         printDBG('HdgoccParser.getFullUrl')
+        return self.cm.getFullUrl(pathUrl, url)
         baseUrl = self.up.getDomain(url, onlyDomain=False)
         if not self.cm.isValidUrl(pathUrl):
             if pathUrl.startswith('//'):
@@ -95,7 +96,7 @@ class HdgoccParser():
         if '.playlist.php' in seasonUrl:
             itemTitle = self.cm.ph.getSearchGroups(data, '''createTextNode\([^'^"]*?['"]([^'^"]+?)['"]''')[0]
             data = self.cm.ph.getDataBeetwenMarkers(data, 'season_list[0] =', ';', False)[1]
-            data = re.compile('''['"]([^'^"]+?)['"]''').findall(data)
+            data = re.compile('''['"]([^'^"]*?)['"]''').findall(data)
             idx = 0
             for idx in range(len(data)):
                 vidUrl = self.getFullUrl(seasonUrl, data[idx])
@@ -116,7 +117,7 @@ class HdgoccParser():
                 except Exception: 
                     printExc()
                     id = idx
-                episodesTab.append({'title':item[1], 'id':id, 'url': strwithmeta(episodeMainUrl + item[0], {'Referer':refUrl})})
+                episodesTab.append({'title':item[1], 'id':id, 'url': strwithmeta(episodeMainUrl + item[0], {'host_name':'hdgo.cc', 'Referer':refUrl})})
                 idx += 1
         episodesTab.sort(key=lambda item: item['id'])
         return episodesTab

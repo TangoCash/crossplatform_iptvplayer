@@ -9,10 +9,13 @@ START_S=2
 END_E=4
 END_S=8
 IGNORECASE=16
+I=16
 
 # pre-compiled regular expressions
+IFRAME_SRC_URI_RE = re.compile(r'''<iframe[^>]+?src=(['"])([^>]*?)(?:\1)''', re.I)
 IMAGE_SRC_URI_RE = re.compile(r'''<img[^>]+?src=(['"])([^>]*?\.(?:jpe?g|png)(?:\?[^\1]*?)?)(?:\1)''', re.I)
 A_HREF_URI_RE = re.compile(r'''<a[^>]+?href=(['"])([^>]*?)(?:\1)''', re.I)
+STRIP_HTML_COMMENT_RE = re.compile("<!--[\s\S]*?-->")
 
 def getattr(data, attrmame, flags=0):
     if flags & IGNORECASE:
@@ -67,6 +70,7 @@ def any(tab, data, start, end):
             return True
     return False
 
+# example: ph.findall(data, ('<a', '>', ph.check(('articles.php', 'readarticle.php'), ph.any)), '</a>')
 def check(arg1, arg2=None):
     if arg2 == None and isinstance(arg1, basestring):
         return lambda data, ldata, s, e: ldata.find(arg1, s, e) != -1
