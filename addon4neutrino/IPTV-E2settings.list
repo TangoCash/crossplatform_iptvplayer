@@ -1,7 +1,7 @@
-#Aby ustawic jakas opcje nalezy skopiowac jej nazwe do pliku E2settings.conf i wpisac jej wartosc
-#Przyklad:
+#To set some options, copy its name to the E2settings.conf file and enter its value
+#Example:
 
-#Lista mozliwych opcji konfiguracyjnych IPTVplayer-a:
+#List of possible IPTVplayer configuration options:
 config.plugins.iptvplayer.exteplayer3path = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.wgetpath        = ConfigText(default = "wget", fixed_size = False)
 config.plugins.iptvplayer.hlsdlpath       = ConfigText(default = "hlsdl", fixed_size = False)

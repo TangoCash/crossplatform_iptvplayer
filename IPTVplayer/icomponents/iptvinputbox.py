@@ -6,7 +6,6 @@
 #
 # 
 from Screens.InputBox import InputBox
-from cover import Cover3
 from Tools.LoadPixmap import LoadPixmap
 
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
