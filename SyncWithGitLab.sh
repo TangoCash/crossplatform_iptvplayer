@@ -2,56 +2,59 @@
 UPD=$1
 [ "$UPD" == "" ] && UPD=$(pwd)
 publicGitRoot=$UPD
+TMPGIT=$2
+[ "$TMPGIT" == "" ] && TMPGIT=$publicGitRoot/tmp_git
 daemonDir=$publicGitRoot/IPTVdaemon
 KaddonDir=$publicGitRoot/addon4KODI/neutrinoIPTV
 NpluginDir=$publicGitRoot/addon4neutrino/neutrinoIPTV
 publicGitDir=$publicGitRoot/IPTVplayer
+tmpGitDir=$TMPGIT
 
 ############################## Syncing GITLAB ##############################
-if [ ! -d ~/Archive/iptvplayer-GitLab-master-version ];then
-  mkdir -p ~/Archive
+if [ ! -d $tmpGitDir/iptvplayer-GitLab-master-version ];then
+  mkdir -p $tmpGitDir
   echo 'Cloning...'
-  git clone https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2.git ~/Archive/iptvplayer-GitLab-master-version
+  git clone https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2.git $tmpGitDir/iptvplayer-GitLab-master-version
 else
   echo 'Syncing GitLab...'
-  cd ~/Archive/iptvplayer-GitLab-master-version
+  cd $tmpGitDir/iptvplayer-GitLab-master-version
   git pull
 fi
-if [ ! -d ~/Archive/iptvplayerXXX-GitLab-master-version ];then
+if [ ! -d $tmpGitDir/iptvplayerXXX-GitLab-master-version ];then
   echo 'Cloning XXX host...'
-  git clone https://gitlab.com/iptv-host-xxx/iptv-host-xxx.git ~/Archive/iptvplayerXXX-GitLab-master-version
+  git clone https://gitlab.com/iptv-host-xxx/iptv-host-xxx.git $tmpGitDir/iptvplayerXXX-GitLab-master-version
 else
   echo 'Syncing GitLab XXX host...'
-  cd ~/Archive/iptvplayerXXX-GitLab-master-version
+  cd $tmpGitDir/iptvplayerXXX-GitLab-master-version
   git pull
 fi
-if [ ! -d ~/Archive/iptvplayer-infoversion-host ];then
-  echo 'Cloning XXX host...'
-  git clone https://gitlab.com/mosz_nowy/infoversion.git ~/Archive/iptvplayer-infoversion-host
+if [ ! -d $tmpGitDir/iptvplayer-infoversion-host ];then
+  echo 'Cloning infoversion host...'
+  git clone https://gitlab.com/mosz_nowy/infoversion.git $tmpGitDir/iptvplayer-infoversion-host
 else
-  echo 'Syncing GitLab XXX host...'
-  cd ~/Archive/iptvplayer-infoversion-host
+  echo 'Syncing GitLab infoversion host...'
+  cd $tmpGitDir/iptvplayer-infoversion-host
   git pull
 fi
-if [ ! -d ~/Archive/zdzislaw-iptvplayer-GitLab-version ];then
-  mkdir -p ~/Archive
+if [ ! -d $tmpGitDir/zdzislaw-iptvplayer-GitLab-version ];then
+  mkdir -p $tmpGitDir
   echo 'Cloning...'
-  git clone https://gitlab.com/zdzislaw22/iptvplayer-for-e2.git ~/Archive/zdzislaw-iptvplayer-GitLab-version
+  git clone https://gitlab.com/zdzislaw22/iptvplayer-for-e2.git $tmpGitDir/zdzislaw-iptvplayer-GitLab-version
 else
   echo 'Syncing Zdzislaw22 version...'
-  cd ~/Archive/zdzislaw-iptvplayer-GitLab-version
+  cd $tmpGitDir/zdzislaw-iptvplayer-GitLab-version
   git pull
 fi
 ############################## Syncing neutrinoIPTV ##############################
 echo 'Syncing neutrinoIPTV...'
-cd ~/Archive/iptvplayer-GitLab-master-version/
+cd $tmpGitDir/iptvplayer-GitLab-master-version/
 
 subDIR='components'
   [ -e $publicGitDir/i$subDIR ] && rm -rf $publicGitDir/i$subDIR/* || mkdir -p $publicGitDir/i$subDIR
-  cp -a ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/i$subDIR
+  cp -a $tmpGitDir/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/i$subDIR
 subDIR='tools'
   [ -e $publicGitDir/i$subDIR ] && rm -rf $publicGitDir/i$subDIR/* || mkdir -p $publicGitDir/i$subDIR
-  cp -a ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/i$subDIR
+  cp -a $tmpGitDir/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/i$subDIR
 
   rm -rf $publicGitDir/ihosts
 
@@ -59,7 +62,7 @@ subDIRs="cache icons/logos hosts iptvdm libs locale"
 for subDIR in $subDIRs
 do
   [ -e $publicGitDir/$subDIR ] && rm -rf $publicGitDir/$subDIR/* || mkdir -p $publicGitDir/$subDIR
-  cp -a ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/$subDIR
+  cp -a $tmpGitDir/iptvplayer-GitLab-master-version/IPTVPlayer/$subDIR/* $publicGitDir/$subDIR
 done
 
 subDIRs="icomponents itools hosts libs scripts iptvdm"
@@ -68,18 +71,17 @@ do
   #ln -sf ../__init__.py $publicGitDir/$subDIR/__init__.py
   touch $publicGitDir/$subDIR/__init__.py
 done
-cp -a ~/Archive/iptvplayerXXX-GitLab-master-version/IPTVPlayer/hosts/* $publicGitDir/hosts/
-cp -a ~/Archive/iptvplayer-infoversion-host/hosts/* $publicGitDir/hosts/
-cp -f ~/Archive/iptvplayer-GitLab-master-version/IPTVPlayer/version.py $publicGitDir
-wersja=`cat ./IPTVPlayer/version.py|grep 'IPTV_VERSION='|cut -d '"' -f2`
-sed -i "s/^name=.*$/name=IPTV for Neutrino @j00zek v.$wersja/" $NpluginDir/neutrinoIPTV.cfg
-sed -i "s/^name.polski=.*$/name.polski=IPTV dla Neutrino @j00zek w.$wersja/" $NpluginDir/neutrinoIPTV.cfg
-echo "$wersja">$daemonDir/version
+cp -a $tmpGitDir/iptvplayerXXX-GitLab-master-version/IPTVPlayer/hosts/* $publicGitDir/hosts/
+cp -a $tmpGitDir/iptvplayer-infoversion-host/hosts/* $publicGitDir/hosts/
+cp -f $tmpGitDir/iptvplayer-GitLab-master-version/IPTVPlayer/version.py $publicGitDir
+version=`cat ./IPTVPlayer/version.py|grep 'IPTV_VERSION='|cut -d '"' -f2`
+sed -i "s/^name=.*$/name=IPTV for Neutrino ($version)/" $NpluginDir/neutrinoIPTV.cfg
+echo "$version">$daemonDir/version
 ############################## logos structure & names ##############################
 rm -f $publicGitDir/icons/*
 mv -f $publicGitDir/icons/logos/*.png $publicGitDir/icons/
-cp -a ~/Archive/iptvplayerXXX-GitLab-master-version/IPTVPlayer/icons/logos/XXXlogo.png $publicGitDir/icons/XXX.png
-cp -a ~/Archive/iptvplayer-infoversion-host/icons/logos/infologo.png $publicGitDir/icons/infoversion.png
+cp -a $tmpGitDir/iptvplayerXXX-GitLab-master-version/IPTVPlayer/icons/logos/XXXlogo.png $publicGitDir/icons/XXX.png
+cp -a $tmpGitDir/iptvplayer-infoversion-host/icons/logos/infologo.png $publicGitDir/icons/infoversion.png
 rm -rf $publicGitDir/icons/logos/
 rm -rf $publicGitDir/icons/favourites*
 cd $publicGitDir/icons/
@@ -139,6 +141,7 @@ do
   toDel='ActionMap';			[[ `grep -c $toDel<$myfile` -gt 1 ]] || sed -i "/import .*$toDel/d" $myfile
   toDel='ConfigExtMoviePlayer';		[[ `grep -c $toDel<$myfile` -gt 1 ]] || sed -i "/import .*$toDel/d" $myfile
   toDel='IPTVMultipleInputBox';		[[ `grep -c $toDel<$myfile` -gt 1 ]] || sed -i "/import .*$toDel/d" $myfile
+  toDel='Cover3';		[[ `grep -c $toDel<$myfile` -gt 1 ]] || sed -i "/import .*$toDel/d" $myfile
   #toDel='self.console_appClosed_conn';	[[ `grep -q $toDel<$myfile` ]] || sed -i "/$toDel/d" $myfile
   #toDel='self.console_stderrAvail_conn';[[ `grep -q $toDel<$myfile` ]] || sed -i "/$toDel/d" $myfile
   
@@ -242,12 +245,15 @@ done
 echo "	}">>$NpluginDir/luaScripts/hostslist.lua
 ###################### step 4 create list of possible configs
 cd $publicGitDir
-echo "#Aby ustawic jakas opcje nalezy skopiowac jej nazwe do pliku E2settings.conf i wpisac jej wartosc" > $NpluginDir/../IPTV-E2settings.list
-echo "#Przyklad:" >> $NpluginDir/../IPTV-E2settings.list
+echo "#To set some options, copy its name to the E2settings.conf file and enter its value" > $NpluginDir/../IPTV-E2settings.list
+echo "#Example:" >> $NpluginDir/../IPTV-E2settings.list
 echo "" >> $NpluginDir/../IPTV-E2settings.list
-echo "#Lista mozliwych opcji konfiguracyjnych IPTVplayer-a:" >> $NpluginDir/../IPTV-E2settings.list
+echo "#List of possible IPTVplayer configuration options:" >> $NpluginDir/../IPTV-E2settings.list
 for myfile in `find -type f -name '*.py'`
 do
   #echo $myfile
   cat $myfile| egrep -v 'extplayer|gstplayer|MIPS|ARM|software_decode' | grep -o "config\.plugins\.iptvplayer\..*=[ ]*Config.*$" >> $NpluginDir/../IPTV-E2settings.list
 done
+
+####################### step 5 cleanup
+[ "$2" == "" ] && rm -rf $tmpGitDir
