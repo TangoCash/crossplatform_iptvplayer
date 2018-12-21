@@ -436,15 +436,15 @@ class TED(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
         
-        def _addLinkItem(urlTab, item, url):
+        def _addLinkItem(urlTab, item, url, namePrefix=''):
             try:
-                if not self.cm.isValidUrl(url): return
+                if not self.cm.isValidUrl(url) and not url.startswith('merge://'): return
                 if 'width' in item and 'height' in item:
                     name = '%sx%s (%s)' % (item['width'], item['height'], item['bitrate'])
                 else:
                     name = item.get('name', str(item['bitrate']))
                 bitrate = item['bitrate']
-                urlTab.append({'name':name, 'url':url, 'bitrate':bitrate, 'need_resolve':0})
+                urlTab.append({'name':namePrefix + name, 'url':url, 'bitrate':bitrate, 'need_resolve':0})
             except Exception:
                 printExc()
         
@@ -485,10 +485,14 @@ class TED(CBaseHostClass):
 
                 tmp = getDirectM3U8Playlist(self.cm.getFullUrl(url, self.cm.meta['url']), checkExt=False)
                 for item in tmp:
-                    bitrate = ph.search(item['url'], reObj)[0]
+                    url = item['url']
+                    if url.startswith('merge://'): url = url.meta.get('video_url', '')
+                    bitrate = ph.search(url, reObj)[0]
                     url = baseMp4Url.replace(baseBitrate, bitrate)
-                    printDBG(">> %s %s" % (baseMp4Url, url))
-                    _addLinkItem(urlTab, item, url)
+                    printDBG(">> %s %s %s" % (url, baseMp4Url, url))
+                    _addLinkItem(urlTab, item, url, '[MP4] ')
+                #for item in tmp:
+                #    _addLinkItem(urlTab, item, item['url'], '[HLS] ')
 
             def __getLinkQuality( itemLink ):
                 try: return int(itemLink['bitrate'])

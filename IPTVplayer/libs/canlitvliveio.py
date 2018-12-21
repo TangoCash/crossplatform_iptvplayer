@@ -99,23 +99,33 @@ class CanlitvliveIoApi(CBaseHostClass):
         printDBG("CanlitvliveIoApi.getVideoLink")
         urlsTab = []
 
-        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        sts, baseData = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return urlsTab
 
         if '/tele1.' in cItem['url']:
-            data = ph.find(data, ('<div', '>', 'video-player'), '</div>', flags=ph.IGNORECASE)[1]
-            url = self.cm.getFullUrl(ph.search(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', flags=ph.IGNORECASE)[0], self.cm.meta['url'])
-            return self.up.getVideoLinkExt(strwithmeta(url, {'Referer':self.cm.meta['url']}))
+            data = ph.findall(baseData, '<iframe', '>', flags=ph.I)
+            for item in data:
+                printDBG(">>>>>>>>>>>>>>>>>>> " + item)
+                url = self.cm.getFullUrl(ph.getattr(item, 'src'), self.cm.meta['url'])
+                if 1 == self.up.checkHostSupport(url):
+                    urlsTab = self.up.getVideoLinkExt(strwithmeta(url, {'Referer':self.cm.meta['url']}))
+                    if urlsTab: return urlsTab
 
-        hlsUrl = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
+        hlsUrl = ph.search(baseData, '''["'](https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)["']''', flags=ph.I)[0]
         printDBG("hlsUrl||||||||||||||||| " + hlsUrl)
-        if hlsUrl != '':
+        if hlsUrl:
             hlsUrl = strwithmeta(hlsUrl, {'User-Agent':self.defaultParams['header']['User-Agent'], 'Referer':cItem['url']})
             urlsTab = getDirectM3U8Playlist(hlsUrl, checkContent=True, sortWithMaxBitrate=999999999)
-        
+
         if 0 == len(urlsTab):
-            data = self.cm.ph.getDataBeetwenMarkers(data, '.setup(', ')')[1]
-            videoUrl = self.cm.ph.getSearchGroups(data, '''['"]?file['"]?\s*:\s*['"](https?://[^'^"]+?)['"]''')[0]
+            data = ph.find(baseData, '.setup(', ')')[1]
+            videoUrl = ph.search(data, '''['"]?file['"]?\s*:\s*['"](https?://[^'^"]+?)['"]''')[0]
+            if self.cm.isValidUrl(videoUrl):
+                videoUrl = strwithmeta(videoUrl, {'User-Agent':self.defaultParams['header']['User-Agent'], 'Referer':cItem['url']})
+                urlsTab.append({'name':'direct', 'url':videoUrl})
+
+        if 0 == len(urlsTab):
+            videoUrl = ph.search(baseData, '''['"]?streamurl['"]?\s*:\s*['"](https?://[^'^"]+?)['"]''', flags=ph.I)[0]
             if self.cm.isValidUrl(videoUrl):
                 videoUrl = strwithmeta(videoUrl, {'User-Agent':self.defaultParams['header']['User-Agent'], 'Referer':cItem['url']})
                 urlsTab.append({'name':'direct', 'url':videoUrl})

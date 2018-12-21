@@ -5,9 +5,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, GetIPTVNotify, GetIPTVSleep
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, rm, UsePyCurl
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, IsHttpsCertValidationEnabled, byteify, GetDefaultLang, rm, UsePyCurl, GetJSScriptFile
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import IsMainThread, IsThreadTerminated, SetThreadKillable
-from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute_ext
 from Plugins.Extensions.IPTVPlayer.libs import ph
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
@@ -746,6 +746,7 @@ class common:
                 # reset will cause lost all cookies, so we force to saved them in the file
                 if params.get('use_cookie', False) and params.get('save_cookie', False):
                     curlSession.setopt(pycurl.COOKIELIST , 'FLUSH')
+                    curlSession.setopt(pycurl.COOKIELIST , 'ALL')
                 
                 curlSession.reset()
                 # to be re-used in next request
@@ -754,7 +755,7 @@ class common:
                 # we should not use pycurl anymore
                 SetThreadKillable(True)
                 
-                self.fillHeaderItems(metadata, responseHeaders)
+                self.fillHeaderItems(metadata, responseHeaders, collectAllHeaders=params.get('collect_all_headers'))
                 
                 if params['return_data']:
                     out_data = buffer.getvalue()
@@ -828,14 +829,18 @@ class common:
             printExc()
         return sts, data
 
-    def fillHeaderItems(self, metadata, responseHeaders, camelCase=False):
+    def fillHeaderItems(self, metadata, responseHeaders, camelCase=False, collectAllHeaders=False):
         returnKeys = ['content-type', 'content-disposition', 'content-length', 'location']
         if camelCase: sourceKeys = ['Content-Type', 'Content-Disposition', 'Content-Length', 'Location']
         else: sourceKeys = returnKeys
         for idx in range(len(returnKeys)):
             if sourceKeys[idx] in responseHeaders:
                 metadata[returnKeys[idx]] = responseHeaders[sourceKeys[idx]]
-        
+
+        if collectAllHeaders:
+            for header, value in responseHeaders.iteritems():
+                metadata[header.lower()] = responseHeaders[header]
+
     def getPage(self, url, addParams = {}, post_data = None):
         ''' wraps getURLRequestData '''
         
@@ -859,7 +864,7 @@ class common:
                     metadata = self.meta
                     metadata['url'] = e.fp.geturl()
                     metadata['status_code'] = e.code
-                    self.fillHeaderItems(metadata, e.fp.info(), True)
+                    self.fillHeaderItems(metadata, e.fp.info(), True, collectAllHeaders=addParams.get('collect_all_headers'))
                     
                     data = e.fp.read(addParams.get('max_data_size', -1))
                     if e.fp.info().get('Content-Encoding', '') == 'gzip':
@@ -980,31 +985,28 @@ class common:
                         printDBG(data)
                         printDBG("++++++++++++++")
                     else:
-                        dat = self.ph.getAllItemsBeetwenNodes(verData, ('<script', '>'), ('</script', '>'), False)
+                        dat = ph.findall(verData, ('<script', '>'), '</script>', flags=0)
                         for item in dat:
                             if 'setTimeout' in item and 'submit()' in item:
                                 dat = item
                                 break
                         decoded = ''
-                        jscode = base64.b64decode('''ZnVuY3Rpb24gc2V0VGltZW91dCh0LGUpe2lwdHZfcmV0LnRpbWVvdXQ9ZSx0KCl9dmFyIGlwdHZfcmV0PXt9LGlwdHZfZnVuPW51bGwsZG9jdW1lbnQ9e30sd2luZG93PXRoaXMsZWxlbWVudD1mdW5jdGlvbih0KXt0aGlzLl9uYW1lPXQsdGhpcy5fc3JjPSIiLHRoaXMuX2lubmVySFRNTD0iIix0aGlzLl9wYXJlbnRFbGVtZW50PSIiLHRoaXMuc2hvdz1mdW5jdGlvbigpe30sdGhpcy5hdHRyPWZ1bmN0aW9uKHQsZSl7cmV0dXJuInNyYyI9PXQmJiIjdmlkZW8iPT10aGlzLl9uYW1lJiZpcHR2X3NyY2VzLnB1c2goZSksdGhpc30sdGhpcy5maXJzdENoaWxkPXtocmVmOmlwdHZfZG9tYWlufSx0aGlzLnN0eWxlPXtkaXNwbGF5OiIifSx0aGlzLnN1Ym1pdD1mdW5jdGlvbigpe3ByaW50KEpTT04uc3RyaW5naWZ5KGlwdHZfcmV0KSl9LE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh0aGlzLCJzcmMiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4gdGhpcy5fc3JjfSxzZXQ6ZnVuY3Rpb24odCl7dGhpcy5fc3JjPXR9fSksT2JqZWN0LmRlZmluZVByb3BlcnR5KHRoaXMsImlubmVySFRNTCIse2dldDpmdW5jdGlvbigpe3JldHVybiB0aGlzLl9pbm5lckhUTUx9LHNldDpmdW5jdGlvbih0KXt0aGlzLl9pbm5lckhUTUw9dH19KSxPYmplY3QuZGVmaW5lUHJvcGVydHkodGhpcywidmFsdWUiLHtnZXQ6ZnVuY3Rpb24oKXtyZXR1cm4iIn0sc2V0OmZ1bmN0aW9uKHQpe2lwdHZfcmV0LmFuc3dlcj10fX0pfSwkPWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX07ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQ9ZnVuY3Rpb24odCl7cmV0dXJuIG5ldyBlbGVtZW50KHQpfSxkb2N1bWVudC5jcmVhdGVFbGVtZW50PWZ1bmN0aW9uKHQpe3JldHVybiBuZXcgZWxlbWVudCh0KX0sZG9jdW1lbnQuYXR0YWNoRXZlbnQ9ZnVuY3Rpb24oKXtpcHR2X2Z1bj1hcmd1bWVudHNbMV19Ow==''')
-                        jscode = "var location = {hash:''}; var iptv_domain='%s';\n%s\n%s\niptv_fun();" % (domain, jscode, dat) #cfParams['domain']
-                        printDBG("+ CODE +")
-                        printDBG(jscode)
-                        printDBG("++++++++")
-                        ret = js_execute( jscode )
+                        js_params = [{'path':GetJSScriptFile('cf.byte')}]
+                        js_params.append({'code':"var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (domain, dat)}) #cfParams['domain']
+                        ret = js_execute_ext( js_params )
                         decoded = json_loads(ret['data'].strip())
                         
-                        verData = self.ph.getDataBeetwenReMarkers(verData, re.compile('<form[^>]+?id="challenge-form"'), re.compile('</form>'), False)[1]
+                        verData = ph.find(verData, ('<form', '>', 'id="challenge-form"'), '</form>')[1]
                         printDBG(">>")
                         printDBG(verData)
                         printDBG("<<")
-                        verUrl =  _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0], domain)
+                        verUrl =  _getFullUrl( ph.getattr(verData, 'action'), domain)
                         get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
                         get_data['jschl_answer'] = decoded['answer']
                         verUrl += '?'
                         for key in get_data:
                             verUrl += '%s=%s&' % (key, get_data[key])
-                        verUrl = _getFullUrl( self.ph.getSearchGroups(verData, 'action="([^"]+?)"')[0], domain) + '?jschl_vc=%s&pass=%s&jschl_answer=%s' % (get_data['jschl_vc'], get_data['pass'], get_data['jschl_answer'])
+                        verUrl = _getFullUrl( ph.getattr(verData, 'action'), domain) + '?jschl_vc=%s&pass=%s&jschl_answer=%s' % (get_data['jschl_vc'], get_data['pass'], get_data['jschl_answer'])
                         verUrl = _getFullUrl2( verUrl, domain)
                         params2 = dict(params)
                         params2['load_cookie'] = True
@@ -1283,7 +1285,7 @@ class common:
                 try: 
                     metadata['url'] = response.geturl()
                     metadata['status_code'] = response.getcode()
-                    self.fillHeaderItems(metadata, response.info(), True)
+                    self.fillHeaderItems(metadata, response.info(), True, collectAllHeaders=params.get('collect_all_headers'))
                 except Exception: pass
                 
                 data = response.read(params.get('max_data_size', -1))
@@ -1303,7 +1305,7 @@ class common:
                         gzip_encoding = True
                     try: 
                         metadata['url'] = e.fp.geturl()
-                        self.fillHeaderItems(metadata, e.fp.info(), True)
+                        self.fillHeaderItems(metadata, e.fp.info(), True, collectAllHeaders=params.get('collect_all_headers'))
                     except Exception: pass
                     data = e.fp.read(params.get('max_data_size', -1))
                     #e.msg

@@ -608,7 +608,7 @@ class E2iPlayerWidget(Screen):
                 options.append((_("Configure host"), "HostConfig"))
         except Exception: printExc()
         options.append((_("Info"), "info"))
-        options.append((_("IPTV download manager"), "IPTVDM"))
+        options.append((_("Download manager"), "IPTVDM"))
         self.session.openWithCallback(self.blue_pressed_next, ChoiceBox, title = _("Select option"), list = options)
 
     def pause_pressed(self):
@@ -2223,28 +2223,28 @@ class IPTVPlayerLCDScreen(Screen):
         summary_screenheight = 64
     if summary_screenwidth >= 800 and summary_screenheight >= 480:
         skin = """
-    <screen position="0,0" size="800,480" title="IPTVPlayer">
+    <screen position="0,0" size="800,480" title="E2iPlayer">
         <widget name="text1" position="10,0"  size="800,70" font="Regular;50" halign="center" valign="center" foregroundColor="#05F7F3"/>
         <widget name="text2" position="10,80" size="800,70" font="Regular;40" halign="center" valign="center" foregroundColor="#FFFF00"/>
         <widget name="LCDlogo" position="0,210" zPosition="4" size="800,267" alphatest="blend" />
     </screen>"""
     elif summary_screenwidth >= 480 and summary_screenheight >= 320:
         skin = """
-    <screen position="0,0" size="480,320" title="IPTVPlayer">
+    <screen position="0,0" size="480,320" title="E2iPlayer">
         <widget name="text1" position="10,0" size="460,70" font="Regular;50" halign="center" valign="center" foregroundColor="#05F7F3"/>
         <widget name="text2" position="10,80" size="460,70" font="Regular;40" halign="center" valign="center" foregroundColor="#FFFF00"/>
         <widget name="LCDlogo" position="0,160" zPosition="4" size="480,160" alphatest="blend" />
     </screen>"""
     elif summary_screenwidth >= 220 and summary_screenheight >= 176:
         skin = """
-    <screen position="0,0" size="220,176" title="IPTVPlayer">
+    <screen position="0,0" size="220,176" title="E2iPlayer">
         <widget name="text1" position="5,0" size="210,26" font="Regular;24" halign="center" valign="center" foregroundColor="#05F7F3"/>
         <widget name="text2" position="5,30" size="210,65" font="Regular;22" halign="center" valign="center" foregroundColor="#FFFF00"/>
         <widget name="LCDlogo" position="5,106" size="210,70" zPosition="4" alphatest="blend" />
     </screen>"""
     else:
         skin = """
-    <screen position="0,0" size="132,64" title="IPTVPlayer">
+    <screen position="0,0" size="132,64" title="E2iPlayer">
         <widget name="text1" position="4,0" size="132,14" font="Regular;12" halign="center" valign="center"/>
         <widget name="text2" position="4,14" size="132,49" font="Regular;10" halign="center" valign="center"/>
         <widget name="LCDlogo" zPosition="4" position="4,70" size="240,80" alphatest="blend" />
@@ -2252,18 +2252,24 @@ class IPTVPlayerLCDScreen(Screen):
 
     def __init__(self, session, parent):
         Screen.__init__(self, session)
-        self["text1"] =  Label("IPTVPlayer")
-        self["text2"] = Label("")
-        self["LCDlogo"] = Pixmap()
+        try: 
+            self["text1"] =  Label("E2iPlayer")
+            self["text2"] = Label("")
+            self["LCDlogo"] = Pixmap()
+        except Exception: pass
 
     def setText(self, text):
-        self["text2"].setText(text[0:39])
+        try: self["text2"].setText(text[0:39])
+        except Exception: pass
 
     def LCD_showPic(self, widgetName, picPath):
-        self[widgetName].instance.setScale(1)
-        self[widgetName].instance.setPixmap(LoadPixmap(picPath))
-        self[widgetName].show()
+        try: 
+            self[widgetName].instance.setScale(1)
+            self[widgetName].instance.setPixmap(LoadPixmap(picPath))
+            self[widgetName].show()
+        except Exception: pass
 
     def LCD_hide(self, widgetName):
-        self[widgetName].hide()
+        try: self[widgetName].hide()
+        except Exception: pass
       

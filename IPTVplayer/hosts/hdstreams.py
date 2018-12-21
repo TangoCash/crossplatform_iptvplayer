@@ -6,6 +6,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -13,10 +15,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, ConfigYesNo, ConfigText, getConfigListEntry
-
 from Plugins.Extensions.IPTVPlayer.libs.crypto.cipher.aes_cbc import AES_CBC
 from binascii import unhexlify
 from hashlib import md5
@@ -186,8 +185,8 @@ class HDStreams(CBaseHostClass):
         sts, data = self.getPage(url)
         if not sts: return
         
-        nextPage = self.cm.ph.getDataBeetwenMarkers(data, 'class="pagination"', '</ul>')[1]
-        nextPage = self.cm.ph.getSearchGroups(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]
+        nextPage = ph.find(data, ('<ul', '>', 'pagination'), '</ul>', flags=0)[1]
+        nextPage = ph.search(nextPage, '''page=(%s)[^0-9]''' % (page+1))[0]
         if nextPage != '': nextPage = True
         else: nextPage = False
         
@@ -342,7 +341,7 @@ class HDStreams(CBaseHostClass):
         
         try:
             
-            data = byteify(json.loads(data), '', True)
+            data = json_loads(data, '', True)
             for key in keys:
                 for item in data[key]:
                     icon  = self.getFullIconUrl(item.get('src', ''))
@@ -413,12 +412,12 @@ class HDStreams(CBaseHostClass):
         
         try:
             printDBG(data)
-            mainData = byteify(json.loads(data))
+            mainData = json_loads(data)
             
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             tmp = mainData.get('d', '') + mainData.get('c', '') + mainData.get('iv', '') + mainData.get('f', '') + mainData.get('h', '') + mainData.get('b', '')
             printDBG("tmp: " + tmp)
-            tmp = byteify(json.loads(base64.b64decode(tmp)))
+            tmp = json_loads(base64.b64decode(tmp))
             
             ciphertext = base64.b64decode(tmp['ct'][::-1])
             iv = unhexlify(tmp['iv'])
@@ -429,7 +428,7 @@ class HDStreams(CBaseHostClass):
             tmp = self.cryptoJS_AES_decrypt(ciphertext, b, salt)
             printDBG(tmp)
             
-            tmp = byteify(json.loads(base64.b64decode(tmp)))
+            tmp = json_loads(base64.b64decode(tmp))
             ciphertext = base64.b64decode(tmp['ct'][::-1])
             iv = unhexlify(tmp['iv'])
             salt = unhexlify(tmp['s'])
@@ -444,7 +443,7 @@ class HDStreams(CBaseHostClass):
             printDBG(tmp)
             # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             
-            tmp = byteify(json.loads(tmp))
+            tmp = json_loads(tmp)
             videoUrl = tmp
         except Exception:
             printExc()

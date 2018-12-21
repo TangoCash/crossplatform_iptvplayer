@@ -4,6 +4,8 @@ import re
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html as yt_clean_html
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printExc
 
+# flags:
+NONE=0
 START_E=1
 START_S=2
 END_E=4
@@ -16,6 +18,11 @@ IFRAME_SRC_URI_RE = re.compile(r'''<iframe[^>]+?src=(['"])([^>]*?)(?:\1)''', re.
 IMAGE_SRC_URI_RE = re.compile(r'''<img[^>]+?src=(['"])([^>]*?\.(?:jpe?g|png)(?:\?[^\1]*?)?)(?:\1)''', re.I)
 A_HREF_URI_RE = re.compile(r'''<a[^>]+?href=(['"])([^>]*?)(?:\1)''', re.I)
 STRIP_HTML_COMMENT_RE = re.compile("<!--[\s\S]*?-->")
+
+# add short aliases
+IFRAME = IFRAME_SRC_URI_RE
+IMG = IMAGE_SRC_URI_RE
+A = A_HREF_URI_RE
 
 def getattr(data, attrmame, flags=0):
     if flags & IGNORECASE:
@@ -70,7 +77,10 @@ def any(tab, data, start, end):
             return True
     return False
 
-# example: ph.findall(data, ('<a', '>', ph.check(('articles.php', 'readarticle.php'), ph.any)), '</a>')
+def none(tab, data, start, end):
+    return not any(tab, data, start, end)
+
+# example: ph.findall(data, ('<a', '>', ph.check(ph.any, ('articles.php', 'readarticle.php'))), '</a>')
 def check(arg1, arg2=None):
     if arg2 == None and isinstance(arg1, basestring):
         return lambda data, ldata, s, e: ldata.find(arg1, s, e) != -1
@@ -148,7 +158,7 @@ def findall(data, start, end=('',), flags=START_E|END_E, limits=-1):
 
             search = 1
 
-        if limits > 0 and len(itemsTab) == limits:
+        if limits > 0 and len(itemsTab) >= limits:
             break
     return itemsTab
 
@@ -221,7 +231,7 @@ def rfindall(data, start, end=('',), flags=START_E|END_E, limits=-1):
 
             search = 1
 
-        if limits > 0 and len(itemsTab) == limits:
+        if limits > 0 and len(itemsTab) >= limits:
             break
     return itemsTab
 

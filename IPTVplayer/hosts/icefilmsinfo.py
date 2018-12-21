@@ -97,6 +97,9 @@ class IceFilms(CBaseHostClass):
 
         addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
+    
+    #def getFullIconUrl(self, url, baseUrl=None):
+    #    return ''
 
     def _getAttrVal(self, data, attr):
         val = self.cm.ph.getSearchGroups(data, '[<\s][^>]*' + attr + '=([^\s^>]+?)[\s>]')[0].strip()

@@ -4,16 +4,16 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import urllib
-try:    import json
-except Exception: import simplejson as json
 from urlparse import urljoin
 ###################################################
 
@@ -31,7 +31,7 @@ class FilmPalastTo(CBaseHostClass):
         
         self.defaultParams = {'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         
-        self.DEFAULT_ICON_URL = 'http://filmpalast.to/themes/downloadarchive/images/logo.png'
+        self.DEFAULT_ICON_URL = 'https://www.free4fisher.de/wp-content/uploads/2017/02/filmpalast-Fanart.png'
         self.MAIN_URL = None
         self.cacheSeries = {}
         self.cacheSeasons = {}
@@ -58,14 +58,8 @@ class FilmPalastTo(CBaseHostClass):
                               ]
     
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
-        
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url): return url
-            else: return urljoin(baseUrl, url)
-        
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        if addParams == {}: addParams = dict(self.defaultParams)
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
         
     def getFullIconUrl(self, url):
@@ -253,15 +247,16 @@ class FilmPalastTo(CBaseHostClass):
         sts, data = self.getPage(cItem['url'], self.defaultParams)
         if not sts: return []
         
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<ul class="currentStreamLinks">', '</ul>')
+        data = ph.findall(data, ('<ul', '>', 'currentStreamLinks'), '</ul>', flags=0)
         for item in data:
-            data_id    = self.cm.ph.getSearchGroups(item, '''data-id=['"]([^'^"]+?)['"]''')[0]
-            data_stamp = self.cm.ph.getSearchGroups(item, '''data-stamp=['"]([^'^"]+?)['"]''')[0]
-            
-            title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<p', '</p>')[1])
-            if title == '': title = self.cleanHtmlStr(item)
-            
-            linksTab.append({'name':title, 'url':strwithmeta('%s|%s' % (data_id, data_stamp), {'data_id':data_id, 'data_stamp':data_stamp, 'links_key':cItem['url']}), 'need_resolve':1})
+            data_id    = ph.getattr(item, 'data-id')
+            data_stamp = ph.getattr(item, 'data-stamp')
+            if data_id and data_stamp: url = strwithmeta('%s|%s' % (data_id, data_stamp), {'data_id':data_id, 'data_stamp':data_stamp, 'links_key':cItem['url']}) 
+            else: url = strwithmeta(self.getFullUrl(ph.search(item, ph.A_HREF_URI_RE)[1]), {'links_key':cItem['url']})
+
+            title = ph.clean_html(ph.find(item, ('<p', '>'), '</p>', flags=0)[1])
+            if title == '': title = ph.clean_html(item)
+            linksTab.append({'name':title, 'url':url, 'need_resolve':1})
         
         if len(linksTab):
             self.cacheLinks[cItem['url']] = linksTab
@@ -284,24 +279,27 @@ class FilmPalastTo(CBaseHostClass):
         data_id    = videoUrl.meta.get('data_id', '')
         data_stamp = videoUrl.meta.get('data_stamp', '')
         
-        #sts, data = self.getPage(key, self.defaultParams)
-        #if not sts: return []
-        
-        url = self.getFullUrl('/stream/%s/%s' % (data_id, data_stamp))
-        urlParams = dict(self.defaultParams)
-        urlParams['header'] = dict(self.AJAX_HEADER)
-        urlParams['header']['Referer'] = key
-        sts, data = self.getPage(url, urlParams, {'streamID':data_id})
-        if not sts: return []
-        
-        try:
-            data = byteify(json.loads(data))
-            url = data.get('url', '')
-            if self.cm.isValidUrl(url):
-                return self.up.getVideoLinkExt(url)
-            SetIPTVPlayerLastHostError(data['msg'])
-        except Exception:
-            printExc()
+        if data_id and data_stamp:
+            #sts, data = self.getPage(key, self.defaultParams)
+            #if not sts: return []
+            
+            url = self.getFullUrl('/stream/%s/%s' % (data_id, data_stamp))
+            urlParams = dict(self.defaultParams)
+            urlParams['header'] = dict(self.AJAX_HEADER)
+            urlParams['header']['Referer'] = key
+            sts, data = self.getPage(url, urlParams, {'streamID':data_id})
+            if not sts: return []
+            
+            try:
+                data = json_loads(data)
+                url = data.get('url', '')
+                if self.cm.isValidUrl(url):
+                    return self.up.getVideoLinkExt(url)
+                SetIPTVPlayerLastHostError(data['msg'])
+            except Exception:
+                printExc()
+        else:
+            linksTab = self.up.getVideoLinkExt(videoUrl)
         
         return linksTab
     
@@ -364,34 +362,7 @@ class FilmPalastTo(CBaseHostClass):
         if icon == '':  icon = cItem.get('icon', self.DEFAULT_ICON_URL)
         
         return [{'title':self.cleanHtmlStr( title ), 'text': self.cleanHtmlStr( desc ), 'images':[{'title':'', 'url':self.getFullUrl(icon)}], 'other_info':otherInfo}]
-    
-    def getFavouriteData(self, cItem):
-        printDBG('FilmPalastTo.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('FilmPalastTo.getLinksForFavourite')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('FilmPalastTo.setInitListFromFavouriteItem')
-        if self.MAIN_URL == None:
-            self.selectDomain()
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
-        
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         

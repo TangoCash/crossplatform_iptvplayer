@@ -10,6 +10,7 @@ from Tools.Directories import fileExists
 from binascii import hexlify
 from hashlib import md5
 import time
+import thread
 
 DUKTAPE_VER = '226'
 
@@ -53,6 +54,8 @@ def js_execute_ext(items, params={}):
     fileList = []
     tmpFiles = []
 
+    tid = thread.get_ident()
+    uniqueId = 0;
     ret = {'sts':False, 'code':-13, 'data':''}
     try:
         for item in items:
@@ -109,7 +112,8 @@ def js_execute_ext(items, params={}):
                 if path:
                     fileList.append(path)
                 else:
-                    path = 'e2i_js_exe_%s.js' % (int(time.time()*1000))
+                    path = 'e2i_js_exe_%s_%s.js' % (uniqueId, tid)
+                    uniqueId += 1
                     sts, path = CreateTmpFile(path, code)
                     if not sts:
                         raise Exception('Faile to create file "%s"' % path)

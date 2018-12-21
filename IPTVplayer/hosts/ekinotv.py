@@ -9,6 +9,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import  printDBG, printEx
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -22,8 +24,6 @@ import base64
 import re
 import urlparse
 import urllib
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigText, ConfigSelection, getConfigListEntry
 ###################################################
 
@@ -437,7 +437,7 @@ class EkinoTv(CBaseHostClass):
         
     def getLinksForFavourite(self, favData):
         try:
-            cItem = byteify(json.loads(favData))
+            cItem = json_loads(favData)
         except Exception:
             cItem = {'url':favData}
             printExc()

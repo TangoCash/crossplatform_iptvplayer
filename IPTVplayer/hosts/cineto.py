@@ -5,8 +5,9 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, GetDefaultLang, MergeDicts
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, MergeDicts
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -15,8 +16,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import urlparse
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 
@@ -31,7 +30,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         self.DEFAULT_ICON_URL = 'https://cine.to/opengraph.jpg'
         self.USER_AGENT = 'Mozilla / 5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebkit / 538.1 (KHTML, podobnie jak Gecko) SamsungBrowser / 1.1 TV Safari / 538.1'
         self.MAIN_URL = 'https://cine.to/'
-        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl()}
+        self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Encoding':'gzip, deflate', 'Referer':self.getMainUrl(), 'Accept-Language':GetDefaultLang()}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding':'gzip, deflate', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8', 'Accept':'application/json, text/javascript, */*; q=0.01'} )
         
@@ -143,7 +142,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         cItem['category'] = nextCategory
         
         try:
-            data = byteify(json.loads(data), '', True)['genres']
+            data = json_loads(data, '', True)['genres']
             for item in self.cacheFilters['genres']:
                 params = dict(cItem)
                 params.update(item)
@@ -172,7 +171,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         printDBG(item)
         title = self.cleanHtmlStr(item['title'])
         if 'cover' in item: icon  = self.getFullIconUrl(item['cover'])
-        else: icon = 'https://s.cine.to/cover/%s.jpg' % item['imdb']
+        else: icon = 'https://s.cine.to/cover/%s.jpg' % str(item['imdb']).zfill(7)
         
         descTab = []
         for it in ['year', 'quality', 'language']:
@@ -198,7 +197,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         if not sts: return []
         
         try:
-            data = byteify(json.loads(data), noneReplacement='', baseTypesAsString=True)
+            data = json_loads(data, noneReplacement='', baseTypesAsString=True)
             for item in data['entries']:
                 self._addItem(item, cItem, nextCategory)
         except Exception:
@@ -226,9 +225,12 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         if not sts: return []
         
         try:
-            data = byteify(json.loads(data), noneReplacement='', baseTypesAsString=True)['entry']
+            data = json_loads(data, noneReplacement='', baseTypesAsString=True)['entry']
             icon = self.getFullIconUrl(data.get('cover', cItem.get('icon', '')))
-            
+            printDBG("+++++++++++++++++++++++++++++++++++++++")
+            printDBG(data)
+            printDBG("+++++++++++++++++++++++++++++++++++++++")
+
             descTab = []
             tmp = data.get('year', '')
             if tmp != '': descTab.append(tmp)
@@ -262,14 +264,15 @@ class CineTO(CBaseHostClass, CaptchaHelper):
                 langName = lang
                 trailerUrl = data.get('trailer_%s' % lang, '')
                 desc = ' | '.join(descTab) + '[/br]' + data.get('plot_%s' % lang, '')
-                
+                baseTitle = data['title']
+
                 if trailerUrl != '':
                     url = 'https://www.youtube.com/watch?v=%s' % trailerUrl
-                    title = '[TRAILER] [%s] %s' % (langName, data['title'])
+                    title = '[TRAILER] [%s] %s' % (langName, baseTitle)
                     params = {'title':title,  'imdb':cItem['imdb'], 'f_lang_id':langId, 'f_lang':lang, 'url':url, 'icon':icon, 'desc':desc}
                     self.addVideo(params)
                 
-                title = '[%s] %s (%s)' % (langName, data['title'], data.get('year', ''))
+                title = '[%s] %s (%s)' % (langName, baseTitle, data.get('year', ''))
                 params = {'title':title, 'imdb':cItem['imdb'], 'f_lang_id':langId, 'f_lang':lang, 'icon':icon, 'desc':desc}
                 self.addVideo(params)
         except Exception:
@@ -301,7 +304,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
             sts, data = self.getPage(url, post_data=post_data)
             if not sts: return []
             
-            data = byteify(json.loads(data), '', True)['links']
+            data = json_loads(data, '', True)['links']
             printDBG(data)
             
             for hosting in data:
@@ -390,7 +393,7 @@ class CineTO(CBaseHostClass, CaptchaHelper):
         icon = ''
         
         try:
-            data = byteify(json.loads(data), noneReplacement='', baseTypesAsString=True)['entry']
+            data = json_loads(data, noneReplacement='', baseTypesAsString=True)['entry']
             icon = self.getFullIconUrl(data.get('cover', cItem.get('icon', '')))
             title = self.cleanHtmlStr(data['title'])
             

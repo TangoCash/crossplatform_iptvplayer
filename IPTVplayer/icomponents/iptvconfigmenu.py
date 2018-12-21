@@ -70,7 +70,7 @@ config.plugins.iptvplayer.IPTVWebIterface = ConfigYesNo(default = False)
 config.plugins.iptvplayer.plugin_autostart = ConfigYesNo(default = False)
 config.plugins.iptvplayer.plugin_autostart_method = ConfigSelection(default = "wizard", choices = [("wizard", "wizard"),("infobar", "infobar")])
 
-config.plugins.iptvplayer.preferredupdateserver = ConfigSelection(default = "", choices = [("", _("Default")),("1", "http://iptvplayer.vline.pl/"), ("2", _("http://www.iptvplayer.gitlab.io/"))])
+config.plugins.iptvplayer.preferredupdateserver = ConfigSelection(default = "", choices = [("", _("Default")),("1", "http://iptvplayer.vline.pl/"), ("2", _("http://www.iptvplayer.gitlab.io/")), ("3", _("private"))])
 config.plugins.iptvplayer.osk_type = ConfigSelection(default = "", choices = [("", _("Auto")),("system", _("System")), ("own", _("Own model"))])
 config.plugins.iptvplayer.osk_layout = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.osk_allow_suggestions = ConfigYesNo(default = True)
@@ -208,7 +208,7 @@ config.plugins.iptvplayer.autoplay_start_delay  = ConfigInteger(3, (0, 9))
 config.plugins.iptvplayer.watched_item_color = ConfigSelection(default = "#808080", choices = COLORS_DEFINITONS)
 config.plugins.iptvplayer.usepycurl = ConfigYesNo(default = False)
 
-config.plugins.iptvplayer.prefer_hlsdl_for_pls_with_alt_media = ConfigYesNo(default = False)
+config.plugins.iptvplayer.prefer_hlsdl_for_pls_with_alt_media = ConfigYesNo(default = True)
 
 ###################################################
 

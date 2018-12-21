@@ -18,6 +18,7 @@ class CYTSignAlgoExtractor:
     MAX_REC_DEPTH = 5
     RE_FUNCTION_NAMES = re.compile('[ =(,]([a-zA-Z$]+?)\([a-z0-9,]*?\)')
     RE_OBJECTS = re.compile('[ =(,;]([a-zA-Z$]+?)\.([a-zA-Z$]+?)\(')
+    RE_MAIN = re.compile('([a-zA-Z0-9$]+)\(')
 
     def __init__(self, cm):
         self.cm = cm
@@ -52,11 +53,12 @@ class CYTSignAlgoExtractor:
 
         tmp = ph.find(data, 'yt.akamaized.net', '}', 0)[1]
         if tmp:
-            tmp = ph.findall(tmp, '.set(', ')')
+            printDBG("DATA: %s" % tmp)
+            tmp = ph.rfindall(tmp, 'return', '.set(', flags=0)
             for name in tmp:
-                name = name.split(',', 1)[-1].split('(', 1)[0].strip()
-                if name and not any((c in name) for c in ''', '"'''):
-                    return name
+                printDBG("ITEM: %s" % name)
+                name = ph.search(name, self.RE_MAIN)[0]
+                if name: return name
 
         tmp = ph.findall(data, ('.set(', '));', lambda d, l, s, e: not ph.any(')-";', l, s, e)))
         for name in tmp:
@@ -106,7 +108,7 @@ class CYTSignAlgoExtractor:
         decSignatures = []
         code = ''
         jsname = 'ytsigndec'
-        jshash = 'hash6_' + playerUrl.split('://', 1)[-1]
+        jshash = 'hash7_' + playerUrl.split('://', 1)[-1]
         if not is_js_cached(jsname, jshash):
         
             # get main function
@@ -116,8 +118,15 @@ class CYTSignAlgoExtractor:
             t1 = time.time()
             code = []
             mainFunctionName = self._findMainFunctionName()
+            if not mainFunctionName:
+                SetIPTVPlayerLastHostError(_('Encryption function name extraction failed!\nPlease report the problem to %s') % 'iptvplayere2@gmail.com')
+                return []
+            printDBG("mainFunctionName >> %s" % mainFunctionName)
 
             mainFunction = self._findFunction(mainFunctionName)
+            if not mainFunction:
+                SetIPTVPlayerLastHostError(_('Encryption function body extraction failed!\nPlease report the problem to %s') % 'iptvplayere2@gmail.com')
+                return []
             code.append(mainFunction)
 
             funNames = self._getAllLocalSubFunNames(mainFunction)
@@ -190,7 +199,7 @@ class YoutubeIE(object):
                           '85', '84', '102', '83', '101', '82', '100',
                           # Dash video
                           '138', '137', '248', '136', '247', '135', '246',
-                          '245', '244', '134', '243', '133', '242', '160',
+                          '245', '244', '134', '243', '133', '242', '160','298','299',
                           # Dash audio
                           '141', '172', '140', '171', '139',
                           ]
@@ -201,15 +210,15 @@ class YoutubeIE(object):
                                       '85', '102', '84', '101', '83', '100', '82',
                                       # Dash video
                                       '138', '248', '137', '247', '136', '246', '245',
-                                      '244', '135', '243', '134', '242', '133', '160',
+                                      '244', '135', '243', '134', '242', '133', '160','298','299',
                                       # Dash audio
-                                      '172', '141', '171', '140', '139',
+                                      '172', '141', '171', '140', '139'
                                       ]
                                       
     _supported_formats = ['18', '22', '37', '38', # mp4
                           '82', '83', '84', '85', # mp4 3D
                           '92', '93', '94', '95', '96', '132', '151', # Apple HTTP Live Streaming
-                          '133', '134', '135', '136', '137', '138', '160', # Dash mp4
+                          '133', '134', '135', '136', '137', '138', '160','298','299', # Dash mp4
                           '139', '140', '141', # Dash mp4 audio
                           ]
     
@@ -258,6 +267,8 @@ class YoutubeIE(object):
         '137': 'mp4v',
         '138': 'mp4v',
         '160': 'mp4v',
+        '298': 'mp4v',
+        '299': 'mp4v',
 
         # Dash mp4 audio
         '139': 'mp4a',
@@ -274,6 +285,8 @@ class YoutubeIE(object):
         '246': 'webm',
         '247': 'webm',
         '248': 'webm',
+
+        'mpd': 'mpd'
     }
     _video_dimensions = {
         '5': '240x400',
@@ -324,6 +337,8 @@ class YoutubeIE(object):
         '246': '480p',
         '247': '720p',
         '248': '1080p',
+        '298': '720p60',
+        '299': '1080p60',
     }
 
     _special_itags = {
@@ -353,6 +368,8 @@ class YoutubeIE(object):
         '246': 'DASH Video',
         '247': 'DASH Video',
         '248': 'DASH Video',
+        '298': 'DASH Video',
+        '299': 'DASH Video',
     }
     IE_NAME = u'youtube'
 
@@ -360,7 +377,7 @@ class YoutubeIE(object):
         proxyURL = params.get('proxyURL', '')
         useProxy = params.get('useProxy', False)
         self.cm = common(proxyURL, useProxy)
-        self.cm.HOST = 'Mpython-urllib/2.7'
+        self.cm.HOST = 'Mozilla/5.0 (X11; Linux x86_64; rv:59.0) Gecko/20100101 Firefox/59.0' #'Mpython-urllib/2.7'
 
     def _extract_id(self, url):
         video_id = ''
@@ -543,7 +560,7 @@ class YoutubeIE(object):
             video_info2[item[0].strip()] = item[1].strip()
         video_info = video_info2
         del video_info2
-
+        dashmpd = str(_unquote(str(video_info.get('dashmpd', '')), None))
         # subtitles
         if 'length_seconds' not in video_info:
             video_duration = ''
@@ -582,6 +599,7 @@ class YoutubeIE(object):
             encoded_url_map = video_info.get('url_encoded_fmt_stream_map', [''])[0] + ',' + video_info.get('adaptive_fmts',[''])[0]
 
             for url_data_str in encoded_url_map.split(','):
+                if 'index=' in url_data_str and 'index=0-0&' in url_data_str: continue
                 if 'itag=' in url_data_str and 'url=' in url_data_str:
                     url_data_str = url_data_str.split('&')
                     url_data = {}
@@ -621,6 +639,12 @@ class YoutubeIE(object):
         
         if not video_url_list:
             return []
+
+        if self.cm.isValidUrl(dashmpd):
+            sign = ph.search(dashmpd, r'/s/([a-fA-F0-9\.]+)')[0]
+            if sign: dashmpd = dashmpd.replace(sign, '{0}')
+            video_url_list.append(('mpd', {'url':dashmpd}))
+            if sign: video_url_list[-1][1]['esign'] = sign
 
         signItems = []
         signatures = []

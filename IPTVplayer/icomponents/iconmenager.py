@@ -13,6 +13,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import mkdirs, \
                       RemoveAllDirsIconsFromPath, GetIconsFilesFromDir, GetNewIconsDirName, \
                       GetIconsDirs, RemoveIconsDirByPath
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -258,6 +259,7 @@ class IconMenager:
         
         if img_url.endswith('need_resolve.jpeg'):
             domain = urlparser.getDomain(img_url)
+            if domain.startswith('www.'): domain = domain[4:]
             # link need resolve, at now we will have only one img resolver, 
             # we should consider add img resolver to urlparser if more will be needed
             sts, data = self.cm.getPage(img_url)
@@ -304,6 +306,9 @@ class IconMenager:
                 img_url = self.cm.ph.getDataBeetwenNodes(data, ('<img', '>', 'wp-post-image'), ('<', '>'))[1]
                 if img_url != '': img_url = self.cm.ph.getSearchGroups(img_url, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(?:\?[^"]+?)?)"')[0]
                 if img_url.startswith('/'): img_url = urljoin(baseUrl, img_url)
+            elif '7tv.de' == domain:
+                data = ph.find(data, ('<meta', '>', 'thumbnail_image_url'))[1]
+                img_url = ph.getattr(data, 'content')
             if not self.cm.isValidUrl(img_url): return False
         else:
             img_url = strwithmeta(img_url)

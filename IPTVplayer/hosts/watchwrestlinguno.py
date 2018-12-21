@@ -14,21 +14,17 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import re
 import urllib
 import urlparse
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
-
-
 def gettytul():
-    return 'http://watchwrestling.uno/'
+    return 'http://watchwrestling.ac/'
 
 class WatchwrestlingUNO(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'watchwrestling.uno', 'cookie':'watchwrestling.uno.cookie'})
-        self.MAIN_URL    = 'http://watchwrestling.uno/'
+        self.MAIN_URL    = 'http://watchwrestling.ac/'
         self.SRCH_URL    = self.getFullUrl('index.php?s=')
-        self.DEFAULT_ICON_URL = 'http://i.imgur.com/UsYsZ.png' #'http://watchwrestling.uno/wp-content/uploads/2016/03/wwunologo2.png'
+        self.DEFAULT_ICON_URL = 'http://i.imgur.com/UsYsZ.png'
         
         self.MAIN_CAT_TAB = [{'category':'categories',    'title': _('Categories'),  'url':self.getMainUrl(),  'm1':'Categories</h3>'              },
                              {'category':'categories',    'title': _('WWE'),         'url':self.getFullUrl('category/wwe/'),  'm1':'>WWE</a>'      },
@@ -238,29 +234,6 @@ class WatchwrestlingUNO(CBaseHostClass):
         else:
             urlTab = self.up.getVideoLinkExt(url)
         return urlTab
-        
-    def getFavouriteData(self, cItem):
-        printDBG('WatchwrestlingUNO.getFavouriteData')
-        return json.dumps(cItem) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('WatchwrestlingUNO.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('WatchwrestlingUNO.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')

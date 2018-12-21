@@ -52,7 +52,7 @@ class IPTVSubDownloaderWidget(Screen):
     screenwidth = 1980
     if screenwidth and screenwidth == 1920:
         skin =  """
-                    <screen name="IPTVSubDownloaderWidget" position="center,center" size="1590,825" title="IPTV Player HD v%s">
+                    <screen name="IPTVSubDownloaderWidget" position="center,center" size="1590,825" title="E2iPlayer v%s">
                             <ePixmap position="5,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <widget render="Label" source="key_red" position="45,9" size="140,32" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;32" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget name="headertext" position="15,55" zPosition="1" size="1580,30" font="Regular;30" transparent="1" backgroundColor="#00000000" />
@@ -69,7 +69,7 @@ class IPTVSubDownloaderWidget(Screen):
                 """ %( IPTV_VERSION, GetIconDir('red.png'), GetIconDir('line.png'))
     else:
         skin =  """
-                    <screen name="IPTVSubDownloaderWidget" position="center,center" size="1090,525" title="IPTV Player v%s">
+                    <screen name="IPTVSubDownloaderWidget" position="center,center" size="1090,525" title="E2iPlayer v%s">
                             <ePixmap position="30,9" zPosition="4" size="30,30" pixmap="%s" transparent="1" alphatest="on" />
                             <widget render="Label" source="key_red"    position="65,9"  size="210,27" zPosition="5" valign="center" halign="left" backgroundColor="black" font="Regular;21" transparent="1" foregroundColor="white" shadowColor="black" shadowOffset="-1,-1" />
                             <widget name="headertext" position="5,47" zPosition="1" size="1080,23" font="Regular;20" transparent="1" backgroundColor="#00000000" />

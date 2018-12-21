@@ -1,28 +1,41 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ###################################################
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, MergeDicts, rm, GetCookieDir, ReadTextFile, WriteTextFile
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
+from binascii import hexlify
+from hashlib import md5
 import re
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
 ###################################################
+# E2 GUI COMMPONENTS 
+###################################################
+from Screens.MessageBox import MessageBox
+###################################################
+
+###################################################
 # Config options for HOST
+###################################################
 config.plugins.iptvplayer.filmixco_alt_domain = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.filmixco_login     = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.filmixco_password  = ConfigText(default = "", fixed_size = False)
 
 def GetConfigList():
     optionList = []
     optionList.append(getConfigListEntry(_("Alternative domain:"), config.plugins.iptvplayer.filmixco_alt_domain))
+    optionList.append(getConfigListEntry(_("login"), config.plugins.iptvplayer.filmixco_login))
+    optionList.append(getConfigListEntry(_("password"), config.plugins.iptvplayer.filmixco_password))
     return optionList
 ###################################################
 
@@ -39,13 +52,18 @@ class FilmixCO(CBaseHostClass):
         self.HEADER = {'User-Agent': self.USER_AGENT, 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'} )
-        
+
         self.MAIN_URL = 'https://filmix.co/'
         self.DEFAULT_ICON_URL = 'http://www.userlogos.org/files/logos/jumpordie/filmix.png'
-        
+
         self.defaultParams = {'with_metadata':True, 'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
         self.cacheFilters = []
-    
+        self.domainSelected = False
+
+        self.loggedIn = None
+        self.login    = ''
+        self.password = ''
+
     def getUtf8Str(self, st):
         try:
             idx = 0
@@ -57,31 +75,21 @@ class FilmixCO(CBaseHostClass):
         except Exception:
             printExc()
         return ''
-    
-    def setMainUrl(self, url):
-        if self.cm.isValidUrl(url):
-            self.MAIN_URL = self.cm.getBaseUrl(url)
-    
+
     def getPage(self, baseUrl, addParams = {}, post_data = None):
-        if addParams == {}:
-            addParams = dict(self.defaultParams)
-        def _getFullUrl(url):
-            if self.cm.isValidUrl(url):
-                return url
-            else:
-                return urljoin(baseUrl, url)
-        addParams['cloudflare_params'] = {'domain':self.up.getDomain(baseUrl), 'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT, 'full_url_handle':_getFullUrl}
+        if addParams == {}: addParams = dict(self.defaultParams)
+        addParams['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, addParams, post_data)
-    
-    def listMainMenu(self, cItem):
-        printDBG("FilmixCO.listMainMenu")
-        
+
+    def selectDomain(self):
+        if self.domainSelected: return 
+        self.domainSelected = True
         domains = ['http://filmix.cc/films', 'https://filmix.co/films']
         domain = config.plugins.iptvplayer.filmixco_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/': domain += '/'
             domains.insert(0, domain + 'films')
-        
+
         sts = False
         for domain in domains:
             sts, data = self.getPage(domain)
@@ -91,11 +99,14 @@ class FilmixCO(CBaseHostClass):
                 break
             else:
                 sts = False
-        
+
+    def listMainMenu(self, cItem):
+        printDBG("FilmixCO.listMainMenu")
+        sts, data = self.getPage(self.getFullUrl('/films'))
         self.cacheFilters = []
         if sts:
             tmp = self.cm.ph.getDataBeetwenNodes(data, ('<form', '>', 'filtersForm'), ('</form', '>'))[1]
-            tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'filter-category'), ('</div', '>'))
+            tmp = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('</div', '>'), ('<div', '>', 'filter-category'),)
             for item in tmp:
                 scope = self.cm.ph.getSearchGroups(item, '''\sdata\-scope=['"]([^'^"]+?)['"]''')[0]
                 type  = self.cm.ph.getSearchGroups(item, '''\sdata\-type=['"]([^'^"]+?)['"]''')[0]
@@ -162,26 +173,32 @@ class FilmixCO(CBaseHostClass):
             if 'values' not in filter and 'type' in filter:
                 # separate request is needed to get filter values
                 values = []
-                url = self.getFullUrl('/engine/ajax/get_filter.php')
-                urlParams = dict(self.defaultParams)
-                urlParams['header'] = dict(self.AJAX_HEADER)
-                urlParams['Referer'] = self.getMainUrl()
-                sts, data = self.getPage(url, urlParams, {'scope':'cat', 'type':filter['type']})
-                if not sts: return
-                try:
-                    printDBG(data)
-                    data = byteify(json.loads('[%s]' % data.replace('":"', '","')[1:-1]))
-                    for i in range(0, len(data), 2):
-                        title = self.cleanHtmlStr(data[i+1])
-                        value = data[i]
-                        if value.startswith('f'): value = value[1:]
-                        values.append({'title':title, ('f_%s' % filter['scope']):value})
+                if 'rating' == filter['type']:
+                    for i in range(9, 0, -1):
+                        values.append({'title':'%s-%s'% (str(i).zfill(2), str(i+1).zfill(2)), ('f_%s' % filter['scope']):'%s%s' % (str(i).zfill(2), str(i+1).zfill(2))})
                     if len(values):
-                        if 'years' == filter['type']: values.reverse()
                         values.insert(0, {'title':_('--Any--')})
-                        filter['values'] = values
-                except Exception:
-                    printExc()
+                else:
+                    url = self.getFullUrl('/engine/ajax/get_filter.php')
+                    urlParams = dict(self.defaultParams)
+                    urlParams['header'] = dict(self.AJAX_HEADER)
+                    urlParams['Referer'] = self.getMainUrl()
+                    sts, data = self.getPage(url, urlParams, {'scope':'cat', 'type':filter['type']})
+                    if not sts: return
+                    try:
+                        printDBG(data)
+                        data = json_loads('[%s]' % data.replace('":"', '","')[1:-1])
+                        for i in range(0, len(data), 2):
+                            title = self.cleanHtmlStr(data[i+1])
+                            value = data[i]
+                            if value.startswith('f'): value = value[1:]
+                            values.append({'title':title, ('f_%s' % filter['scope']):value})
+                        if len(values):
+                            if 'years' == filter['type']: values.reverse()
+                            values.insert(0, {'title':_('--Any--')})
+                            filter['values'] = values
+                    except Exception:
+                        printExc()
             elif 'values' in filter:
                 values = filter['values']
             
@@ -309,7 +326,7 @@ class FilmixCO(CBaseHostClass):
         if not sts: return
         
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             printDBG(">>>\n%s\n" % data)
             data = data['message']['translations']['html5']
             for key in data:
@@ -339,7 +356,7 @@ class FilmixCO(CBaseHostClass):
         
         try:
             data = self.getUtf8Str(data[1:])
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for playlistItem in data['playlist']:
                 subItems = []
                 for item in playlistItem['playlist']:
@@ -368,6 +385,7 @@ class FilmixCO(CBaseHostClass):
     
     def getLinksForVideo(self, cItem):
         printDBG("FilmixCO.getLinksForVideo [%s]" % cItem)
+        self.tryTologin()
         urlTab = []
 
         qualities = self.cm.ph.getSearchGroups(cItem['url'], '''\[([^\]]+?)\]''')[0].split(',')
@@ -388,6 +406,69 @@ class FilmixCO(CBaseHostClass):
         urlTab = []
         return urlTab
 
+    def tryTologin(self):
+        printDBG('tryTologin start')
+        self.selectDomain()
+
+        if None == self.loggedIn or self.login != config.plugins.iptvplayer.filmixco_login.value or\
+            self.password != config.plugins.iptvplayer.filmixco_password.value:
+
+            loginCookie = GetCookieDir('filmix.co.login')
+            self.login = config.plugins.iptvplayer.filmixco_login.value
+            self.password = config.plugins.iptvplayer.filmixco_password.value
+
+            sts, data = self.getPage(self.getMainUrl())
+            if sts: self.setMainUrl(self.cm.meta['url'])
+
+            freshSession = False
+            if sts and 'action=logout' in data:
+                printDBG("Check hash")
+                hash = hexlify(md5('%s@***@%s' % (self.login, self.password)).digest())
+                prevHash = ReadTextFile(loginCookie)[1].strip()
+
+                printDBG("$hash[%s] $prevHash[%s]" % (hash, prevHash))
+                if hash == prevHash:
+                    self.loggedIn = True
+                    return
+                else:
+                    freshSession = True
+
+            rm(loginCookie)
+            rm(self.COOKIE_FILE)
+            if freshSession:
+                sts, data = self.getPage(self.getMainUrl(), MergeDicts(self.defaultParams, {'use_new_session':True}))
+
+            self.loggedIn = False
+            if '' == self.login.strip() or '' == self.password.strip():
+                return False
+
+            msgTab = [_('Login failed.')]
+            if sts:
+                actionUrl = self.getFullUrl('/engine/ajax/user_auth.php')
+                post_data = {'login_name':self.login, 'login_password':self.password, 'login_not_save':'1', 'login':'submit'}
+
+                httpParams = dict(self.defaultParams)
+                httpParams['header'] = MergeDicts(httpParams['header'], {'Referer':self.cm.meta['url'], 'Accept':'*/*', 'X-Requested-With':'XMLHttpRequest', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'})
+
+                sts, data = self.getPage(actionUrl, httpParams, post_data)
+                printDBG(data)
+                if sts: msgTab.append(ph.clean_html(data))
+                sts, data = self.getPage(self.getMainUrl())
+
+            if sts and 'action=logout' in data:
+                printDBG('tryTologin OK')
+                self.loggedIn = True
+            else:
+                printDBG(data)
+                self.sessionEx.waitForFinishOpen(MessageBox, '\n'.join(msgTab), type = MessageBox.TYPE_ERROR, timeout = 10)
+                printDBG('tryTologin failed')
+
+            if self.loggedIn:
+                hash = hexlify(md5('%s@***@%s' % (self.login, self.password)).digest())
+                WriteTextFile(loginCookie, hash)
+
+        return self.loggedIn
+
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
         
@@ -396,9 +477,11 @@ class FilmixCO(CBaseHostClass):
         name     = self.currItem.get("name", '')
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')
-        
+
         printDBG( "handleService: || name[%s], category[%s] " % (name, category) )
         self.currList = []
+        self.tryTologin()
+
         self.currItem = dict(self.currItem)
         self.currItem.pop('good_for_fav', None)
         
@@ -441,4 +524,3 @@ class IPTVHost(CHostBase):
 
     def __init__(self):
         CHostBase.__init__(self, FilmixCO(), True, favouriteTypes=[]) 
-

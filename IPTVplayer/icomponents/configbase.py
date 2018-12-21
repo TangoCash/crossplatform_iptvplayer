@@ -162,7 +162,7 @@ class ConfigBaseWidget(Screen, ConfigListScreen):
                     # it is much easier to type text with VK after OK press, but maybe option need to be added to allow user to have this "help"
                     currItem.help_window.hide()
                 except Exception:
-                    printExc()
+                    pass
                 return True
         return False
         

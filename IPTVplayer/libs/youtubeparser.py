@@ -10,6 +10,7 @@ from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist, getMPDLinksWithMeta
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -39,7 +40,7 @@ class YouTubeParser():
     @staticmethod
     def isDashAllowed():
         value = config.plugins.iptvplayer.ytShowDash.value
-        printDBG("ALLOW DASH: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s" % value)
+        printDBG("ALLOW DASH: >> %s" % value)
         if value == "true" and IsExecutable('ffmpeg'):
             return True
         elif value == "auto" and IsExecutable('ffmpeg') and IsExecutable(config.plugins.iptvplayer.exteplayer3path.value):
@@ -64,8 +65,10 @@ class YouTubeParser():
                 return [], []
             else: return []
         
+        reNum = re.compile('([0-9]+)')
         retHLSList = []
         retList = []
+        dashList = []
         # filter dash
         dashAudioLists = []
         dashVideoLists = []
@@ -76,16 +79,24 @@ class YouTubeParser():
                     dashAudioLists.append(item)
                 elif 'mp4v' == item['ext']:
                     dashVideoLists.append(item)
+                elif 'mpd' == item['ext']:
+                    tmpList = getMPDLinksWithMeta(item['url'], checkExt=False)
+                    printDBG(tmpList)
+                    for idx in range(len(tmpList)):
+                        tmpList[idx]['format'] = "%sx%s" % (tmpList[idx].get('height', 0), tmpList[idx].get('width', 0))
+                        tmpList[idx]['ext']  = "mpd"
+                        tmpList[idx]['dash'] = True
+                    dashList.extend(tmpList)
             # sort by quality -> format
             def _key(x):
                 if x['format'].startswith('>'):
                      int(x['format'][1:-1])
                 else:
-                     int(x['format'][:-1])
+                     int(ph.search(x['format'], reNum)[0])
                     
             dashAudioLists = sorted(dashAudioLists, key=_key, reverse=True)
             dashVideoLists = sorted(dashVideoLists, key=_key, reverse=True)
-            
+
         for item in list:
             printDBG(">>>>>>>>>>>>>>>>>>>>>")
             printDBG( item )
@@ -105,12 +116,11 @@ class YouTubeParser():
                         item['url']  = decorateUrl(item['url'])
                         retList.append(item)
         
-        dashList = []
         if len(dashAudioLists):
             # use best audio
             for item in dashVideoLists:
                 item = dict(item)
-                item["url"] = decorateUrl("merge://audio_url|video_url", {'audio_url':dashAudioLists[0]['url'], 'video_url':item['url'], 'prefered_merger':'MP4box'})
+                item["url"] = decorateUrl("merge://audio_url|video_url", {'audio_url':dashAudioLists[0]['url'], 'video_url':item['url']})
                 dashList.append(item)
         
         # try to get hls format with alternative method 

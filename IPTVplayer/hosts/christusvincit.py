@@ -61,171 +61,211 @@ class Christusvincit(CBaseHostClass):
         self.MAIN_URL   = 'http://christusvincit-tv.pl/'
         self.DEFAULT_ICON_URL = 'http://christusvincit-tv.pl/images/christusbg.jpg'
         self.reImgObj = re.compile(r'''<img[^>]+?src=(['"])([^>]*?)(?:\1)''', re.I)
-        self.titlesMap = {"wspolodkupicielka":"Współodkupicielka i Pośredniczka Wszelkich Łask",
-                          "rekolkap":"Rekolekcje kapłańskie",
-                          "medalionbogaojca":"Medalion Boga Ojca",
-                          "mojkosciele":"Mój Kościele co oni Tobie uczynili",
-                          "redemptorismater":"Redemptoris Mater",
-                          "luter":"Luter świadkiem Chrystusa ?",
-                          "bn2017":"Boże Narodzenie w tajemnicy Trójcy Przenajświętszej",
-                          "synowielaski":"Synowie łaski przywołajcie narody i miasta",
-                          "witajoblubienico":"Witaj Oblubienico Ducha Świętego",
-                          "mowaboga":"Orędzia-Mowa Boga",
-                          "chwalaboga":"Chwała Boga-doszliśmy do absurdu",
-                          "maciewybor":"Macie wybór między Niebem a Piekłem",
-                          "kontds":"Kontemplacja Ducha Świętego",
-                          "listyp":"Kontemplacja Ducha Świętego w listach św. Pawła",
-                          "prosby":"Prośby Matki Bożej",
-                          "zyciesak":"Życie sakramentalne wg. św. Agnieszki",
-                          "objquito":"Objawienia w Quito",
-                          "poznajmy":"Poznajmy Wroga",
-                          "tajemnicabn":"Tajemnica Bożego Narodzenia",
-                          "lag2016":"Mała Intronizacja 2016",
-                          "dsroz":"Duchu Święty Rozpal",
-                          "kontemplacjajch":"Kontemplacja Jezusa Chrystusa",
-                          "cierpienieo":"Cierpienie Oblubienicy",
-                          "rekokap":"Rekolekcje o kapłaństwie",
-                          "intronizacja":"Intronizacja-może się zegną",
-                          "quito_nowe":"Objawienia Matki Bożejz Quito",
-                          "bogmowi":"Bóg mówi do swego kapłana",
-                          "kazanieslowa1":"Słowa ks.P.Natanka do ks.kard.S.Dziwisza",
-                          "rekolekcje":"Rekolekcje o Mszy św.",
-                          "glebiamodlitwy":"Głębia modlitwy Ojcze nasz",
-                          "tatojestem":"Tato jestem",
-                          "30-lecieksp":"30-lecie kapłaństwa ks.P.M.Natanka",
-                          "gazetym":"Gazety mówią o księdzu",
-                          "regulam":"Reguła Mariańska",
-                          "bozatajemnica":"Boża Tajemnica Maryja",
-                          "kochamkaplana":"Kocham polskiego katolickiego kapłana",
-                          "bitwa_o_post":"Bitwa o post",
-                          "tajemnice_glowny":"Tajemnica różańca świętego",
-                          "bog_umacnia":"Bóg umacnia",
-                          "bajka_sprawozdanie_komisarzy":"Bajka sprawozdanie komisarzy",
-                          "dlaczego_rok_1960":"Dlaczego rok 1960? Żądania Matki Bożej Fatimskiej",
-                          "Polsko_Bog_jeszcze_czeka_na_Ciebie":"Polsko, Bóg jeszcze czeka na Ciebie",
-                          "istota_ojcostwa_boga":"Istota Ojcostwa Boga",
-                          "polsko_ciebie_maryja_uratuje":"Polsko, Ciebie tylko Maryja uratuje",
-                          "katechezy_boga":"Katechezy Boga Ojca",
-                          "potega_slowa":"Potęga Słowa Bożego",
-                          "rozwazania_drogi_krzyzowej":"Rozważania drogi krzyżowej",
-                          "uczynmnieniewolnikiemtwojejmilosci":"Uczyń Mnie niewolnikiem Twojej miłości",
-                          "drogapojednania":"Droga pojednania",
-                          "leniwiwwierze":"Leniwi w wierze",
-                          "kazaniapogrzebowe":"Kazania pogrzebowe",
-                          "czysciec":"Tajemnica czyśćca",
-                          "cierpienieboga":"Cierpienie Boga",
-                          "czynie":"Czynię nieprzyjaźń między żywiołami",
-                          "swiatduchaiswiatciala":"Świat ducha i świat ciała",
-                          "medalik_benedykta":"Medalik św. Benedykta",
-                          "triduum2012":"Święte Triduum",
-                          "grzechy":"Cztery grzechy główne ks. Piotra Natanka",
-                          "plomien":"Kościół płonie",
-                          "pokuta":"Sakrament pokuty - niezmierzona Miłość Boga",
-                          "droga2":"Droga Czasów Ostatecznych",
-                          "niebianskie":"Bóg powala z nóg - katechezy niebiańskie",
-                          "objawienia":"Objawienia w Montichiari - Godzina Łaski",
-                          "zertka":"Polacy, Bóg chce się podeprzeć o Waszą ofiarę",
-                          "krol_b":"Polsko, oto Król nadchodzi!",
-                          "kaplani1":"Kapłani Chrystusowi czemu śpicie?",
-                          "polska1":"Kocham Polskę",
-                          "modernizm":"Rozsadzenie Kościoła od wewnątrz",
-                          "msza_sw":"O Mszy Świętej",
-                          "encykliki":"Encykliki papieskie",
-                          "kaplan":"Tylko kapłan katolicki uratuje świat",
-                          "dollar_s":"Lucyferyczny plan zniszczenia Kościoła Świętego",
-                          "list_kaplani":"List Otwarty do Kapłanów Kościoła Katolickiego",
-                          "gietrzwald":"Katechezy gietrzwałdzkie",
-                          "kongresmaryjny":"Kongres Maryjny",
-                          "czestochowa_kategoria":"Pielgrzymki do Częstochowy",
-                          "kategoria_niepokalane_poczecie_nmp":"Niepokalane Poczęcie NMP",
-                          "kategoria_chrystus_krol":"Chrystus Król - Słowa do Rycerzy",
-                          "kategoria_bog_ojciec":"Bóg Ojciec",
-                          "kategoria_dwa_serca":"Dwa Serca",
-                          "kategoria_najdrozsza_krew":"Najdroższa Krew Pana Jezusa",
-                          "slowodorycerzy1":"Słowa do Rycerzy Chrystusa Króla",
-                          "reformalit":"Reforma liturgiczna",
-                          "dwaserca2018":"Dwa Serca 2018",
-                          "dwojgaserc2018":"Uroczystość Dwojga Serc 29.09.2018r.",
-                          "sekretlasal":"Sekret La Salette i kompleks księży saletynów",
-                          "kazkrew2018":"O Krwi Najdroższej 2018",
-                          "koronacjamb2018":"Koronacja Matki Bożej z Quito",
-                          "quito2018":"Objawienia Matki Bożej w Quito",
-                          "cierboga":"Cierpienie Boga w Trójcy Jedynego",
-                          "encyklikimaryjne":"Encykliki Maryjne",
-                          "uczpm":"Uczymy się Pieśni Maryjnych",
-                          "manifestacjazbiorcze":"Królowa idzie do Sejmu",
-                          "kazschol":"Pierwsze kazanie scholastyczne",
-                          "krolowanie":"Królowanie Pana Jezusa i Królowanie Maryi",
-                          "postzbiorcze":"Posty - Pomagamy Matce Bożej",
-                          "zesrocz":"Zestawienie roczne",
-                          "domychk":"Domy Chrystusa Króla",
-                          "zesl4062017":"Zesłanie Ducha Świętego 04.06.2017r.",
-                          "kazaniawielkanocy":"Kazanie Czasu Wielkanocy",
-                          "kfront":"Kazanie frontowe",
-                          "24meki":"24 godziny Męki naszego Pana Jezusa Chrystusa",
-                          "kontsj":"Kontemplacja Najświętszego Serca Jezusa",
-                          "boguzdrawia":"Bóg czyni cuda i uzdrawia",
-                          "wdsnabw":"Wieczernik Ducha Świętego nabożeństwo wieczorne",
-                          "rozwazaniacz":"Rozważania czerwcowe",
-                          "adwokat":"Nająłem Adwokata na godzinę śmierci",
-                          "inner":"Inne retransmisje",
-                          "adwentglowne":"Liturgiczne inicjacje adwentowe",
-                          "objawieniawakita1":"Objawienia w Akita",
-                          "wieczornice":"Wieczornice",
-                          "burzanadpd":"Burza nad pustelnią - Dokumenty",
-                          "paninarodow":"Pani Wszystkich Narodów",
-                          "blogjest":"Błogosławiony jestem",
-                          "oduchuswietym":"O Duchu Świętym",
-                          "miloscspraw":"Miłość wypełnia się w sprawiedliwości",
-                          "refleksje":"Refleksje betlejemskie",
-                          "nasza_matka-garabandal":"Nasza Matka - Garabandal",
-                          "kazania_pasyjne_glowny":"Kazania Pasyjne",
-                          "kazania_nabozenstwa_patriotyczne":"Kazania i nabożeństwa patriotyczne",
-                          "w_obronie_garabandal":"W obronie Garabandal",
-                          "nabozenstwouzdrawianiaiuwalniania":"Nabożeństwa uzdrawiania i uwalniania",
-                          "tajemnicamszywgojcapio":"Tajemnica Mszy Św. wg św. Ojca Pio",
-                          "25lecie_pustelni":"25-lecie Pustelni",
-                          "ratujcie_dusze":"Ratujcie dusze",
-                          "bog_trwa_zawsze":"Bóg trwa zawsze. Czas który jest przeminie",
-                          "quovadis":"Quo Vadis",
-                          "bitwa_pod_wiedniem":"Bitwa pod Wiedniem",
-                          "detronizacjakrola":"Detronizacja Króla. Oni Mnie nie chcą",
-                          "kosciele":"Kościele obudź się!",
-                          "czestochowa06102012":"Częstochowa - 06.10.2012r Rok Wiary",
-                          "bruksela":"Bruksela - współczesny Jeroboam",
-                          "wykrot":"Słowa do pielgrzymów z Wykrotu",
-                          "galeria_bobola_prawy":"Rotunda św.Boboli",
-                          "kimnaprawdejesteskaplanie":"Kim naprawdę jesteś kapłanie?",
-                          "objawienia_prywatne":"Objawienia prywatne",
-                          "przebaczenie":"O naturze przebaczenia",
-                          "ktokrolem":"Kogo wybierzemy Królem - 01.04.2012r.",
-                          "droga":"Droga którą idę, jest...",
-                          "swjan":"Wspomnienie św. Jana Ewangelisty",
-                          "przyspiesze":"Przyśpieszę Dzień Mojego Przyjścia",
-                          "hold1":"Rocznica Hołdu Ruskiego - Msza święta z 5.11.2011r.",
-                          "uwiedzony":"Uwiedzony świat i ludzkość - kazanie z 2 października 2011r.",
-                          "oni_nie_zrobia":"Oni nie zrobią Intronizacji",
-                          "heretyk":"Prawdziwe oblicze HERETYKÓW i SEKCIARZY w Kościele",
-                          "baal":"Wzywam proroków Baal'a na konfrontację",
-                          "natanek1":"ks.Natanek nieposłuszny?",
-                          "katechezy":"Katechezy czasów ostatecznych",
-                          "ogloszenia_biezace":"Ogłoszenia bieżące",
-                          "slowodorycerzy1":"Pilne! Słowa do Rycerzy Chrystusa Króla",
-                          "nowennabogojciec":"Nowenna ku czci Boga Ojca",
-                          "zakon":"Powstaje zakon",
-                          "banner_oferty_parafii":"Oferty Parafii Internetowej",
-                          "wykrot_banner":"Nocna Pielgrzymka do Wykrotu (1-2/03/2014)",
-                          "slowobozenacodzien":"Słowo Boże na co dzień",
-                          "oredzianaczasyostateczne":"Orędzia na Czasy Ostateczne - czyta ks. Piotr",
-                          "zywoty_swietych_panskich":"Żywoty Świętych Pańskich",
-                          "msze_swiete":"Całe msze święte - nowe okienko",
-                          "ewangeliawspol":"Ewangelia współcześnie",
-                          "matka_swietych_polska":"Matka Świętych Polska",
-                          "filozofiamyslenia":"Filozofia myślenia",
-                          "slowobozevaltorta":"Słowo Boże na co dzień - M. Valtorta",
-                          "dni_wiernych_parafii":"Dni wiernych parafii",
-                          "pielgrzymki_550x120":"Pielgrzymki Odbijamy Europę",
-                          }
+        self.titlesMap = {'wspolodkupicielka': 'Współodkupicielka i Pośredniczka Wszelkich Łask',
+                          'rekolkap': 'Rekolekcje kap\xc5\x82a\xc5\x84skie',
+                          'medalionbogaojca': 'Medalion Boga Ojca',
+                          'mojkosciele': 'M\xc3\xb3j Ko\xc5\x9bciele co oni Tobie uczynili',
+                          'redemptorismater': 'Redemptoris Mater',
+                          'luter': 'Luter \xc5\x9bwiadkiem Chrystusa ?',
+                          'bn2017': 'Bo\xc5\xbce Narodzenie w tajemnicy Tr\xc3\xb3jcy Przenaj\xc5\x9bwi\xc4\x99tszej',
+                          'synowielaski': 'Synowie \xc5\x82aski przywo\xc5\x82ajcie narody i miasta',
+                          'witajoblubienico': 'Witaj Oblubienico Ducha \xc5\x9awi\xc4\x99tego',
+                          'mowaboga': 'Or\xc4\x99dzia-Mowa Boga',
+                          'chwalaboga': 'Chwa\xc5\x82a Boga-doszli\xc5\x9bmy do absurdu',
+                          'maciewybor': 'Macie wyb\xc3\xb3r mi\xc4\x99dzy Niebem a Piek\xc5\x82em',
+                          'kontds': 'Kontemplacja Ducha \xc5\x9awi\xc4\x99tego',
+                          'listyp': 'Kontemplacja Ducha \xc5\x9awi\xc4\x99tego w listach \xc5\x9bw. Paw\xc5\x82a',
+                          'prosby': 'Pro\xc5\x9bby Matki Bo\xc5\xbcej',
+                          'zyciesak': '\xc5\xbbycie sakramentalne wg. \xc5\x9bw. Agnieszki',
+                          'objquito': 'Objawienia w Quito',
+                          'poznajmy': 'Poznajmy Wroga',
+                          'tajemnicabn': 'Tajemnica Bo\xc5\xbcego Narodzenia',
+                          'lag2016': 'Ma\xc5\x82a Intronizacja 2016',
+                          'dsroz': 'Duchu \xc5\x9awi\xc4\x99ty Rozpal',
+                          'kontemplacjajch': 'Kontemplacja Jezusa Chrystusa',
+                          'cierpienieo': 'Cierpienie Oblubienicy',
+                          'rekokap': 'Rekolekcje o kap\xc5\x82a\xc5\x84stwie',
+                          'intronizacja': 'Intronizacja-mo\xc5\xbce si\xc4\x99 zegn\xc4\x85',
+                          'quito_nowe': 'Objawienia Matki Bo\xc5\xbcej z Quito',
+                          'bogmowi': 'B\xc3\xb3g m\xc3\xb3wi do swego kap\xc5\x82ana',
+                          'kazanieslowa1': 'S\xc5\x82owa ks.P.Natanka do ks.kard.S.Dziwisza',
+                          'rekolekcje': 'Rekolekcje o Mszy \xc5\x9bw.',
+                          'glebiamodlitwy': 'G\xc5\x82\xc4\x99bia modlitwy Ojcze nasz',
+                          'tatojestem': 'Tato jestem',
+                          '30-lecieksp': '30-lecie kap\xc5\x82a\xc5\x84stwa ks.P.M.Natanka',
+                          'gazetym': 'Gazety m\xc3\xb3wi\xc4\x85 o ksi\xc4\x99dzu',
+                          'regulam': 'Regu\xc5\x82a Maria\xc5\x84ska',
+                          'bozatajemnica': 'Bo\xc5\xbca Tajemnica Maryja',
+                          'kochamkaplana': 'Kocham polskiego katolickiego kap\xc5\x82ana',
+                          'bitwa_o_post': 'Bitwa o post',
+                          'tajemnice_glowny': 'Tajemnica r\xc3\xb3\xc5\xbca\xc5\x84ca \xc5\x9bwi\xc4\x99tego',
+                          'bog_umacnia': 'B\xc3\xb3g umacnia',
+                          'bajka_sprawozdanie_komisarzy': 'Bajka sprawozdanie komisarzy',
+                          'dlaczego_rok_1960': 'Dlaczego rok 1960? \xc5\xbb\xc4\x85dania Matki Bo\xc5\xbcej Fatimskiej',
+                          'Polsko_Bog_jeszcze_czeka_na_Ciebie': 'Polsko, B\xc3\xb3g jeszcze czeka na Ciebie',
+                          'istota_ojcostwa_boga': 'Istota Ojcostwa Boga',
+                          'polsko_ciebie_maryja_uratuje': 'Polsko,Ciebie tylko Maryja uratuje',
+                          'katechezy_boga': 'Katechezy Boga Ojca',
+                          'potega_slowa': 'Pot\xc4\x99ga S\xc5\x82owa Bo\xc5\xbcego',
+                          'rozwazania_drogi_krzyzowej': 'Rozwa\xc5\xbcania drogi krzy\xc5\xbcowej',
+                          'uczynmnieniewolnikiemtwojejmilosci': 'Uczy\xc5\x84 Mnie niewolnikiem Twojej mi\xc5\x82o\xc5\x9bci',
+                          'drogapojednania': 'Droga pojednania',
+                          'leniwiwwierze': 'Leniwi w wierze',
+                          'kazaniapogrzebowe': 'Kazania pogrzebowe',
+                          'czysciec': 'Tajemnica czy\xc5\x9b\xc4\x87ca',
+                          'cierpienieboga': 'Cierpienie Boga',
+                          'czynie': 'Czyni\xc4\x99 nieprzyja\xc5\xba\xc5\x84 mi\xc4\x99dzy \xc5\xbcywio\xc5\x82ami',
+                          'swiatduchaiswiatciala': '\xc5\x9awiat ducha i \xc5\x9bwiat cia\xc5\x82a',
+                          'medalik_benedykta': 'Medalik \xc5\x9bw. Benedykta',
+                          'triduum2012': '\xc5\x9awi\xc4\x99te Triduum',
+                          'grzechy': 'Cztery grzechy g\xc5\x82\xc3\xb3wne ks. Piotra Natanka',
+                          'plomien': 'Ko\xc5\x9bci\xc3\xb3\xc5\x82 p\xc5\x82onie',
+                          'pokuta': 'Sakrament pokuty - niezmierzona Mi\xc5\x82o\xc5\x9b\xc4\x87 Boga',
+                          'droga2': 'Droga Czas\xc3\xb3w Ostatecznych',
+                          'niebianskie': 'B\xc3\xb3g powala z n\xc3\xb3g - katechezy niebia\xc5\x84skie',
+                          'objawienia': 'Objawienia w Montichiari - Godzina \xc5\x81aski',
+                          'zertka': 'Polacy, B\xc3\xb3g chce si\xc4\x99 podeprze\xc4\x87 o Wasz\xc4\x85 ofiar\xc4\x99',
+                          'krol_b': 'Polsko, oto Kr\xc3\xb3l nadchodzi!',
+                          'kaplani1': 'Kap\xc5\x82ani Chrystusowi czemu \xc5\x9bpicie?',
+                          'polska1': 'Kocham Polsk\xc4\x99',
+                          'modernizm': 'Rozsadzenie Ko\xc5\x9bcio\xc5\x82a od wewn\xc4\x85trz',
+                          'msza_sw': 'O Mszy \xc5\x9awi\xc4\x99tej',
+                          'encykliki': 'Encykliki papieskie',
+                          'kaplan': 'Tylko kap\xc5\x82an katolicki uratuje \xc5\x9bwiat',
+                          'dollar_s': 'Lucyferyczny plan zniszczenia Ko\xc5\x9bcio\xc5\x82a \xc5\x9awi\xc4\x99tego',
+                          'list_kaplani': 'List Otwarty do Kap\xc5\x82an\xc3\xb3w Ko\xc5\x9bcio\xc5\x82a Katolickiego',
+                          'gietrzwald': 'Katechezy gietrzwa\xc5\x82dzkie',
+                          'kongresmaryjny': 'Kongres Maryjny',
+                          'czestochowa_kategoria': 'Pielgrzymki do Cz\xc4\x99stochowy',
+                          'czest102015': 'Cz\xc4\x99stochowa 2015',
+                          'jasna_gora': 'Jasna G\xc3\xb3ra ',
+                          'krolowa2018': 'Kr\xc3\xb3lowa idzie do Sejmu 2018 ',
+                          'wars2017': 'Kr\xc3\xb3lowa idzie do Sejmu 2017 ',
+                          'marsz2016': 'Kr\xc3\xb3lowa idzie do Sejmu 2016 ',
+                          'kategoria_niepokalane_poczecie_nmp': 'Niepokalane Pocz\xc4\x99cie NMP',
+                          'kategoria_chrystus_krol': 'Chrystus Kr\xc3\xb3l - S\xc5\x82owa do Rycerzy',
+                          'kategoria_bog_ojciec': 'B\xc3\xb3g Ojciec',
+                          'kategoria_dwa_serca': 'Dwa Serca',
+                          'kategoria_najdrozsza_krew': 'Najdro\xc5\xbcsza Krew Pana Jezusa',
+                          'slowodorycerzy1': 'S\xc5\x82owa do Rycerzy Chrystusa Kr\xc3\xb3la',
+                          'reformalit': 'Reforma liturgiczna',
+                          'dwaserca2018': 'Dwa Serca 2018',
+                          'dwojgaserc2018': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 29.09.2018r.',
+                          'sekretlasal': 'Sekret La Salette i kompleks ksi\xc4\x99\xc5\xbcy saletyn\xc3\xb3w',
+                          'kazkrew2018': 'O Krwi Najdro\xc5\xbcsza 2018',
+                          'koronacjamb2018': 'Koronacja Matki Bo\xc5\xbcej z Quito',
+                          'quito2018': 'Objawienia Matki Bo\xc5\xbcej w Quito',
+                          'cierboga': 'Cierpienie Boga w Tr\xc3\xb3jcy Jedynego',
+                          'encyklikimaryjne': 'Encykliki Maryjne',
+                          'uczpm': 'Uczymy si\xc4\x99 Pie\xc5\x9bni Maryjnych',
+                          'manifestacjazbiorcze': 'Kr\xc3\xb3lowa idzie do Sejmu',
+                          'kazschol': 'Pierwsze kazanie scholastyczne',
+                          'krolowanie': 'Kr\xc3\xb3lowanie Pana Jezusa i Kr\xc3\xb3lowanie Maryi',
+                          'postzbiorcze': 'Posty - Pomagamy Matce Bo\xc5\xbcej',
+                          'zesrocz': 'Zestawienie roczne',
+                          'domychk': 'Domy Chrystusa Kr\xc3\xb3la',
+                          'zesl4062017': 'Zes\xc5\x82anie Ducha \xc5\x9awi\xc4\x99tego 04.06.2017r.',
+                          'kazaniawielkanocy': 'Kazanie Czasu Wielkanocy',
+                          'kfront': 'Kazanie frontowe',
+                          '24meki': '24 godziny M\xc4\x99ki naszego Pana Jezusa Chrystusa',
+                          'kontsj': 'Kontemplacja Naj\xc5\x9bwi\xc4\x99tszego Serca Jezusa',
+                          'boguzdrawia': 'B\xc3\xb3g czyni cuda i uzdrawia',
+                          'wdsnabw': 'Wieczernik Ducha \xc5\x9awi\xc4\x99tego nabo\xc5\xbce\xc5\x84stwo wieczorne',
+                          'rozwazaniacz': 'Rozwa\xc5\xbcania czerwcowe',
+                          'adwokat': 'Naj\xc4\x85\xc5\x82em Adwokata na godzin\xc4\x99 \xc5\x9bmierci',
+                          'inner': 'Inne retransmisje',
+                          'adwentglowne': 'Liturgiczne inicjacje adwentowe',
+                          'objawieniawakita1': 'Objawienia w Akita',
+                          'wieczornice': 'Wieczornice',
+                          'burzanadp': 'Burza nad pustelni\xc4\x85',
+                          'paninarodow': 'Pani Wszystkich Narod\xc3\xb3w',
+                          'blogjest': 'B\xc5\x82ogos\xc5\x82awiony jestem',
+                          'oduchuswietym': 'O Duchu \xc5\x9awi\xc4\x99tym',
+                          'miloscspraw': 'Mi\xc5\x82o\xc5\x9b\xc4\x87 wype\xc5\x82nia si\xc4\x99 w sprawiedliwo\xc5\x9bci',
+                          'refleksje': 'Refleksje betlejemskie',
+                          'nasza_matka-garabandal': 'Nasza Matka - Garabandal',
+                          'kazania_pasyjne_glowny': 'Kazania Pasyjne',
+                          'kazania_nabozenstwa_patriotyczne': 'Kazania i nabo\xc5\xbce\xc5\x84stwa patriotyczne',
+                          'w_obronie_garabandal': 'W obronie Garabandal',
+                          'nabozenstwouzdrawianiaiuwalniania': 'Nabo\xc5\xbce\xc5\x84stwa uzdrawiania i uwalniania',
+                          'tajemnicamszywgojcapio': 'Tajemnica Mszy \xc5\x9aw. wg \xc5\x9bw. Ojca Pio',
+                          '25lecie_pustelni': '25-lecie Pustelni',
+                          'ratujcie_dusze': 'Ratujcie dusze',
+                          'bog_trwa_zawsze': 'B\xc3\xb3g trwa zawsze. Czas kt\xc3\xb3ry jest przeminie',
+                          'quovadis': 'Quo Vadis',
+                          'bitwa_pod_wiedniem': 'Bitwa pod Wiedniem',
+                          'detronizacjakrola': 'Detronizacja Kr\xc3\xb3la. Oni Mnie nie chc\xc4\x85',
+                          'kosciele': 'Ko\xc5\x9bciele obud\xc5\xba si\xc4\x99!',
+                          'czestochowa06102012': 'Cz\xc4\x99stochowa - 06.10.2012r Rok Wiary',
+                          'bruksela': 'Bruksela - wsp\xc3\xb3\xc5\x82czesny Jeroboam',
+                          'wykrot': 'S\xc5\x82owa do pielgrzym\xc3\xb3w z Wykrotu',
+                          'galeria_bobola_prawy': 'Rotunda \xc5\x9bw.Boboli',
+                          'kimnaprawdejesteskaplanie': 'Kim naprawd\xc4\x99 jeste\xc5\x9b kap\xc5\x82anie?',
+                          'objawienia_prywatne': 'Objawienia prywatne',
+                          'przebaczenie': 'O naturze przebaczenia',
+                          'ktokrolem': 'Kogo wybierzemy Kr\xc3\xb3lem - 01.04.2012r.',
+                          'droga': 'Droga kt\xc3\xb3r\xc4\x85 id\xc4\x99, jest...',
+                          'swjan': 'Wspomnienie \xc5\x9bw. Jana Ewangelisty',
+                          'przyspiesze': 'Przy\xc5\x9bpiesz\xc4\x99 Dzie\xc5\x84 Mojego Przyj\xc5\x9bcia',
+                          'hold1': 'Rocznica Ho\xc5\x82du Ruskiego - Msza \xc5\x9bwi\xc4\x99ta z 5.11.2011r.',
+                          'uwiedzony': 'Uwiedzony \xc5\x9bwiat i ludzko\xc5\x9b\xc4\x87 - kazanie z 2 pa\xc5\xbadziernika 2011r.',
+                          'oni_nie_zrobia': 'Oni nie zrobi\xc4\x85 Intronizacji',
+                          'heretyk': 'Prawdziwe oblicze HERETYK\xc3\x93W i SEKCIARZY w Ko\xc5\x9bciele',
+                          'baal': "Wzywam prorok\xc3\xb3w Baal'a na konfrontacj\xc4\x99",
+                          'natanek1': 'ks.Natanek niepos\xc5\x82uszny?',
+                          'katechezy': 'Katechezy czas\xc3\xb3w ostatecznych',
+                          'ogloszenia_biezace': 'Og\xc5\x82oszenia bie\xc5\xbc\xc4\x85ce',
+                          'slowodorycerzy1': 'Pilne! S\xc5\x82owa do Rycerzy Chrystusa Kr\xc3\xb3la',
+                          'nowennabogojciec': 'Nowenna ku czci Boga Ojca',
+                          'zakon': 'Powstaje zakon',
+                          'banner_oferty_parafii': 'Oferty Parafii Internetowej',
+                          'wykrot_banner': 'Nocna Pielgrzymka do Wykrotu (1-2/03/2014)',
+                          'slowobozenacodzien': 'S\xc5\x82owo Bo\xc5\xbce na co dzie\xc5\x84',
+                          'oredzianaczasyostateczne': 'Or\xc4\x99dzia na Czasy Ostateczne - czyta ks. Piotr',
+                          'zywoty_swietych_panskich': '\xc5\xbbywoty \xc5\x9awi\xc4\x99tych Pa\xc5\x84skich',
+                          'msze_swiete': 'Ca\xc5\x82e msze \xc5\x9bwi\xc4\x99te - nowe okienko',
+                          'ewangeliawspol': 'Ewangelia wsp\xc3\xb3\xc5\x82cze\xc5\x9bnie',
+                          'matka_swietych_polska': 'Matka \xc5\x9awi\xc4\x99tych Polska',
+                          'filozofiamyslenia': 'Filozofia my\xc5\x9blenia',
+                          'slowobozevaltorta': 'S\xc5\x82owo Bo\xc5\xbce na co dzie\xc5\x84 - M. Valtorta',
+                          'dni_wiernych_parafii': 'Dni wiernych parafii',
+                          'medugorje2018': 'Medugorje 9-17.10.2018r.',
+                          'kongres2016': 'III-ci Kongres Maryjny 2016r.',
+                          'iikongresmaryjny': 'II-gi Kongres Maryjny 2015r.',
+                          '1kongresma': 'I-szy Kongres Maryjny 2014r.',
+                          '1roczek_ks_piotra': '1-szy Roczek ks. Piotra',
+                          '50teurodziny_ks_piotra': '50-te Urodziny ks. Piotra',
+                          'bogojciec2018': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2018',
+                          'ubogojciec2017': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2017',
+                          'bojciec2016': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2016',
+                          'bogojciec2015': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2015',
+                          'bogojciec2014': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2014',
+                          'ojcostwoboga2014': 'Ojcostwo Boga 2014',
+                          'boga_ojca_04082013': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2013',
+                          'bogaojca2012': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2012',
+                          '20110807': 'Uroczysto\xc5\x9b\xc4\x87 Boga Ojca 2011',
+                          'milosc_boga': 'Mi\xc5\x82o\xc5\x9b\xc4\x87 Boga',
+                          'dwojgaserc2017': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 2017',
+                          'ds2016': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 2016',
+                          'dwojgaserc2015': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 2015',
+                          'dwojgaserc2014': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 2014',
+                          'niepokalaneserce2014': 'Niepokalane Serce NMP 2014',
+                          'dwojgaserc_28092013': 'Uroczysto\xc5\x9b\xc4\x87 Dwojga Serc 2013',
+                          'uroczkrwi2017': 'Uroczysto\xc5\x9b\xc4\x87 Najdro\xc5\xbcszej Krwi Pana Jezusa 2017',
+                          'krew2016': 'Uroczysto\xc5\x9b\xc4\x87 Najdro\xc5\xbcszej Krwi Pana Jezusa 2016',
+                          'najkrew2015': 'Uroczysto\xc5\x9b\xc4\x87 Najdro\xc5\xbcszej Krwi Pana Jezusa 2015',
+                          'najdrozszakrew2014': 'Uroczysto\xc5\x9b\xc4\x87 Najdro\xc5\xbcszej Krwi Pana Jezusa 2014',
+                          'najdrozszejkrwi_07072013': 'Uroczysto\xc5\x9b\xc4\x87 Najdro\xc5\xbcszej Krwi Pana Jezusa 2013',
+                          'npocz2017': 'Uroczysto\xc5\x9b\xc4\x87 Niepokalanego Pocz\xc4\x99cia NMP 2017',
+                          'np2016': 'Uroczysto\xc5\x9b\xc4\x87 Niepokalanego Pocz\xc4\x99cia NMP 2016',
+                          'npnmp2015': 'Uroczysto\xc5\x9b\xc4\x87 Niepokalanego Pocz\xc4\x99cia NMP 2015',
+                          'npnmp2014': 'Uroczysto\xc5\x9b\xc4\x87 Niepokalanego Pocz\xc4\x99cia NMP 2014',
+                          'niepokalanego_poczecia_08122013': 'Uroczysto\xc5\x9b\xc4\x87 Niepokalanego Pocz\xc4\x99cia NMP 2013',
+                          'godzina_laski': 'Godzina \xc5\x82aski',
+                          'odpust2012': 'Odpust Parafialny 2012',
+                          'pielgrzymki_550x120': 'Pielgrzymki Odbijamy Europ\xc4\x99',
+                          'chrystuskrol2018': 'Uroczysto\xc5\x9b\xc4\x87 Jezusa Chrystusa Kr\xc3\xb3la Polski 2018',
+                          'podmianka': 'Podmianka - Atrapa Ko\xc5\x9bcio\xc5\x82a',}
 
     def listMain(self, cItem, nextCategory):
         printDBG("Christusvincit.listMain")
@@ -248,7 +288,11 @@ class Christusvincit(CBaseHostClass):
                 if rtmpUrl:
                     try:
                         rtmpUrl = strwithmeta(rtmpUrl, {'iptv_proto':'rtmp', 'iptv_livestream':True})
-                        item['sub_items'].append({'title':'%s [RTMP]' % item['title'], 'url':rtmpUrl, 'type':'video'})
+                        params = {'title':'%s [RTMP]' % item['title'], 'url':rtmpUrl, 'type':'video'}
+                        if 'sub_items' in item:
+                            item['sub_items'].append(params)
+                        else:
+                            item['rtmp_item'] = params
                     except Exception:
                         printExc()
                 self.currList.insert(0, item)
@@ -323,43 +367,46 @@ class Christusvincit(CBaseHostClass):
         playerConfig = None
 
         sts, data = self.getPage(cItem['url'])
-        if not sts: return
-        cUrl = self.cm.meta['url']
-        self.setMainUrl(cUrl)
+        if sts:
+            cUrl = self.cm.meta['url']
+            self.setMainUrl(cUrl)
 
-        if 'articles.php' in cUrl:
-            iframe = ph.search(data, ph.IFRAME_SRC_URI_RE)[1]
-            if not iframe: 
-                iframe = ph.find(data, ('<script', '>', 'embedIframeJs'))[1]
-                iframe = ph.getattr(iframe, 'src')
+            if 'articles.php' in cUrl:
+                iframe = ph.search(data, ph.IFRAME_SRC_URI_RE)[1]
+                if not iframe: 
+                    iframe = ph.find(data, ('<script', '>', 'embedIframeJs'))[1]
+                    iframe = ph.getattr(iframe, 'src')
 
-            if iframe and '?' in iframe:
-                sts, tmp = self.getPage(self.getFullUrl(iframe.replace('?', '?iframeembed=true&')))
-                if not sts: return
-                playerConfig = ph.find(tmp, '{"playerConfig"', '};')[1][:-1]
+                if iframe and '?' in iframe:
+                    sts, tmp = self.getPage(self.getFullUrl(iframe.replace('?', '?iframeembed=true&')))
+                    if not sts: return
+                    playerConfig = ph.find(tmp, '{"playerConfig"', '};')[1][:-1]
+                else:
+                    sections = ph.find(data, '<noscript', 'scapmain-left')[1]
+                    sections = ph.rfindall(sections, '</table>', ('<td', '>', 'capmain-left'), flags=0)
+                    for section in sections:
+                        self.handleSection(cItem, cItem['category'], section)
             else:
-                sections = ph.find(data, '<noscript', 'scapmain-left')[1]
-                sections = ph.rfindall(sections, '</table>', ('<td', '>', 'capmain-left'), flags=0)
-                for section in sections:
-                    self.handleSection(cItem, cItem['category'], section)
-        else:
-            playerConfig = ph.find(data, '{"playerConfig"', '};')[1][:-1]
+                playerConfig = ph.find(data, '{"playerConfig"', '};')[1][:-1]
 
-        if playerConfig:
-            try:
-                playerConfig = json_loads(playerConfig)
-                playlistResult = playerConfig.get('playlistResult', {})
-                if not playlistResult: playlistResult['0'] = {'items':[playerConfig['entryResult']['meta']]}
-                for key, section in playlistResult.iteritems():
-                    for item in section['items']:
-                        icon = self.getFullUrl(item['thumbnailUrl'])
-                        title = item['name']
-                        desc = '%s | %s' % (str(timedelta(seconds=item['duration'])), item['description'])
-                        params = {'title':title, 'icon':icon, 'desc':desc, 'f_id':item['id']}
-                        if item.get('hlsStreamUrl'): params['url'] = item['hlsStreamUrl']
-                        self.addVideo(params)
-            except Exception:
-                printExc()
+            if playerConfig:
+                try:
+                    playerConfig = json_loads(playerConfig)
+                    playlistResult = playerConfig.get('playlistResult', {})
+                    if not playlistResult: playlistResult['0'] = {'items':[playerConfig['entryResult']['meta']]}
+                    for key, section in playlistResult.iteritems():
+                        for item in section['items']:
+                            icon = self.getFullUrl(item['thumbnailUrl'])
+                            title = item['name']
+                            desc = '%s | %s' % (str(timedelta(seconds=item['duration'])), item['description'])
+                            params = {'title':title, 'icon':icon, 'desc':desc, 'f_id':item['id']}
+                            if item.get('hlsStreamUrl'): params['url'] = item['hlsStreamUrl']
+                            self.addVideo(params)
+                except Exception:
+                    printExc()
+
+        rtmpItem = dict(cItem).pop('rtmp_item', None)
+        if rtmpItem: self.addVideo(rtmpItem)
 
     def listSearchResult(self, cItem, searchPattern, searchType):
 

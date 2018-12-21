@@ -53,8 +53,6 @@ class MLBStreamTVApi(CBaseHostClass):
         self.GMTOffset = GMTOffset
         self.offset = timedelta(seconds=seconds)
         
-        self.gameSchedule = {}
-        
     def _str2date(self, txt):
         txt = self.cm.ph.getSearchGroups(txt, '([0-9]+\-[0-9]+\-[0-9]+T[0-9]+\:[0-9]+:[0-9]+)')[0]
         return datetime.strptime(txt, '%Y-%m-%dT%H:%M:%S') + self.offset
@@ -65,31 +63,29 @@ class MLBStreamTVApi(CBaseHostClass):
         
         category = cItem.get('priv_cat')
         if category == None:
-            if not self.gameSchedule:
-                try:
-                    sts, data = self.cm.getPage('https://statsapi.mlb.com/api/v1/schedule?sportId=1')
-                    data = json_loads(data)
-                    for item in data['dates']:
-                        for gameItem in item['games']:
-                            key = (gameItem['teams']['home']['team']['name'].replace(' ', ''), gameItem['teams']['away']['team']['name'].replace(' ', ''))
-                            self.gameSchedule[key] = self._str2date(gameItem['gameDate'])
-                except Exception:
-                    printExc()
-        
-            sts, data = self.cm.getPage(self.getMainUrl(), self.defaultParams)
+            tab = [{'url':'http://mlbstream.tv/', 'icon':self.DEFAULT_ICON_URL},
+                   {'url':'http://nhlstream.tv/', 'icon':'http://nhlstream.tv/wp-content/uploads/2018/09/nhl-logo.png'},
+                   #{'url':'http://nflstream.tv/'},
+                   #{'url':'http://nbastream.tv/'},
+                  ]
+            for item in tab:
+                channelsList.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'list_items', 'title':item['url'], 'url':item['url'], 'icon':item['icon']})
+        elif category == 'list_items':
+            defaultIcon = cItem.get('icon', '')
+            sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
             if not sts: return []
-            self.setMainUrl(self.cm.meta['url'])
-            
+            cUrl = self.cm.meta['url']
+
             tmp = self.cm.ph.getDataBeetwenNodes(data, ('<ul', '>', 'menu-menu'), ('</ul', '>'), False)[1]
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
             if len(tmp):
-                url = self.getFullUrl( self.cm.ph.getSearchGroups(tmp[-1], '''href=['"]([^'^"]+?)['"]''')[0] )
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(tmp[-1], '''href=['"]([^'^"]+?)['"]''')[0], cUrl)
                 title = self.cleanHtmlStr(tmp[-1])
                 sts, tmp = self.cm.getPage(url, self.defaultParams)
                 if sts and '<iframe' in tmp:
                     title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<title', '</title>')[1])
-                    url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-                    channelsList.append({'name':'mlbstream.tv', 'type':'video', 'url':url, 'title':title, 'Referer':self.cm.meta['url'], 'icon':self.DEFAULT_ICON_URL})
+                    url = self.getFullUrl(self.cm.ph.getSearchGroups(tmp, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0], self.cm.meta['url'])
+                    channelsList.append({'name':'mlbstream.tv', 'type':'video', 'url':url, 'title':title, 'Referer':self.cm.meta['url'], 'icon':defaultIcon})
             
             sDesc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'entry-content'), ('</', '>'), False)[1] )
             data = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('var\s+?timezoneJSON\s*?=\s*?\['), re.compile('\];'), False)[1]
@@ -102,7 +98,7 @@ class MLBStreamTVApi(CBaseHostClass):
                     for item in sData:
                         if 'colspan' in item:
                             if len(subItems):
-                                channelsList.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'sub_items', 'title':sTitle, 'sub_items':subItems, 'desc':sDesc, 'icon':self.DEFAULT_ICON_URL})
+                                channelsList.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'sub_items', 'title':sTitle, 'sub_items':subItems, 'desc':sDesc, 'icon':defaultIcon})
                             subItems = []
                             sTitle = self.cleanHtmlStr(item)
                             continue
@@ -110,26 +106,17 @@ class MLBStreamTVApi(CBaseHostClass):
                         date = self.cm.ph.getSearchGroups(item, '''data\-token=['"]([^'^"]+?)['"]''')[0]
                         date = datetime.fromtimestamp(int(date))
                         
-                        home = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'team-name'), ('</span', '>'), False)[1]).decode('utf-8').replace(' ', '')
-                        away = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<span', '>', 'away-name'), ('</span', '>'), False)[1]).decode('utf-8').replace(' ', '')
-                        if (home, away) in self.gameSchedule:
-                            key = (home, away)
-                        elif (away, home) in self.gameSchedule:
-                            key = (away, home)
-                        else:
-                            key = None
                         url = self.cm.ph.getSearchGroups(item, '''\sdata\-link=['"]([^'^"]+?)['"]''')[0]
                         
                         item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<td', '</td>')
                         title = self.cleanHtmlStr(''.join(item[3:]))
                         icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item[3], '''<img[^>]+?src=['"]([^'^"]+?)['"]''')[0])
                         desc = self.cleanHtmlStr(item[2])
-                        if key != None: desc += '[/br]www.mlb.com: ' + self.gameSchedule[key].strftime('%A, %-d %B %H:%M')
-                        desc += '[/br]mlbstream.tv: ' + date.strftime('%A, %-d %B %H:%M')
+                        desc += '[/br]%s %s' % ( self.cm.getBaseUrl(self.cm.meta['url'], True), date.strftime('%A, %-d %B %H:%M') )
                         
-                        subItems.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'links', 'title':title, 'url':self.getFullUrl(url), 'desc':desc, 'icon':icon})
+                        subItems.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'links', 'title':title, 'url':self.getFullUrl(url, self.cm.meta['url']), 'desc':desc, 'icon':icon})
                     if len(subItems):
-                        channelsList.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'sub_items', 'title':sTitle, 'sub_items':subItems, 'desc':sDesc, 'icon':self.DEFAULT_ICON_URL})
+                        channelsList.append({'name':'mlbstream.tv', 'type':'dir', 'priv_cat':'sub_items', 'title':sTitle, 'sub_items':subItems, 'desc':sDesc, 'icon':defaultIcon})
             except Exception:
                 printExc()
         elif category == 'sub_items':
@@ -137,20 +124,20 @@ class MLBStreamTVApi(CBaseHostClass):
         else:
             urlParams = dict(self.defaultParams)
             urlParams['header'] = dict(urlParams['header'])
-            urlParams['header']['Referer'] = self.getMainUrl()
+            urlParams['header']['Referer'] = cItem['url']
             sts, data = self.cm.getPage(cItem['url'], urlParams)
             if not sts: return []
             
             tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'custom-related-links'), ('</div', '>'))[1]
             tmp = self.cm.ph.getAllItemsBeetwenNodes(tmp, ('<a', '>'), ('</a', '>'))
             for item in tmp:
-                url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0] )
+                url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
                 title = '%s - %s' % (cItem['title'], self.cleanHtmlStr(item))
                 params = dict(cItem)
                 params.update({'type':'video', 'title':title, 'url':url, 'Referer':self.cm.meta['url'], 'get_iframe':True})
                 channelsList.append(params)
             
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0], self.cm.meta['url'])
             params = dict(cItem)
             params.update({'type':'video', 'url':url, 'Referer':self.cm.meta['url']})
             channelsList.insert(0, params)
@@ -163,13 +150,13 @@ class MLBStreamTVApi(CBaseHostClass):
         
         urlParams = dict(self.defaultParams)
         urlParams['header'] = dict(urlParams['header'])
-        urlParams['header']['Referer'] = cItem.get('Referer', self.getMainUrl())
+        urlParams['header']['Referer'] = cItem.get('Referer', cItem['url'])
         
         sts, data = self.cm.getPage(cItem['url'], urlParams)
         if not sts: return []
         
         if cItem.get('get_iframe', False):
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0], self.cm.meta['url'])
             if url != '':
                 urlParams['header']['Referer'] = self.cm.meta['url']
                 sts, data = self.cm.getPage(url, urlParams)
@@ -206,7 +193,7 @@ class MLBStreamTVApi(CBaseHostClass):
         elif rewrittenUrl != '':
             scriptUrl = '<proxy>' + rewrittenUrl
         elif '/js/nhl.js' in data:
-            scriptUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?js/nhl\.js)['"]''', 1, True)[0])
+            scriptUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?js/nhl\.js)['"]''', 1, True)[0], self.cm.meta['url'])
         
         if scriptUrl != '':
             for idx in range(len(hlsTab)):

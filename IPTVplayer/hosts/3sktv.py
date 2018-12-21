@@ -242,11 +242,11 @@ class C3skTv(CBaseHostClass):
         else:
             baseUrl = cItem['url']
 
-        url = baseUrl.format(str(page*10))
-        sts, data = self.getPage(url)
-        if not sts: return
-
         try:
+            url = baseUrl.format(str(page*10))
+            sts, data = self.getPage(url)
+            if not sts: return
+
             data = data.strip()
             data = json_loads(data[data.find(marker) + len(marker)+1:-2])
             for item in data['results']:

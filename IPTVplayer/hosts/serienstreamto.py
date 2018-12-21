@@ -5,16 +5,19 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetCookieDir, MergeDicts, ReadTextFile, WriteTextFile, GetTmpDir, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
 # FOREIGN import
 ###################################################
 import re
-try:    import json
-except Exception: import simplejson as json
+from binascii import hexlify
+from hashlib import md5
+from copy import deepcopy
 from Components.config import config, ConfigSelection, ConfigText, getConfigListEntry
 ###################################################
 
@@ -22,6 +25,7 @@ from Components.config import config, ConfigSelection, ConfigText, getConfigList
 ###################################################
 # E2 GUI COMMPONENTS 
 ###################################################
+from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
 from Screens.MessageBox import MessageBox
 ###################################################
 
@@ -290,7 +294,7 @@ class SerienStreamTo(CBaseHostClass, CaptchaHelper):
         printDBG(data)
 
         try:
-            data = byteify(json.loads(data))
+            data = json_loads(data)
             for item in data:
                 title = self.cleanHtmlStr(item['title'])
                 desc  = self.cleanHtmlStr(item['description'])
@@ -366,22 +370,28 @@ class SerienStreamTo(CBaseHostClass, CaptchaHelper):
                     params['max_data_size'] = 0
                     params['no_redirection'] = True
                     tries = 0
-                    tmpUrl = videoUrl
+                    url = videoUrl
                     while tries < 3:
-                        sts, data = self.getPage(videoUrl, params)
+                        sts, data = self.getPage(url, params)
                         printDBG("+++++++++++")
                         printDBG(self.cm.meta)
                         printDBG("+++++++++++")
                         url = self.cm.meta.get('location', '')
                         if not self.cm.isValidUrl(url):
                             break
-                        videoUrl = url
+                        if url != '':
+                            videoUrl = url
                         tries += 1
                 except Exception:
                     printExc()
             
+            printDBG(">>>>>>>>>>>>>>>>>>>>>>>>||||||||||||||||||||||||")
             if 1 != self.up.checkHostSupport(videoUrl):
                 sts, data = self.getPage(videoUrl)
+                if sts: videoUrl = self.cm.meta['url']
+                printDBG("+++++++++++")
+                printDBG(data)
+                printDBG("+++++++++++")
                 if sts and 'google.com/recaptcha/' in data and 'sitekey' in data:
                     message = _('Link protected with google recaptcha v2.')
                     if True != self.loggedIn:
@@ -391,7 +401,8 @@ class SerienStreamTo(CBaseHostClass, CaptchaHelper):
                         message += '\n' + _('Please retry later.')
                     SetIPTVPlayerLastHostError(message)
             
-            urlTab = self.up.getVideoLinkExt(videoUrl)
+            if 1 == self.up.checkHostSupport(videoUrl):
+                urlTab = self.up.getVideoLinkExt(videoUrl)
         return urlTab
         
     def tryTologin(self):
@@ -414,21 +425,133 @@ class SerienStreamTo(CBaseHostClass, CaptchaHelper):
         
         post_data = {'email':self.login, 'password':self.password, 'autoLogin':'on'}
 
-        httpParams = dict(self.defaultParams)
-        httpParams['header'] = dict(httpParams['header'])
-        httpParams['header']['Referer'] = url
-        sts, data = self.getPage(url, httpParams, post_data)
-        printDBG(data)
-        sts, data = self.getPage(url)
-        if sts and '/home/logout' in data:
-            printDBG('tryTologin OK')
-            self.loggedIn = True
-            return
+        while True:
+            errorMsg = ''
+            httpParams = dict(self.defaultParams)
+            httpParams['header'] = dict(httpParams['header'])
+            httpParams['header']['Referer'] = url
+            sts, data = self.getPage(url, httpParams, post_data)
+            printDBG(data)
+            sts, data = self.getPage(url)
+            if sts and '/home/logout' in data:
+                printDBG('tryTologin OK')
+                self.loggedIn = True
+                return
+            elif sts:
+                'messageAlert'
      
         self.sessionEx.open(MessageBox, _('Login failed.'), type = MessageBox.TYPE_ERROR, timeout = 10)
         printDBG('tryTologin failed')
         self.loggedIn = False
         return
+        
+    def tryTologin(self):
+        printDBG('tryTologin start')
+        
+        if None == self.loggedIn or self.login != config.plugins.iptvplayer.serienstreamto_login.value or\
+            self.password != config.plugins.iptvplayer.serienstreamto_password.value:
+
+            loginCookie = GetCookieDir('s.to.login')
+            self.login = config.plugins.iptvplayer.serienstreamto_login.value
+            self.password = config.plugins.iptvplayer.serienstreamto_password.value
+
+            sts, data = self.cm.getPage(self.getMainUrl(), self.defaultParams)
+            if sts: self.setMainUrl(self.cm.meta['url'])
+
+            freshSession = False
+            if sts and '/home/logout' in data:
+                printDBG("Check hash")
+                hash = hexlify(md5('%s@***@%s' % (self.login, self.password)).digest())
+                prevHash = ReadTextFile(loginCookie)[1].strip()
+
+                printDBG("$hash[%s] $prevHash[%s]" % (hash, prevHash))
+                if hash == prevHash:
+                    self.loggedIn = True
+                    return
+                else:
+                    freshSession = True
+
+            rm(loginCookie)
+            rm(self.COOKIE_FILE)
+            if freshSession:
+                sts, data = self.cm.getPage(self.getMainUrl(), MergeDicts(self.defaultParams, {'use_new_session':True}))
+
+            self.loggedIn = False
+            if '' == self.login.strip() or '' == self.password.strip():
+                return False
+
+            actionUrl = self.getFullUrl('/login')
+            post_data = {'email':self.login, 'password':self.password, 'autoLogin':'on'}
+            tries = 0
+            while tries < 3:
+                tries += 1
+                errorMsg = ''
+                httpParams = dict(self.defaultParams)
+                httpParams['header'] = dict(httpParams['header'])
+                httpParams['header']['Referer'] = actionUrl
+                sts, data = self.getPage(actionUrl, httpParams, post_data)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                printDBG(data)
+                printDBG("+++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                if sts and not data.strip():
+                    sts, data = self.getPage(actionUrl)
+                if sts and '/home/logout' in data:
+                    printDBG('tryTologin OK')
+                    self.loggedIn = True
+                    break
+                elif sts:
+                    errorMsg = ph.clean_html(ph.find(data, ('<div', '>','messageAlert'), '</div>', flags=0)[1])
+                    tmp1 = ph.find(data, ('<div', '>', 'formCaptcha'), '</div>', flags=0)[1]
+                    imgUrl = self.getFullUrl(ph.search(tmp1, ph.IMAGE_SRC_URI_RE)[1], self.cm.meta['url'])
+                    tmp2 = ph.find(data, ('<input', '>', 'captcha'), flags=0)[1]
+                    if imgUrl:
+                        captchaLabel = _('Captcha')
+                        captchaTitle = errorMsg
+                        sendLabel = _('Send')
+
+                        header = dict(httpParams['header'])
+                        header['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+                        params = dict(self.defaultParams)
+                        params.update( {'maintype': 'image', 'subtypes':['jpeg', 'png'], 'check_first_bytes':['\xFF\xD8','\xFF\xD9','\x89\x50\x4E\x47'], 'header':header} )
+                        filePath = GetTmpDir('.iptvplayer_captcha.jpg')
+                        rm(filePath)
+                        ret = self.cm.saveWebFile(filePath, imgUrl.replace('&amp;', '&'), params)
+                        if not ret.get('sts'):
+                            SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
+                            return
+                        params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
+                        params['accep_label'] = sendLabel
+                        params['title'] = captchaLabel
+                        params['status_text'] = captchaTitle
+                        params['status_text_hight'] = 200
+                        params['with_accept_button'] = True
+                        params['list'] = []
+                        item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
+                        item['label_size'] = (660,110)
+                        item['input_size'] = (680,25)
+                        item['icon_path'] = filePath
+                        item['title'] = _('Answer')
+                        item['input']['text'] = ''
+                        params['list'].append(item)
+                        #params['vk_params'] = {'invert_letters_case':True}
+
+                        ret = 0
+                        retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
+                        printDBG(retArg)
+                        if retArg and len(retArg) and retArg[0]:
+                            printDBG(retArg[0])
+                            post_data['captcha'] = retArg[0][0]
+                            continue
+                        else:
+                            break
+
+            if self.loggedIn:
+                hash = hexlify(md5('%s@***@%s' % (self.login, self.password)).digest())
+                WriteTextFile(loginCookie, hash)
+            else:
+                self.sessionEx.open(MessageBox, _('Login failed.') + '\n' + errorMsg, type = MessageBox.TYPE_ERROR, timeout = 10)
+
+        return self.loggedIn
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')

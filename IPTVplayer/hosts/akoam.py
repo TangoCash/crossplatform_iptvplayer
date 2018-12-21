@@ -300,7 +300,9 @@ class AkoAm(CBaseHostClass):
             paramsUrl['max_data_size'] = 0
             try:
                 self.cm.clearCookie(self.COOKIE_FILE, removeNames=['golink'])
+                paramsUrl['use_new_session'] = True
                 self.getPage(baseUrl, paramsUrl)
+                paramsUrl.pop('use_new_session')
                 cUrl = self.cm.meta['url']
                 data = self.cm.getCookieItems(self.COOKIE_FILE)
                 if 'golink' in data:

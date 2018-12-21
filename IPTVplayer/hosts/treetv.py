@@ -456,7 +456,8 @@ class TreeTv(CBaseHostClass):
             else:
                 self.login    = config.plugins.iptvplayer.treetv_login.value
                 self.password = config.plugins.iptvplayer.treetv_password.value
-        else:
+        elif config.plugins.iptvplayer.treetv_login.value.strip() == '' or  \
+             config.plugins.iptvplayer.treetv_password.value.strip() == '':
             rm(self.COOKIE_FILE)
 
         name     = self.currItem.get("name", '')

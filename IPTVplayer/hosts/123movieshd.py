@@ -6,6 +6,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -215,15 +216,15 @@ class GoMovies(CBaseHostClass):
         self.setMainUrl(self.cm.meta['url'])
         
         # trailer
-        trailerUrl = self.cm.ph.getSearchGroups(data, '''trailer['"]?\s*?:\s*?['"](https?://[^'^"]+?youtube[^'^"]+?)['"]''')[0]
+        trailerUrl = ph.search(data, '''trailer['"]?\s*?:\s*?['"](https?://[^'^"]+?youtube[^'^"]+?)['"]''')[0]
         if trailerUrl != '' and not trailerUrl.endswith('/'):
             params = dict(cItem)
             params.update({'good_for_fav': False, 'title':'%s : %s' % (cItem['title'], _('trailer')), 'url':trailerUrl})
             self.addVideo(params)
-        
-        playerUrl = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'mv-info'), ('</div', '>'))[1]
-        playerUrl = self.getFullUrl( self.cm.ph.getSearchGroups(playerUrl, ''' href=['"]([^'^"]+?/watching/[^'^"]+?)['"]''')[0] )
-        
+
+        playerUrl = ph.find(data, ('<a', '>', 'watching('), '</a>')[1]
+        playerUrl = self.getFullUrl( ph.getattr(playerUrl, 'href'))
+
         params = dict(self.defaultParams)
         params['header'] = dict(params['header'])
         params['header']['Referer'] = self.cm.meta['url']
@@ -233,15 +234,15 @@ class GoMovies(CBaseHostClass):
         titlesTab = []
         self.cacheLinks  = {}
         
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'server-'), ('<div', '>', 'clearfix'))
+        data = ph.findall(data, ('<div', '>', 'server-'), ('<div', '>', 'clearfix'))
         for tmp in data:
-            serverName = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(tmp, '<strong', '</strong>')[1])
-            serverId   = self.cm.ph.getSearchGroups(tmp, '''server\-([0-9]+)''')[0]
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
+            serverName = ph.clean_html(ph.find(tmp, '<strong', '</strong>')[1])
+            serverId   = ph.search(tmp, '''server\-([0-9]+)''')[0]
+            tmp = ph.findall(tmp, '<a', '</a>')
             for item in tmp:
-                title = self.cleanHtmlStr(item)
-                id = self.cm.ph.getSearchGroups(item, '''\sid=['"]([^'^"]+?)['"]''')[0]
-                playerData = self.cm.ph.getSearchGroups(item, '''data\-([^=]+?)=['"]([^'^"]+?)['"]''', 2)
+                title = ph.clean_html(item)
+                id = ph.getattr(item, 'sid')
+                playerData = ph.search(item, '''data\-([^=]+?)=['"]([^'^"]+?)['"]''')
                 if playerData[0] == 'strgo':
                     url = 'https://vidload.co/player/' + playerData[1]
                 elif playerData[0] == 'openload':

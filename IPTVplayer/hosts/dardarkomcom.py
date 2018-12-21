@@ -357,7 +357,7 @@ class DardarkomCom(CBaseHostClass):
         icon = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'fposter'), ('</div', '>'), False)[1]
         icon = self.getFullUrl( self.cm.ph.getSearchGroups(icon, '''<img[^>]+?src=['"]([^'^"]+?)['"]''')[0] )
         title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(data, ('<h', '>', 's-title'), ('</h', '>'), False)[1] )
-        desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 's-desc'), ('</div', '>'), False)[1] )
+        desc = self.cleanHtmlStr( self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'desc'), ('</div', '>'), False)[1] )
 
         tmpTab = self.cm.ph.getAllItemsBeetwenNodes(data, ('<ul', '>', 'flist-col'), ('</ul', '>'), False)
         for tmp in tmpTab:

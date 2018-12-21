@@ -271,7 +271,7 @@ class ConfigExtMoviePlayer(ConfigBaseWidget, ConfigExtMoviePlayerBase):
 
     def layoutFinished(self):
         ConfigBaseWidget.layoutFinished(self)
-        self.setTitle("IPTV Player " + (_("Configuring an external movie player")))
+        self.setTitle("E2iPlayer " + (_("Configuring an external movie player")))
         
     def getRuntimeOptionsValues(self):
         valTab = []

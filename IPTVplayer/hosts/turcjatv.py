@@ -134,11 +134,12 @@ class TurcjaTv(CBaseHostClass):
             else:
                 self.addVideo( params )
 
-        post_data['page'] = page + 1
-        sts, data = self.getPage(nextPage, post_data=self.cm.buildHTTPQuery(post_data))
-        if not sts: return
-        if data.count('entry-content'):
-            self.addDir(MergeDicts(cItem, {'url':nextPage, 'title':_('Next page'), 'post_data':post_data, 'page':page + 1}))
+        if post_data:
+            post_data['page'] = page + 1
+            sts, data = self.getPage(nextPage, post_data=self.cm.buildHTTPQuery(post_data))
+            if not sts: return
+            if data.count('entry-content'):
+                self.addDir(MergeDicts(cItem, {'url':nextPage, 'title':_('Next page'), 'post_data':post_data, 'page':page + 1}))
 
     def listSearchResult(self, cItem, searchPattern=None, searchType=None):
         page = cItem.get('page', 0)

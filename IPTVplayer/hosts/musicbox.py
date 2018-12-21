@@ -10,6 +10,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printExc, CSelOneL
 from Components.config import config, getConfigListEntry, ConfigYesNo, ConfigText
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 # FOREIGN import
 ###################################################
@@ -190,14 +191,21 @@ class MusicBox(CBaseHostClass):
     def Billboard_charts(self, url):
         sts, data = self.cm.getPage(url, {'header': HEADER})
         if not sts:  return
-        
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>', 'chart-row'), ('</article', '>'))
+
+        data = ph.find(data, ('<div', '>', 'chart-number-one'), ('<div', '>', 'chart-list__expanded-header'))[1]
+        data = re.compile('<div[^>]*?data\-has\-content[^>]*?>').split(data)
         for item in data:
-            name = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'song'), ('</h', '>'), False)[1])
-            artist = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'artist'), ('</', '>'), False)[1])
-            icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''url\(([^\)]+?\.(?:jpg|png|jpeg)(?:\?[^\)]*?)?)\)''')[0], self.cm.meta['url'])
-            if icon == '': icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''imagesrc=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
-            
+            name = ph.clean_html(ph.find(item, ('<div', '>', '__title'), '</div>', flags=0)[1])
+            artist = ph.clean_html(ph.find(item, ('<div', '>', '__artist'), '</div>', flags=0)[1])
+
+            icon = self.cm.getFullUrl(ph.search(item, '\s(https?://[^\s]+?\-174x174\.jpg)\s')[0], self.cm.meta['url'])
+            tmp = ph.clean_html(ph.getattr(item, 'data-brightcove-data'))
+            if not icon and tmp:
+                try:
+                    tmp = json_loads(tmp)
+                    icon = self.cm.getFullUrl(tmp['video_image'], self.cm.meta['url'])
+                except Exception:
+                    printExc()
             track_name = name
             search_string = urllib.quote(artist + ' ' + track_name + ' music video')
             params = {'good_for_fav':True, 'title': name + ' - ' + artist, 'page': search_string, 'icon': icon}
@@ -206,16 +214,18 @@ class MusicBox(CBaseHostClass):
     def Billboard_chartsalbums(self, url):
         sts, data = self.cm.getPage(url, {'header': HEADER})
         if not sts:  return
-        
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<article', '>', 'chart-row'), ('</article', '>'))
+
+        data = ph.find(data, ('<div', '>', 'chart-number-one'), ('<div', '>', 'chart-list__expanded-header'))[1]
+        data = re.compile('<div[^>]*?data\-has\-content[^>]*?>').split(data)
         for item in data:
-            name = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<h', '>', 'song'), ('</h', '>'), False)[1])
-            artist = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<', '>', 'artist'), ('</', '>'), False)[1])
-            icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''url\(([^\)]+?\.(?:jpg|png|jpeg)(?:\?[^\)]*?)?)\)''')[0], self.cm.meta['url'])
-            if icon == '': icon = self.cm.getFullUrl(self.cm.ph.getSearchGroups(item, '''imagesrc=['"]([^'^"]+?)['"]''')[0], self.cm.meta['url'])
-            
+            name = ph.clean_html(ph.find(item, ('<div', '>', '__title'), '</div>', flags=0)[1])
+            artist = ph.clean_html(ph.find(item, ('<div', '>', '__artist'), '</div>', flags=0)[1])
+
+            icon = ph.search(item, '\s(https?://[^\s]+?\-174x174\.jpg)\s')[0]
+            if not icon: icon = ph.getattr(item, 'data-srcset').split(' ', 1)[0]
+            if not icon: icon = ph.getattr(item, 'srcset').split(' ', 1)[0]
             album_name = name
-            params = {'good_for_fav':True, 'name': 'List_album_tracks','title': name + ' - ' + artist, 'page': 0, 'artist': artist, 'album': album_name, 'icon':icon}
+            params = {'good_for_fav':True, 'name': 'List_album_tracks','title': name + ' - ' + artist, 'page': 0, 'artist': artist, 'album': album_name, 'icon':self.cm.getFullUrl(icon, self.cm.meta['url'])}
             self.addDir(params)
 
 ###############################################################################

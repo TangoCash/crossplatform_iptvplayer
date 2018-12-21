@@ -37,7 +37,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'http://filmstreamvk.site/'
+    return 'http://filmstreamvk.club/'
 
 class FilmstreamvkCom(CBaseHostClass):
     
@@ -74,7 +74,7 @@ class FilmstreamvkCom(CBaseHostClass):
     
     def selectDomain(self):
         if self.MAIN_URL == None:
-            domains = ['http://ww1.filmstreamvk.site/']
+            domains = ['http://filmstreamvk.club/']
             domain = config.plugins.iptvplayer.filmstreamvk_alt_domain.value.strip()
             if self.cm.isValidUrl(domain):
                 if domain[-1] != '/': domain += '/'

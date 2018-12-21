@@ -414,9 +414,10 @@ def getDirectM3U8Playlist(M3U8Url, checkExt=True, variantCheck=True, cookieParam
                 if mergeAltAudio and playlist.alt_audio_streams and item['url'].meta.get('iptv_proto') == 'm3u8':
                     for audio_stream in playlist.alt_audio_streams:
                         audioUrl = strwithmeta(audio_stream.absolute_uri, item['url'].meta)
-                        item['name'] = '[%s] %s' % (audio_stream.name, item['name'])
-                        item['url'] = decorateUrl("merge://audio_url|video_url", {'audio_url':audioUrl, 'video_url':item['url'], 'ff_out_container':'mpegts', 'prefered_merger':'hlsdl'})
-                        retPlaylists.append(item)
+                        altItem = dict(item)
+                        altItem['name'] = '[%s] %s' % (audio_stream.name, altItem['name'])
+                        altItem['url'] = decorateUrl("merge://audio_url|video_url", {'audio_url':audioUrl, 'video_url':altItem['url'], 'ff_out_container':'mpegts', 'prefered_merger':'hlsdl'})
+                        retPlaylists.append(altItem)
                 else:
                     item['alt_audio_streams'] = playlist.alt_audio_streams
                     retPlaylists.append(item)

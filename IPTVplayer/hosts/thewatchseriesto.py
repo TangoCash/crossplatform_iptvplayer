@@ -6,6 +6,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import dumps as json_dumps
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -14,8 +16,6 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import re
 import urllib
 import base64
-try:    import json
-except Exception: import simplejson as json
 from Components.config import config, ConfigSelection, getConfigListEntry
 ###################################################
 
@@ -33,7 +33,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://www1.swatchseries.to/'
+    return 'https://swatchseries.to/'
 
 class TheWatchseriesTo(CBaseHostClass):
     DOMAIN        = 'www1.swatchseries.to'
@@ -220,7 +220,7 @@ class TheWatchseriesTo(CBaseHostClass):
                 title = self.cleanHtmlStr( self.cm.ph.getDataBeetwenReMarkers(item, re.compile('itemprop="name"[^>]*?>'), re.compile('</span>'), False)[1] )
                 url = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
                 episodeNum = self.cm.ph.getSearchGroups(title + '|', '''Episode\s+?([0-9]+?)[^0-9]''', 1, True)[0]
-                printDBG(">>>>>>>>>>>>>>>>>>>>>>>> e[%s] s[%s]" % (episodeNum, seasonNum) )
+                printDBG(">> e[%s] s[%s]" % (episodeNum, seasonNum) )
                 if '' != episodeNum and '' != seasonNum:
                     title = 's%se%s'% (seasonNum.zfill(2), episodeNum.zfill(2)) + ' - ' + title.replace('Episode %s' % episodeNum, '')
                 params = dict(cItem)
@@ -241,27 +241,26 @@ class TheWatchseriesTo(CBaseHostClass):
     def getLinksForVideo(self, cItem):
         printDBG("TheWatchseriesTo.getLinksForVideo [%s]" % cItem)
         urlTab = []
-        
+
         if len(self.cacheLinks.get(cItem['url'], [])):
             return self.cacheLinks[cItem['url']]
-        
+
         sts, data = self.getPage(cItem['url'])
         if not sts: return []
-        
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<tr', '>', 'download_link_'), ('</tr', '>'))
+
+        data = ph.findall(data, ('<tr', '>', 'download_link_'), '</tr>')
         for item in data:
-            host = self.cm.ph.getSearchGroups(item, '''"download_link_([^'^"]+?)['"]''')[0]
+            host = ph.search(item, '''"download_link_([^'^"]+?)['"]''')[0]
             #if self.up.checkHostSupport('http://'+host+'/') != 1: continue
             printDBG(item)
-            printDBG('-----------------------------------')
+            printDBG('------')
             url = ''
-            item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<a', '</a>')
+            item = ph.findall(item, '<a', '</a>')
             for it in item:
                 if self.isNeedProxy():
-                    url = urllib.unquote(self.cm.ph.getSearchGroups(it, '''href=['"][^'^"]*?%3Fr%3D([^'^"^&]+?)['"&]''')[0])
+                    url = urllib.unquote(ph.search(it, '''href=['"][^'^"]*?%3Fr%3D([^'^"^&]+?)['"&]''')[0])
                 else:
-                    url = self.cm.ph.getSearchGroups(it, '''href=['"][^'^"]*?\?r=([^'^"]+?)['"]''')[0]
-                
+                    url = ph.search(it, '''href=['"][^'^"]*?\?r=([^'^"]+?)['"]''')[0]
                 if url == '': continue
                 try:
                     url = base64.b64decode(url)
@@ -270,7 +269,8 @@ class TheWatchseriesTo(CBaseHostClass):
                 break
             if url == '': continue
             if self.up.checkHostSupport(url) != 1: continue
-            urlTab.append({'name':host, 'url':self.getFullUrl(url), 'need_resolve':1})
+            url = strwithmeta(self.getFullUrl(url), {'Referer':self.cm.meta['url']})
+            urlTab.append({'name':host, 'url':url, 'need_resolve':1})
         if len(urlTab):
             self.cacheLinks[cItem['url']] = urlTab
         return urlTab
@@ -296,26 +296,7 @@ class TheWatchseriesTo(CBaseHostClass):
     def getFavouriteData(self, cItem):
         printDBG('TheWatchseriesTo.getFavouriteData')
         params = {'type':cItem['type'], 'category':cItem.get('category', ''), 'title':cItem['title'], 'url':cItem['url'], 'desc':cItem['desc'], 'icon':cItem['icon']}
-        return json.dumps(params) 
-        
-    def getLinksForFavourite(self, fav_data):
-        printDBG('TheWatchseriesTo.getLinksForFavourite')
-        links = []
-        try:
-            cItem = byteify(json.loads(fav_data))
-            links = self.getLinksForVideo(cItem)
-        except Exception: printExc()
-        return links
-        
-    def setInitListFromFavouriteItem(self, fav_data):
-        printDBG('TheWatchseriesTo.setInitListFromFavouriteItem')
-        try:
-            params = byteify(json.loads(fav_data))
-        except Exception: 
-            params = {}
-            printExc()
-        self.addDir(params)
-        return True
+        return json_dumps(params) 
 
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
         printDBG('handleService start')
@@ -326,7 +307,7 @@ class TheWatchseriesTo(CBaseHostClass):
         category = self.currItem.get("category", '')
         mode     = self.currItem.get("mode", '')
         
-        printDBG( "handleService: |||||||||||||||||||||||||||||||||||| name[%s], category[%s] " % (name, category) )
+        printDBG( "handleService: || name[%s], category[%s] " % (name, category) )
         self.currList = []
         
     #MAIN MENU
@@ -359,5 +340,4 @@ class TheWatchseriesTo(CBaseHostClass):
 class IPTVHost(CHostBase):
 
     def __init__(self):
-        # for now we must disable favourites due to problem with links extraction for types other than movie
-        CHostBase.__init__(self, TheWatchseriesTo(), True)#, favouriteTypes=[CDisplayListItem.TYPE_VIDEO, CDisplayListItem.TYPE_AUDIO])
+        CHostBase.__init__(self, TheWatchseriesTo(), True)

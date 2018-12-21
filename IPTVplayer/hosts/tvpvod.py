@@ -5,9 +5,9 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, printDBG, printExc, MergeDicts
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
+from Plugins.Extensions.IPTVPlayer.libs import ph
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 ###################################################
 
@@ -77,12 +77,13 @@ class TvpVod(CBaseHostClass):
     IMAGE_URL = 'http://s.v3.tvp.pl/images/%s/%s/%s/uid_%s_width_500_gs_0.%s'
     HTTP_HEADERS = {}
     
+    RIGI_DEFAULT_ICON_URL = 'https://pbs.twimg.com/profile_images/999586990650638337/YHEsWRTs_400x400.jpg'
     
     VOD_CAT_TAB  = [{'category':'tvp_sport',           'title':'TVP Sport',                 'url':'http://sport.tvp.pl/wideo'},
                     {'category':'streams',             'title':'TVP na żywo',               'url':'http://tvpstream.tvp.pl/'},
                     {'category':'vods_explore_item',   'title':'Przegapiłeś w TV?',         'url':MAIN_VOD_URL + 'przegapiles-w-tv'},
                     {'category':'vods_list_cats',      'title':'Katalog',                   'url':MAIN_VOD_URL},
-                    #{'category':'vods_explore_item',   'title':'Programy',                  'url':MAIN_VOD_URL + 'category/programy,4934948'},
+                    {'category':'digi_menu',           'title':'Rekonstrukcja cyfrowa TVP', 'url':'https://cyfrowa.tvp.pl/', 'icon':RIGI_DEFAULT_ICON_URL},
                     
                     #{'category':'vods_list_items1',    'title':'Polecamy',                  'url':MAIN_VOD_URL},
                     #{'category':'vods_sub_categories', 'title':'Polecane',                  'marker':'Polecane'},
@@ -413,6 +414,7 @@ class TvpVod(CBaseHostClass):
         for item in data:
             url = self._getFullUrl(self.cm.ph.getSearchGroups(item, '''<a[^>]+?href\s*=\s*['"]([^'^"]+?)['"]''')[0])
             if not self.cm.isValidUrl(url): continue
+            if 'cyfrowa.tvp.pl' in url: continue
             params = dict(cItem)
             params.update({'good_for_fav': False, 'category':nextCategory, 'title':self.cleanHtmlStr(item).title(), 'url':url, 'desc':''})
             self.addDir(params)
@@ -532,7 +534,7 @@ class TvpVod(CBaseHostClass):
                 data = data.split('<div class="col-md') #re.split('<div class="col-md[^>]+?>', data)
                 if len(data): del data[0]
             for item in data:
-                jsItem = clean_html(self.cm.ph.getSearchGroups(item, '''data-hover\s*=\s*['"]([^'^"]+?)['"]''')[0])
+                jsItem = ph.clean_html(self.cm.ph.getSearchGroups(item, '''data-hover\s*=\s*['"]([^'^"]+?)['"]''')[0])
                 self.mapHoeverItem(cItem, jsItem, item, nextCategory)
         else:
             sectionItems = []
@@ -829,7 +831,99 @@ class TvpVod(CBaseHostClass):
             printExc()
         self.addDir(params)
         return True
-    
+
+    def listDigiMenu(self, cItem, nextCategory):
+        printDBG("listDigiMenu")
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        if not sts: return
+        cUrl = self.cm.meta['url']
+
+        tmp = ph.find(data, ('<nav', '>'), '</nav>', flags=0)[1]
+        tmp = ph.rfindall(tmp, '</li>', ('<li', '>', ph.check(ph.none, ('item--submenu',))), flags=0)
+        for item in tmp:
+            item = item.split('<ul', 1)
+            sTitle = ph.find(item[0], ('<a', '>'), '</a>')[1]
+            sUrl = self.getFullUrl(ph.getattr(sTitle, 'href'), cUrl)
+            sTitle = ph.clean_html(sTitle)
+
+            subItems = []
+            if len(item) > 1:
+                item = ph.findall(item[-1], ('<li', '>'), '</li>', flags=0)
+                for it in item:
+                    title = ph.clean_html(ph.find(it, ('<a', '>'), '</a>', flags=0)[1])
+                    url = self.getFullUrl(ph.getattr(it, 'href'),  cUrl)
+                    subItems.append(MergeDicts(cItem, {'category':nextCategory, 'title':title, 'url':url}))
+            if len(subItems):
+                self.addDir(MergeDicts(cItem, {'good_for_fav':False, 'category':'sub_items', 'title':sTitle, 'sub_items':subItems}))
+            else:
+                self.addDir(MergeDicts(cItem, {'good_for_fav':True, 'category':nextCategory, 'title':sTitle, 'url':sUrl}))
+
+    def exploreDigiSite(self, cItem):
+        printDBG("exploreDigiSite")
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        if not sts: return
+        cUrl = self.cm.meta['url']
+        page = cItem.get('page', 1)
+
+        if cItem.get('allow_sort', True):
+            tmp = ph.find(data, ('<ul', '>', 'dropdown-menu'), '</ul>', flags=0)[1]
+            tmp = ph.findall(tmp, ('<a', '>'), '</a>')
+            for item in tmp:
+                title = ph.clean_html(item)
+                url = self.getFullUrl(ph.getattr(item, 'href'),  cUrl)
+                self.addDir(MergeDicts(cItem, {'good_for_fav':False, 'allow_sort':False, 'title':title, 'url':url}))
+
+            if self.currList:
+                return
+
+        sections = ph.findall(data, ('<section', '>'), '</section>', flags=0)
+        for section in sections:
+            tmp = ph.find(section, ('<', '>', 'grid-links'), '</ul>', flags=0)[1]
+            if not tmp: tmp = ph.find(section, ('<div', '>', 'custom-grid row'), '</ul>', flags=0)[1]
+            if tmp:
+                tmp2 = section.split('<ul', 1)[0]
+                url = self.getFullUrl(ph.search(tmp2, ph.A_HREF_URI_RE)[1],  cUrl)
+                if url.endswith('/video'):
+                    self.exploreDigiSite(MergeDicts(cItem, {'url':url}))
+
+                if self.currList:
+                    return
+
+            tmp = ph.findall(tmp, ('<li', '>'), '</li>', flags=0)
+            printDBG(tmp)
+            for item in tmp:
+                title = ph.clean_html(ph.find(item, ('<h3', '>'), '</h3>', flags=0)[1])
+                item = item.split('</div>', 1)
+                url = self.getFullUrl(ph.search(item[0], ph.A_HREF_URI_RE)[1],  cUrl)
+                icon = self.getFullUrl(ph.search(item[0], ph.IMAGE_SRC_URI_RE)[1],  cUrl)
+
+                descData = ph.findall(item[0], ('<p', '>'), '</p>', flags=0)
+                descData.extend(ph.findall(item[0], ('<span', '>'), '</span>', flags=0))
+                if not descData and not title: continue
+                if not title: title = self.cleanHtmlStr(descData[0])
+                desc = []
+                for idx in range(1, len(descData)):
+                    t = ph.clean_html(descData[idx])
+                    if t: desc.append(t)
+                desc = ' | '.join(desc) + '[/br]' + ph.clean_html(item[-1])
+                params = MergeDicts(cItem, {'good_for_fav':True, 'allow_sort':True, 'url':url, 'desc':desc, 'icon':icon})
+                if '/video/' in url:
+                    if title.startswith('odc.') and cItem.get('prev_title'):
+                        title = '%s: %s' % (cItem['prev_title'], title)
+                    params.update({'title':title})
+                    self.addVideo(params)
+                else:
+                    params.update({'title':title, 'prev_title':title})
+                    self.addDir(params)
+
+            if self.currList:
+                nextPage = ph.find(section, ('<ul', '>', 'pagination'), '</ul>', flags=0)[1]
+                nextPage = ph.find(nextPage, ('<li', '>', 'page="%s"' % (page + 1)), '</li>', flags=0)[1]
+                nextPage = self.getFullUrl(ph.search(nextPage, ph.A_HREF_URI_RE)[1], cUrl)
+                if nextPage:
+                    self.addDir(MergeDicts(cItem, {'good_for_fav':False, 'title':_('Next page'), 'url':nextPage}))
+                return
+
     def handleService(self, index, refresh=0, searchPattern='', searchType=''):
         printDBG('TvpVod.handleService start')
         if None == self.loggedIn:
@@ -864,7 +958,7 @@ class TvpVod(CBaseHostClass):
             self.listWeekEPG(currItem, 'epg_items')
         elif category == 'epg_items':
             self.listEPGItems(currItem)
-            
+
         elif category == 'tvpsport_streams':
             self.listTVPSportStreams(currItem, 'sub_items')
         elif category == 'sub_items':
@@ -879,6 +973,13 @@ class TvpVod(CBaseHostClass):
             self.listCatalog(currItem, 'vods_explore_item')
         elif category == 'vods_explore_item':
             self.exploreVODItem(currItem, 'vods_explore_item')
+
+    # Reconstruction
+        elif category == 'digi_menu':
+            self.listDigiMenu(currItem, 'digi_explore_site')
+        elif category == 'digi_explore_site':
+            self.exploreDigiSite(currItem)
+
     #WYSZUKAJ
         elif category == "search":
             cItem = dict(currItem)

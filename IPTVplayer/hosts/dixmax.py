@@ -268,13 +268,13 @@ class DixMax(CBaseHostClass):
         except Exception:
             printExc()
 
-        self._getLinks(cItem)
-
         if type == 'tv':
-            url = self.getFullUrl('/api/private/get/episodes/%s/1' % cItem['f_id'])
+            url = self.getFullUrl('/serie/%s' % cItem['f_id'])
             sts, data = self.getPage(url)
             if not sts: return
             try:
+                data = ph.find(data, 'gotoFuchaCrazy', '</script>', flags=0)[1]
+                data = data[data.find('{'):data.rfind('}')+1]
                 data = json_loads(data)
                 sTitle = data['result']['info']['title']
                 sIcon = self.getFullIconUrl(data['result']['info']['cover'])
@@ -302,10 +302,7 @@ class DixMax(CBaseHostClass):
                         params.pop('f_episodes')
 
                         key =  '%sx%sx%s' % (cItem['f_id'], params['f_episode'].zfill(2), params['f_season'].zfill(2))
-                        if not self.cacheLinks.get(key, []):
-                            printDBG("Skip episode %s" % key)
-                        else:
-                            subItems.append( params )
+                        subItems.append( params )
 
                     if len(subItems):
                         params = {'f_type':_('Season'), 'f_isseason':1, 'f_season':sNum}
@@ -314,8 +311,7 @@ class DixMax(CBaseHostClass):
             except Exception:
                 printExc()
         else:
-            if self.cacheLinks.get(cItem['f_id']):
-                self.addVideo( MergeDicts(cItem) )
+            self.addVideo( MergeDicts(cItem) )
 
     def listSearchResult(self, cItem, searchPattern, searchType):
         self.tryTologin()
@@ -337,21 +333,25 @@ class DixMax(CBaseHostClass):
         if len(self.currList) == 1:
             self.currList = self.currList[0]['sub_items']
 
-    def _getLinks(self, cItem):
+    def _getLinks(self, key, cItem):
         printDBG("DixMax._getLinks [%s]" % cItem['f_id'])
 
+        post_data={'id':cItem['f_id']}
+        
         isSeries =  cItem.get('f_isepisode') or cItem.get('f_isserie')
+        if isSeries:
+            post_data.update({'i':'true', 't':cItem.get('f_season'), 'e':cItem.get('f_episode')})
+        else:
+            post_data.update({'i':'false'})
 
-        url = self.getFullUrl('/get_all_links.php')
-        sts, data = self.getPage(url, post_data={'id':cItem['f_id'], 'i':'true' if isSeries else 'false'})
+        url = self.getFullUrl('/get_links.php') #get_all_links
+        sts, data = self.getPage(url, post_data=post_data)
         if not sts: return
         printDBG(data)
 
         try:
             data = json_loads(data)
             for item in data:
-                if isSeries: key = '%sx%sx%s' % (cItem['f_id'], item['episodio'].zfill(2), item['temporada'].zfill(2))
-                else: key = cItem['f_id']
                 if key not in self.cacheLinks:
                     self.cacheLinks[key] = []
                 name = '[%s] %s | %s (%s) | %s | %s | %s ' % (item['host'], item['calidad'], item['audio'], item['sonido'], item['sub'], item['fecha'], item['autor_name'])
@@ -374,7 +374,7 @@ class DixMax(CBaseHostClass):
 
         linksTab = self.cacheLinks.get(key, [])
         if not linksTab:
-            self._getLinks(cItem)
+            self._getLinks(key, cItem)
             linksTab = self.cacheLinks.get(key, [])
 
         return linksTab

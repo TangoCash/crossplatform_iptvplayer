@@ -4,12 +4,14 @@
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCookieDir, GetPyScriptCmd
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetCookieDir, GetPyScriptCmd, MergeDicts, GetDukPath, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CBaseHostClass
+from Plugins.Extensions.IPTVPlayer.itools.e2ijs import duktape_execute
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -18,6 +20,8 @@ from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dump
 from Components.config import config, ConfigInteger, getConfigListEntry
 import base64
 import re
+from binascii import hexlify
+from hashlib import md5
 ############################################
 
 ###################################################
@@ -36,54 +40,68 @@ class BilaSportPwApi(CBaseHostClass):
 
     def __init__(self):
         CBaseHostClass.__init__(self)
-        self.MAIN_URL =  'http://www.bilasport.com/'
+        self.MAIN_URL =  'http://bilasport.net/'
         self.DEFAULT_ICON_URL = 'https://projects.fivethirtyeight.com/2016-mlb-predictions/images/logos.png'
-        self.HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36', 'Accept': 'text/html', 'Accept-Encoding':'gzip, deflate'}
+        self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        
         self.COOKIE_FILE = GetCookieDir('bilasport.pw.cookie')
-        
         self.defaultParams = {'header':self.HTTP_HEADER, 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
-    
+
+    def getPage(self, baseUrl, params={}, post_data=None):
+        if params == {}: params = dict(self.defaultParams)
+        params['cloudflare_params'] = {'cookie_file':self.COOKIE_FILE, 'User-Agent':self.HTTP_HEADER['User-Agent']}
+        return self.cm.getPageCFProtection(baseUrl, params, post_data)
+
+    def getFullIconUrl(self, url, currUrl=None):
+        url = CBaseHostClass.getFullIconUrl(self, url.strip(), currUrl)
+        if url == '': return ''
+        cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID', 'cf_clearance'])
+        return strwithmeta(url, {'Cookie':cookieHeader, 'User-Agent':self.HTTP_HEADER['User-Agent']})
+
     def getList(self, cItem):
         printDBG("BilaSportPwApi.getChannelsList")
         mainItemsTab = []
         
-        sts, data = self.cm.getPage(self.getMainUrl())
+        sts, data = self.getPage(self.getFullUrl('/schedule.html'))
         if not sts: return mainItemsTab
-        
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<table', '</table>')
-        for idx in range(len(data)-1, -1, -1):
-            sData = self.cm.ph.getAllItemsBeetwenMarkers(data[idx], '<td', '</td>')
-            printDBG(sData)
-            for item in sData:
-                icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^'^"]+?)['"]''')[0])
-                url  = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
-                if url == '': continue
-                title = url.split('/')[-1].replace('.html', '').upper()
-                params = dict(cItem)
-                params.update({'type':'video', 'title':title, 'url':url, 'icon':icon})
-                mainItemsTab.append(params)
-            if idx > 0:
-                params = dict(cItem)
-                params.update({'type':'marker', 'title':'\xE2\x9E\xA2', 'icon':self.DEFAULT_ICON_URL})
-                mainItemsTab.append(params)
-        
+        cUrl = self.cm.meta['url']
+
+        data = ph.find(data, ('<table', '>'), '</table>', flags=0)[1]
+        data = ph.findall(data, ('<tr', '>'), '</tr>')
+        for item in data:
+            url = self.getFullUrl(ph.search(item, ph.A)[1], cUrl)
+            icon = self.getFullIconUrl(ph.search(item, ph.IMG)[1], cUrl)
+            item = item.split('</td>', 1)
+            title = ph.clean_html(item[0])
+            start = ph.getattr(item[-1], 'data-gamestart')
+            end = ph.getattr(item[-1], 'data-gameends')
+            if start and end: title = '[%s - %s] %s' % (start, end, title)
+            desc = ph.clean_html(item[-1].split('</div>', 1)[-1])
+            mainItemsTab.append(MergeDicts(cItem, {'type':'video', 'title':title, 'url':url, 'icon':icon, 'desc':desc}))
         return mainItemsTab
         
     def getVideoLink(self, cItem):
         printDBG("BilaSportPwApi.getVideoLink")
         urlsTab = []
-        
-        sts, data = self.cm.getPage(cItem['url'])
+
+        sts, data = self.getPage(cItem['url'])
         if not sts: return urlsTab
-        
-        url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-        
-        sts, data = self.cm.getPage(url)
+        cUrl = self.cm.meta['url']
+        baseUrl = cUrl
+
+        url = self.getFullUrl(ph.search(data, '''['"]([^'^"]*?/iframes/[^'^"]+?)['"]''')[0], cUrl)
+        if not url: return urlsTab
+        sts, data = self.getPage(url)
         if not sts: return urlsTab
-        
+        cUrl = self.cm.meta['url']
+
+        url = self.getFullUrl(ph.search(data, ph.IFRAME)[1], cUrl)
+        if url:
+            sts, data = self.getPage(url)
+            if not sts: return urlsTab
+            cUrl = self.cm.meta['url']
+
         replaceTab = self.cm.ph.getDataBeetwenMarkers(data, 'prototype.open', '};', False)[1]
         printDBG(replaceTab)
         replaceTab = re.compile('''\.replace\(['"](\s*[^'^"]+?)['"]\s*\,\s*['"]([^'^"]+?)['"]''').findall(replaceTab)
@@ -91,8 +109,12 @@ class BilaSportPwApi(CBaseHostClass):
         if len(replaceTab):
             scriptUrl = '|' + base64.b64encode(json_dumps(replaceTab).encode('utf-8'))
         else:
-            scriptUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<script[^>]+?src=['"]([^"^']*?\.js)['"]''', 1, True)[0])
-        
+            scriptUrl = ''
+            tmp = ph.findall(data, ('<script', '>', ph.check(ph.none, ('jsdelivr',))))
+            for item in tmp:
+                scriptUrl = self.getFullUrl(ph.getattr(item, 'src'), cUrl)
+                break
+
         hlsTab = []
         hlsUrl = re.compile('''(https?://[^'^"]+?\.m3u8(?:\?[^'^"]+?)?)['"]''', re.IGNORECASE).findall(data)
         if len(hlsUrl):
@@ -101,28 +123,51 @@ class BilaSportPwApi(CBaseHostClass):
             for idx in range(len(hlsTab)):
                 hlsTab[idx]['need_resolve'] = 1
                 hlsTab[idx]['url'] = strwithmeta(hlsTab[idx]['url'], {'name':cItem['name'], 'Referer':url, 'priv_script_url':scriptUrl})
-            
-        return hlsTab
-        
+
+        if hlsTab:
+            return hlsTab
+
+        if 1 == self.up.checkHostSupport(cUrl): 
+            return self.up.getVideoLinkExt(strwithmeta(cUrl, {'Referer':baseUrl}))
+
+        return []
+
     def getResolvedVideoLink(self, videoUrl):
         printDBG("BilaSportPwApi.getResolvedVideoLink [%s]" % videoUrl)
         urlsTab = []
         
+        meta = strwithmeta(videoUrl).meta
+        
         baseUrl = self.cm.getBaseUrl(videoUrl.meta.get('Referer', ''))
         scriptUrl = videoUrl.meta.get('priv_script_url', '')
-        
-        sts, data = self.cm.getPage(videoUrl)
+        if scriptUrl:
+            sts, data = self.getPage(scriptUrl)
+            if not sts: return []
+            hash = '/tmp/%s' % hexlify(md5(data).digest())
+            data = 'btoa=function(t){return Duktape.enc("base64",t)},XMLHttpRequest=function(){},XMLHttpRequest.prototype.open=function(t,e,n,o,p){print(e)};' + data + 'tmp = new XMLHttpRequest();'
+            try:
+                with open(hash + '.js', 'w') as f:
+                    f.write(data)
+            except Exception:
+                printExc()
+                return []
+            duktape_execute('-c "%s.byte" "%s.js" ' % (hash, hash))
+            rm(hash + '.js')
+            scriptUrl = hash
+
+        sts, data = self.getPage(videoUrl)
         if not sts or '#EXTM3U' not in data: return urlsTab
         
         keyUrl = set(re.compile('''#EXT\-X\-KEY.*?URI=['"](https?://[^"]+?)['"]''').findall(data))
         if len(keyUrl):
             keyUrl = keyUrl.pop()
             proto = keyUrl.split('://', 1)[0]
-            pyCmd = GetPyScriptCmd('livesports') + ' "%s" "%s" "%s" "%s" "%s" ' % (config.plugins.iptvplayer.bilasportpw_port.value, videoUrl, baseUrl, scriptUrl, self.HTTP_HEADER['User-Agent'])
+            pyCmd = GetPyScriptCmd('livesports') + ' "%s" "%s" "%s" "%s" "%s" "%s" "%s" ' % (config.plugins.iptvplayer.bilasportpw_port.value, videoUrl, baseUrl, scriptUrl, self.HTTP_HEADER['User-Agent'], self.COOKIE_FILE, GetDukPath())
             meta = {'iptv_proto':'em3u8'}
             meta['iptv_m3u8_key_uri_replace_old'] = '%s://' % proto 
             meta['iptv_m3u8_key_uri_replace_new'] = 'http://127.0.0.1:{0}/{1}/'.format(config.plugins.iptvplayer.bilasportpw_port.value, proto)
             meta['iptv_refresh_cmd'] = pyCmd
-        
-        videoUrl = urlparser.decorateUrl("ext://url/" + videoUrl, meta)
+            videoUrl = urlparser.decorateUrl("ext://url/" + videoUrl, meta)
+        else:
+            videoUrl = urlparser.decorateUrl(videoUrl, meta)
         return [{'name':'direct', 'url':videoUrl}]

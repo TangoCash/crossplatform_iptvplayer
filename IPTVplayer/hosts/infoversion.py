@@ -131,7 +131,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2018.10.11"
+    infoversion = "2018.11.14"
     inforemote  = "0.0.0"
     currList = []
     SEARCH_proc = ''
@@ -224,19 +224,19 @@ class Host:
            valTab.append(CDisplayListItem('Sudecka TV', 'http://www.tvsudecka.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvsudecka.pl/streams/single/1'], 'tvsudecka', 'https://pbs.twimg.com/profile_images/585880676693454849/2eAO2_hC.jpg', None)) 
            valTab.append(CDisplayListItem('Kłodzka TV', 'http://www.tvklodzka.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCOBLslh96FyyppmaYaJDwyQ/live'], 'klodzka', 'https://d-nm.ppstatic.pl/k/r/46/d7/4c227342bda20_o.jpg', None)) 
            valTab.append(CDisplayListItem('Zgorzelec TVT', 'http://www.tvtzgorzelec.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvtzgorzelec.pl/index.php/live', 1)], 'tvt', 'http://www.tvtzgorzelec.pl/images/TVT-mini.png', None)) 
-           valTab.append(CDisplayListItem('Gorlice TV', 'http://gorlice.tv', CDisplayListItem.TYPE_CATEGORY, ['http://gorlice.tv/%C2%A0'], 'gorlice', 'http://gorlice.tv/static/gfx/service/gorlicetv/logo.png?96eb5', None)) 
+           #valTab.append(CDisplayListItem('Gorlice TV', 'http://gorlice.tv', CDisplayListItem.TYPE_CATEGORY, ['http://gorlice.tv/%C2%A0'], 'gorlice', 'http://gorlice.tv/static/gfx/service/gorlicetv/logo.png?96eb5', None)) 
            valTab.append(CDisplayListItem('Stella TVK', 'http://www.tvkstella.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvkstella.pl/live_tv', 1)], 'stella', 'http://www.tvkstella.pl/img/logo.png', None)) 
            #valTab.append(CDisplayListItem('Narew TV', 'http://www.narew.info', CDisplayListItem.TYPE_CATEGORY, ['http://www.narew.info/streams/single/1'], 'narew', 'https://pbs.twimg.com/profile_images/684831832307810306/M9KmKBse_400x400.jpg', None)) 
            valTab.append(CDisplayListItem('WP1 TV', 'WP1 TV', CDisplayListItem.TYPE_CATEGORY, ['https://av-cdn-2.wpimg.pl/tv24/ngrp:wp1/chunklist_.m3u8'], 'wp1', 'http://telewizja-cyfrowa.com/wp-content/uploads/2016/09/wp1-logo.png', None)) 
            valTab.append(CDisplayListItem('Master TV', 'http://www.tv.master.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tv.master.pl/tv_online.php'], 'master', 'http://www.tv.master.pl/grafika/TV_Master2.png', None))
            valTab.append(CDisplayListItem('Opoka TV', 'http://opoka.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.popler.tv/embed/player.php?user=Opokatv&popler=1&kody_code='], 'opoka', 'http://opoka.tv/wp-content/uploads/2016/10/OPTV2016weblgtp1bc.png', None)) 
-           valTab.append(CDisplayListItem('Sfera TV', 'http://www.sferatv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.sferatv.pl/sferalive/_definst_/mp4:live3', 0)], 'sfera', 'http://www.sferatv.pl/images/logo_www.png', None)) 
+           #valTab.append(CDisplayListItem('Sfera TV', 'http://www.sferatv.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.sferatv.pl/sferalive/_definst_/mp4:live3', 0)], 'sfera', 'http://www.sferatv.pl/images/logo_www.png', None)) 
            valTab.append(CDisplayListItem('Kamery Toya GO', 'https://go.toya.net.pl/25', CDisplayListItem.TYPE_CATEGORY, ['https://go.toya.net.pl/25'], 'toyago', 'https://go.toya.net.pl/public/images/top_menu/logo-4.png?t=1494325022', None)) 
            valTab.append(CDisplayListItem('Podkarpacie TV', 'http://podkarpacielive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://podkarpacielive.tv'], 'podkarpacie', 'http://podkarpacielive.tv/wp-content/themes/podkarpackielivetv/images/logo.png', None)) 
            valTab.append(CDisplayListItem('Żary TV', 'http://www.telewizjazary.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC29dc_mBUWW4mz5h754v88w/live'], 'zary', 'http://www.telewizjazary.pl/assets/wysiwig/images/logo/TVR_logo.png', None))
            #valTab.append(CDisplayListItem('TRT PL', 'http://www.trt.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://www.trt.pl/'], 'trt', 'http://www.trt.pl/images/logo-new.png', None))
            valTab.append(CDisplayListItem('Toruń TV', 'http://www.tvtorun.net/', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvtorun.net/'], 'toruntv', 'http://www.tvtorun.net/public/img/new/logo.png', None))
-           valTab.append(CDisplayListItem('Lech TV', 'http://lech.tv/live', CDisplayListItem.TYPE_CATEGORY, ['http://lech.tv/program'], 'lechtv', 'http://lech.tv/graphics_new/all/lechtv_logo_top.png', None))
+           #valTab.append(CDisplayListItem('Lech TV', 'http://lech.tv/live', CDisplayListItem.TYPE_CATEGORY, ['http://lech.tv/program'], 'lechtv', 'http://lech.tv/graphics_new/all/lechtv_logo_top.png', None))
            valTab.append(CDisplayListItem('Kamery WLKP24', 'http://wlkp24.info/kamery/', CDisplayListItem.TYPE_CATEGORY, ['http://wlkp24.info/kamery/'], 'wlkp24', 'http://archiwum.wlkp24.info/static/img/squarelogo400.jpg', None)) 
            #valTab.append(CDisplayListItem('BG-Gledai TV', 'http://www.bg-gledai.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.bg-gledai.tv'], 'gledai', 'http://www.bg-gledai.tv/img/newlogo.png', None)) 
            valTab.append(CDisplayListItem('Zabrze TV', 'Zabrze TV', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCyQL0IjtptnQ9PxmAfH3fKQ/live'], 'zabrze', 'http://tvzabrze.pl/assets/images/logo.png', None))
@@ -248,8 +248,8 @@ class Host:
            #valTab.append(CDisplayListItem('Karting', '', CDisplayListItem.TYPE_CATEGORY, ['http://polskikarting.pl/live/'], 'karting', 'http://polskikarting.pl/wp-content/uploads/2015/06/logo_polski_karting_cza_272x90.png', None)) 
            valTab.append(CDisplayListItem('Djing Music', 'www.djing.com', CDisplayListItem.TYPE_CATEGORY, ['https://www.djing.com/#!embed.php'], 'djing', 'https://pbs.twimg.com/profile_images/753627557917065216/G_-_PzF9_400x400.jpg', None)) 
            valTab.append(CDisplayListItem('ERT Grecja', 'http://webtv.ert.gr', CDisplayListItem.TYPE_CATEGORY, ['http://webtv.ert.gr'], 'ert', 'https://media.glassdoor.com/sqll/1145411/ert-inc-squarelogo-1496826736870.png', None)) 
-           valTab.append(CDisplayListItem('Słubice TV', 'http://www.slubice.tv', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://95.160.28.218:1935/slubice/myStream_aac/playlist.m3u8', 0)], 'slubice', 'http://www.slubice.tv/assets/wysiwig/images/logo_tv_HTS200.jpg', None)) 
-           valTab.append(CDisplayListItem('RBL TV', 'http://www.rbl.tv/live.html', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.rbl.tv/live.html', 1)], 'rbl', 'http://polny.pl/wp-content/uploads/2013/06/rbl_logo.jpg', None)) 
+           #valTab.append(CDisplayListItem('Słubice TV', 'http://www.slubice.tv', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://95.160.28.218:1935/slubice/myStream_aac/playlist.m3u8', 0)], 'slubice', 'http://www.slubice.tv/assets/wysiwig/images/logo_tv_HTS200.jpg', None)) 
+           #valTab.append(CDisplayListItem('RBL TV', 'http://www.rbl.tv/live.html', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.rbl.tv/live.html', 1)], 'rbl', 'http://polny.pl/wp-content/uploads/2013/06/rbl_logo.jpg', None)) 
            valTab.append(CDisplayListItem('Imperium TV', 'https://tvimperium.pl/live/', CDisplayListItem.TYPE_CATEGORY, ['https://tvimperium.pl/live/'], 'imperium', 'https://tvimperium.pl/wp-content/uploads/2017/08/Logo_site.png', None)) 
            valTab.append(CDisplayListItem('Tawizja TV', 'https://www.tawizja.pl/na-zywo', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://www.tawizja.pl/na-zywo', 1)], 'tawizja', 'http://bestfestiwal.pl/foto/linki/TaWizja.JPG', None)) 
            #valTab.append(CDisplayListItem('Stream - OKLIVETV', 'http://oklivetv.com', CDisplayListItem.TYPE_CATEGORY, ['http://oklivetv.com/genre/?orderby=title'], 'oklivetv', 'http://oklivetv.com/wp-content/uploads/2015/01/logo2.png', None)) 
@@ -265,10 +265,11 @@ class Host:
            valTab.append(CDisplayListItem('Kamery Szczecin', 'https://www.lantech.com.pl/liveszczecin/', CDisplayListItem.TYPE_CATEGORY, ['https://www.lantech.com.pl/liveszczecin/'], 'szczecin', 'https://naszywki24.pl/galerie/h/herb-szczecina_1745_m.jpg', None)) 
            valTab.append(CDisplayListItem('Kamery Earth TV', 'http://www.earthtv.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.earthtv.com/en/webcams'], 'earthtv', 'https://i1.wp.com/www.broadbandtvnews.com/wp-content/uploads/2015/10/Earth-TV.jpg?w=600&ssl=1', None)) 
            valTab.append(CDisplayListItem('Kamery SBL (Bieruń-Lędziny)', 'http://sblinternet.pl/kamery', CDisplayListItem.TYPE_CATEGORY, ['http://sblinternet.pl/kamery/bieru-rynek-76'], 'sbl', 'http://sblinternet.pl/img/logotype.png', None)) 
-           valTab.append(CDisplayListItem('WTK - Poznań', 'https://wtkplay.pl', CDisplayListItem.TYPE_CATEGORY, ['https://wtkplay.pl/videos-magazine-229-na_zywo'], 'wtk', 'https://wtkplay.pl/graphic/header/wtkplay_logo.png?theme=normal', None)) 
+           #valTab.append(CDisplayListItem('WTK - Poznań', 'https://wtkplay.pl', CDisplayListItem.TYPE_CATEGORY, ['https://wtkplay.pl/videos-magazine-229-na_zywo'], 'wtk', 'https://wtkplay.pl/graphic/header/wtkplay_logo.png?theme=normal', None)) 
            valTab.append(CDisplayListItem('Republika TV', 'http://live.telewizjarepublika.pl', CDisplayListItem.TYPE_CATEGORY, ['http://live.telewizjarepublika.pl/live.php'], 'republika', 'http://live.telewizjarepublika.pl/img/logo_bez_tla_na_granatowe.png', None)) 
            valTab.append(CDisplayListItem('Przełom TV', 'http://przelom.pl/tv', CDisplayListItem.TYPE_CATEGORY, ['http://przelom.pl/tv'], 'przelom', 'http://gazetylokalne.pl/wp-content/uploads/2015/12/prze%C5%82om-logo1-e1449698961820.jpg', None)) 
-           valTab.append(CDisplayListItem('Tivix', 'http://tivix.co', CDisplayListItem.TYPE_CATEGORY, ['http://tivix.co'], 'tivix', '', None)) 
+           valTab.append(CDisplayListItem('Tivix', 'http://tivix.co', CDisplayListItem.TYPE_CATEGORY, ['http://tivix.co'], 'tivix', 'http://tivix.co/templates/Default/dleimages/logo.png', None)) 
+           valTab.append(CDisplayListItem('Poland In', 'Poland In', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCBjUPsHj7bXt24SUWNoZ0zA/live'], 'polandin', 'https://yt3.ggpht.com/a-/AN66SAyfw6iby9Gj5QKt0mT80p1CL7C5miParL5nSw=s288-mo-c-c0xffffffff-rj-k-no', None)) 
 
            valTab.sort(key=lambda poz: poz.name)
            valTab.insert(0,CDisplayListItem('Pobierz info o IPTV Player', 'Wersja hostinfoversion: '+self.infoversion, CDisplayListItem.TYPE_CATEGORY, ['https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/commits/master.atom'], 'info', 'http://www.cam-sats.com/images/forumicons/ip.png', None)) 
@@ -385,6 +386,18 @@ class Host:
                     printDBG( 'Host Url:  '+Url )
                     printDBG( 'Host name:  '+Name )
                     valTab.append(CDisplayListItem('Rzeczpospolita TV  '+Name, 'Rzeczpospolita TV  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://yt3.ggpht.com/-5MIWhQ6SBRU/AAAAAAAAAAI/AAAAAAAAAAA/ZwKRSGWJu6o/s100-mo-c-c0xffffffff-rj-k-no/photo.jpg', None))
+            return valTab 
+
+        if 'polandin' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            videoUrls = self.getLinksForVideo(url)
+            if videoUrls:
+                for item in videoUrls:
+                    Url = item['url']
+                    Name = item['name']
+                    printDBG( 'Host Url:  '+Url )
+                    printDBG( 'Host name:  '+Name )
+                    valTab.append(CDisplayListItem('Poland In  '+Name, 'Poland In  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'https://yt3.ggpht.com/a-/AN66SAyfw6iby9Gj5QKt0mT80p1CL7C5miParL5nSw=s288-mo-c-c0xffffffff-rj-k-no', None))
             return valTab 
 
         if 'skoczow3' == name:
@@ -998,23 +1011,11 @@ class Host:
                 return valTab
             printDBG( 'Host listsItems data1 '+data )
             url_m3u8 = self.cm.ph.getSearchGroups(data, '''var stream_url = ['"]([^"^']+?)['"]''', 1, True)[0]+'N12LI_WEST'
-            printDBG( 'Host listsItems url_m3u8 '+url_m3u8 )
-            query_data = {'url': url_m3u8, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-            try: data = self.cm.getURLRequestData(query_data)
-            except:
-                printDBG( 'Host listsItems ERROR' )
-                return valTab
-            printDBG( 'Host listsItems data2 '+data )
-            Aurl = self.cm.ph.getSearchGroups(data, '''URI=['"]([^"^']+?)['"]''', 1, True)[0]
             if self.cm.isValidUrl(url_m3u8): 
                 tmp = getDirectM3U8Playlist(url_m3u8)
                 for item in tmp:
                     printDBG( 'Host listsItems valtab: '  +str(item) )
-                    Vurl = item['url']
-                    mergeurl = decorateUrl("merge://audio_url|video_url", {'audio_url':Aurl, 'video_url':Vurl, 'prefered_merger':'MP4box'}) 
-                    valTab.append(CDisplayListItem('News12    (exteplayer3)   '+str(item['name']), 'News12   '+str(item['name']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', mergeurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
-                valTab.append(CDisplayListItem('News12 only video', Vurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Vurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
-                valTab.append(CDisplayListItem('News12 only audio', Aurl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Aurl, 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
+                    valTab.append(CDisplayListItem('News12  '+str(item['name']), 'News12   '+str(item['name']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', item['url'], 0)], 0, 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None))
             return valTab 
 
         if 'ltv' == name:
@@ -1048,7 +1049,7 @@ class Host:
                 printDBG( 'Host getResolvedURL query error url: '+url )
                 data = ''
                 #return valTab
-            #printDBG( 'Host listsItems data1: '+data )
+            printDBG( 'Host listsItems data1: '+data )
             data = self.cm.ph.getDataBeetwenMarkers(data, 'categories-module', '</ul>', False)[1]
             data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
             for item in data:
@@ -2107,8 +2108,8 @@ class Host:
 
             valTab.insert(0,CDisplayListItem('Żywiec', 'http://www.zywiec.pl/kamery,120.html', CDisplayListItem.TYPE_CATEGORY, ['http://www.zywiec.pl/kamery,120.html'], 'zywiec', 'http://www.zywiec.pl/images/logo.png', None)) 
             valTab.insert(0,CDisplayListItem("Poznań - MTP", "https://www.mtp.pl/pl/", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'https://live.mtp.pl/cam1.ts/stream.m3u8', 0)], '', 'https://vignette.wikia.nocookie.net/poznan/images/c/c4/MTP.jpg/revision/latest/scale-to-width-down/300?cb=20120328193828&path-prefix=pl',None))
-            valTab.insert(0,CDisplayListItem("Olesno - ulica Pieloka", "Olesno - ulica Pieloka", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://www.olesno.pl/kamera-na-ulicy-pieloka.html', 1)], '', 'http://images.polskaniezwykla.pl/medium/311261.jpg',None))
-            valTab.insert(0,CDisplayListItem("Olesno - Rynek", "Olesno - Rynek", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://www.olesno.pl/kamera-oleski-rynek.html', 1)], '', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Ratusz_w_Ole%C5%9Bnie.JPG/1024px-Ratusz_w_Ole%C5%9Bnie.JPG',None))
+            #valTab.insert(0,CDisplayListItem("Olesno - ulica Pieloka", "Olesno - ulica Pieloka", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://www.olesno.pl/kamera-na-ulicy-pieloka.html', 1)], '', 'http://images.polskaniezwykla.pl/medium/311261.jpg',None))
+            #valTab.insert(0,CDisplayListItem("Olesno - Rynek", "Olesno - Rynek", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://www.olesno.pl/kamera-oleski-rynek.html', 1)], '', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Ratusz_w_Ole%C5%9Bnie.JPG/1024px-Ratusz_w_Ole%C5%9Bnie.JPG',None))
             valTab.insert(0,CDisplayListItem("Cieszyn - Rynek", "http://www.cieszyn.pl", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://www.cieszyn.pl/_kamera/', 1)], '', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2085.jpg',None))
             valTab.insert(0,CDisplayListItem("Bieruń - Rynek", "http://sblinternet.pl/kamery/bieru-rynek-76", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'http://streaming.e-sbl.net:1935/live/rynek_bierun.stream/playlist.m3u8', 0)], '', 'http://www.bierun.pl/pics/_news/rynek_zegar.jpg',None))
 
@@ -2624,7 +2625,7 @@ class Host:
             Url = self.cm.ph.getSearchGroups(data, '''(//www.youtube.com[^"^']+?)['"?]''')[0] 
             if Url:
                if Url.startswith('//'): Url = 'https:' + Url 
-               valTab.append(CDisplayListItem('Kamera na bocianim gnieździe Sokółka (youtube)', 'Kamera na bocianim gnieździe Sokółka (youtube)',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, 'http://zasoby.ekologia.pl/artykulyNew/19316/xxl/800px-ciconia-ciconia-01-bocian-bialy_800x600.jpg', None))
+               #valTab.append(CDisplayListItem('Kamera na bocianim gnieździe Sokółka (youtube)', 'Kamera na bocianim gnieździe Sokółka (youtube)',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, 'http://zasoby.ekologia.pl/artykulyNew/19316/xxl/800px-ciconia-ciconia-01-bocian-bialy_800x600.jpg', None))
 
             #valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN (rtmp)', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.orlen.pl:1935/sokol playpath=gniazdo.stream swfUrl=http://webcam.peregrinus.pl/plugins/hwdvs-videoplayer/jwflv/mediaplayer.swf pageUrl=http://webcam.peregrinus.pl/pl/plock-orlen-podglad', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
             valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN (m3u8)', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://stream.orlen.pl:443/sokol/gniazdo.stream/playlist.m3u8', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
@@ -2632,7 +2633,7 @@ class Host:
             url ='https://live.mstream.pl/uwb/cam-4923/'
             #valTab.append(CDisplayListItem('Instytut Biologii UwB zaprasza do oglądania transmisji z gniazda jastrzębia ', 'Zapraszamy do oglądania transmisji z gniazda jastrzębia pod Białymstokiem w  Nadleśnictwie Dojlidy. W godzinach 23.00-4.00 transmisja jest przerywana',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url, 1)], 0, 'https://biologia.biol-chem.uwb.edu.pl/media/_versions/biologia/podstrony_statyczne_zdjecia/panel_main_photo_detail.jpg', None))
 
-            valTab.append(CDisplayListItem('Gniazdo bocianów czarnych w Łodzi', 'Gniazdo bocianów czarnych w Łodzi',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.lodz.lasy.gov.pl/bocianyczarne#p_101_INSTANCE_kCS6', 1)], 0, 'http://www.lodz.lasy.gov.pl/image/journal/article?img_id=33457917&t=1523609274456&width=716', None))
+            #valTab.append(CDisplayListItem('Gniazdo bocianów czarnych w Łodzi', 'Gniazdo bocianów czarnych w Łodzi',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.lodz.lasy.gov.pl/bocianyczarne#p_101_INSTANCE_kCS6', 1)], 0, 'http://www.lodz.lasy.gov.pl/image/journal/article?img_id=33457917&t=1523609274456&width=716', None))
 
             url = 'http://webcam.peregrinus.pl/pl/gdansk-lotos-podglad'
             #valTab.append(CDisplayListItem('Sokół wędrowny LOTOS Gdańsk (youtube)', 'Sokół wędrowny LOTOS Gdańsk',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url, 1)], 0, '', None))
@@ -3022,7 +3023,7 @@ class Host:
                 if self.cm.isValidUrl(item['url']): return item['url']
 
 
-        if url.startswith('http://tv.eenet.ee'):
+        if url.startswith('https://tv.eenet.ee'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
             COOKIEFILE = os_path.join(GetCookieDir(), 'animalestonia.cookie')
             host = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'

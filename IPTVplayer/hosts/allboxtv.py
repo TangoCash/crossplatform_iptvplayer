@@ -6,6 +6,8 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 ###################################################
 
 ###################################################
@@ -14,8 +16,7 @@ from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 import urlparse
 import urllib
 import base64
-try:    import json
-except Exception: import simplejson as json
+import re
 from Components.config import config, ConfigText, getConfigListEntry
 ###################################################
 
@@ -118,7 +119,7 @@ class AllBoxTV(CBaseHostClass):
                 if letter == '': continue
                 url = self.getFullUrl( self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''')[0] )
                 if url == '': continue
-                title = self.cleanHtmlStr( item )
+                title = ph.clean_html( item )
                 if letter not in cacheLetter:
                     cacheLetter.append(letter)
                     cacheByLetter[letter] = []
@@ -153,7 +154,7 @@ class AllBoxTV(CBaseHostClass):
             for item in tmp:
                 url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
                 if not self.cm.isValidUrl(url): continue
-                title = self.cleanHtmlStr(item)
+                title = ph.clean_html(item)
                 params = dict(cItem)
                 params.update({'title':title, 'url':url, 'f_idx':f_idx, 'desc':''})
                 self.addDir(params)
@@ -164,32 +165,33 @@ class AllBoxTV(CBaseHostClass):
 
     def _listItems(self, data):
         retTab = []
-        data = self.cm.ph.rgetAllItemsBeetwenNodes(data, ('</div', '>'), ('<div', '>', 'box_movie'))
+        data = ph.rfindall(data, '</div>', ('<div', '>', 'box_movie'))
+        printDBG(data)
+        
         for item in data:
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
-            if not self.cm.isValidUrl(url): continue
-            title = self.cleanHtmlStr(self.cm.ph.getAllItemsBeetwenMarkers(item, '<div>', '</div>')[-1])
-            if len(title): title = self.cleanHtmlStr(title)
-            else: title = ''
-            if title == '': title = self.cleanHtmlStr(self.cm.ph.getSearchGroups(item, '''\stitle=['"]([^'^"]+?)['"]''')[0])
-            icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''\sdata\-src=['"]([^'^"]+?)['"]''')[0])
-            if icon == '': icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''\surl\(([^\)]+?)\)''')[0].strip())
+            printDBG('+++')
+            url = self.getFullUrl(ph.search(item, ph.A)[1])
+            if not url: continue
+            title = ph.clean_html(ph.rfind(item, '</div>', '</div>')[1])
+            if title == '': title = ph.clean_html(ph.getattr(item, 'title'))
+            icon = self.getFullIconUrl(ph.getattr(item, 'data-src'))
+            if icon == '': icon = self.getFullIconUrl(ph.search(item, '''\surl\(([^\)]+?)\)''')[0].strip())
             
             desc = []
-            tmp = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'cats'), ('</div', '>'))[1]
-            tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
+            tmp = ph.find(item, ('<div', '>', 'cats'), '</div>', flags=0)[1]
+            tmp = ph.findall(tmp, ('<a', '>'), '</a>')
             for t in tmp:
-                t = self.cleanHtmlStr(t)
+                t = ph.clean_html(t)
                 if t != '': desc.append(t)
             
             desc = [', '.join(desc)]
-            tmp = self.cm.ph.getAllItemsBeetwenNodes(item, ('<', '>', 'badge-small'), ('</', '>', 'a'))
+            tmp = ph.findall(item, ('<', '>', 'badge-small'), ('</', '>', 'a'))
             for t in tmp:
-                t = self.cleanHtmlStr(t)
+                t = ph.clean_html(t)
                 if t != '': desc.append(t)
                 
             desc = ' | '.join(desc)
-            desc += '[/br]' + self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(item, ('<p', '>'), ('</p', '>'))[1])
+            desc += '[/br]' + ph.clean_html(ph.find(item, ('<p', '>'), '</p>')[1])
             retTab.append({'title':title, 'url':url, 'icon':icon, 'desc':desc})
         return retTab
     
@@ -208,7 +210,7 @@ class AllBoxTV(CBaseHostClass):
         
         nextPage = False
         try:
-            data = byteify(json.loads(data), '')
+            data = json_loads(data, '')
             if not data.get('lastPage', True):
                 try: 
                     moviesCount = int(data['moviesCount'])
@@ -241,7 +243,7 @@ class AllBoxTV(CBaseHostClass):
             url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^'^"]+?)['"]''')[0])
             if not self.cm.isValidUrl(url): continue
             icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, 'url\(([^"^\)]+?\.(:?jpe?g|png)(:?\?[^"^\)]+?)?)\);')[0].strip())
-            title = self.cleanHtmlStr(item)
+            title = ph.clean_html(item)
             params = dict(cItem)
             params.update({'good_for_fav':True, 'title':title, 'url':url, 'icon':icon})
             if nextCategory == 'video':
@@ -260,7 +262,7 @@ class AllBoxTV(CBaseHostClass):
         
         icon = self.cm.ph.getDataBeetwenNodes(data, ('<img', '>', '"image"'), ('<', '>'))[1]
         icon = self.cm.ph.getSearchGroups(icon, '<img[^>]+?src="([^"]+?\.(:?jpe?g|png)(:?\?[^"]+?)?)"')[0]
-        seriesTitle = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<', '>', 'movie-name'), ('<', '>'))[1])
+        seriesTitle = ph.clean_html(self.cm.ph.getDataBeetwenNodes(data, ('<', '>', 'movie-name'), ('<', '>'))[1])
         if seriesTitle == '': seriesTitle = cItem['title']
         tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'modal-trailer'), ('<div', '>', 'row'))
         printDBG(tmp)
@@ -278,17 +280,15 @@ class AllBoxTV(CBaseHostClass):
             num += 1
         
         seasonsTab = []
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'season-episodes'), ('</ul', '>'))
-        for sItem in data:
-            sItem = self.cm.ph.getAllItemsBeetwenMarkers(sItem, '<li', '</li>')
+        data = ph.findall(data, ('<div', '</div>', 'seasonHead'), '</div>', flags=ph.START_S)
+        for idx in range(1, len(data), 2):
+            sTitle = ph.clean_html(data[idx-1].split('<span', 1)[0])
+            sItem = ph.findall(data[idx], '<a', '</a>')
             for item in sItem:
-                url   = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0])
-                if not self.cm.isValidUrl(url): continue
-                icon  = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''src=['"]([^'^"]+?)['"]''')[0])
-                title = self.cleanHtmlStr(self.cm.ph.getDataBeetwenMarkers(item, '<a', '</a>')[1])
-                tmp = self.cm.ph.getSearchGroups(title, '''S([0-9]+?)E([0-9]+?)[^0-9]''', 2, True)
+                url   = self.getFullUrl(ph.search(item, ph.A)[1])
+                title = ph.clean_html(item)
+                tmp = ph.search(title, '''S([0-9]+?)E([0-9]+?)[^0-9]''', flags=ph.I)
                 title = '%s - %s' % (seriesTitle, title)
-                
                 if tmp[0] not in self.cacheEpisodes:
                     self.cacheEpisodes[tmp[0]] = []
                     seasonsTab.append({'good_for_fav':False, 'category':nextCategory, 's_num':tmp[0], 'title':_('Season %s') % tmp[0]})
@@ -335,23 +335,29 @@ class AllBoxTV(CBaseHostClass):
         
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("AllBoxTV.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
-        
+
         self.cacheSearch = {}
-        
+
         url = self.getFullUrl('/szukaj?query=') + urllib.quote_plus(searchPattern)
         sts, data = self.getPage(url)
         if not sts: return
-        
+
         nameMap = {'movies':_('Movies'), 'serials':_('TV series')}
-        for name in ['movies', 'serials']:
-            tmp = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'id="%s"' % name), ('<script', '>'))[1]
-            itemsTab = self._listItems(tmp)
-            if 0 == len(itemsTab): continue
+
+        data = ph.find(data, ('<div', '>', 'tab-content'), ('<div', '>', 'sidebarTitle'))[1]
+        data = re.compile('<div([^>]+?tabpanel[^>]+?)>').split(data)
+        for idx in range(2, len(data), 2):
+            name = ph.getattr(data[idx-1], 'id')
+            if name not in ['movies', 'serials']:
+                printDBG('SKIP search group %s' % name)
+                continue
+            itemsTab = self._listItems(data[idx])
+            if not itemsTab: continue
             params = dict(cItem)
             params.update({'good_for_fav':False, 'category':'list_search_items', 'f_search_type':name, 'desc':'', 'title':'%s (%s)' % (nameMap[name], len(itemsTab))})
             self.addDir(params)
             self.cacheSearch[name] = itemsTab
-        
+
     def listSearchItems(self, cItem, nextCategory):
         printDBG("AllBoxTV.listSearchItems")
         
@@ -388,7 +394,7 @@ class AllBoxTV(CBaseHostClass):
             name = []
             tmp = self.cm.ph.getAllItemsBeetwenMarkers(item, '<td', '</td>')[0:-1]
             for t in tmp:
-                t = self.cleanHtmlStr(t.split('<b>', 1)[-1])
+                t = ph.clean_html(t.split('<b>', 1)[-1])
                 if t != '': name.append(t)
             name = ' | '.join(name)
             retTab.append({'name':name, 'url':self.getFullUrl(url), 'need_resolve':1})
@@ -427,7 +433,7 @@ class AllBoxTV(CBaseHostClass):
                 dataKey = self.cm.ph.getSearchGroups(data, '''data\-key=['"]([^'^"]+?)['"]''')[0]
                 if dataKey != '':
                     try:
-                        dataKey = byteify(json.loads(self.base64Decode(dataKey[2:])))
+                        dataKey = json_loads(self.base64Decode(dataKey[2:]))
                         printDBG("++++++++++++++++++++++++++> %s" % dataKey )
                         params = dict(self.defaultParams)
                         params['header'] = dict(params['header'])
@@ -498,7 +504,7 @@ class AllBoxTV(CBaseHostClass):
                 data  = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>') 
                 self.loginMessage = []
                 for item in data:
-                    item = self.cleanHtmlStr(item)
+                    item = ph.clean_html(item)
                     if item == '': continue
                     self.loginMessage.append(item)
                 self.loginMessage = '[/br]'.join(self.loginMessage)
@@ -507,7 +513,7 @@ class AllBoxTV(CBaseHostClass):
                     errMsg = []
                     tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<span', '>', 'required'), ('</span', '>'), False)
                     for it in tmp:
-                        errMsg.append(self.cleanHtmlStr(it))
+                        errMsg.append(ph.clean_html(it))
                 else:
                     errMsg = [_('Connection error.')]
                 self.sessionEx.open(MessageBox, _('Login failed.') + '\n' + '\n'.join(errMsg), type = MessageBox.TYPE_ERROR, timeout = 10)

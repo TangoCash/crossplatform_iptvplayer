@@ -205,7 +205,7 @@ class Cinemaxx(CBaseHostClass):
         data = ph.find(data, ('<div', '>', 'full-video'), '</div>', flags=0)[1]
         url = self.getFullUrl( ph.search(data, ph.IFRAME_SRC_URI_RE)[1] )
         if url:
-            if 'playlist' in url:
+            if ('/video/' in url and '/serials/' in url) or 'playlist' in url:
                 url = strwithmeta(url, {'Referer':cUrl})
                 seasons = self.hdgocc.getSeasonsList(url)
                 for item in seasons:

@@ -19,7 +19,7 @@ except Exception: import simplejson as json
 ###################################################
 
 def gettytul():
-    return 'https://altadefinizione.red/'
+    return 'https://altadefinizione.fm/'
 
 class Altadefinizione(CBaseHostClass):
  
@@ -29,7 +29,7 @@ class Altadefinizione(CBaseHostClass):
         self.HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
-        self.MAIN_URL = 'https://altadefinizione.red/'
+        self.MAIN_URL = 'https://altadefinizione.fm/'
         self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/themes/alta/img/logo.png')
         
         self.cacheCategories = []

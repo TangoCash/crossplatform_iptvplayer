@@ -134,13 +134,13 @@ class MeczykiPL(CBaseHostClass):
             if 'playwire.com' not in url and  self.up.checkHostSupport(url) != 1: continue
             title = cItem['title']
             desc = ''
-            if len(titles) == len(tmp): 
+            if len(titles) > idx: 
                 if titles[idx][0]:
                     title += ' - ' + titles[idx][0]
                 desc = titles[idx][1]
             
             params = dict(cItem)
-            params.update({'good_for_fav': False, 'title':title, 'url':url, 'desc':titles[idx][1]})
+            params.update({'good_for_fav': False, 'title':title, 'url':url, 'desc':desc})
             self.addVideo(params)
     
     def getLinksForVideo(self, cItem):

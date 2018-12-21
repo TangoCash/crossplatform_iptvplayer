@@ -6,9 +6,9 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetTmpDir, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.libs.pCommon import common
-from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import  MainSessionWrapper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.recaptcha_v2widget import UnCaptchaReCaptchaWidget
+from Plugins.Extensions.IPTVPlayer.libs import ph
 
 ###################################################
 # FOREIGN import
@@ -36,24 +36,29 @@ class UnCaptchaReCaptcha:
             if not sts: 
                 SetIPTVPlayerLastHostError(_('Fail to get "%s".') % reCaptchaUrl)
                 return ''
-        
-            imgUrl = self.cm.ph.getSearchGroups(data, '"(/recaptcha/api2/payload[^"]+?)"')[0]
+
+            printDBG("+++++++++++++++++++++++++++++++++++++++++")
+            printDBG(data)
+            printDBG("+++++++++++++++++++++++++++++++++++++++++")
+            imgUrl = ph.search(data, '"(/recaptcha/api2/payload[^"]+?)"')[0]
             iteration += 1
-            message = self.cm.ph.getSearchGroups(data, '<label[^>]+class="fbc-imageselect-message-text"[^>]*>(.*?)</label>')[0]
-            if '' == message: message = self.cm.ph.getSearchGroups(data, '<div[^>]+class="fbc-imageselect-message-error">(.*?)</div>')[0]
+
+            message = ph.clean_html(ph.find(data, ('<div', '>', 'imageselect-desc'), '</div>', flags=0)[1])
+            if not message: message = ph.clean_html(ph.find(data, ('<label', '>', 'fbc-imageselect-message-text'), '</label>', flags=0)[1])
+            if not message: message = ph.clean_html(ph.find(data, ('<div', '>', 'imageselect-message'), '</div>', flags=0)[1])
             if '' == message:
-                token = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'verification-token'), ('</div', '>'), False)[1]
-                token = self.cm.ph.getDataBeetwenNodes(data, ('<textarea', '>'), ('</textarea', '>'), False)[1].strip()
-                if token == '': token = self.cm.ph.getSearchGroups(data, '"this\.select\(\)">(.*?)</textarea>')[0]
-                if token == '': token = self.cm.ph.getDataBeetwenNodes(data, ('<textarea', '>'), ('</textarea', '>'), False)[1].strip()
+                token = ph.find(data, ('<div', '>', 'verification-token'), '</div>', flags=0)[1]
+                token = ph.find(data, ('<textarea', '>'), '</textarea>', flags=0)[1].strip()
+                if token == '': token = ph.search(data, '"this\.select\(\)">(.*?)</textarea>')[0]
+                if token == '': token = ph.find(data, ('<textarea', '>'), '</textarea>', flags=0)[1].strip()
                 if '' != token: printDBG('>>>>>>>> Captcha token[%s]' % (token))
                 else: printDBG('>>>>>>>> Captcha Failed\n\n%s\n\n' % data)
                 break
 
-            cval = self.cm.ph.getSearchGroups(data, 'name="c"\s+value="([^"]+)')[0]
+            cval = ph.search(data, 'name="c"\s+value="([^"]+)')[0]
             imgUrl = 'https://www.google.com%s' % (imgUrl.replace('&amp;', '&'))
-            message = clean_html(message)
-            accepLabel = clean_html(self.cm.ph.getSearchGroups(data, 'type="submit"\s+value="([^"]+)')[0])
+            message = ph.clean_html(message)
+            accepLabel = ph.clean_html(ph.search(data, 'type="submit"\s+value="([^"]+)')[0])
             
             filePath = GetTmpDir('.iptvplayer_captcha.jpg')
             printDBG(">>>>>>>> Captcha message[%s]" % (message))

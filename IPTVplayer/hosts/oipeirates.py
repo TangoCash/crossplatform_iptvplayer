@@ -5,6 +5,8 @@
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -12,13 +14,11 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 ###################################################
 import re
 import urllib
-try:    import json
-except Exception: import simplejson as json
 ###################################################
 
 
 def gettytul():
-    return 'https://oipeirates.online/'
+    return 'https://oipeirates.tv/'
 
 class OipeiratesOnline(CBaseHostClass):
 
@@ -30,7 +30,7 @@ class OipeiratesOnline(CBaseHostClass):
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update( {'X-Requested-With': 'XMLHttpRequest'} )
         
-        self.MAIN_URL = 'https://oipeirates.online/'
+        self.MAIN_URL = 'https://oipeirates.tv/'
         self.DEFAULT_ICON_URL = 'http://1.bp.blogspot.com/-EWw9aeMT-bo/U1_TUm3oM-I/AAAAAAAABiE/n07eIp9i6CI/s1600/oipeirates.jpg'
         
         self.defaultParams = {'with_metadata':True, 'header':self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
@@ -126,7 +126,7 @@ class OipeiratesOnline(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
 
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'filmcontent'), ('</ul', '>'), False)[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'filmborder'), ('</ul', '>'), False)[1]
         data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li', '</li>')
         for item in data:
             title = self.cleanHtmlStr(item)
@@ -137,23 +137,50 @@ class OipeiratesOnline(CBaseHostClass):
         
     def listItems(self, cItem, nextCategory='explore_item'):
         printDBG("OipeiratesOnline.listItems")
-        page = cItem.get('page', 1)
-        
-        url = cItem['url'] 
-        if page > 1:
-            url += '/page/' + str(page)
-        
-        if 'url_suffix' in cItem:
-            url += cItem['url_suffix']
-        
-        sts, data = self.getPage(url)
-        if not sts: return
-        
-        nextPage = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('''class=['"]pages['"]'''), re.compile('</div>'), False)[1]
-        if 'rel="next"' in nextPage:
-            nextPage = True
-        else: nextPage = False
-        
+        page = cItem.get('page', 0)
+        cItem = dict(cItem)
+        ajaxurl = ''
+        query = cItem.pop('query', {})
+
+        if page == 0:
+            url = cItem['url']
+            if 'url_suffix' in cItem:
+                url += cItem['url_suffix']
+
+            sts, data = self.getPage(url)
+            if not sts: return
+
+            tmp = ph.find(data, ('<div', '>', 'ajax-load-more'), '</div>')[1]
+            tmp = re.compile('''data\-([^=]+?)=['"]([^'^"]+?)['"]''').findall(tmp)
+            for item in tmp:
+                if item[0].startswith('alm-'): item[0] = item[0][4:]
+                query[item[0].replace('-', '_')] = item[1]
+
+            if query:
+                tmp = ph.search(data, '''var\s+?alm_localize=\s*?(\{[^;]+?);''')[0]
+                try:
+                    tmp = json_loads(tmp)
+                    query['alm_nonce'] = tmp['alm_nonce']
+                    ajaxurl = self.getFullUrl(tmp['ajaxurl'], self.cm.meta['url'])
+                except Exception:
+                    printExc()
+        else:
+            query.update({'page':page, 'seo_start_page':page})
+
+            url = cItem['ajaxurl'] + '?action=alm_query_posts&query_type=standard&' + urllib.urlencode(query)
+            sts, data = self.getPage(url)
+            if not sts: return
+            printDBG(data)
+            try:
+                tmp = json_loads(data)
+                data = tmp['html']
+                if not data: data = ''
+                if tmp['meta']['postcount'] == int(query['posts_per_page']):
+                    if tmp['meta']['totalposts'] > (page+1) * int(query['posts_per_page']):
+                        ajaxurl = cItem['ajaxurl']
+            except Exception:
+                printExc()
+
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'moviefilm'), ('</div', '>'), False)
         for item in data:
             url  = self.getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
@@ -163,34 +190,37 @@ class OipeiratesOnline(CBaseHostClass):
                 params = dict(cItem)
                 params.update({'category':nextCategory, 'good_for_fav': True, 'title':title, 'url':url, 'icon':icon})
                 self.addDir(params)
-        if nextPage:
+
+        if ajaxurl and query:
+            printDBG(ajaxurl)
+            printDBG(query)
             params = dict(cItem)
-            params.update({'title':_("Next page"), 'page':page+1})
+            params.update({'title':_("Next page"), 'page':page+1, 'ajaxurl':ajaxurl, 'query':query})
             self.addDir(params)
             
     def exploreItem(self, cItem):
         printDBG("OipeiratesOnline.exploreItem")
         sts, data = self.getPage(cItem['url'])
         if not sts: return
-        
+
         desc  = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '<meta[^>]*?property="og:description"[^>]*?content="([^"]+?)"')[0] )
         title = self.cleanHtmlStr( self.cm.ph.getSearchGroups(data, '<meta[^>]*?property="og:title"[^>]*?content="([^"]+?)"')[0] )
         if '' == title: title = cItem['title']
-        
+
         # trailer link extraction
         trailerMarker = '/trailer'
-        sts, trailer = self.cm.ph.getDataBeetwenMarkers(data, trailerMarker, '</iframe>', False, False)
-        if sts:
-            trailer = self.cm.ph.getSearchGroups(trailer, '<iframe[^>]+?src="([^"]+?)"', 1, ignoreCase=True)[0]
-            if trailer.startswith('//'): trailer = 'http:' + trailer
-            if trailer.startswith('http'):
-                params = dict(cItem)
-                params['title'] = 'TRAILER'
-                params['mode']  = 'trailer'
-                params['links'] = [{'name':'TRAILER', 'url':trailer, 'need_resolve':1}]
-                params['desc']  = desc
-                self.addVideo(params)
-        
+        trailer = ph.find(data, trailerMarker, '</iframe>', flags=ph.I|ph.START_E)[1]
+        if not trailer: trailer = ph.find(data, ('<iframe', '>', 'youtube'), '</iframe>', flags=ph.I|ph.START_E)[1]
+        trailer = ph.search(trailer, ph.IFRAME_SRC_URI_RE)[1]
+        if trailer.startswith('//'): trailer = 'http:' + trailer
+        if trailer.startswith('http'):
+            params = dict(cItem)
+            params['title'] = 'TRAILER'
+            params['mode']  = 'trailer'
+            params['links'] = [{'name':'TRAILER', 'url':trailer, 'need_resolve':1}]
+            params['desc']  = desc
+            self.addVideo(params)
+
         # check 
         ms1 = '<b>ΠΕΡΙΛΗΨΗ</b>'
         if ms1 in data:
@@ -203,7 +233,7 @@ class OipeiratesOnline(CBaseHostClass):
         if not sts: return
         seasonMarkerObj = re.compile(">\s*season|>\s*σεζόν")
         linksDataLower = linksData.decode('utf-8').lower().encode('utf-8')
-        
+
         mode = cItem.get('mode', 'unknown')
         if '-collection' in cItem['url']:
             mode = 'collect_item'

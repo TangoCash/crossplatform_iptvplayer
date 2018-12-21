@@ -25,7 +25,7 @@ from Tools.BoundFunction import boundFunction
 class ConfigHostMenu(ConfigBaseWidget):
    
     def __init__(self, session, hostName):
-        printDBG("ConfigHostMenu.__init__ -------------------------------")
+        printDBG("ConfigHostMenu.__init__ ")
         self.list = [ ]
         self.hostName = hostName
         ConfigBaseWidget.__init__(self, session)
@@ -33,15 +33,15 @@ class ConfigHostMenu(ConfigBaseWidget):
         self.host = __import__('Plugins.Extensions.IPTVPlayer.hosts.host' + hostName, globals(), locals(), ['GetConfigList'], -1)
 
     def __del__(self):
-        printDBG("ConfigHostMenu.__del__ -------------------------------")
+        printDBG("ConfigHostMenu.__del__ ")
 
     def __onClose(self):
-        printDBG("ConfigHostMenu.__onClose -----------------------------")
+        printDBG("ConfigHostMenu.__onClose ")
         ConfigBaseWidget.__onClose(self)
 
     def layoutFinished(self):
         ConfigBaseWidget.layoutFinished(self)
-        self.setTitle("IPTV Player " + (_("[%s] - configuration") % self.hostName))
+        self.setTitle("E2iPlayer " + (_("[%s] - configuration") % self.hostName))
 
     def runSetup(self):
         self.list = self.host.GetConfigList()
@@ -57,7 +57,7 @@ class ConfigHostMenu(ConfigBaseWidget):
 class ConfigHostsMenu(ConfigBaseWidget):
    
     def __init__(self, session, listOfHostsNames):
-        printDBG("ConfigHostsMenu.__init__ -------------------------------")
+        printDBG("ConfigHostsMenu.__init__ ")
         self.list = []
         self.privacePoliceWorningList = []
         self.hostsConfigsAvailableList = []
@@ -71,15 +71,15 @@ class ConfigHostsMenu(ConfigBaseWidget):
         self.reorderingMode = False
 
     def __del__(self):
-        printDBG("ConfigHostsMenu.__del__ -------------------------------")
+        printDBG("ConfigHostsMenu.__del__ ")
 
     def __onClose(self):
-        printDBG("ConfigHostsMenu.__onClose -----------------------------")
+        printDBG("ConfigHostsMenu.__onClose ")
         ConfigBaseWidget.__onClose(self)
 
     def layoutFinished(self):
         ConfigBaseWidget.layoutFinished(self)
-        self.setTitle(_("IPTVPlayer services configuration"))
+        self.setTitle(_("%s services configuration") % ('E2iPlayer'))
 
     def runSetup(self):
         ConfigBaseWidget.runSetup(self)

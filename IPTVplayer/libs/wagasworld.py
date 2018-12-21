@@ -4,6 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, GetCookieDir
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -44,39 +45,29 @@ class WagasWorldApi(CBaseHostClass):
         CBaseHostClass.__init__(self)
         self.sessionEx = MainSessionWrapper()
         self.MAIN_URL      = 'http://www.wagasworld.com/'
-        self.HTTP_HEADER  = { 'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': self.MAIN_URL }
-    
+        self.HTTP_HEADER  = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0', 'Referer': self.MAIN_URL}
         self.COOKIE_FILE = GetCookieDir('wagasworld.cookie')
         self.http_params = {'header': dict(self.HTTP_HEADER), 'save_cookie': True, 'load_cookie': True, 'cookiefile': self.COOKIE_FILE}
-        
-    def _getFullUrl(self, url):
-        if url.startswith('//'):
-            url = 'http:' + url
-        elif 0 < len(url) and not url.startswith('http'):
-            url =  self.MAIN_URL + url
-        
-        if self.MAIN_URL.startswith('https://'):
-            url = url.replace('https://', 'http://')
-        return url.replace('&amp;', '&')
-        
+        self.DEFAULT_URL_ICON = self.getFullIconUrl('/sites/default/files/styles/slideshow_full/public/12_0.jpg?itok=LHobtpyX')
+
     def getMainCategories(self, cItem):
         printDBG("WagasWorldApi.getMainCategories")
         list = []
         list.append({'type':'waga_cat', 'waga_cat':'groups', 'title':_('Channel'), 'url':self.MAIN_URL + 'channel'})
         list.append({'type':'waga_cat', 'waga_cat':'groups', 'title':_('LiveTv'),  'url':self.MAIN_URL + 'LiveTv' })
         return list
-        
+
     def getGroups(self, cItem):
         printDBG("WagasWorldApi.getGroups")
         list = []
         sts, data = self.cm.getPage(cItem['url'], self.http_params)
         if not sts: return list
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="form-item">', '<select', True)[1]
+        data = ph.find(data, ('<div', '>', 'form-item'), '<select', flags=0)[1]
         data = re.compile('<a[^>]+?href="([^"]+?)"[^>]*?>([^<]+?)</a>').findall(data)
         for item in data:
-            list.append({'type':'waga_cat', 'waga_cat':'items', 'title':item[1], 'url':self._getFullUrl(item[0])})
+            list.append({'type':'waga_cat', 'waga_cat':'items', 'title':ph.clean_html(item[1]), 'icon':self.DEFAULT_URL_ICON, 'url':self.getFullUrl(item[0])})
         return list
-        
+
     def getItems(self, cItem):
         printDBG("WagasWorldApi.getItems")
         list = []
@@ -92,15 +83,15 @@ class WagasWorldApi(CBaseHostClass):
         nextPage = False
         if '&amp;page={0}"'.format(page+1) in data:
             nextPage = True
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="view-content">', '</section>', True)[1]
+        data = ph.find(data, '<div class="view-content">', '</section>')[1]
         data = data.split('</span>')
         if len(data): del data[-1]
         for item in data:
-            title = self.cm.ph.getSearchGroups(item, '>([^<]+?)</a>')[0]
-            icon  = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'src="([^"]+?)"')[0] )
-            url   = self._getFullUrl( self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0] )
+            title = ph.search(item, '>([^<]+?)</a>')[0]
+            url   = self.getFullUrl( ph.getattr(item, 'href') )
+            icon  = self.getFullIconUrl( ph.search(item, ph.IMG)[1] )
             if '' != url and '' != title:
-                list.append( {'waga_cat':'explore', 'type':'waga_cat', 'title':title, 'icon':icon, 'url':url} )
+                list.append( {'waga_cat':'explore', 'type':'waga_cat', 'title':ph.clean_html(title), 'icon':icon, 'url':url} )
         if nextPage:
             list.append({'type':'waga_cat', 'waga_cat':'items', 'title':_('Next page'), 'url':cItem['url'], 'page':page+1})
         return list
@@ -162,13 +153,15 @@ class WagasWorldApi(CBaseHostClass):
         printDBG("WagasWorldApi.exploreItem url[%s]" % cItem['url'])
         sts,data = self.cm.getPage(cItem['url'], self.http_params)
         if not sts: return []
+
+        desc = ph.clean_html(ph.find(data, ('<div', '>', 'alert-danger'), '</div>', flags=0)[1])
         data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoWrapper">', ' </section>', False)[1]
         if 'pr3v4t.tk' not in data:
             params = dict(cItem)
             params['type'] = 'video'
+            params['desc'] = desc
             return [params]
-        
-        
+
         retTab = [] 
         url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=["'](https?://[^"^']*?pr3v4t\.tk[^"^']+)["']''', 1, True)[0]
         data = self._getEpisode(url)
@@ -176,13 +169,12 @@ class WagasWorldApi(CBaseHostClass):
             params = dict(cItem)
             params.update({'type':'video', 'title':cItem['title'] + ' ' + data['title'], 'waga_url':url, 'waga_episode':int(data['episode'])})
             retTab.append(params)
-            
+
             params = dict(cItem)
             params.update({'type':'more', 'waga_cat':'more', 'title':_('More'), 'waga_title':cItem['title'], 'waga_url':url, 'waga_episode':int(data['episode'])+1})
             retTab.append(params)
-        
         return retTab
-        
+
     def loadMore(self, cItem):
         printDBG("WagasWorldApi.loadMore cItem[%s]" % cItem)
         
@@ -215,7 +207,7 @@ class WagasWorldApi(CBaseHostClass):
         else:
             sts,data = self.cm.getPage(baseUrl, self.http_params)
             if not sts: return []
-            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoWrapper">', ' </section>', False)[1]
+            data = self.cm.ph.getDataBeetwenMarkers(data, '<div class="videoWrapper">', '</section>', False)[1]
             return self.up.getAutoDetectedStreamLink(baseUrl, data)
         return []
         
