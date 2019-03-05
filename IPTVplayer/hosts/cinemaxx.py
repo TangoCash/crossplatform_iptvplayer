@@ -195,7 +195,7 @@ class Cinemaxx(CBaseHostClass):
             desc.append(item[1])
         desc = ' | '.join(desc) + '[/br]' + descObj['text']
 
-        data = ph.find(data, ('<div', '>', 'dle-content'), ('<div', '>', 'dle_b_iptv'), flags=0)[1]
+        data = ph.find(data, ('<div', '>', 'dle-content'), ('<div', '>', 'fstory-info'), flags=0)[1]
         trailer = ph.find(data, ('<', '>', '#trailer'), '</div>', flags=0)[1]
         title = self.cleanHtmlStr(trailer)
         trailer = self.getFullUrl( ph.search(trailer, ph.IFRAME_SRC_URI_RE)[1] )
@@ -298,7 +298,7 @@ class Cinemaxx(CBaseHostClass):
             if not sts: return []
             self.setMainUrl(self.cm.meta['url'])
 
-        tmp = ph.find(data, ('<div', '>', 'dle-content'), ('<div', '>', 'dle_b_iptv'), flags=0)[1]
+        tmp = ph.find(data, ('<div', '>', 'dle-content'), ('<div', '>', 'fstory-info'), flags=0)[1]
         title = self.cleanHtmlStr(ph.find(tmp, ('<h1', '>'), '</h1>', flags=0)[1])
         icon = self.getFullIconUrl(ph.search(tmp, ph.IMAGE_SRC_URI_RE)[1])
         desc = self.cleanHtmlStr(ph.find(data, ('<div', '>', 'fstory-content'), '</div>', flags=0)[1])

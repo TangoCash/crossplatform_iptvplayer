@@ -87,7 +87,8 @@ class XrysoiSE(CBaseHostClass):
         sts, data = self.cm.getPage(self.MAIN_URL)
         if not sts: return
 
-        moviesTab = [{'title':'2018', 'url':self._getFullUrl('category/tainiesonline/2018/')},
+        moviesTab = [{'title':'2019', 'url':self._getFullUrl('category/tainiesonline/2019/')},
+                     {'title':'2018', 'url':self._getFullUrl('category/tainiesonline/2018/')},
                      {'title':'2017', 'url':self._getFullUrl('category/tainiesonline/2017/')},
                      {'title':'2016', 'url':self._getFullUrl('category/2016/')},
                      {'title':'2013-2015', 'url':self._getFullUrl('category/new-good/')},

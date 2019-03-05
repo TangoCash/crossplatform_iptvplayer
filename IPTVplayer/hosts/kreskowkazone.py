@@ -62,7 +62,7 @@ class KreskowkaZonePL(CBaseHostClass):
                          {'category':'search',            'title': _('Search'), 'search_item':True,         'icon':self.DEFAULT_ICON_URL},
                          {'category':'search_history',    'title': _('Search history'),                     'icon':self.DEFAULT_ICON_URL}]
                              
-        self.CARTOONS_CAT_TAB = [{'category':'list_abc',    'title': 'Lista kreskówek',       'url':self.MAIN_URL+'lista_anime-0'},
+        self.CARTOONS_CAT_TAB = [{'category':'list_abc',    'title': 'Lista kreskówek',       'url':self.MAIN_URL+'lista_kreskowek-0'},
                                  {'category':'list_abc',    'title': 'Lista filmów',          'url':self.MAIN_URL+'lista_filmow-0'},
                                  {'category':'list_items',  'title': 'Wychodzące kreskówki',  'url':self.MAIN_URL+'wychodzace'},
                                  {'category':'list_items',  'title': 'Wychodzące seriale',    'url':self.MAIN_URL+'wychodzace-seriale'},
@@ -213,7 +213,7 @@ class KreskowkaZonePL(CBaseHostClass):
                     
         if not self.cm.isValidUrl(videoUrl):
             for retry in [True, False]:
-                url = self.getFullUrl('odcinki_emb')
+                url = self.getFullUrl('odcinki_ajax')
                 params = dict(self.defaultParams)
                 params['header'] = dict(self.AJAX_HEADER)
                 params['header']['Referer'] = originUrl
@@ -224,8 +224,9 @@ class KreskowkaZonePL(CBaseHostClass):
                 printDBG('+++++++++++++++++++++++++++++++++++++++++++++++')
                 tmp = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
                 if tmp == '': tmp = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''<embed[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
+                if tmp == '': tmp = self.cm.ph.getSearchGroups(data, '''<a[^>]+?href="([^>\s]+?)"[>\s]''')[0]
                 if tmp == '': tmp = self.cleanHtmlStr(data)
-                if not self.cm.isValidUrl(tmp) and retry:
+                if not self.cm.isValidUrl(tmp) and 1 <> self.up.checkHostSupport(tmp) and retry:
                     sts, tmp = self.cm.getPage(self.getFullUrl('images/statystyki.gif'), self.defaultParams)
                 else:
                     videoUrl = tmp
@@ -410,4 +411,3 @@ class IPTVHost(CHostBase):
                                     possibleTypesOfSearch = possibleTypesOfSearch,
                                     isGoodForFavourites = isGoodForFavourites)
     # end converItem
-

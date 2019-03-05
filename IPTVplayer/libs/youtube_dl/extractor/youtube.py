@@ -56,6 +56,7 @@ class CYTSignAlgoExtractor:
             printDBG("DATA: %s" % tmp)
             tmp = ph.rfindall(tmp, 'return', '.set(', flags=0)
             for name in tmp:
+                name = name.replace('decodeURIComponent(', '').replace('encodeURIComponent(', '')
                 printDBG("ITEM: %s" % name)
                 name = ph.search(name, self.RE_MAIN)[0]
                 if name: return name

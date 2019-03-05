@@ -269,13 +269,14 @@ class EskaGo(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'])
         if not sts: return
         
-        data = ph.find(data, ('<div', '>', '__cities'), '</div>')[1]
+        data = ph.find(data, ('<div', '>', '__cities'), '</ul>')[1]
         data = ph.findall(data, '<li', '</li>')
         for item in data:
             url    = self.cm.ph.getSearchGroups(item, '''data-link=['"]([^'^"]+?)['"]''')[0]
             if url == '': continue
             if not self.cm.isValidUrl(url):
                 url = self.MAIN_URL + '/radio/' + url
+            url = url + self.cm.ph.getSearchGroups(item, '''value\s*=\s*['"](timestamp[^'^"]+?)['"]''')[0]
             icon   = cItem.get('icon', '')
             title  = self.cleanHtmlStr(item)
             desc   = ''
@@ -347,6 +348,7 @@ class EskaGo(CBaseHostClass):
                                 streamUrl = streamUrl.replace('.mp3', '.aac')
                             elif 'mp3' in streamType:
                                 streamUrl = streamUrl.replace('.aac', '.mp3')
+                            streamUrl = streamUrl + self.cm.ph.getSearchGroups(data, '''value\s*=\s*['"](timestamp[^'^"]+?)['"]''')[0]
                             urlTab.append({'name':streamType, 'url':streamUrl})
         return urlTab
 

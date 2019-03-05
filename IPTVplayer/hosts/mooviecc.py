@@ -296,7 +296,7 @@ class MoovieCC(CBaseHostClass):
             params.update({'good_for_fav': False, 'title':title, 'prev_title':cItem['title'], 'url':url, 'prev_url':cItem['url'], 'prev_desc':cItem.get('desc', ''), 'icon':icon, 'desc':desc})
             self.addVideo(params)
         
-        sourcesLink = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'streamBtn'), ('</div', '>'), caseSensitive=False)[1]
+        sourcesLink = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'streambtn'), ('</div', '>'), caseSensitive=False)[1]
         sourcesLink = self.cm.ph.getSearchGroups(sourcesLink, '''href=['"](https?://[^'^"]+?)['"]''')[0]
         if not self.cm.isValidUrl(sourcesLink):
             printDBG("MoovieCC.exploreItem - missing link for sources")

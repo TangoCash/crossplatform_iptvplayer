@@ -111,7 +111,7 @@ class BajeczkiOrg(CBaseHostClass):
         sts, data = self.getPage(cItem['url'])
         if not sts: return
 
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'entry-content'), ('<button', '>'))[1]
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'entry-content'), ('<aside', '>'))[1]
         data = re.sub("<!--[\s\S]*?-->", "", data)
 
         tmp = ph.find(data, '<video', '</video>', flags=ph.IGNORECASE)[1]

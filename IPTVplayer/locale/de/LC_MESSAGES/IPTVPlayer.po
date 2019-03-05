@@ -3621,3 +3621,73 @@ msgstr "warte %s Sekunden"
 
 msgid "Link protected with DRM."
 msgstr "Link ist DRM geschützt."
+
+msgid "Accept"
+msgstr "Bestätigen"
+
+msgid "%s login"
+msgstr "%s Login"
+
+msgid "Get decryption key."
+msgstr "Erhalte Entschlüsselungsschlüssel."
+
+msgid "Decrypt archive."
+msgstr "Entschlüssele Archiv."
+
+msgid ""
+"Problem with downloading the encryption key:\n"
+"[%s]."
+msgstr ""
+"Problem beim Herunterladen des Verschlüsselungsschlüssels:\n"
+"[%s]."
+
+msgid "Wrong the encryption key size: %s\n"
+msgstr "Falsche Größe des Verschlüsselungsschlüssels: %s\n"
+
+msgid "Problem with decryption the key."
+msgstr "Problem mit der Entschlüsselung des Schlüssels."
+
+msgid "Encryption key was downloaded successfully."
+msgstr "Der Verschlüsselungsschlüssel wurde erfolgreich heruntergeladen."
+
+msgid "Decryption the archive completed successfully."
+msgstr "Entschlüsselung des Archivs erfolgreich abgeschlossen."
+
+msgid ""
+"Problem with decryption the archive. Return code [%d]\n"
+"%s."
+msgstr ""
+"Problem mit der Entschlüsselung des Archivs. Fehler-Code [%d]\n"
+"%s."
+
+msgid "JDownloader script finished."
+msgstr "JDownloader Script beendet."
+
+msgid ""
+"Captcha solved.\n"
+"Waiting for notification."
+msgstr "Captcha gelöst. Warte auf Benachrichtigung."
+
+msgid "My JDownloader reCAPTCHA v2 solution"
+msgstr "My JDownloader reCAPTCHA v2 Lösung"
+
+msgid "Auto-translate"
+msgstr "Auto-Übersetzung"
+
+msgid "Failed to page with subtitle link."
+msgstr "Aufrufen der Seite mit dem Untertitel-Link fehlgeschlagen."
+
+msgid "Wrong uri."
+msgstr "Falsche uri."
+
+msgid "Search Movies and TV Series"
+msgstr "Suche Filme und TV-Serien"
+
+msgid "Search only in Movies"
+msgstr "Suche nur Filme"
+
+msgid "Search only in TV Series"
+msgstr "Suche nur TV-Serien"
+
+msgid "Get token failed!"
+msgstr "Erhalten von Token fehlgeschlagen!"

@@ -233,9 +233,14 @@ class FilmezzEU(CBaseHostClass):
             serverName = ' | '.join(serverName)
             #if 'letöltés' in serverName: continue
             
-            url = self.getFullUrl(urllib.unquote(self.cm.ph.getSearchGroups(tmp, '''(link_to\.php[^'^"]+?)['"]''')[0]))
+            t = self.cm.ph.getDataBeetwenReMarkers(tmp, re.compile('<a[^>]+?class="url-btn play"'), re.compile('>'))[1]
+            url = self.cm.ph.getSearchGroups(t, '''href=['"]([^'^"]+?)['"]''')[0]
             if url == '': continue
-            
+
+            if url.startswith('http://adf.ly/'):
+                url = urllib.unquote(url.rpartition('/')[2])
+                if url == '': continue
+
             if title not in titlesTab:
                 titlesTab.append(title)
                 self.cacheLinks[title] = []

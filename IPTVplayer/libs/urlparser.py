@@ -514,6 +514,7 @@ class urlparser:
                        'videomore.ru':         self.pp.parserVIDEOMORERU    ,
                        'ntv.ru':               self.pp.parserNTVRU          ,
                        '1tv.ru':               self.pp.parser1TVRU          ,
+                       'videohouse.me':        self.pp.parserVIDEOHOUSE     ,
                     }
         return
     
@@ -3628,7 +3629,7 @@ class pageParser(CaptchaHelper):
         printDBG("parserGOLDVODTV baseUrl[%s]" % baseUrl)
         COOKIE_FILE = GetCookieDir('goldvodtv.cookie')
         HTTP_HEADER = { 'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3 Gecko/2008092417 Firefox/3.0.3' }
-        SWF_URL = 'http://p.jwpcdn.com/6/9/jwplayer.flash.swf'
+        SWF_URL = 'http://goldvod.tv/jwplayer_old/jwplayer.flash.swf'
         
         url = strwithmeta(baseUrl)
         baseParams = url.meta.get('params', {})
@@ -7959,6 +7960,22 @@ class pageParser(CaptchaHelper):
         rtmpUrl += ' swfUrl=%s pageUrl=%s live=1 ' % (swfUrl, linkUrl)
         printDBG(rtmpUrl)
         return rtmpUrl
+
+    def parserVIDEOHOUSE(self, baseUrl):
+        printDBG("parserVIDEOHOUSE baseUrl[%r]" % baseUrl )
+        HTTP_HEADER = MergeDicts(self.cm.getDefaultHeader('firefox'), {'Referer':baseUrl})
+        sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
+        if not sts: return False
+        cUrl = self.cm.meta['url']
+        up = urlparser()
+        tmp = ph.IFRAME.findall(data)
+        tmp.extend(ph.A.findall(data))
+        for item in tmp:
+            url = self.cm.getFullUrl(item[1], cUrl)
+            if 1 == up.checkHostSupport(url):
+                urls = up.getVideoLink(url)
+                if urls: return urls        
+        return False
         
     def parserOPENLOADIO(self, baseUrl):
         printDBG("parserOPENLOADIO baseUrl[%r]" % baseUrl )

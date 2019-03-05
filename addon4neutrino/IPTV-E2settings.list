@@ -321,6 +321,7 @@ config.plugins.iptvplayer.fotka = ConfigSelection(default="0", choices = [("0",_
 config.plugins.iptvplayer.xxxupdate = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xxxzbiornik = ConfigYesNo(default = False)
 config.plugins.iptvplayer.xxx4k = ConfigYesNo(default = False)
+config.plugins.iptvplayer.yourporn = ConfigInteger(4, (1, 99))  
 config.plugins.iptvplayer.laola1tv_defquality  = ConfigSelection(default = "1000000", choices = [("0", _("The worst")), ("500000", _("Low")), ("1000000", _("Mid")), ("1500000", _("High")), ("9000000", _("The best"))]) 
 config.plugins.iptvplayer.laola1tv_onelink     = ConfigYesNo(default = False)
 config.plugins.iptvplayer.laola1tv_portal      = ConfigSelection(default = "int", choices = [("at", "AT"), ("de", "DE"), ("int", "INT")]) 
