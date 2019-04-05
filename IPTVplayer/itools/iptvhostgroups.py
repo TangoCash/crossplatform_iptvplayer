@@ -63,7 +63,7 @@ class IPTVHostsGroups:
                                                      'movienightws','yifytv','hdpopcornscom','losmovies', \
                                                      'solarmovie','mythewatchseries','thewatchseriesto','classiccinemaonline','seriesonline','vumooch','movie4kto','dardarkomcom','movs4ucom','movizlandcom', \
                                                      'sovdub','kinopokaz','cinemay','icefilmsinfo','hdkinomir','kinotan','egybest','dpstreamingcx','librestream','streamcomplet','skstream','filmstreamvkcom', \
-                                                     'filmpalast','hdstreams','serienstreamto','bsto','hdfilmetv','cineto','treetv','mozicsillag','filmezz','gamatocom','xrysoise','gamatotvme','mooviecc','mrpiracy', \
+                                                     'filmpalast','hdstreams','serienstreamto','bsto','hdfilmetv','cineto','treetv','mozicsillag','filmezz','rtlmost','gamatocom','xrysoise','gamatotvme','mooviecc','mrpiracy', \
                                                      'filmativa','filmovizijastudio','filma24hdcom','serijeonline','kinox','szenestreamz','cartoonhd','worldfree4u','tantifilmorg','forjatn', 'serialeco', 'faselhdcom', \
                                                      'darshowcom','yesmoviesto','movierulzsx','filisertv','allboxtv','planetstreamingcom','filmeonlineto','tainieskaiseirestv','3sktv', 'cimaclubcom','naszekinotv', 'gledalica', \
                                                      'tfarjocom','kinogo','filmaoncom','filmstreamhdit','altadefinizione','streaminghdfun','putlockertvto','akoam','filmehdnet','kinomanco','oipeirates','filmixco', 'andrijaiandjelka', \
@@ -92,7 +92,7 @@ class IPTVHostsGroups:
         self.PREDEFINED_HOSTS['french']           = ['youtube','tfarjocom','skstream','filmstreamvkcom','streamcomplet','dpstreamingcx','librestream','cinemay','otakufr','rtbfbe','artetv','movie4kto','dailymotion',\
                                                      'vimeo','twitchtv','hitboxtv','forjatn','planetstreamingcom','playrtsiw','officialfilmillimite','hdsto']
         self.PREDEFINED_HOSTS['russian']          = ['youtube','hd1080online','treetv','kinogo','kinotan','hdkinomir','sovdub','filmixco','kinopokaz','movie4kto','dailymotion','vimeo','twitchtv','hitboxtv']
-        self.PREDEFINED_HOSTS['hungarian']        = ['youtube','mooviecc','filmezz','mozicsillag','dailymotion','vimeo','twitchtv','hitboxtv']
+        self.PREDEFINED_HOSTS['hungarian']        = ['youtube','mooviecc','filmezz','mozicsillag','rtlmost','dailymotion','vimeo','twitchtv','hitboxtv']
         self.PREDEFINED_HOSTS['arabic']           = ['youtube','webstream','akoam','egybest','dardarkomcom','movs4ucom','movizlandcom','shahiidanimenet','dailymotion','vimeo','twitchtv','hitboxtv','forjatn','faselhdcom','darshowcom','movierulzsx','3sktv','cimaclubcom','hdsto']
         self.PREDEFINED_HOSTS['greek']            = ['youtube','gamatotvme','xrysoise','tainieskaiseirestv','gamatocom','greekdocumentaries3','dailymotion','vimeo','twitchtv','hitboxtv','oipeirates']
         self.PREDEFINED_HOSTS['latino']           = ['youtube','mrpiracy','solarmovie','artetv','dailymotion','vimeo','twitchtv','hitboxtv','plusdede','hdsto','hdfull','vidcorncom','dixmax']

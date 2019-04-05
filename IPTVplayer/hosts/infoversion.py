@@ -131,7 +131,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2019.03.02"
+    infoversion = "2019.03.16a"
     inforemote  = "0.0.0"
     currList = []
     SEARCH_proc = ''
@@ -212,6 +212,10 @@ class Host:
         params['cloudflare_params'] = {'domain':cloud_domain, 'cookie_file':COOKIEFILE, 'User-Agent':self.USER_AGENT}
         return self.cm.getPageCFProtection(baseUrl, params, post_data)
 
+    def get_Page(self, baseUrl, addParams={}, post_data=None):
+        if addParams == {}: addParams = dict(self.defaultParams)
+        return self.cm.getPage(baseUrl, addParams, post_data)
+
     def listsItems(self, Index, url, name = ''):
         printDBG( 'Host listsItems begin' )
         valTab = []
@@ -222,7 +226,7 @@ class Host:
            valTab.append(CDisplayListItem('Kamery Piła', 'http://www.tvasta.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvasta.pl/home/'], 'asta', 'http://www.tvasta.pl/resources/images/logo_tvasta.png', None)) 
            valTab.append(CDisplayListItem('Dami 24', 'http://dami24.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCL1u3cY7_nPjbZmKljCy_Cw/live'], 'dami', 'http://dami24.pl/images/headers/logo.png', None)) 
            valTab.append(CDisplayListItem('Sudecka TV', 'http://www.tvsudecka.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvsudecka.pl/streams/single/1'], 'tvsudecka', 'https://pbs.twimg.com/profile_images/585880676693454849/2eAO2_hC.jpg', None)) 
-           valTab.append(CDisplayListItem('Kłodzka TV', 'http://www.tvklodzka.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCOBLslh96FyyppmaYaJDwyQ/live'], 'klodzka', 'https://d-nm.ppstatic.pl/k/r/46/d7/4c227342bda20_o.jpg', None)) 
+           #valTab.append(CDisplayListItem('Kłodzka TV', 'http://www.tvklodzka.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCOBLslh96FyyppmaYaJDwyQ/live'], 'klodzka', 'https://d-nm.ppstatic.pl/k/r/46/d7/4c227342bda20_o.jpg', None)) 
            valTab.append(CDisplayListItem('Zgorzelec TVT', 'http://www.tvtzgorzelec.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvtzgorzelec.pl/index.php/live', 1)], 'tvt', 'http://www.tvtzgorzelec.pl/images/TVT-mini.png', None)) 
            #valTab.append(CDisplayListItem('Gorlice TV', 'http://gorlice.tv', CDisplayListItem.TYPE_CATEGORY, ['http://gorlice.tv/%C2%A0'], 'gorlice', 'http://gorlice.tv/static/gfx/service/gorlicetv/logo.png?96eb5', None)) 
            valTab.append(CDisplayListItem('Stella TVK', 'http://www.tvkstella.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tvkstella.pl/live_tv', 1)], 'stella', 'http://www.tvkstella.pl/img/logo.png', None)) 
@@ -240,7 +244,7 @@ class Host:
            valTab.append(CDisplayListItem('Kamery WLKP24', 'http://wlkp24.info/kamery/', CDisplayListItem.TYPE_CATEGORY, ['http://wlkp24.info/kamery/'], 'wlkp24', 'http://archiwum.wlkp24.info/static/img/squarelogo400.jpg', None)) 
            #valTab.append(CDisplayListItem('BG-Gledai TV', 'http://www.bg-gledai.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.bg-gledai.tv'], 'gledai', 'http://www.bg-gledai.tv/img/newlogo.png', None)) 
            valTab.append(CDisplayListItem('Zabrze TV', 'Zabrze TV', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCyQL0IjtptnQ9PxmAfH3fKQ/live'], 'zabrze', 'http://tvzabrze.pl/assets/images/logo.png', None))
-           valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/kamerki/'], 'lookcam', 'http://lookcam.com/static/images/lookcam.png', None)) 
+           valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.com', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.com/'], 'lookcam', 'http://lookcam.com/static/images/lookcam.png', None)) 
            #valTab.append(CDisplayListItem('Fokus TV', 'http://www.fokus.tv', CDisplayListItem.TYPE_CATEGORY, ['http://www.fokus.tv'], 'fokus', 'http://www.fokus.tv/assets/gfx/logo-new.png', None)) 
            valTab.append(CDisplayListItem('News12 Long Island', 'http://longisland.news12.com/category/324508/live-streaming', CDisplayListItem.TYPE_CATEGORY, ['http://longisland.news12.com/category/324508/live-streaming'], 'n12', 'http://ftpcontent.worldnow.com/professionalservices/clients/news12/news12li/images/news12li-logo.png', None)) 
            valTab.append(CDisplayListItem('Deutsch', 'Deutsch', CDisplayListItem.TYPE_CATEGORY, [''], 'Deutsch', 'https://previews.123rf.com/images/disfera/disfera1203/disfera120300045/12842476-German-flag-with-deutsch-word-3D-render-Stock-Photo-germany.jpg', None)) 
@@ -272,6 +276,7 @@ class Host:
            valTab.append(CDisplayListItem('Poland In', 'Poland In', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCBjUPsHj7bXt24SUWNoZ0zA/live'], 'polandin', 'https://yt3.ggpht.com/a-/AN66SAyfw6iby9Gj5QKt0mT80p1CL7C5miParL5nSw=s288-mo-c-c0xffffffff-rj-k-no', None)) 
            valTab.append(CDisplayListItem('Kamery Bieszczady', 'Kamery Bieszczady', CDisplayListItem.TYPE_CATEGORY, ['https://www.bieszczady.live/kamery'], 'Bieszczady', 'https://img4.dmty.pl//uploads/201410/1414266711_6cw4do_600.jpg', None)) 
            valTab.append(CDisplayListItem('MIAMI TV',     'https://miamitvhd.com', CDisplayListItem.TYPE_CATEGORY, ['https://miamitvhd.com/?channel=miamitv'],'MIAMI', 'https://miamitvhd.com/assets/miamitv-8fcf2efe186508c88b6ebd5441452254a32c410d1d18ea7f82ffbb0d26b35271.png', None)) 
+           valTab.append(CDisplayListItem('TWOJE TV',     'http://twojetv.ws/telewizja-na-zywo/kanaly-darmowe', CDisplayListItem.TYPE_CATEGORY, ['http://twojetv.ws/telewizja-na-zywo/kanaly-darmowe'],'TWOJETV', 'http://twojetv.ws/public/dist/images/logo_new.png', None)) 
 
            valTab.sort(key=lambda poz: poz.name)
            valTab.insert(0,CDisplayListItem('Info o E2iPlayer - fork mosz_nowy', 'Wersja hostinfoversion: '+self.infoversion, CDisplayListItem.TYPE_CATEGORY, ['https://gitlab.com/mosz_nowy/e2iplayer/commits/master.atom'], 'info', 'http://www.cam-sats.com/images/forumicons/ip.png', None)) 
@@ -295,7 +300,7 @@ class Host:
               valTab.append(CDisplayListItem('Heroldsbach - Rosenkranzkapelle', 'http://heroldsbach.esgibtmehr.net', CDisplayListItem.TYPE_CATEGORY, ['http://heroldsbach.esgibtmehr.net/doku.php?id=rosenkranzkapelle'], 'Heroldsbach', 'https://image.jimcdn.com/app/cms/image/transf/none/path/sfb302df63f1bb549/image/id6c593d789b741f4/version/1391965689/image.jpg', None)) 
               valTab.append(CDisplayListItem('Heroldsbach - Krypta', 'http://heroldsbach.esgibtmehr.net', CDisplayListItem.TYPE_CATEGORY, ['http://heroldsbach.esgibtmehr.net/doku.php?id=krypta'], 'Heroldsbach', 'http://www.gebetsstaette-heroldsbach.de/bilder/PICT0068_1.jpg', None)) 
               valTab.append(CDisplayListItem('Heroldsbach - Marienkirche', 'http://heroldsbach.esgibtmehr.net', CDisplayListItem.TYPE_CATEGORY, ['http://heroldsbach.esgibtmehr.net/doku.php?id=marienkirche#marienkirche_-_24h_livestream'], 'Heroldsbach', 'http://www.heroldsbach-pilgerverein.de/bilder/rundgang_5_g.jpg', None)) 
-              valTab.append(CDisplayListItem('Kalwaria Zebrzydowska Sanktuarium ', 'Kalwaria Zebrzydowska Sanktuarium ', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCPaeCakVviK0hmDEl-3yGsg'], 'kalwaria', 'https://i.ytimg.com/vi/5_ViON2rwVk/hqdefault_live.jpg', None)) 
+              valTab.append(CDisplayListItem('Kalwaria Zebrzydowska Sanktuarium ', 'Kalwaria Zebrzydowska Sanktuarium ', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCPaeCakVviK0hmDEl-3yGsg'], 'kalwaria', 'http://www.powiat.wadowice.pl/fotki/g2065d.jpg', None)) 
               valTab.append(CDisplayListItem('Kluczbork - Parafia Najświętszego Serca Pana Jezusa', 'http://nspjkluczbork.pl/uncategorized/kamera/', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://nspjkluczbork.pl/uncategorized/kamera/', 1)], 'kluczbork', 'http://nspjkluczbork.pl/wp-content/uploads/2016/11/33_-1200x675.jpg', None)) 
               valTab.append(CDisplayListItem('Kodeń - Sanktuarium Matki Bożej', 'http://www.koden.com.pl/', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://worldcam.live/pl/webcam/koden', 1)], 'koden', 'http://img2.garnek.pl/a.garnek.pl/017/153/17153628_800.0.jpg/koden-sanktuarium-maryjne.jpg', None)) 
               valTab.append(CDisplayListItem('Kraków-Łagiewniki Sanktuarium', 'https://www.faustyna.pl', CDisplayListItem.TYPE_CATEGORY, ['https://www.faustyna.pl/zmbm/transmisja-on-line/'], 'faustyna', 'http://milosierdzie.pl/images/menu-obrazki/obraz.png', None)) 
@@ -559,7 +564,7 @@ class Host:
                 if Url.startswith('/'): Url = 'https://lookcam.com' + Url 
                 if Url:
                     valTab.append(CDisplayListItem(Title,Title,CDisplayListItem.TYPE_CATEGORY, [Url],'lookcam-clips', '', None)) 
-            valTab.insert(0,CDisplayListItem("--- Webcamera Live TV ---",     "Webcamera Live TV",     CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCh2MI-QmqjA40IYO4oCXdUw/live'], 'webcamlive', 'https://i.ytimg.com/vi_webp/wUB-WWN4QXo/mqdefault_live.webp',None))
+            #valTab.insert(0,CDisplayListItem("--- Webcamera Live TV ---",     "Webcamera Live TV",     CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCh2MI-QmqjA40IYO4oCXdUw/live'], 'webcamlive', 'https://i.ytimg.com/vi_webp/wUB-WWN4QXo/mqdefault_live.webp',None))
             valTab.insert(0,CDisplayListItem("--- Live TV ---",     "Live TV",     CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://lookcam.com/livetv/player/', 1)], 0, '',None))
             return valTab  
         if 'lookcam-clips' == name:
@@ -1511,23 +1516,23 @@ class Host:
         if 'republika' == name:
             printDBG( 'Host getResolvedURL mainurl: '+url )
             COOKIEFILE = os_path.join(GetCookieDir(), 'republika.cookie')
-            host = "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
-            header = {'Referer':url, 'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}   
-            try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host getResolvedURL query error url: '+url )
-                return ''
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
             printDBG( 'Host listsItems data1: '+data )
+            self.defaultParams['header']['Referer'] = url
+
             url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
-            header = {'Referer':url, 'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}   
-            try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host getResolvedURL query error url: '+url )
-                return ''
+            if url.startswith('//'): url = 'https:' + url
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
             printDBG( 'Host listsItems data2: '+data )
             playlist = self.cm.ph.getDataBeetwenMarkers(data, 'playlist: [', ']', False)[1]
             source = self.cm.ph.getSearchGroups(playlist, '''src:\s['"]([^"^']+?)['"]''')[0] 
-            source = urlparser.decorateUrl(source, {'Referer': url, 'User-Agent': host})  
+            if source.startswith('//'): source = 'http:' + source
+            source = urlparser.decorateUrl(source, {'Referer': url})   
             if self.cm.isValidUrl(source): 
                 tmp = getDirectM3U8Playlist(source)
                 for item in tmp:
@@ -1650,15 +1655,57 @@ class Host:
               valTab.append(CDisplayListItem(phTitle.split('\n')[0],phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
            return valTab
 
+        if 'fatima' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            COOKIEFILE = os_path.join(GetCookieDir(), 'fatima.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
+            #printDBG( 'Host listsItems data: '+data )
+            link = self.cm.ph.getSearchGroups(data, '''src=['"](https?://www.youtube.com[^"^']+?)['"]''')[0] 
+            if not link:
+                link = self.cm.ph.getSearchGroups(data, '''src=['"](https?://youtu[^"^']+?)['"]''')[0] 
+            if link:
+                videoUrls = self.getLinksForVideo(link)
+                if videoUrls:
+                    for item in videoUrls:
+                        Url = item['url']
+                        Name = item['name']
+                        printDBG( 'Host Url:  '+Url )
+                        printDBG( 'Host name:  '+Name )
+                        valTab.append(CDisplayListItem('Fatima  '+Name, 'Fatima  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://science-info.pl/wp-content/uploads/2011/12/maria.jpg', None))
+            link = re.search('(https://rd3.videos.sapo.pt.*?)"', data, re.S|re.I)
+            if link:
+                stream = 'rtmp://213.13.26.13/live/ playpath=santuario.stream swfUrl=http://js.sapo.pt/Projects/SAPOPlayer/20170410R1/jwplayer.flash.swf pageUrl=http://videos.sapo.pt/v6Lza88afnReWzVdAQap'
+                valTab.append(CDisplayListItem('Fatima  '+'sapo', 'Fatima  '+'sapo',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream, 0)], 0, '', None))
+            return valTab 
+
+        if 'TWOJETV' == name:
+            printDBG( 'Host listsItems begin name='+name )
+            COOKIEFILE = os_path.join(GetCookieDir(), 'TWOJETV.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data: '+data )
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="col-xs', '</div>')
+            for item in data:
+               phUrl = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
+               phTitle = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
+               phImage = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
+               if phUrl.startswith('//'): phUrl = 'http:' + phUrl + '/' 
+               if phUrl.startswith('/'): phUrl = 'http://twojetv.ws' + phUrl 
+               valTab.append(CDisplayListItem(phTitle,phTitle,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
+            return valTab
 #############################################
         if len(url)>8:
-           query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-           try:
-               data = self.cm.getURLRequestData(query_data)
-           except:
-               printDBG( 'Host listsItems ERROR '+url )
-               return valTab
-           #printDBG( 'Host listsItems data'+data )
+           COOKIEFILE = os_path.join(GetCookieDir(), 'info.cookie')
+           self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+           self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': False, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+           sts, data = self.get_Page(url)
+           if not sts: return valTab
+           printDBG( 'Host listsItems data: '+data )
 
         if 'info' == name:
             x = 0
@@ -1744,6 +1791,7 @@ class Host:
         if 'jasna' == name:
             printDBG( 'Host listsItems begin name='+name )
             Url = self.cm.ph.getSearchGroups(data, '''href=['"](https://www.youtube.com/channel/[^"^']+?)['"]''')[0]+'/live'
+            if not Url: Url = 'https://www.youtube.com/channel/UCKAtPxfE2RAHSCwDABMMeAg/live'
             videoUrls = self.getLinksForVideo(Url)
             if videoUrls:
                 for item in videoUrls:
@@ -1988,26 +2036,6 @@ class Host:
                         valTab.append(CDisplayListItem(item['name'], item['url'],  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', item['url'], 0)], 0, 'http://www.tvtorun.net/public/img/new/logo.png', None))
             return valTab
 
-        if 'fatima' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            link = self.cm.ph.getSearchGroups(data, '''src=['"](https?://www.youtube.com[^"^']+?)['"]''')[0] 
-            if not link:
-                link = self.cm.ph.getSearchGroups(data, '''src=['"](https?://youtu[^"^']+?)['"]''')[0] 
-            if link:
-                videoUrls = self.getLinksForVideo(link)
-                if videoUrls:
-                    for item in videoUrls:
-                        Url = item['url']
-                        Name = item['name']
-                        printDBG( 'Host Url:  '+Url )
-                        printDBG( 'Host name:  '+Name )
-                        valTab.append(CDisplayListItem('Fatima  '+Name, 'Fatima  '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://science-info.pl/wp-content/uploads/2011/12/maria.jpg', None))
-            link = re.search('(http://rd3.videos.sapo.pt.*?)"', data, re.S|re.I)
-            if link:
-                stream = 'rtmp://213.13.26.13/live/ playpath=santuario.stream swfUrl=http://js.sapo.pt/Projects/SAPOPlayer/20170410R1/jwplayer.flash.swf pageUrl=http://videos.sapo.pt/v6Lza88afnReWzVdAQap'
-                #valTab.append(CDisplayListItem('Fatima  '+'sapo', 'Fatima  '+'sapo',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', stream, 0)], 0, '', None))
-            return valTab 
-
         if 'makow' == name:
             printDBG( 'Host listsItems begin name='+name )
             Url = self.cm.ph.getSearchGroups(data, '''<iframe src=['"]([^"^']+?)['"]''')[0] 
@@ -2046,6 +2074,7 @@ class Host:
                 printDBG( 'Host listsItems rtmp_app: '+rtmp_app )
                 printDBG( 'Host listsItems rtmp_host: '+rtmp_host )
                 hls_url = link.group(1).replace('embed.html?dvr=false','index.m3u8')
+                hls_url = link.group(1).replace('embed.html','index.m3u8')
                 if self.cm.isValidUrl(hls_url): 
                     tmp = getDirectM3U8Playlist(hls_url)
                     for item in tmp:
@@ -2053,8 +2082,6 @@ class Host:
                 if rtmp_app:
                     rtmp_url = 'rtmp://'+rtmp_host+':'+rtmpPort+'/'+rtmp_app+'/'+streamName+' live=1'
                     valTab.append(CDisplayListItem('Cieszyn  rtmp', 'Cieszyn  rtmp',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', rtmp_url, 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
-                f4m_url = link.group(1).replace('embed.html?dvr=false','manifest.f4m')
-                valTab.append(CDisplayListItem('Cieszyn  f4m', 'Cieszyn  f4m',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', f4m_url, 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
             return valTab 
 
         if 'wilno' == name:
@@ -2217,19 +2244,18 @@ class Host:
 
         if 'kalwaria' == name:
             printDBG( 'Host listsItems begin name='+name )
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<h3', '</h3>')
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '"item":', '"runs":')
             for item in data:
-                Title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
-                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
-                if Url.startswith('/'): Url = 'https://www.youtube.com'+Url
-                if 'Kalwar' in Title:
-                    videoUrls = self.getLinksForVideo(Url)
-                    if videoUrls:
-                        for item in videoUrls:
-                            Url = item['url']
-                            Name = item['name']
-                            printDBG( 'Host name:  '+Name )
-                            valTab.append(CDisplayListItem(Title+'   '+Name, Title+'   '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.powiat.wadowice.pl/fotki/g2065d.jpg', None))
+                Title = self.cm.ph.getSearchGroups(item, '''simpleText":['"]([^"^']+?)['"]''', 1, True)[0] 
+                Url = self.cm.ph.getSearchGroups(item, '''"videoId":['"]([^"^']+?)['"]''', 1, True)[0] 
+                Url = 'https://www.youtube.com/watch?v='+Url
+                videoUrls = self.getLinksForVideo(Url)
+                if videoUrls:
+                    for item in videoUrls:
+                        Url = item['url']
+                        Name = item['name']
+                        printDBG( 'Host name:  '+Name )
+                        valTab.append(CDisplayListItem(Title+'   '+Name, Title+'   '+Name,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, 'http://www.powiat.wadowice.pl/fotki/g2065d.jpg', None))
             return valTab 
 
         if 'radzionkow' == name:
@@ -2929,6 +2955,25 @@ class Host:
         videoUrl = ''
         valTab = []
 
+        if 'twojetv' in url:
+           COOKIEFILE = os_path.join(GetCookieDir(), 'twojetv.cookie')
+           self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+           sts, data = self.getPage(url, 'twojetv.cookie', 'twojetv.ws', self.defaultParams)
+           if not sts: return valTab
+           printDBG( 'Host listsItems data: '+str(data) )
+           Url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''')[0] 
+           sts, data = self.getPage(Url, 'twojetv.cookie', 'twojetv.ws', self.defaultParams)
+           if not sts: return valTab
+           printDBG( 'Host listsItems data2: '+str(data) )
+           m3u8 =  self.cm.ph.getSearchGroups(data, '''source:\s*['"]([^"^']+?)['"]''', 1, True)[0]
+           if m3u8.startswith('//'): m3u8 = 'http:' + m3u8
+           videoUrl = urlparser.decorateUrl(m3u8, {'Referer': Url})  
+           if self.cm.isValidUrl(videoUrl): 
+               tmp = getDirectM3U8Playlist(videoUrl)
+               for item in tmp:
+                   printDBG( 'Host listsItems valtab: '  +str(item))
+               return item['url']
+
         if 'miamitvhd' in url:
            COOKIEFILE = os_path.join(GetCookieDir(), 'miami.cookie')
            self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
@@ -3392,10 +3437,11 @@ class Host:
             if Url.startswith('//'): Url = 'http:' + Url
             printDBG( 'Host Url: '+Url )
             #return Url+token
-            if self.cm.isValidUrl(Url+token): 
-                tmp = getDirectM3U8Playlist(Url+token)
-                for item in tmp:
-                    return item['url']
+            m3u8 = self.cm.ph.getSearchGroups(data, '''livesd=([^"^']+?)['"]''', 1, True)[0]
+            player = self.cm.ph.getSearchGroups(data, '''embedURL" content=['"]([^"^']+?)['"]''', 1, True)[0]
+            #printDBG( 'Host m3u8: '+m3u8 )
+            #printDBG( 'Host player: '+player )
+            return urlparser.decorateUrl(m3u8, {'Referer': player, 'Origin':'https://playercdn.earthtv.com'})
 
         if url.startswith('http://live.russia.tv'):
             COOKIEFILE = os_path.join(GetCookieDir(), 'russiatv.cookie')

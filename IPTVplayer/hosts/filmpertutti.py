@@ -16,13 +16,13 @@ import urllib
 ###################################################
 
 def gettytul():
-    return 'https://filmpertutti.uno/'
+    return 'https://filmpertutti.club/'
 
 class FilmPertutti(CBaseHostClass):
 
     def __init__(self):
         CBaseHostClass.__init__(self, {'history':'FilmPertutti', 'cookie':'FilmPertutti.cookie'})
-        self.MAIN_URL    = 'https://www.filmpertutti.uno/'
+        self.MAIN_URL    = 'https://www.filmpertutti.club/'
         self.DEFAULT_ICON_URL = 'https://thumbnails.webinfcdn.net/thumbnails/280x202/f/filmpertutti.click.png'
         self.cacheLinks = {}
     

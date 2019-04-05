@@ -87,10 +87,10 @@ class VideoPenny(CBaseHostClass):
         self.MAIN_URL = 'https://videopenny.net/'
         sts, data = self.getPage(self.getMainUrl())
 
-        self.MAIN_CAT_TAB = [{'category':'list_sort_filter',    'title': 'Seriale',           'url':self.getFullUrl('/kategoria-2/seriale-pl'),           'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Seriale-tv.png')},
-                             {'category':'list_sort_filter',    'title': 'Programy online',   'url':self.getFullUrl('/kategoria-2/programy-rozrywkowe'),  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Programy-online.png')},
-                             {'category':'list_sort_filter',    'title': 'Filmy',             'url':self.getFullUrl('/category/filmy-pl/'),               'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Filmy.png')},
-                             {'category':'list_sort_filter',    'title': 'Bajki',             'url':self.getFullUrl('/category/bajki/'),                  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Bajki-tv.png')},
+        self.MAIN_CAT_TAB = [{'category':'list_sort_filter',    'title': 'Seriale',           'url':self.getFullUrl('/kategoria-2/seriale-pol'),           'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Seriale-tv.png')},
+                             {'category':'list_sort_filter',    'title': 'Programy online',   'url':self.getFullUrl('/kategoria-2/programy-rozrywkowe_pol'),  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Programy-online.png')},
+                             {'category':'list_sort_filter',    'title': 'Filmy',             'url':self.getFullUrl('/category/filmy-pol/'),               'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Filmy.png')},
+                             {'category':'list_sort_filter',    'title': 'Bajki',             'url':self.getFullUrl('/category/bajki_pol/'),                  'icon':self.getFullIconUrl('/wp-content/uploads/2014/05/Bajki-tv.png')},
                              {'category':'list_last',           'title': 'Ostatnio dodane',   'url':self.getFullUrl('/ostatnio-dodane/')},
                              
                              {'category':'search',          'title': _('Search'), 'search_item':True, },

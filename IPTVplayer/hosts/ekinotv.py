@@ -53,7 +53,7 @@ class EkinoTv(CBaseHostClass):
     def __init__(self):
         printDBG("EkinoTv.__init__")
         CBaseHostClass.__init__(self, {'history':'EkinoTv.tv', 'cookie':'ekinotv.cookie'})
-        self.MAIN_URL = 'http://ekino-tv.pl/'
+        self.MAIN_URL = 'https://ekino-tv.pl/'
         self.DEFAULT_ICON_URL = 'https://img.cda.pl/obr/oryginalne/c53be9b25636d46fabbb0ec78abe75c8.png'
         self.FILMS_CAT_URL = self.getFullUrl('/movie/cat/')  
         
@@ -250,7 +250,7 @@ class EkinoTv(CBaseHostClass):
         printDBG("EkinoTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         searchPattern = searchPattern.replace(' ', '+')
         
-        url = self.getFullUrl('http://ekino-tv.pl/s/search?q=') + urllib.quote_plus(searchPattern)
+        url = self.getFullUrl('https://ekino-tv.pl/se/search?q=') + urllib.quote_plus(searchPattern)
         
         sts, data = self.getPage(url)
         if not sts: return

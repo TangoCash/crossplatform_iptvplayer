@@ -637,7 +637,15 @@ class YoutubeIE(object):
             manifest_url = _unquote(video_info['hlsvp'], None)
             url_map = self._extract_from_m3u8(manifest_url, video_id)
             video_url_list = self._get_video_url_list(url_map)
-        
+
+        if video_info.get('player_response') and not video_url_list:
+            is_m3u8 = 'yes'
+            manifest_url = _unquote(video_info['player_response'], None)
+            manifest = re.search('"hlsManifestUrl":"(.*?)"', manifest_url)
+            if manifest: manifest_url = manifest.group(1)
+            url_map = self._extract_from_m3u8(manifest_url, video_id)
+            video_url_list = self._get_video_url_list(url_map)
+
         if not video_url_list:
             return []
 

@@ -46,6 +46,7 @@ config.plugins.iptvplayer.osk_background_color = ConfigSelection(default = "", c
 config.plugins.iptvplayer.SciezkaCache = ConfigDirectory(default = "/hdd/IPTVCache/") #, fixed_size = False)
 config.plugins.iptvplayer.NaszaTMP = ConfigDirectory(default = "/tmp/") #, fixed_size = False)
 config.plugins.iptvplayer.ZablokujWMV = ConfigYesNo(default = True)
+config.plugins.iptvplayer.gitlab_repo = ConfigYesNo(default = False)
 config.plugins.iptvplayer.vkcom_login    = ConfigText(default="", fixed_size = False)
 config.plugins.iptvplayer.vkcom_password = ConfigText(default="", fixed_size = False)
 config.plugins.iptvplayer.fichiercom_login    = ConfigText(default="", fixed_size = False)
@@ -339,6 +340,8 @@ config.plugins.iptvplayer.tvpVodPreferedformat = ConfigSelection(default = "mp4"
 config.plugins.iptvplayer.tv3player_use_web_proxy = ConfigYesNo(default=False)
 config.plugins.iptvplayer.orthobulletscom_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.orthobulletscom_password = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.rtlmosthu_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.rtlmosthu_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.serienstreamto_langpreference = ConfigSelection(default = "de,de_sub,en", choices = [("de,de_sub,en", "de,sub,en"), \
 config.plugins.iptvplayer.serienstreamto_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.serienstreamto_password = ConfigText(default = "", fixed_size = False)
