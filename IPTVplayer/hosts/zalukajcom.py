@@ -5,7 +5,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError, GetIPTVNotify
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm, GetTmpDir
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 ###################################################
 
@@ -173,7 +173,10 @@ class ZalukajCOM(CBaseHostClass):
         sts, data = self._getPage(url, {}, cItem.get('post_data', None))
         #self.cm.ph.writeToFile("/home/sulge/zalukaj.html", data)
         if not sts: return
+        printDBG("ZalukajCOM data "+data)
+
         sp = '<div class="tivief4">'
+        if not sp in data: sp = '<div class="details">'
         if extract:
             if self.cm.ph.getSearchGroups(data, 'strona\-(%d)[^0-9]' % (page+1))[0] != '':
                 nextPage = True
@@ -253,7 +256,8 @@ class ZalukajCOM(CBaseHostClass):
         printDBG("ZalukajCOM.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         #searchPattern = urllib.quote_plus(searchPattern)
         post_data = {'searchinput':searchPattern}
-        params = {'name':'category', 'category':'films_list', 'url': ZalukajCOM.SEARCH_URL, 'post_data':post_data}
+        szukaj = 'https://zalukaj.com/v2/ajax/load.search?html=1&q=%s' % searchPattern
+        params = {'name':'category', 'category':'films_list', 'url': szukaj, 'post_data':None}
         self.listFilms(params)
     
     def getLinksForVideo(self, cItem):
@@ -326,6 +330,53 @@ class ZalukajCOM(CBaseHostClass):
                     break
         return urlTab
         
+    def captcha(self):
+        self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+        self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'application/json, text/javascript, */*; q=0.01', 'Accept-Encoding':'gzip, deflate', 'Referer':'https://zalukaj.com/', 'Origin':'https://zalukaj.com/'}
+        self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+        httpParams = dict(self.defaultParams)
+        imgUrl = 'https://zalukaj.com/captcha-image'
+        from copy import deepcopy
+        from Plugins.Extensions.IPTVPlayer.icomponents.iptvmultipleinputbox import IPTVMultipleInputBox
+        from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import MainSessionWrapper
+        self.sessionEx = MainSessionWrapper()  
+        captchaTitle = ''
+        captchaLabel = _('Captcha')
+        captchaTitle = captchaLabel  
+        sendLabel = _('Send')
+        header = dict(self.HTTP_HEADER)
+        header['Accept'] = 'image/png,image/*;q=0.8,*/*;q=0.5'
+        params = dict(self.defaultParams)
+        params.update( {'maintype': 'image', 'subtypes':['jpeg', 'png'], 'check_first_bytes':['\xFF\xD8','\xFF\xD9','\x89\x50\x4E\x47'], 'header':header} )
+        filePath = GetTmpDir('.iptvplayer_captcha.jpg')
+        rm(filePath)
+        ret = self.cm.saveWebFile(filePath, imgUrl.replace('&amp;', '&'), params)
+        if not ret.get('sts'):
+            SetIPTVPlayerLastHostError(_('Fail to get "%s".') % imgUrl)
+            return []
+        params = deepcopy(IPTVMultipleInputBox.DEF_PARAMS)
+        params['accep_label'] = sendLabel
+        params['title'] = captchaLabel
+        params['status_text'] = captchaTitle
+        params['status_text_hight'] = 200
+        params['with_accept_button'] = True
+        params['list'] = []
+        item = deepcopy(IPTVMultipleInputBox.DEF_INPUT_PARAMS)
+        item['label_size'] = (660,110)
+        item['input_size'] = (680,25)
+        item['icon_path'] = filePath
+        item['title'] = _('Answer')
+        item['input']['text'] = ''
+        params['list'].append(item)
+        params['vk_params'] = {'invert_letters_case':True}
+        ret = 0
+        retArg = self.sessionEx.waitForFinishOpen(IPTVMultipleInputBox, params)
+        printDBG(retArg)
+        if retArg and len(retArg) and retArg[0]:
+            return retArg[0][0].lower()
+        else:
+            return []
+
     def tryTologin(self):
         printDBG('tryTologin start')
         
@@ -347,11 +398,26 @@ class ZalukajCOM(CBaseHostClass):
                 return False
             
             rm(self.COOKIE_FILE)
+
+            captcha = self.captcha()
             sts, msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % self.login
-            post_data = {'login': self.login, 'password': self.password}
+            post_data = None
             sts, data  = self._getPage(ZalukajCOM.LOGIN_URL, params=post_data, loggedIn=True)
             if sts:
-                printDBG( 'Host getInitList: chyba zalogowano do premium...' )
+                printDBG(data)
+                hash = self.cm.ph.getSearchGroups(data, '''name="hash" value=['"]([^'^"]+?)['"]''')[0].strip()
+                expires = self.cm.ph.getSearchGroups(data, '''"expires" value=['"]([^'^"]+?)['"]''')[0].strip()
+                post_data = {'expires': expires, 'hash': hash, 'username': self.login,'password': self.password, 'captcha': captcha} #%(expires,hash,self.login,self.password)
+                self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
+                self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT':'1', 'Accept': 'application/json, text/javascript, */*; q=0.01', 'Accept-Encoding':'gzip, deflate', 'Referer':'https://zalukaj.com/', 'Origin':'https://zalukaj.com/'}
+                self.defaultParams = {'header':self.HTTP_HEADER, 'with_metadata':True, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE}
+                httpParams = dict(self.defaultParams)
+                httpParams['header'] = dict(httpParams['header'])
+                httpParams['header']['Referer'] = 'https://zalukaj.com/'
+                sts, data = self.cm.getPage('https://zalukaj.com/ajax/login', httpParams, post_data)
+                printDBG(data)
+                #printDBG( 'Host getInitList: chyba zalogowano do premium...' )
+                #if 'error' in data: captcha()
                 sts, data = self._getPage(url=self.getFullUrl('/libs/ajax/login.php?login=1'), loggedIn=True)
                 
                 if sts: 

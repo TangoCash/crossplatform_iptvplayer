@@ -430,7 +430,7 @@ class SVTPlaySE(CBaseHostClass):
                 sts, data = self.cm.getPage(url, self.defaultParams)
                 if not sts: return []
                 videoId = self.cm.ph.getSearchGroups(data, '<video\s+?data-video-id="([^"]+?)"')[0]
-                url = 'http://api.svt.se/videoplayer-api/video/' + videoId
+                url = 'https://api.svt.se/video/' + videoId
             else:
                 url = cItem['url']
             

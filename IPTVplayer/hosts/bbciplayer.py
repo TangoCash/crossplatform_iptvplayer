@@ -4,7 +4,8 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, byteify, rm
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, rm
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 
 # needed for option bbc_use_web_proxy definition
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.extractor.bbc import BBCCoUkIE
@@ -72,26 +73,36 @@ class BBCiPlayer(CBaseHostClass):
             self.addDir(params)
     
     def listAZ(self, cItem, nextCategory):
-        
+        printDBG("BBCiPlayer.listAZ, cItem: %s, nextCategory: %s" % (cItem, nextCategory))
+
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
-        if not sts: return
-        
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<ol', '>',  'tleo-list'), ('</ol', '>'))
-        for col in data:
-            col = self.cm.ph.getAllItemsBeetwenMarkers(col, '<li', '</li>')
-            for item in col:
-                title = self.cleanHtmlStr(item)
-                url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
-                if '/brand/' in url: url = url.replace('/brand/', '/episodes/')
-                params = dict(cItem)
-                params.update({'good_for_fav': True, 'title':title, 'url':self.getFullUrl(url)})
-                if '/episodes/' in url:
-                    params['category'] = nextCategory
-                    self.addDir(params)
-                else:
-                    self.addVideo(params)
-        
+        if not sts: 
+            printDBG("Failed to get page.")
+            return
+
+        title = cItem['title'].lower()
+
+        json_data = self.scrapeJSON(data)
+        if json_data:
+            try:
+                uniqueTab = []
+                for item in json_data['programmes'][title]['entities']:
+                    episodesAvailable = item['meta']['episodesAvailable']
+                    url = self.getFullUrl(item['props']['href'])
+                    title = item['props']['title']
+                    
+                    params = dict(cItem)
+                    params.update({'good_for_fav': True, 'title':title, 'url':self.getFullUrl(url)})
+                    if episodesAvailable > 1:
+                        params['category'] = nextCategory
+                        self.addDir(params)
+                    else:
+                        self.addVideo(params)
+            except Exception:
+                printExc()
+
     def listLive(self, cItem):
+        printDBG("BBCiPlayer.listLive")
         channel_list = [
             ('bbc_one_hd',                       'BBC One'),
             ('bbc_two_hd',                       'BBC Two'),
@@ -123,12 +134,13 @@ class BBCiPlayer(CBaseHostClass):
             ('bbc_one_west',                     'BBC One West'),
             ('bbc_one_west_midlands',            'BBC One West Midlands'),
             ('bbc_one_yorks',                    'BBC One Yorks')]
-        
+
         for id, title in channel_list:
             params = {'good_for_fav': True, 'title':title, 'url':self.getFullUrl('vpid/' + id + '/'), 'icon':self.otherIconsTemplate % id}
             self.addVideo(params)
     
     def listChannels(self, cItem, nextCategory):
+        printDBG("BBCiPlayer.listChannels")
         params = {'good_for_fav': True, 'category':'live_streams', 'title':_('Live'), 'icon':'https://raw.githubusercontent.com/vonH/plugin.video.iplayerwww/master/media/live.png'}
         self.addDir(params)
         
@@ -149,7 +161,7 @@ class BBCiPlayer(CBaseHostClass):
             self.addDir(params)
         
     def listChannelMenu(self, cItem, nextCategory):
-        
+        printDBG("BBCiPlayer.listChannelMenu")
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return
         
@@ -189,16 +201,21 @@ class BBCiPlayer(CBaseHostClass):
         printDBG("BBCiPlayer.listCategories")
         
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
-        if not sts: return
-        
-        data = self.cm.ph.getDataBeetwenMarkers(data, '<div id="category-navigation"', '<li class="ipNav', withMarkers=False)[1]
-        data = self.cm.ph.getAllItemsBeetwenMarkers(data, "<li", '</li>', withMarkers=True)
-        for item in data:
-            title = self.cleanHtmlStr(item)
-            url   = self.cm.ph.getSearchGroups(item, '''href=['"]([^'^"]+?)['"]''')[0]
-            params = dict(cItem)
-            params.update({'category':nextCategory, 'title':title, 'url':self.getFullUrl(url)})
-            self.addDir(params)
+        if not sts:
+            printDBG("Failed to get page.")
+            return
+
+        json_data = self.scrapeJSON(data)
+        if json_data:
+            try:
+                for item in json_data['navigation']['items'][1]['subItems']:
+                    title = item['title']
+                    url   = item['href']
+                    params = dict(cItem)
+                    params.update({'category':nextCategory, 'title':title, 'url':self.getFullUrl(url)})
+                    self.addDir(params)
+            except Exception:
+                printExc()
             
     def listCatFilters(self, cItem, nextCategory):
         printDBG("BBCiPlayer.listCatFilters")
@@ -330,7 +347,27 @@ class BBCiPlayer(CBaseHostClass):
                     else:
                         params['category'] = nextCategory
                         self.addDir(params)
-    
+
+    # when the url is actually an episode url but you want to get all eposides via the View All link
+    def listItemsViewAll(self, cItem, nextCategory):
+        printDBG("BBCiPlayer.listItemsViewAll")
+        sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
+        if not sts:
+            printDBG("Failed to get page.")
+            return
+        
+        title = cItem['title'].lower()
+
+        json_data = self.scrapeJSON(data)
+        if json_data:
+            try:
+                tleo_id = json_data['episode']['tleoId']
+                
+                cItem.update({'url':self.getFullUrl('/iplayer/episodes/' + tleo_id), 'category':'list_episodes'}) 
+                self.listItems(cItem, nextCategory)
+            except Exception:
+                printExc()
+
     def listItems(self, cItem, nextCategory):
         printDBG("BBCiPlayer.listItems")
         
@@ -431,11 +468,50 @@ class BBCiPlayer(CBaseHostClass):
     def listSearchResult(self, cItem, searchPattern, searchType):
         printDBG("BBCiPlayer.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         
-        baseUrl = self.getFullUrl('iplayer/search?q=' + urllib.quote_plus(searchPattern))
         cItem = dict(cItem)
-        cItem['url'] = baseUrl
+        # if search pattern was specified, use it to build the URL, otherwise 
+        # leave the URL alone - it will already be set if this is a Next Page search
+        if len(searchPattern):
+            cItem['url'] = self.getFullUrl('iplayer/search?q=' + urllib.quote_plus(searchPattern))
+
         self.listItems(cItem, 'list_episodes')
     
+    def scrapeJSON(self, html):
+        printDBG("BBCiPlayer.scrapeJSON - scraping for video versions. Format 1.")
+        json_data = None
+        format = 1
+        match = re.search(r'window\.mediatorDefer\=page\(document\.getElementById\(\"tviplayer\"\),(.*?)\);', html, re.DOTALL)
+        if not match:
+            printDBG("Format 1 failed. Trying format 2.")
+            format = 2
+            match = re.search(r'window.__IPLAYER_REDUX_STATE__ = (.*?);\s*</script>', html, re.DOTALL)
+        if match:
+            data = match.group(1)
+            json_data = json_loads(data)
+            if json_data:
+                if format == 1:
+                    if 'appStoreState' in json_data:
+                        json_data = json_data.get('appStoreState')
+                    elif 'initialState' in json_data:
+                        json_data = json_data.get('initialState')
+        else:
+            printDBG("Format 2 failed. Trying format 3.")
+            format = 3
+            match = re.search(r"'episode_id'\] = '([a-z\d]+)';", html, re.DOTALL)
+            if match and match.groups():
+                match = false
+                episode_id = matches.group(1)
+                printDBG("Episode ID found: %s" % episode_id)
+
+                jsonurl = "https://www.bbc.co.uk/programmes/%s.json" % episode_id
+
+                sts, data = self.cm.getPage(jsonurl, self.defaultParams)
+                if sts:
+                    printDBG("JSON page retrieved")
+                    json_data = json_loads(data)['programme']
+                   
+        return json_data
+
     def getLinksForVideo(self, cItem):
         printDBG("BBCiPlayer.getLinksForVideo [%s]" % cItem)
         retTab = []
@@ -443,24 +519,40 @@ class BBCiPlayer(CBaseHostClass):
         sts, data = self.cm.getPage(cItem['url'], self.defaultParams)
         if not sts: return retTab
         
-        tmp = self.cm.ph.getSearchGroups(data, r'mediator\.bind\(({.+?})\s*,\s*document\.getElementById')[0]
-        if tmp == '': tmp = self.cm.ph.getDataBeetwenReMarkers(data, re.compile('window\.mediatorDefer\s*=\s*[^,]*?\,'), re.compile('\);'), False)[1]
-        try:
-            uniqueTab = []
-            data = byteify(json.loads(tmp))
-            for item in data['episode']['versions']:
-                url  = self.getFullUrl('/iplayer/vpid/%s/' % item['id'])
-                if url in uniqueTab: continue
-                uniqueTab.append(url)
-                name = item['kind'].title()
-                retTab.append({'name':name, 'url':url, 'need_resolve':1})
-        except Exception:
-            printExc()
-        
-        if len(retTab):
-            return retTab
+        json_data = self.scrapeJSON(data)
+        if json_data:
+            try:
+                uniqueTab = []
+                for item in json_data['versions']:
+                    if 'id' in item:
+                        item_id = item.get('id')
+                    elif 'pid' in item:
+                        item_id = item.get('pid')
+                    else:
+                        continue
+
+                    url  = self.getFullUrl('/iplayer/vpid/%s/' % item_id)
+                    if url in uniqueTab:
+                        continue
+
+                    uniqueTab.append(url)
+                    if 'kind' in item:
+                        name = item['kind'].title()
+                    elif 'types' in item:
+                        name = item['types'][0]
+                    else:
+                        name = item_id
+
+                    retTab.append({'name':name, 'url':url, 'need_resolve':1})
+            except Exception:
+                printExc()
+
+            if len(retTab):
+                return retTab
+            else:
+                retTab.append({'name':'', 'url':cItem['url'], 'need_resolve':1})
         else:
-            retTab.append({'name':'', 'url':cItem['url'], 'need_resolve':1})
+            printDBG("Failed to retrieve JSON.")
         return retTab
         
     def getVideoLinks(self, url):
@@ -468,7 +560,7 @@ class BBCiPlayer(CBaseHostClass):
         return self.up.getVideoLinkExt(url)
         
     def handleService(self, index, refresh = 0, searchPattern = '', searchType = ''):
-        printDBG('handleService start')
+        printDBG('BBCiPlayer.handleService - start')
         
         CBaseHostClass.handleService(self, index, refresh, searchPattern, searchType)
         
@@ -494,7 +586,7 @@ class BBCiPlayer(CBaseHostClass):
         elif 'list_az_menu' == category:
             self.listAZMenu(self.currItem, 'list_az')
         elif 'list_az' == category:
-            self.listAZ(self.currItem, 'list_episodes')
+            self.listAZ(self.currItem, 'list_episodes_view_all')
         elif 'list_categories' == category:
             self.listCategories(self.currItem, 'list_cat_filters')
         elif category in 'list_cat_filters':
@@ -509,6 +601,8 @@ class BBCiPlayer(CBaseHostClass):
             self.listItems3(self.currItem, 'list_episodes')
         elif 'list_episodes' == category:
             self.listItems(self.currItem, 'video')
+        elif 'list_episodes_view_all' == category:
+            self.listItemsViewAll(self.currItem, 'video')
 
     #SEARCH
         elif category in ["search", "search_next_page"]:

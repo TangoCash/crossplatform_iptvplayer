@@ -515,6 +515,7 @@ class urlparser:
                        'ntv.ru':               self.pp.parserNTVRU          ,
                        '1tv.ru':               self.pp.parser1TVRU          ,
                        'videohouse.me':        self.pp.parserVIDEOHOUSE     ,
+                       'verystream.com':       self.pp.parserVERYSTREAM     ,
                     }
         return
     
@@ -7976,7 +7977,19 @@ class pageParser(CaptchaHelper):
                 urls = up.getVideoLink(url)
                 if urls: return urls        
         return False
-        
+
+    def parserVERYSTREAM(self, baseUrl):
+        printDBG("parserVERYSTREAM baseUrl[%r]" % baseUrl )
+        HTTP_HEADER = MergeDicts(self.cm.getDefaultHeader('firefox'), {'Referer':baseUrl})
+        sts, data = self.cm.getPage(baseUrl, {'header':HTTP_HEADER})
+        if not sts: return False
+        #printDBG("parserVERYSTREAM data: [%s]" % data )
+        id = ph.search(data, """id="videolink">([^>]+?)<""")[0]
+        videoUrl = 'https://verystream.com/gettoken/{0}?mime=true'.format(id)
+        sts, data = self.cm.getPage(videoUrl, {'max_data_size':0})
+        if not sts: return False
+        return self.cm.meta['url']
+
     def parserOPENLOADIO(self, baseUrl):
         printDBG("parserOPENLOADIO baseUrl[%r]" % baseUrl )
         HTTP_HEADER= { 'User-Agent':"Mozilla/5.0", 'Referer':baseUrl}
