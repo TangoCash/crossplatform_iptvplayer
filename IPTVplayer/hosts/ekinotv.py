@@ -250,10 +250,13 @@ class EkinoTv(CBaseHostClass):
         printDBG("EkinoTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         searchPattern = searchPattern.replace(' ', '+')
         
-        url = self.getFullUrl('https://ekino-tv.pl/se/search?q=') + urllib.quote_plus(searchPattern)
-        
+        url = 'https://ekino-tv.pl/s/search?q=' + urllib.quote_plus(searchPattern)
         sts, data = self.getPage(url)
         if not sts: return
+        if not 'search' in self.cm.meta['url']:
+            url = 'https://ekino-tv.pl/se/search?q=' + urllib.quote_plus(searchPattern)
+            sts, data = self.getPage(url)
+            if not sts: return
         
         if 'movies' == searchType:
             sp = '<div class="movies-list-item"'
@@ -404,6 +407,8 @@ class EkinoTv(CBaseHostClass):
                         urlParams['header']['Referer'] = baseUrl
                         sts, data = self.getPage(vUrl, urlParams, {'verify':token})
                     else:
+                        SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.')+'\n wejdź na https://ekino-tv.pl/ i odpal dowolny film przez przeglądarke na komputerze.')
+                        return []
                         break
             
             sts, data = self.getPage(url, urlParams)

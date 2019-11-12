@@ -9,7 +9,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.icomponents.asynccall import IsMainThread, IsThreadTerminated, SetThreadKillable
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute_ext
 from Plugins.Extensions.IPTVPlayer.libs import ph
-from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
+from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
 ###################################################
 # FOREIGN import
 ###################################################
@@ -232,7 +232,7 @@ class CParsingHelper:
         return ph.clean_html(str)
 
 class common:
-    HOST   = 'Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0'
+    HOST   = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
     HEADER = None
     ph = CParsingHelper
     
@@ -838,6 +838,15 @@ class common:
                 metadata[returnKeys[idx]] = responseHeaders[sourceKeys[idx]]
 
         if collectAllHeaders:
+            if "Access-Control-Allow-Headers" in responseHeaders:
+                acah = responseHeaders["Access-Control-Allow-Headers"]
+                acah_keys= acah.split(',')
+                
+                for key in acah_keys:
+                    key = key.strip()
+                    if key in responseHeaders:
+                        metadata[key.lower()]=responseHeaders[key]
+
             for header, value in responseHeaders.iteritems():
                 metadata[header.lower()] = responseHeaders[header]
 
@@ -991,8 +1000,15 @@ class common:
                                 dat = item
                                 break
                         decoded = ''
+                        elemsText = {}
+                        tmp = ph.findall(verData, ('<div', '>', 'hidden'), '</div>', flags=ph.START_S)
+                        for idx in range(1, len(tmp), 2):
+                            eId = ph.getattr(tmp[(idx - 1)], 'id', flags=ph.I)
+                            if eId:
+                                elemsText[eId] = tmp[idx]
+
                         js_params = [{'path':GetJSScriptFile('cf.byte')}]
-                        js_params.append({'code':"var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (domain, dat)}) #cfParams['domain']
+                        js_params.append({'code': "var ELEMS_TEXT = %s; var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (json_dumps(elemsText), domain, dat)})
                         ret = js_execute_ext( js_params )
                         decoded = json_loads(ret['data'].strip())
                         
@@ -1006,16 +1022,18 @@ class common:
                         verUrl += '?'
                         for key in get_data:
                             verUrl += '%s=%s&' % (key, get_data[key])
-                        verUrl = _getFullUrl( ph.getattr(verData, 'action'), domain) + '?s=%s&jschl_vc=%s&pass=%s&jschl_answer=%s' % (get_data['s'], get_data['jschl_vc'], get_data['pass'], get_data['jschl_answer'])
+                        verUrl = _getFullUrl( ph.getattr(verData, 'action'), domain) + '?s=%s&jschl_vc=%s&pass=%s&jschl_answer=%s' % (urllib.quote(get_data['s'],safe=''), urllib.quote(get_data['jschl_vc'],safe=''), urllib.quote(get_data['pass'],safe=''), get_data['jschl_answer'])
                         verUrl = _getFullUrl2( verUrl, domain)
                         params2 = dict(params)
                         params2['load_cookie'] = True
                         params2['save_cookie'] = True
                         params2['header'] = dict(params.get('header', {}))
                         params2['header'].update({'Referer':url, 'User-Agent':cfParams.get('User-Agent', ''), 'Accept-Encoding':'text'})
+                        if 'Accept-Encoding' not in params2:
+                            params2['Accept-Encoding'] = '*'
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
                         if current == 1:
-                            GetIPTVSleep().Sleep(1 + (decoded['timeout'] / 1000.0)-(time.time() - start_time))
+                            GetIPTVSleep().Sleep(0.2 + (decoded['timeout'] / 1000.0)-(time.time() - start_time))
                         else:
                             GetIPTVSleep().Sleep((decoded['timeout'] / 1000.0))
                         printDBG("Time spent: [%s]" % (time.time() - start_time))
@@ -1052,7 +1070,7 @@ class common:
         outParams, postData = self.getParamsFromUrlWithMeta(url)
         addParams.update(outParams)
         if 'header' not in addParams and 'host' not in addParams:
-            host = 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.18) Gecko/20110621 Mandriva Linux/1.9.2.18-0.1mdv2010.2 (2010.2) Firefox/3.6.18'
+            host = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
             header = {'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
             addParams['header'] = header
         addParams['return_data'] = False
