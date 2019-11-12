@@ -14,7 +14,8 @@ tmpGitDir=$TMPGIT
 if [ ! -d $tmpGitDir/iptvplayer-GitLab-master-version ];then
   mkdir -p $tmpGitDir
   echo 'Cloning...'
-  git clone https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2.git $tmpGitDir/iptvplayer-GitLab-master-version
+  #git clone https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2.git $tmpGitDir/iptvplayer-GitLab-master-version
+  git clone https://gitlab.com/zadmario/e2iplayer.git $tmpGitDir/iptvplayer-GitLab-master-version
 else
   echo 'Syncing GitLab...'
   cd $tmpGitDir/iptvplayer-GitLab-master-version
