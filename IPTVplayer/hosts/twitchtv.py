@@ -205,7 +205,7 @@ class Twitch(CBaseHostClass):
         try:
             cursor = ''
             data = json.loads(data)
-            for item in data[0]['data']['directories']['edges']:
+            for item in data[0]['data']['directoriesWithTags']['edges']:
                 cursor = jstr(item, 'cursor')
                 item = item['node']
                 if item['__typename'] == 'Game':
@@ -215,7 +215,7 @@ class Twitch(CBaseHostClass):
                     params = {'good_for_fav':True, 'name':'category', 'category':nextCategory, 'title':title, 'game_id':str(item['id']), 'game_name':jstr(item, 'name'), 'icon':icon, 'desc':desc}
                     self.addDir(params)
 
-            if cursor != '' and data[0]['data']['directories']['pageInfo']['hasNextPage']:
+            if cursor != '' and data[0]['data']['directoriesWithTags']['pageInfo']['hasNextPage']:
                 self.addDir( MergeDicts(cItem, {'title':_('Next page'), 'cursor':cursor}) )
 
         except Exception:
@@ -226,7 +226,7 @@ class Twitch(CBaseHostClass):
         lang = '"%s"' % cItem['lang'].upper() if 'lang' in cItem else ''
         cursor = ',"cursor":"%s"' % cItem['cursor'] if 'cursor' in cItem else ''
         # post_data updated as per changes to their api.  CM
-        post_data = '[{"operationName":"DirectoryPage_Game","variables":{"name":"%s","options":{"sort":"VIEWER_COUNT","recommendationsContext":{"platform":"web"},"requestID":"a40436b85daf0810","tags":[%s]},"sortTypeIsRecency":false,"limit":30},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"c250a5fa4134a24c3d96abff9450391fd621b1c973c47f3d6adda3be6098c850"}}}]' % (cItem['game_name'], lang)        
+        post_data = '[{"operationName":"DirectoryPage_Game","variables":{"name":"%s","options":{"sort":"VIEWER_COUNT","recommendationsContext":{"platform":"web"},"requestID":"a40436b85daf0810","tags":[%s]},"sortTypeIsRecency":false,"limit":30%s},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"c250a5fa4134a24c3d96abff9450391fd621b1c973c47f3d6adda3be6098c850"}}}]' % (cItem['game_name'], lang, cursor)
         url = self.getFullUrl('/gql', self.API2_URL)
         sts, data = self.getPage(url, MergeDicts(self.defaultParams, {'raw_post_data':True}), post_data)
         if not sts: return

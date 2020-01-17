@@ -474,20 +474,19 @@ class EFilmyTv(CBaseHostClass):
         
         errorMessage = self.cleanHtmlStr(self.cm.ph.getDataBeetwenNodes(data, ('<div', '>', 'deleted'), ('<div', '>'))[1])
         SetIPTVPlayerLastHostError(errorMessage)
-        
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<span', '>', 'playername'), ('</div></div', '>'))
-        printDBG(data)
+        printDBG("EFilmyTv.getLinksForVideo playername[%s]" % data)
         for item in data:
-            movieId = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'play'), ('<div', '>'))[1]
+            movieId = self.cm.ph.getDataBeetwenNodes(item, ('<div', '>', 'embedbg'), ('</div', '>'))[1]
             movieId = self.cm.ph.getSearchGroups(movieId, '''\sid=['"]([0-9]+?(?:_s)?)['"]''')[0]
             if movieId == '': continue
             if movieId.endswith('_s'): baseUrl = '/seriale.php'
             else: baseUrl = '/filmy.php'
             
-            item = item.split('</div>', 1)
-            name = self.cleanHtmlStr(item[0]).replace('Odtwarzacz', '').replace('Wersja', '')
-            
-            item = self.cm.ph.getAllItemsBeetwenMarkers(item[-1], '<input', '>')
+#            item = item.split('</div>', 1)
+            name = self.cleanHtmlStr(item).replace('Odtwarzacz', '').replace('Wersja', '')
+
+            item = self.cm.ph.getAllItemsBeetwenMarkers(item, '<input', '>')
             for it in item:
                 val = self.cm.ph.getSearchGroups(it, '''\svalue=['"]([^'^"]+?)['"]''')[0]
                 if 'bez' in val.lower(): 
