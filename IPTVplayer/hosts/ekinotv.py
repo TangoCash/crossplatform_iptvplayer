@@ -251,14 +251,14 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
         printDBG("EkinoTv.listSearchResult cItem[%s], searchPattern[%s] searchType[%s]" % (cItem, searchPattern, searchType))
         searchPattern = searchPattern.replace(' ', '+')
         
-        url = 'https://ekino-tv.pl/s/search?q=' + urllib.quote_plus(searchPattern)
+        url = 'https://ekino-tv.pl/search/q/?q=' + urllib.quote_plus(searchPattern)
         sts, data = self.getPage(url)
         if not sts: return
-        if not 'search' in self.cm.meta['url']:
-            url = 'https://ekino-tv.pl/se/search?q=' + urllib.quote_plus(searchPattern)
-            sts, data = self.getPage(url)
-            if not sts: return
-        
+#        if not 'search' in self.cm.meta['url']:
+#            url = 'https://ekino-tv.pl/se/search?q=' + urllib.quote_plus(searchPattern)
+#            sts, data = self.getPage(url)
+#            if not sts: return
+        printDBG("EkinoTv.listSearchResult data[%s]" % data)
         if 'movies' == searchType:
             sp = '<div class="movies-list-item"'
             data = self.cm.ph.getDataBeetwenMarkers(data, sp, 'Znalezione seriale', False)[1]
@@ -338,9 +338,8 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
                     continue
                 for p in players:
                     if p['id'] == id:
-                        if premium: title = '[premium] %s' % p['title']
-                        else: title = p['title']
-                        linkTab.append({'name':title, 'url':strwithmeta(url, {'Referer':cItem['url']}), 'need_resolve':1})
+                        if premium: linkTab.append({'name':'[premium] %s' % p['title'], 'url':strwithmeta(url, {'Referer':cItem['url'], 'is_premium':True}), 'need_resolve':1})
+                        else: linkTab.append({'name':p['title'], 'url':strwithmeta(url, {'Referer':cItem['url']}), 'need_resolve':1})
                         break
         
         _findHostingLinks(data, urlTab, False)
@@ -414,32 +413,37 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
             sts, data = self.getPage(url, urlParams)
             if not sts: return urlTab
 
-            url = self.cm.ph.getSearchGroups(data, '''\shref=['"]([^'^"]+?)['"]''')[0]
+            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''\shref=['"]([^'^"]+?)['"].+?buttonprch''')[0])
 
-            if self.cm.isValidUrl(url):
-                urlParams['header']['Referer'] = baseUrl
-                urlParams['ignore_http_code_ranges'] = [(403, 403)]
-                sts, data = self.getPage(url, urlParams)
-                if not sts: return urlTab
+            if not meta.get('is_premium', False) and url == '':
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''\shref=['"]([^'^"]+?)['"]''')[0])
+                if self.cm.isValidUrl(url):
+                    urlParams['header']['Referer'] = baseUrl
+                    urlParams['ignore_http_code_ranges'] = [(403, 403)]
+                    sts, data = self.getPage(url, urlParams)
+                    if not sts: return urlTab
 
             if 'recaptcha' in data:
                 SetIPTVPlayerLastHostError(_('Link protected with google recaptcha v2.')) 
                 continue
             
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0])
+            if not self.cm.isValidUrl(url):
+                url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '<iframe[^>]+?src="([^"]+?)"')[0])
 
             if not self.cm.isValidUrl(url):
                 url = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''var\s+url\s*=\s*['"]([^'^"]+?)['"]''')[0])
-            
+
             if not self.cm.isValidUrl(url):
                 url = data.meta.get('url', '')
-                
-            if meta.get('is_premium', False) and 'video-player' in data:
-                vidUrl = self.cm.ph.getSearchGroups(data, '''var\s+[^=]+?\s*=\s*['"](https?://[^'^"]+?\.mp4(:?\?[^'^"]*?)?)['"]''', ignoreCase=True)[0]
+
+            if meta.get('is_premium', False):
+                data = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>', False)[1]
+                vidUrl = self.cm.ph.getSearchGroups(data, '''\ssrc=['"]([^'^"]+?)['"]''')[0]
+                name = self.cm.ph.getSearchGroups(data, '''\stype=['"]([^'^"]+?)['"]''')[0]
                 if self.cm.isValidUrl(vidUrl):
-                    urlTab.append({'name':'direct', 'url':vidUrl})
+                    urlTab.append({'name':name, 'url':vidUrl, 'need_resolve':0})
                     return urlTab
-            
+
             printDBG("|||"  + url)
             printDBG("#################################################################")
             printDBG(data)

@@ -361,6 +361,7 @@ config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
 config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zalukajtv_proxy        = ConfigSelection(default = "None", choices = [("None",     _("None")),
+config.plugins.iptvplayer.ustvgo_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.planetstreaming_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.planetstreaming_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.drdk_myip    = ConfigText(default = "213.173.226.190", fixed_size = False)

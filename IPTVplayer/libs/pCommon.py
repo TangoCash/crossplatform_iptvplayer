@@ -1008,6 +1008,10 @@ class common:
                                 elemsText[eId] = tmp[idx]
 
                         js_params = [{'path':GetJSScriptFile('cf.byte')}]
+                        try:
+                            dat = dat.replace(dat[dat.index('var isIE'):dat.index('setTimeout')],'')
+                        except Exception:
+                            printExc()
                         js_params.append({'code': "var ELEMS_TEXT = %s; var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (json_dumps(elemsText), domain, dat)})
                         ret = js_execute_ext( js_params )
                         decoded = json_loads(ret['data'].strip())
@@ -1020,7 +1024,7 @@ class common:
                         get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
                         get_data['jschl_answer'] = decoded['answer']
                         post_data = 'r=%s&jschl_vc=%s&pass=%s&jschl_answer=%s' % (urllib.quote(get_data['r'],safe=''), urllib.quote(get_data['jschl_vc'],safe=''), urllib.quote(get_data['pass'],safe=''), get_data['jschl_answer'])
-                        verUrl = _getFullUrl2( verUrl, domain)
+                        verUrl = _getFullUrl2( verUrl, domain).replace('&amp;','&')
                         params2 = dict(params)
                         params2['load_cookie'] = True
                         params2['save_cookie'] = True

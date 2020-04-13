@@ -419,8 +419,8 @@ class ZalukajCOM(CBaseHostClass):
         httpParams['header'] = dict(httpParams['header'])
         httpParams['header']['Referer'] = 'https://zalukaj.com/'
         
-        if None == self.loggedIn or self.login != config.plugins.iptvplayer.zalukajtv_login.value or\
-            self.password != config.plugins.iptvplayer.zalukajtv_password.value:
+        if (None == self.loggedIn or self.login != config.plugins.iptvplayer.zalukajtv_login.value or\
+            self.password != config.plugins.iptvplayer.zalukajtv_password.value) and config.plugins.iptvplayer.zalukajtvPREMIUM.value:
         
             self.login = config.plugins.iptvplayer.zalukajtv_login.value
             self.password = config.plugins.iptvplayer.zalukajtv_password.value
@@ -437,7 +437,7 @@ class ZalukajCOM(CBaseHostClass):
 
             sts, msg = False, 'Problem z zalogowaniem użytkownika \n"%s".' % self.login
             post_data = None
-            sts, data  = self._getPage('https://zalukaj.com/', params=post_data, loggedIn=True)
+            sts, data  = self._getPage('https://zalukaj.com/rejestracja', params=post_data, loggedIn=True)
             if self.cm.meta['url'] == 'https://zalukaj.com/limit': 
                 httpParams['header']['Referer'] = 'https://zalukaj.com/limit'
                 post_data = {'captcha': self.captcha()}
