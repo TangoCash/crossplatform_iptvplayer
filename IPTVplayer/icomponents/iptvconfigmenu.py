@@ -179,6 +179,8 @@ config.plugins.iptvplayer.ukrainian_proxyurl = ConfigText(default = "http://user
 config.plugins.iptvplayer.alternative_proxy1 = ConfigText(default = "http://user:pass@ip:port", fixed_size = False)
 config.plugins.iptvplayer.alternative_proxy2 = ConfigText(default = "http://user:pass@ip:port", fixed_size = False)
 
+config.plugins.iptvplayer.captcha_bypass = ConfigSelection(default = "", choices = [("", _("Auto")), ("2captcha.com", "2captcha.com"), ("9kw.eu", "9kw.eu")]) 
+
 config.plugins.iptvplayer.api_key_9kweu = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.api_key_2captcha = ConfigText(default = "", fixed_size = False)
 

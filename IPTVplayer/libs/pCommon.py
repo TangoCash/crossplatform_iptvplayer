@@ -955,12 +955,12 @@ class common:
                     sitekey = self.ph.getSearchGroups(verData, 'data-sitekey="([^"]+?)"')[0]
                     id = self.ph.getSearchGroups(verData, 'data-ray="([^"]+?)"')[0]
                     if sitekey != '':
-                        from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
+                        from Plugins.Extensions.IPTVPlayer.libs.hcaptcha_2captcha import UnCaptchahCaptcha
                         # google captcha
-                        recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
-                        recaptcha.HTTP_HEADER['Referer'] = baseUrl
-                        if '' != cfParams.get('User-Agent', ''): recaptcha.HTTP_HEADER['User-Agent'] = cfParams['User-Agent']
-                        token = recaptcha.processCaptcha(sitekey)
+                        recaptcha = UnCaptchahCaptcha(lang=GetDefaultLang())
+#                        recaptcha.HTTP_HEADER['Referer'] = baseUrl
+#                        if '' != cfParams.get('User-Agent', ''): recaptcha.HTTP_HEADER['User-Agent'] = cfParams['User-Agent']
+                        token = recaptcha.processCaptcha(sitekey, domain)
                         if token == '': return False, None
                         
                         sts, tmp = self.ph.getDataBeetwenMarkers(verData, '<form', '</form>', caseSensitive=False)
@@ -970,10 +970,16 @@ class common:
                         if url != '': url = _getFullUrl( url, domain )
                         else: url = data.meta['url']
                         actionType = self.ph.getSearchGroups(tmp, 'method="([^"]+?)"', 1, True)[0].lower()
-                        post_data2 = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
+#                        post_data2 = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', tmp))
+                        post_data2 = {}
+                        verData = re.findall(r'(<input[^>]*)>', re.sub("<!--.*?-->", "<!-- -->", verData))
+                        for item in verData:
+                            name = self.ph.getSearchGroups(item, '''\sname=['"]([^'^"]+?)['"]''')[0]
+                            value = self.ph.getSearchGroups(item, '''\svalue=['"]([^'^"]+?)['"]''')[0]
+                            post_data2[name] = value
                         #post_data2['id'] = id
                         if '' != token:
-                            post_data2['g-recaptcha-response'] = token
+                            post_data2['h-captcha-response'] = token
                         else:
                             continue
                         params2 = dict(params)
@@ -1001,18 +1007,17 @@ class common:
                                 break
                         decoded = ''
                         elemsText = {}
-                        tmp = ph.findall(verData, ('<div', '>', 'hidden'), '</div>', flags=ph.START_S)
-                        for idx in range(1, len(tmp), 2):
-                            eId = ph.getattr(tmp[(idx - 1)], 'id', flags=ph.I)
-                            if eId:
-                                elemsText[eId] = tmp[idx]
+                        tmp = re.findall("<div.*?id=\"([^\"]+)\">(.*?)</div>", verData)
+                        for item in tmp:
+                            if item[0] and re.search(r'\w+\d', item[0]):
+                                elemsText[item[0]] = item[1]
 
                         js_params = [{'path':GetJSScriptFile('cf.byte')}]
                         try:
                             dat = dat.replace(dat[dat.index('var isIE'):dat.index('setTimeout')],'')
                         except Exception:
                             printExc()
-                        js_params.append({'code': "var ELEMS_TEXT = %s; var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (json_dumps(elemsText), domain, dat)})
+                        js_params.append({'code': "var navigator={cookieEnabled:1}; var ELEMS_TEXT = %s; var location = {hash:''}; var iptv_domain='%s';\n%s\niptv_fun();" % (json_dumps(elemsText), domain, dat)})
                         ret = js_execute_ext( js_params )
                         decoded = json_loads(ret['data'].strip())
                         
@@ -1021,7 +1026,13 @@ class common:
                         printDBG(verData)
                         printDBG("<<")
                         verUrl =  _getFullUrl( ph.getattr(verData, 'action'), domain)
-                        get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
+                        get_data = {}
+                        verData = re.findall(r'(<input[^>]*)>', re.sub("<!--.*?-->", "<!-- -->", verData))
+                        for item in verData:
+                            name = self.ph.getSearchGroups(item, '''\sname=['"]([^'^"]+?)['"]''')[0]
+                            value = self.ph.getSearchGroups(item, '''\svalue=['"]([^'^"]+?)['"]''')[0]
+                            get_data[name] = value
+#                        get_data = dict(re.findall(r'<input[^>]*name="([^"]*)"[^>]*value="([^"]*)"[^>]*>', verData))
                         get_data['jschl_answer'] = decoded['answer']
                         post_data = 'r=%s&jschl_vc=%s&pass=%s&jschl_answer=%s' % (urllib.quote(get_data['r'],safe=''), urllib.quote(get_data['jschl_vc'],safe=''), urllib.quote(get_data['pass'],safe=''), get_data['jschl_answer'])
                         verUrl = _getFullUrl2( verUrl, domain).replace('&amp;','&')

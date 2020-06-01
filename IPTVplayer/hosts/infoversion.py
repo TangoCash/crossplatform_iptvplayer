@@ -8,6 +8,7 @@ import Plugins.Extensions.IPTVPlayer.libs.pCommon as pCommon
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, GetLogoDir, GetTmpDir, GetCookieDir, printExc, GetPluginDir, CSearchHistoryHelper, byteify, IsExecutable, iptv_system
 from Plugins.Extensions.IPTVPlayer.libs.urlparser import urlparser 
+from Plugins.Extensions.IPTVPlayer.libs.m3uparser import ParseM3u
 from Plugins.Extensions.IPTVPlayer.iptvdm.iptvdh import DMHelper
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import decorateUrl, getDirectM3U8Playlist, unpackJSPlayerParams, TEAMCASTPL_decryptPlayerParams
 from Plugins.Extensions.IPTVPlayer.libs.youtube_dl.utils import clean_html 
@@ -133,7 +134,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    infoversion = "2020.04.13a"
+    infoversion = "2020.05.24"
     inforemote  = "0.0.0"
     currList = []
     SEARCH_proc = ''
@@ -265,7 +266,7 @@ class Host:
 
         if 'Kamery' == name:
            valTab.append(CDisplayListItem('Kamery Toya GO', 'https://go.toya.net.pl/25', CDisplayListItem.TYPE_CATEGORY, ['https://go.toya.net.pl/25'], 'toyago', 'https://go.toya.net.pl/public/images/top_menu/logo-4.png?t=1494325022', None)) 
-           valTab.append(CDisplayListItem('Kamery Worldcam.live', 'https://worldcam.live/pl/list', CDisplayListItem.TYPE_CATEGORY, ['https://worldcam.live/pl/list'], 'worldcam', 'https://worldcam.live/img/logo-wcam.png', None)) 
+           valTab.append(CDisplayListItem('Kamery Worldcam.live', 'https://worldcam.live/pl/list', CDisplayListItem.TYPE_CATEGORY, ['https://worldcam.live/pl/kamery'], 'worldcam', 'https://worldcam.live/img/logo-wcam.png', None)) 
            #valTab.append(CDisplayListItem('LTV9 Łotwa', 'https://ltv.lsm.lv', CDisplayListItem.TYPE_CATEGORY, ['https://ltv.lsm.lv/lv/tieshraide/visiemltv.lv/live.1480/'], 'ltv', 'https://ltv.lsm.lv/public/assets/design/logo.png', None)) 
            valTab.append(CDisplayListItem('Kamery Animallive.tv', 'http://animallive.tv', CDisplayListItem.TYPE_CATEGORY, ['http://animallive.tv/pl/kamery-online.html'], 'animallive', 'https://pbs.twimg.com/profile_images/935924816082866177/oYFAlqKG_400x400.jpg', None)) 
            valTab.append(CDisplayListItem('Kamery San Diego ZOO', 'http://zoo.sandiegozoo.org', CDisplayListItem.TYPE_CATEGORY, ['http://zoo.sandiegozoo.org/content/video-more'], 'sandiegozoo', 'https://zoo.sandiegozoo.org/sites/default/files/inline-images/sdzlogo.png', None)) 
@@ -274,7 +275,7 @@ class Host:
            valTab.append(CDisplayListItem('Kamery SBL (Bieruń-Lędziny)', 'http://sblinternet.pl/kamery', CDisplayListItem.TYPE_CATEGORY, ['http://sblinternet.pl/kamery/bieru-rynek-76'], 'sbl', 'http://sblinternet.pl/img/logotype.png', None)) 
            #valTab.append(CDisplayListItem('Kamery Piła', 'http://www.tvasta.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.tvasta.pl/home/'], 'asta', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/POL_Pi%C5%82a_COA_1.svg/330px-POL_Pi%C5%82a_COA_1.svg.png', None)) 
            valTab.append(CDisplayListItem('Kamery WLKP24', 'http://wlkp24.info/kamery/', CDisplayListItem.TYPE_CATEGORY, ['http://wlkp24.info/kamery/'], 'wlkp24', 'http://archiwum.wlkp24.info/static/img/squarelogo400.jpg', None)) 
-           valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.pl', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.pl/'], 'lookcam', 'https://scontent.fktw1-1.fna.fbcdn.net/v/t31.0-1/p960x960/27788050_1671609012905840_6753883043113343720_o.jpg?_nc_cat=108&_nc_oc=AQkR3Zcp4JehhL5698WRE5Yqq2jF-D68xK0HwvH4opfJoqJ2bv6SaWJ1C_NYamFbJw4&_nc_ht=scontent.fktw1-1.fna&oh=b4b3862ed4657fe2f7bdf7564eb53b0c&oe=5E3B6159', None)) 
+           valTab.append(CDisplayListItem('Kamery Lookcam', 'https://lookcam.pl', CDisplayListItem.TYPE_CATEGORY, ['https://lookcam.pl/'], 'lookcam', 'https://lookcam.pl/static/7018212/images/logo.png', None)) 
            valTab.append(CDisplayListItem('Kamery Bieszczady', 'Kamery Bieszczady', CDisplayListItem.TYPE_CATEGORY, ['https://www.bieszczady.live/kamery'], 'Bieszczady', 'https://img4.dmty.pl//uploads/201410/1414266711_6cw4do_600.jpg', None)) 
            valTab.append(CDisplayListItem('Kamery Nadmorski24', 'https://www.nadmorski24.pl/kamery', CDisplayListItem.TYPE_CATEGORY, ['https://www.nadmorski24.pl/kamery'], 'nadmorski24', 'https://www.nadmorski24.pl/public/img/nadmorski-logo-1920.png', None)) 
            valTab.append(CDisplayListItem('Popler TV', 'http://www.popler.tv/live', CDisplayListItem.TYPE_CATEGORY, ['http://www.popler.tv/live'], 'poplertv', 'http://www.popler.tv/oferta_new/images/logo.png', None)) 
@@ -361,14 +362,14 @@ class Host:
 
         if 'Religijne' == name:
            if config.plugins.iptvplayer.religia.value:
-              valTab.append(CDisplayListItem('Andrychów - Parafia pw. św. Macieja', 'Parafia pw. św. Macieja w Andrychowie', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://media.aniolbeskidow.pl/andrychow1.php', 1)], 'andrychow', 'http://www.andrychow.bielsko.opoka.org.pl/images/maciej2.jpg', None)) 
+              #valTab.append(CDisplayListItem('Andrychów - Parafia pw. św. Macieja', 'Parafia pw. św. Macieja w Andrychowie', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://media.aniolbeskidow.pl/andrychow1.php', 1)], 'andrychow', 'http://www.andrychow.bielsko.opoka.org.pl/images/maciej2.jpg', None)) 
               valTab.append(CDisplayListItem('Andrychów - Parafia św. Stanisława Biskupa i Męczennika', 'Parafia św. Stanisława Biskupa i Męczennika w Andrychowie', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://stanislaw-andrychow.pl/kamera_online.html', 1)], 'andrychow', 'http://stanislaw-andrychow.pl/public/images/image.jpg', None)) 
-              valTab.append(CDisplayListItem('Andrychów - Parafia św. Stanisława Biskupa i Męczennika 2', 'Parafia św. Stanisława Biskupa i Męczennika w Andrychowie 2', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://stanislaw-andrychow.pl/kamera_online.html?k=2', 1)], 'andrychow', 'http://stanislaw-andrychow.pl/public/images/image.jpg', None)) 
+              #valTab.append(CDisplayListItem('Andrychów - Parafia św. Stanisława Biskupa i Męczennika 2', 'Parafia św. Stanisława Biskupa i Męczennika w Andrychowie 2', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://stanislaw-andrychow.pl/kamera_online.html?k=2', 1)], 'andrychow', 'http://stanislaw-andrychow.pl/public/images/image.jpg', None)) 
               #valTab.append(CDisplayListItem('Assisi - Basilica of St. Francis', 'Basilica of St. Francis in Assisi', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.skylinewebcams.com/en/webcam/italia/umbria/perugia/basilica-san-francesco-assisi.html', 1)], '', 'https://ladybudd.files.wordpress.com/2012/08/basilica-of-st-francis-of-assisi.jpg', None)) 
               valTab.append(CDisplayListItem('Cieszyn - Parafia Św. Marii Magdaleny', 'http://parafiamagdaleny.pl', CDisplayListItem.TYPE_CATEGORY, ['http://parafiamagdaleny.pl/parafia/transmisja-wideo'], 'magdalena', 'http://www.polskiekrajobrazy.pl/images/stories/big/50261.jpg', None)) 
-              valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 1  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy1'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
-              valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 2  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy2'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
-              valTab.append(CDisplayListItem('Częstochowa - Jasna Góra', 'http://www.jasnagora.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.jasnagora.pl/612,372,artykul,Kaplica_Matki_Bozej.aspx'], 'jasna', 'http://cdn19.se.smcloud.net/t/photos/280918/cudowny-wizerunek-matki-boskiej-czestochowskiej.jpg', None)) 
+              #valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 1  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy1'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
+              #valTab.append(CDisplayListItem('Cieszyn - Parafia Św.Jerzego 2  (exteplayer3)', 'http://www.swjerzycieszyn.ox.pl', CDisplayListItem.TYPE_CATEGORY, ['rtmp://80.51.121.254:5119/live/jerzy2'], 'swjerzy', 'http://www.cieszyn.pl/files/www.cieszyn.pl%20Renata%20Karpinska%2050[1].jpg', None)) 
+              valTab.append(CDisplayListItem('Częstochowa - Jasna Góra', 'http://www.jasnagora.pl', CDisplayListItem.TYPE_CATEGORY, ['http://www.jasnagora.pl/612,372,artykul,Kaplica_Matki_Bozej.aspx'], 'jasna', 'https://jasnagora.pl/wp-content/themes/ordipress/assets/img/top-mb.png', None)) 
               valTab.append(CDisplayListItem('Domradio.de', 'domradio.de', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCgX-WrCB5ALQOILWx-b6gUg/live'], 'domradio', 'https://www.domradio.de/sites/all/themes/domradio/images/logo.png', None)) 
               valTab.append(CDisplayListItem('Edmonton, Kanada - Parafia Różańca Świętego', 'http://msza-online.net', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCqdeE9jH5_xe7j3sLHsQcPQ/live'], 'edmonton', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Holy_Rosary_Church_Edmonton_Alberta_Canada_01A.jpg/1200px-Holy_Rosary_Church_Edmonton_Alberta_Canada_01A.jpg', None)) 
               valTab.append(CDisplayListItem('Fatima', 'http://www.fatima.pt', CDisplayListItem.TYPE_CATEGORY, ['http://www.fatima.pt/pt/pages/transmissoes-online'], 'fatima', 'http://usti.reckokat.cz/images/fatima-2017.jpg', None)) 
@@ -392,13 +393,15 @@ class Host:
               valTab.append(CDisplayListItem('Natanek Kazania Pasyjne', 'http://www.christusvincit-tv.pl', CDisplayListItem.TYPE_CATEGORY, ['http://christusvincit-tv.pl/articles.php?article_id=147'], 'pasyjne', 'http://img.youtube.com/vi/JRHdinMsXmA/hqdefault.jpg', None)) 
               valTab.append(CDisplayListItem('Piwniczna-Zdrój - Parafia pw Narodzenia Najświętszej Maryi Panny', 'http://www.parafia.piwniczna.com', CDisplayListItem.TYPE_CATEGORY, ['http://www.parafia.piwniczna.com/s48-tv---online.html'], 'piwniczna', 'http://www.parafia.piwniczna.com/images/panel_boczny.jpg', None)) 
               valTab.append(CDisplayListItem('Pogórze - Parafia NMP Królowej Polski', 'http://www.pogorze.katolik.bielsko.pl', CDisplayListItem.TYPE_CATEGORY, ['http://80.51.121.254/pogorze.m3u8'], 'pogorze', 'http://www.pogorze.info.pl/files/kosciol1.jpg', None)) 
-              valTab.append(CDisplayListItem('Radzionków - Parafis św. Wojciecha', 'Radzionków  Parafis św. Wojciecha', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCsuXsGQzzH-z9vjB1e4DACw/live'], 'radzionkow', 'https://i.ytimg.com/vi/jk5XDG__UgQ/mqdefault_live.jpg', None)) 
+              valTab.append(CDisplayListItem('Radzionków - Parafis św. Wojciecha', 'Radzionków  Parafis św. Wojciecha', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCsuXsGQzzH-z9vjB1e4DACw/live'], 'radzionkow', 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Parafia_%C5%9Bw._Wojciecha_w_Radzionkowie.JPG', None)) 
               valTab.append(CDisplayListItem('Sanok - Parafia Chrystusa Króla', 'Sanok Parafia Chrystusa Króla', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC-Jehng9zHoWXR9NfNXZkqA/live'], 'sanok', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Christ_the_King_church_in_Sanok_2012.jpg/240px-Christ_the_King_church_in_Sanok_2012.jpg', None)) 
               valTab.append(CDisplayListItem('Skoczów Kaplicówka - Sanktuarium Św. Jana Sarkandra', 'http://kamera.pompejanska.pl/', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://80.51.121.254:5119/live/kaplicowka', 0)], 'kaplicowka', 'http://www.polskaniezwykla.pl/pictures/original/278033.jpg', None))               #valTab.append(CDisplayListItem('Parafia Górny Bor', 'http://parafiagornybor.pl/kamera-online', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://parafiagornybor.pl/kamera-online', 1)], 'gornybor', 'http://www.parafiagornybor.ox.pl/images/slider/slide_02.jpg', None)) 
               valTab.append(CDisplayListItem('Skoczów Parafia pw. Św. Apostołów Piotra i Pawła', 'http://www.kamera.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://kamera.parafiaskoczow.ox.pl/'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/css/frontend/contactphoto.jpg', None)) 
               valTab.append(CDisplayListItem('Skoczów Parafia pw. Św. Apostołów Piotra i Pawła 2', 'http://www.kamera2.parafiaskoczow.ox.pl/', CDisplayListItem.TYPE_CATEGORY, ['http://www.kamera2.parafiaskoczow.ox.pl/'], 'skoczow', 'http://www.parafiaskoczow.ox.pl/css/frontend/contactphoto.jpg', None)) 
               valTab.append(CDisplayListItem('Skoczów Parafia Matki Bożej Różańcowej', 'Skoczów Parafia Matki Bożej Różańcowej', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UCeM7BtSCbkEAkFewPALHRMw/live'], 'skoczow3', 'https://yt3.ggpht.com/-3mqSWrOjsaU/AAAAAAAAAAI/AAAAAAAAAAA/ZRW9L0FHDt4/s288-mo-c-c0xffffffff-rj-k-no/photo.jpg', None)) 
-              valTab.append(CDisplayListItem('Tomaszów Lubelski - Kościół pw. Zwiastowania Najświętszej Marii Panny', 'http://www.tomaszow-sanktuarium.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.tomaszow-sanktuarium.pl/niedzielna-transmisja-wideo/', 1)], 'tomaszow', 'http://lubelskie.regiopedia.pl/sites/default/files/imagecache/width630px/photos/foto07.jpg', None)) 
+              valTab.append(CDisplayListItem('Tomaszów Lubelski - Kościół pw. Zwiastowania Najświętszej Marii Panny', 'https://tomaszow.lub.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://tomaszow.lub.pl/obraz-na-zywo-z-kamer-miejskich/', 1)], 'tomaszow', 'https://tomaszow.lub.pl/wp-content/uploads/2017/02/tpl_ogo_large.png', None)) 
+              valTab.append(CDisplayListItem('Tomaszów Lubelski - Kościół pw. Najświętszego Serca Jezusa', 'http://www.nsjtomaszowlub.pl', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.nsjtomaszowlub.pl/video', 1)], 'nsjtomaszow', 'http://www.nsjtomaszowlub.pl/images/phocagallery/2020/improb/thumbs/phoca_thumb_m_DSC_4612.jpg', None)) 
+
               valTab.append(CDisplayListItem('Trwam TV', 'http://www.tv-trwam.pl', CDisplayListItem.TYPE_CATEGORY, ['https://trwamtv.live.rd.insyscd.net/cl01/out/u/trwam.m3u8'], 'trwam', 'https://www.redemptor.pl/wp-content/uploads/2015/06/TV-Trwam-logo.jpg', None)) 
               valTab.append(CDisplayListItem('Turza Śląska - Sanktuarium Matki Bożej Fatimskiej', 'Turza Śląska - Sanktuarium Matki Bożej Fatimskiej', CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.sanktuarium.turza.pl/kamera.html', 1)], 'turza', 'http://www.sanktuarium.turza.pl/public/szablon/sanktuarium.turza.pl/img/logo.jpg', None)) 
               valTab.append(CDisplayListItem('Watykan CTV', 'http://www.ctv.va', CDisplayListItem.TYPE_CATEGORY, ['https://www.youtube.com/channel/UC7E-LYc1wivk33iyt5bR5zQ/live'], 'ctv', 'http://www.vaticannews.va/etc/designs/vatican-news/release/library/main/images/appletouch.png', None)) 
@@ -966,15 +969,23 @@ class Host:
             COOKIEFILE = os_path.join(GetCookieDir(), 'ert.cookie')
             sts, data = self.get_Page(url)
             if not sts: return valTab
+            data2 = self.cm.ph.getAllItemsBeetwenMarkers(data, '<!--', '-->')
+            for item in data2:
+                data = data.replace(item,'')
             printDBG( 'Host listsItems data: '+data )
             data = self.cm.ph.getDataBeetwenMarkers(data, '<iframe', '</iframe>', False)[1]
             Url = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
             printDBG( 'Host Url 2: '+Url )
-
             if Url.startswith('/'): Url = 'https://webtv.ert.gr' + Url
             sts, data = self.get_Page(Url)
             if not sts: return valTab
             printDBG( 'Host listsItems data2: '+data )
+            if '.m3u8' in data:
+                m3u8_url = self.cm.ph.getSearchGroups(data, r'''['"](http[^"^']+?\.m3u8[^"^']*?)['"]''')[0]
+                if self.cm.isValidUrl(m3u8_url):
+                    tmp = getDirectM3U8Playlist(m3u8_url, checkContent=True, sortWithMaxBitrate=999999999)
+                    for item in tmp:
+                        valTab.append(CDisplayListItem('ERT    '+item['name'], 'ERT    '+item['name'],  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', item['url'], 0)], 0, 'http://cdn1.bbend.net/media/com_news/story/2016/10/18/737807/main/sd-2sdf.jpg', None))
             Url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](https://www.youtube.com[^"^']+?)['"]''', 1, True)[0]
             if not Url:
                 data = self.cm.ph.getDataBeetwenMarkers(data, '<iframe', '</iframe>', False)[1]
@@ -1149,12 +1160,11 @@ class Host:
                 Title = self._cleanHtmlStr(item).strip()+'  na żywo'
                 if Url.startswith('/'): Url = 'http://animallive.tv' + Url
                 valTab.append(CDisplayListItem(Title,Title,CDisplayListItem.TYPE_CATEGORY, [Url],'animallive-clips', '', None)) 
-            valTab.append(CDisplayListItem('Kalakaamera', 'Kalakaamera',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://www.youtube.com/channel/UCN8196-VuPxsUBzCLgwVUfA/live', 1)], 0, '', None))
-            valTab.append(CDisplayListItem('Estonia live', 'Estonia live',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://www.youtube.com/channel/UCa7D-kXKYvG-fOEDn_HVkkA/live', 1)], 0, '', None))
+
             valTab.append(CDisplayListItem('Żubry online', 'Żubry online',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.lasy.gov.pl/pl/informacje/kampanie_i_akcje/zubryonline', 1)], 0, 'http://www.lasy.gov.pl/pl/informacje/kampanie_i_akcje/zubryonline/logo_projekt_zubr-200-2.jpg', None))
             valTab.insert(0,CDisplayListItem('--- Kamery kukaj.sk ---', 'http://www.kukaj.sk/', CDisplayListItem.TYPE_CATEGORY, ['http://www.kukaj.sk/'], 'kukaj', 'http://www.kukaj.sk/images/design/logo.png', None)) 
             valTab.insert(0,CDisplayListItem("--- Ptaki w gniazdach ---","Ptaki w gniazdach",     CDisplayListItem.TYPE_CATEGORY,[''],'ptaki',    '',None))
-            #valTab.insert(0,CDisplayListItem("--- Kamery Estonia ---","Kamery Estonia",     CDisplayListItem.TYPE_CATEGORY,['http://pontu.eenet.ee/'],'animalestonia',    '',None))
+            valTab.insert(0,CDisplayListItem("--- Kamery Estonia ---","Kamery Estonia",     CDisplayListItem.TYPE_CATEGORY,['https://www.looduskalender.ee/n/en'],'animalestonia',    '',None))
 
             if data != []:
                 valTab.insert(0,CDisplayListItem("--- Atlas zwierząt ---","Atlas zwierząt",     CDisplayListItem.TYPE_CATEGORY,['http://animallive.tv/pl/atlas-zwierzat.html'],'animallive-filmy',    '',None))
@@ -1280,38 +1290,46 @@ class Host:
 
         if 'animalestonia' == name:
             printDBG( 'Host listsItems begin name='+name )
-            COOKIEFILE = os_path.join(GetCookieDir(), 'animalestonia.cookie')
+            COOKIEFILE = os_path.join(GetCookieDir(), 'looduskalender.cookie')
+            mainUrl = 'https://www.looduskalender.ee'
             host = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
             header = {'Referer':url, 'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}   
-            try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host getResolvedURL query error url: '+url )
-                return valTab
+            self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.getPage(url, 'looduskalender.cookie', 'looduskalender.ee', self.defaultParams)
+            if not sts: return ''
             printDBG( 'Host listsItems data1: '+data )
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<td>', '</td>')
+            valTab.append(CDisplayListItem('Estonia live1', 'Estonia live1',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://www.youtube.com/channel/UCN8196-VuPxsUBzCLgwVUfA/live', 1)], 0, '', None))
+            valTab.append(CDisplayListItem('Estonia live2', 'Estonia live2',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://www.youtube.com/channel/UCa7D-kXKYvG-fOEDn_HVkkA/live', 1)], 0, '', None))
+            data = data.split('<div id="pilt')
+            if len(data): del data[0] 
             for item in data:
                 Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
-                Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
-                Image = 'http://pontu.eenet.ee/' + Image
-                Image = urlparser.decorateUrl(Image, {'Referer': url, 'Origin':'http://pontu.eenet.ee'})  
-                Title = Url.split('/')[-1].replace('.html','') 
-                if Url.startswith('/'): Url = 'http://tv.eenet.ee/' + Url
+                Image = self.cm.ph.getSearchGroups(item, '''Image\(['"]([^"^']+?)['"]''', 1, True)[0] 
+                Title = self.cm.ph.getSearchGroups(item, '''70px;">([^>]+?)<''', 1, True)[0] 
+                if not Title: Title = Image.split('/')[-1].replace('.html','')
+                if Image.startswith('/'): Image = mainUrl + Image
+                if Url.startswith('/'): Url = mainUrl + Url
                 valTab.append(CDisplayListItem(Title, Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, Image, None))
             return valTab  
 
         if 'sandiegozoo' == name:
             printDBG( 'Host listsItems begin name='+name )
-            Title = ''
-            valTab.append(CDisplayListItem('baboon', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/baboon-cam', 1)], 0, 'http://i1.memy.pl/big/d04427_136957621470.jpeg', None))
-            valTab.append(CDisplayListItem('ape', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/ape-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/monkey.jpg?itok=oLhB7EXH', None))
-            valTab.append(CDisplayListItem('panda', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/panda-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/all/themes/atparktheme/images/2016-home-cams-panda-cam.png', None))
-            valTab.append(CDisplayListItem('penguin', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/penguin-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/all/themes/atparktheme/images/2016-home-cams-penguins.png', None))
-            valTab.append(CDisplayListItem('koala', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/koala-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/koalas.jpg?itok=wyUMy4tc', None))
-            valTab.append(CDisplayListItem('polar', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://zoo.sandiegozoo.org/cams/polar-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/all/themes/atparktheme/images/2016-home-cams-polar-cam.png', None))
-            valTab.append(CDisplayListItem('tiger', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://sdzsafaripark.org/tiger-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/malayan-tiger.jpg?itok=5PQYjA7f', None))
-            valTab.append(CDisplayListItem('elephant', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://sdzsafaripark.org/elephant-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/elephants.jpg?itok=GJXgrFaJ', None))
-            valTab.append(CDisplayListItem('giraffe', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://sdzsafaripark.org/giraffe-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/giraffe.jpg?itok=XS7dt0Kf', None))
-            valTab.append(CDisplayListItem('condor', Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://sdzsafaripark.org/condor-cam', 1)], 0, 'http://zoo.sandiegozoo.org/sites/default/files/styles/294_square_fp_crop/public/ca-condor2.jpg?itok=gjdkCtbg', None))
+            main_Url = 'https://zoo.sandiegozoo.org'
+            COOKIEFILE = os_path.join(GetCookieDir(), 'sandiegozoo.cookie')
+            self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.getPage('https://zoo.sandiegozoo.org/live-cams', 'sandiegozoo.cookie', 'sandiegozoo.org', self.defaultParams)
+            if not sts: return ''
+            printDBG( 'Host listsItems data1: '+str(data) )
+            data = data.split('<div class="viewitem">')
+            if len(data): del data[0]
+            for item in data:
+                Title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''', 1, True)[0] 
+                Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0].replace("&amp;","&")
+                if not Image: Image = self.cm.ph.getSearchGroups(item, '''data-original=['"]([^"^']+?)['"]''', 1, True)[0].replace("&amp;","&")
+                Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0].replace("&amp;","&") 
+                if Url.startswith('/'): Url = main_Url + Url
+                if Image.startswith('/'): Image = main_Url + Image
+                valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, Image, None))
             return valTab  
 
         if 'milanos' == name:
@@ -2039,7 +2057,8 @@ class Host:
                 icon  = ph.search(item, 'image:\surl\(([^"]+?)\)')[0]
                 title = self._cleanHtmlStr(ITEM_MARKER + item).split('kamera IP')[0]
                 title = title.split('na żywo')[0]
-                desc  = self._cleanHtmlStr(ITEM_MARKER + item).replace('Autor','\nAutor')
+                if 'Kanał prywatny' in title: continue
+                desc  = self._cleanHtmlStr(ITEM_MARKER + item).replace(',','\n').replace('Autor','\nAutor').strip()
                 Url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
                 if Url.startswith('/'): Url = 'http://www.popler.tv' + Url
                 valTab.append(CDisplayListItem(title.strip(), desc,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, '', None))
@@ -2105,7 +2124,7 @@ class Host:
             printDBG( 'Host listsItems begin name='+name )
             COOKIEFILE = os_path.join(GetCookieDir(), 'pastebin.cookie')
             #url = 'https://www.google.pl/search?q=%23extm3u+pastebin+poland&tbs=qdr:m'
-            url = 'https://www.google.pl/search?q=extm3u+poland+site%3Apastebin.com&tbs=qdr:m'
+            url = 'https://www.google.pl/search?q=extm3u+site%3Apastebin.com&tbs=qdr:m'
             #url = 'https://www.google.pl/search?q=extm3u+poland+tvp+site%3Apastebin.com&tbs=qdr:m'
             self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
             self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
@@ -2129,20 +2148,23 @@ class Host:
             self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
             sts, data = self.get_Page(url)
             if not sts: return valTab
+            if self.cm.meta['status_code']!=200:
+                SetIPTVPlayerLastHostError(_(str(self.cm.meta['status_code'])))
+                valTab.insert(0,CDisplayListItem('Status Code: '+str(self.cm.meta['status_code']),  'Status Code: '+str(self.cm.meta['status_code']),             CDisplayListItem.TYPE_MORE,             [''], '',        '', None)) 
+                return valTab
             printDBG( 'Host listsItems data: '+data )
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'XTINF', '#E')
+            data = ParseM3u(data)
+            groups = {}
             for item in data:
-                try:
-                    item = item.split('\n')
-                    printDBG( 'Host item:%s ' % item )
-                    Image = self.cm.ph.getSearchGroups(item[0], '''tvg-logo=['"]([^"^']+?)['"]''', 1, True)[0] 
-                    Title = self.cm.ph.getSearchGroups(item[0], ''',([^,]+?)[\.\r]''', 1, True)[0].strip()
-                    Url = self.cm.ph.getSearchGroups(item[1], '''([^>]+?)[\r]''', 1, True)[0]
-                    if not Url: Url = item[1]
-                    valTab.append(CDisplayListItem(Title,Url,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, Image, None))
-                except Exception:
-                    printExc()
-                #valTab.sort(key=lambda poz: poz.name)
+                printDBG( 'Host item:%s ' % item )
+
+                group = item.get('group-title', '')
+                url = item['uri']
+                icon = item.get('tvg-logo', '') 
+            
+                if item['f_type'] == 'inf':
+                    valTab.append(CDisplayListItem(item['title'],url,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', url, 0)], 0, icon, None))
+
             return valTab 
         if 'darmowaonline' == name:
             printDBG( 'Host listsItems begin name='+name )
@@ -2373,6 +2395,7 @@ class Host:
                 if not Title: Title = self.cm.ph.getSearchGroups(item, 'alt="([^"]+?)"')[0].strip()
                 Url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
                 if Url.startswith('/'): Url = mainurl + Url
+                if Url.startswith('kamer'): Url = mainurl + '/' + Url
                 if Image.startswith('/'): Image = mainurl + Image
                 valTab.append(CDisplayListItem(decodeHtml(Title), decodeHtml(Title),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, Image, None))
             return valTab
@@ -2464,7 +2487,7 @@ class Host:
            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': False, 'save_cookie': True, 'cookiefile': COOKIEFILE}
            sts, data = self.get_Page(url)
            if not sts: return valTab
-           #printDBG( 'Host listsItems data: '+data )
+           printDBG( 'Host listsItems data: '+data )
 
         if 'info' == name:
             x = 0
@@ -2852,30 +2875,18 @@ class Host:
             printDBG( 'Host listsItems begin name='+name )
             link = re.search('<iframe.*?src="(.*?)"', data, re.S|re.I)
             if link: 
-                query_data = {'url': link.group(1), 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-                try:
-                   data = self.cm.getURLRequestData(query_data)
-                except:
-                   printDBG( 'Host listsItems ERROR' )
-                   return valTab
-                #printDBG( 'Host listsItems data '+data )
-                streamName = self.cm.ph.getSearchGroups(data, '''"streamName":['"]([^"^']+?)['"]''')[0] 
-                rtmpPort = self.cm.ph.getSearchGroups(data, '''"rtmpPort":([^"^']+?),''')[0] 
-                rtmp_app = self.cm.ph.getSearchGroups(data, '''rtmp_app = ['"]([^"^']+?)['"]''')[0] 
-                rtmp_host = self.cm.ph.getSearchGroups(link.group(1), '''//([^"^']+?):''')[0] 
-                printDBG( 'Host listsItems streamName: '+streamName )
-                printDBG( 'Host listsItems rtmpPort: '+rtmpPort )
-                printDBG( 'Host listsItems rtmp_app: '+rtmp_app )
-                printDBG( 'Host listsItems rtmp_host: '+rtmp_host )
-                hls_url = link.group(1).replace('embed.html?dvr=false','index.m3u8')
-                hls_url = link.group(1).replace('embed.html','index.m3u8')
-                if self.cm.isValidUrl(hls_url): 
-                    tmp = getDirectM3U8Playlist(hls_url)
+                COOKIEFILE = os_path.join(GetCookieDir(), 'info.cookie')
+                self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+                self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+                sts, data = self.get_Page(link.group(1))
+                if not sts: return valTab
+                data = data.replace('&quot;','"').replace('\/','/')
+                printDBG( 'Host listsItems data: '+data )
+                videoUrl = self.cm.ph.getSearchGroups(data, '''src['"]:['"]([^"^']+?)['"]''')[0].replace('\/','/')
+                if self.cm.isValidUrl(videoUrl): 
+                    tmp = getDirectM3U8Playlist(videoUrl)
                     for item in tmp:
                         valTab.append(CDisplayListItem('Cieszyn  m3u8', str(item['name']),  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', str(item['url']), 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
-                if rtmp_app:
-                    rtmp_url = 'rtmp://'+rtmp_host+':'+rtmpPort+'/'+rtmp_app+'/'+streamName+' live=1'
-                    valTab.append(CDisplayListItem('Cieszyn  rtmp', 'Cieszyn  rtmp',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', rtmp_url, 0)], 0, 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg/240px-Cieszyn_sw_Marii_Magdaleny_od_pd_wsch.jpg', None))
             return valTab 
 
         if 'wilno' == name:
@@ -2971,19 +2982,15 @@ class Host:
 
         if 'worldcam' == name:
             printDBG( 'Host listsItems begin name='+name )
-            menu = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="list-item">', '</p>')
+            menu = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="thumb b', '</p>')
             printDBG( 'Host listsItems: '+str(menu) )
             for item in menu:
                 Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
                 Title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0].strip()
-                Image = self.cm.ph.getSearchGroups(item, '''url\(['"]([^"^']+?)['"]''', 1, True)[0] 
-                Location = self.cm.ph.getSearchGroups(item, '''list-item-name">([^>]+?)<''', 1, True)[0].strip()
-                Lok = Location.split(',')[0].strip()
-                ation = Location.split(',')[1].strip()
-                Location = Lok+' - '+ation
+                Image = self.cm.ph.getSearchGroups(item, '''srcset=['"]([^"^']+?jpg)['"]''', 1, True)[0] 
                 if Image.startswith('/'): Image = 'http://worldcam.live' + Image
                 if Url.startswith('/'): Url = 'http://worldcam.live' + Url
-                valTab.append(CDisplayListItem(Location,Location+'\n'+Title,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)],'', Image, None)) 
+                valTab.append(CDisplayListItem(Title,Title,CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)],'', Image, None)) 
 
             valTab.insert(0,CDisplayListItem('Żywiec', 'http://www.zywiec.pl/kamery,120.html', CDisplayListItem.TYPE_CATEGORY, ['http://www.zywiec.pl/kamery,120.html'], 'zywiec', 'http://www.zywiec.pl/images/logo.png', None)) 
             valTab.insert(0,CDisplayListItem("Poznań - MTP", "https://www.mtp.pl/pl/", CDisplayListItem.TYPE_VIDEO,[CUrlItem('', 'https://live.mtp.pl/cam1.ts/stream.m3u8', 0)], '', 'https://vignette.wikia.nocookie.net/poznan/images/c/c4/MTP.jpg/revision/latest/scale-to-width-down/300?cb=20120328193828&path-prefix=pl',None))
@@ -3460,54 +3467,43 @@ class Host:
 
         if 'kukaj' == name:
             printDBG( 'Host listsItems begin name='+name )
-            data = self.cm.ph.getDataBeetwenMarkers(data, '<nav class="projekty"', '</nav>', False)[1]
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<li>', '</li>')
+            data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="card', '</div>')
             for item in data:
-                Title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''', 1, True)[0] 
+                Title = self.cm.ph.getSearchGroups(item, '''title=['"]([^"^']+?)['"]''', 1, True)[0] 
                 Url = self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)['"]''', 1, True)[0] 
                 Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
+                if not '/projekt/' in Url: continue
+                if '19-media' in Url: continue
                 if Url.startswith('/'): Url = 'http://www.kukaj.sk' + Url
                 if Url.startswith('//'): Url = 'http:' + Url
                 if Image.startswith('//'): Image = 'http:' + Image
-                valTab.append(CDisplayListItem(Title,Title, CDisplayListItem.TYPE_CATEGORY, [Url], 'kukaj-clips', Image, Title)) 
+                valTab.append(CDisplayListItem(Title, Title,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, Image, None))
             return valTab
-        if 'kukaj-clips' == name:
-            printDBG( 'Host listsItems begin name='+name )
-            catUrl = self.currList[Index].possibleTypesOfSearch
-            data = self.cm.ph.getAllItemsBeetwenMarkers(data, 'var player', ');')
-            for item in data:
-                Title = self.cm.ph.getSearchGroups(item, '''alt=['"]([^"^']+?)['"]''', 1, True)[0] 
-                Url = self.cm.ph.getSearchGroups(item, '''"sourceURL": ['"]([^"^']+?)['"]''', 1, True)[0] 
-                Image = self.cm.ph.getSearchGroups(item, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
-                if Url.startswith('/'): Url = 'http://www.kukaj.sk' + Url
-                if Url.startswith('//'): Url = 'http:' + Url
-                if Image.startswith('//'): Image = 'http:' + Image
-                valTab.append(CDisplayListItem(catUrl, catUrl,  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 0)], 0, '', None))
-            return valTab
+
 
         #http://www.peregrinus.pl/pl/podglad-gniazd-na-zywo
         if 'ptaki' == name:
             printDBG( 'Host listsItems begin name='+name )
 
-            valTab.append(CDisplayListItem('Bociany z Przygodzic CAM1', 'Bociany z Przygodzic CAM1',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.bociany.przygodzice.pl/', 1)], 0, 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
+            #valTab.append(CDisplayListItem('Bociany z Przygodzic CAM1', 'Bociany z Przygodzic CAM1',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.bociany.przygodzice.pl/', 1)], 0, 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
             valTab.append(CDisplayListItem('Bociany z Przygodzic CAM2', 'Bociany z Przygodzic CAM2',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://www.bociany.przygodzice.pl/indexcam2.html', 1)], 0, 'http://dinoanimals.pl/wp-content/uploads/2013/05/Bocian-DinoAnimals.pl-5.jpg', None))
-            valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN podest', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://stream.orlen.pl:443/sokol/podest.stream/playlist.m3u8', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
-            valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN gniazdo', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://stream.orlen.pl:443/sokol/gniazdo.stream/playlist.m3u8', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
-            valTab.append(CDisplayListItem('Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku', 'Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://53c7d208964cd.streamlock.net/mpecz/mpecpodest.stream/playlist.m3u8', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
-            valTab.append(CDisplayListItem('Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku', 'Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://53c7d208964cd.streamlock.net/mpecw/mpecw.stream_aac/playlist.m3u8', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
+            valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN podest', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://stream.orlen.pl:443/sokol/podest.stream/playlist.m3u8', 0)], 0, 'http://www.peregrinus.pl/images/comprofiler/4246_5e91d934b04fa.jpg', None))
+            valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN gniazdo', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://stream.orlen.pl:443/sokol/gniazdo.stream/playlist.m3u8', 0)], 0, 'http://www.peregrinus.pl/images/comprofiler/4246_5e91d934b04fa.jpg', None))
+            valTab.append(CDisplayListItem('Sokół wędrowny na kominie MPEC we Włocławku podest', 'Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://53c7d208964cd.streamlock.net/mpecz/mpecpodest.stream/playlist.m3u8', 0)], 0, 'http://www.peregrinus.pl/images/comprofiler/4246_5e91d934b04fa.jpg', None))
+            valTab.append(CDisplayListItem('Sokół wędrowny na kominie MPEC we Włocławku gniazdo', 'Sokół wędrowny na kominie Miejskiego Przedsiębiorstwa Energetyki Cieplnej we Włocławku',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'https://53c7d208964cd.streamlock.net/mpecw/mpecw.stream_aac/playlist.m3u8', 0)], 0, 'http://www.peregrinus.pl/images/comprofiler/4246_5e91d934b04fa.jpg', None))
+            valTab.append(CDisplayListItem('Czarny Bocian - Hungary', 'Czarny Bocian - Hungary',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'http://gemenczrt.hu/media/feketegolya-feszek/', 1)], 0, 'http://gemenczrt.hu/wp-content/uploads/2020/05/3f_1_200501.jpg', None))
 
             url ='https://www.sokolka.tv/index.php/kamery-online/gniazdo-bocianie'
-            query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
-            try:
-               data = self.cm.getURLRequestData(query_data)
-            except:
-               printDBG( 'Host listsItems ERROR' )
-               return valTab
-            #printDBG( 'Host listsItems data '+data )
+            COOKIEFILE = os_path.join(GetCookieDir(), 'info.cookie') 
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': False, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data '+data )
             Url = self.cm.ph.getSearchGroups(data, '''(//www.youtube.com[^"^']+?)['"?]''')[0] 
             if Url:
                if Url.startswith('//'): Url = 'https:' + Url 
-               #valTab.append(CDisplayListItem('Kamera na bocianim gnieździe Sokółka (youtube)', 'Kamera na bocianim gnieździe Sokółka (youtube)',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, 'http://zasoby.ekologia.pl/artykulyNew/19316/xxl/800px-ciconia-ciconia-01-bocian-bialy_800x600.jpg', None))
+               valTab.append(CDisplayListItem('Kamera na bocianim gnieździe Sokółka', 'Kamera na bocianim gnieździe Sokółka (youtube)',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', Url, 1)], 0, 'http://zasoby.ekologia.pl/artykulyNew/19316/xxl/800px-ciconia-ciconia-01-bocian-bialy_800x600.jpg', None))
 
             #valTab.append(CDisplayListItem('Sokół wędrowny Płock ORLEN (rtmp)', 'Sokół wędrowny Płock ORLEN',  CDisplayListItem.TYPE_VIDEO, [CUrlItem('', 'rtmp://stream.orlen.pl:1935/sokol playpath=gniazdo.stream swfUrl=http://webcam.peregrinus.pl/plugins/hwdvs-videoplayer/jwflv/mediaplayer.swf pageUrl=http://webcam.peregrinus.pl/pl/plock-orlen-podglad', 0)], 0, 'http://postis.pl/wp-content/uploads/sok%C3%B3%C5%82-w%C4%99drowny.jpeg', None))
 
@@ -3737,6 +3733,20 @@ class Host:
         printDBG( 'Host getResolvedURL url: '+url )
         videoUrl = ''
         valTab = []
+
+        if 'kukaj' in url:
+            COOKIEFILE = os_path.join(GetCookieDir(), 'kukaj.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': False, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return ''
+            printDBG( 'Host listsItems data: %s' % data )
+            videoUrl = self.cm.ph.getSearchGroups(data, '''"sourceURL":\s*?['"]([^"^']+?)['"]''', 1, True)[0].replace(r'http:',r'https:').replace(r':443','')
+            videoUrl = strwithmeta(videoUrl, {'Referer':url, 'Origin':"https://www.kukaj.sk"})
+            tmp = getDirectM3U8Playlist(videoUrl, checkContent=True, sortWithMaxBitrate=999999999)
+            for item in tmp:
+                return item['url']
+            return ''
 
         if url.startswith('http://www.skrzyczne.cos.pl'):
             COOKIEFILE = os_path.join(GetCookieDir(), 'skrzyczne.cookie')
@@ -4220,26 +4230,45 @@ class Host:
 
         if 'popler' in url:
             printDBG( 'Host getResolvedURL mainurl: '+url )
-            COOKIEFILE = os_path.join(GetCookieDir(), 'tawizja.cookie')
-            host = "Mozilla/5.0 (Linux; U; Android 4.1.1; en-us; androVM for VirtualBox ('Tablet' version with phone caps) Build/JRO03S) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Safari/534.30"
-            header = {'Referer':url, 'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}   
-            try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host getResolvedURL query error url: '+url )
-                return ''
-            printDBG( 'Host listsItems data1: '+data )
+            COOKIEFILE = os_path.join(GetCookieDir(), 'poplertv.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.HTTP_HEADER['Referer'] = 'http://www.popler.tv/live'
+            self.HTTP_HEADER['X-Requested-With'] = 'XMLHttpRequest'
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url, self.defaultParams)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data: '+data )
             data = self.cm.ph.getDataBeetwenMarkers(data, '<iframe', '/iframe>', False)[1].replace('\\','')
             #printDBG( 'Host listsItems data2: '+data )
             url = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
             if url.startswith('//'): url = 'http:' + url
-            header = {'Referer':url, 'User-Agent': host, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}   
-            try: data = self.cm.getURLRequestData({ 'url': url, 'header': header, 'use_host': False, 'use_cookie': True, 'save_cookie': True, 'load_cookie': False, 'cookiefile': COOKIEFILE, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host getResolvedURL query error url: '+url )
-                return ''
-            printDBG( 'Host listsItems data2: '+data )
+            sts, data = self.get_Page(url, self.defaultParams)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data3: '+data )
+            videoUrl = self.cm.ph.getSearchGroups(data, '''src:  ['"]([^"^']+?)['"]''', 1, True)[0] 
+            tmp = getDirectM3U8Playlist(videoUrl, checkContent=True, sortWithMaxBitrate=999999999)
+            for item in tmp:
+                return item['url']
 
-            return self.cm.ph.getSearchGroups(data, '''src:  ['"]([^"^']+?)['"]''', 1, True)[0] 
+            path = self.cm.ph.getSearchGroups(data, '''path = ['"]([^"^']+?)['"]''', 1, True)[0] 
+            app = self.cm.ph.getSearchGroups(data, '''app = ['"]([^"^']+?)['"]''', 1, True)[0] 
+            stream = self.cm.ph.getSearchGroups(data, '''stream = ['"]([^"^']+?)['"]''', 1, True)[0] 
+            cdn = self.cm.ph.getSearchGroups(data, '''cdn = ['"]([^"^']+?)['"]''', 1, True)[0] 
+            multi = self.cm.ph.getSearchGroups(data, '''multi = ['"]([^"^']+?)['"]''', 1, True)[0] 
+
+            posturl = 'https://www.popler.tv/api/urlsign.php'
+            postdata = {'path': path, 'app': app, 'stream': stream, 'cdn': cdn, 'multi': multi, 'dvr': '1', 'ile': '1'}
+            sts, data = self.get_Page(posturl, self.defaultParams, postdata)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data4: '+data )
+            try:
+                result = byteify(simplejson.loads(data))
+                for item in result:
+                    printDBG( 'Host listsItems data5: '+item )
+                    if 'm3u8' in item: return item
+            except Exception as e:
+                printExc()
+            return ''
 
         if url.startswith('http://www.rbl.tv'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
@@ -4286,6 +4315,8 @@ class Host:
             data = self.cm.ph.getDataBeetwenMarkers(data, '<iframe', '</iframe>', False)[1]
             url = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?)['"]''', 1, True)[0] 
             if url.startswith('//'): url = 'http:' + url
+            if 'youtu' in url: return self.getResolvedURL(url)
+
             sts, data = self.getPage(url, 'lookcam.cookie', 'lookcam.com', self.defaultParams)
             if not sts: return ''
             printDBG( 'Host listsItems data2: '+str(data) )
@@ -4307,9 +4338,12 @@ class Host:
             if not sts: return ''
             printDBG( 'Host listsItems data1: '+str(data) )
             Url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0]
+            if Url.startswith('//'): Url = 'http:' + Url
+            if 'webcamera' in Url: return self.getResolvedURL(Url)
             sts, data = self.getPage(Url, 'andrychow.cookie', 'andrychow.pl', self.defaultParams)
             if not sts: return ''
             printDBG( 'Host listsItems data2: '+str(data) )
+            
             m3u8_link = self.cm.ph.getSearchGroups(data, '''source:\s*['"]([^"^']+?)['"]''', 1, True)[0]
             if m3u8_link.startswith('//'): m3u8_link = 'http:' + m3u8_link
             m3u8_link = urlparser.decorateUrl(m3u8_link, {'Referer': url, 'User-Agent':self.USER_AGENT})  
@@ -4467,7 +4501,34 @@ class Host:
             printDBG( 'Host listsItems data2: '+data )
             m3u8 = self.cm.ph.getSearchGroups(data, '''var src = ['"]([^"^']+?)['"]''')[0] 
             return m3u8
-            return ''
+
+        if url.startswith('http://gemenczrt.hu'):
+            COOKIEFILE = os_path.join(GetCookieDir(), 'gemenczrt.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data1: '+data )
+            link = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''')[0] 
+            sts, data = self.get_Page(link)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data2: '+data )
+            camid = self.cm.ph.getSearchGroups(data, '''var camid = ['"]([^"^']+?)['"]''')[0] 
+            playerid = self.cm.ph.getSearchGroups(data, '''var playerid = ['"]([^"^']+?)['"]''')[0] 
+            token = self.cm.ph.getSearchGroups(data, '''var token = ['"]([^"^']+?)['"]''')[0] 
+            link = "https://stream-infocam.infornax.hu/?action=get_init_tid_pid&camid="+camid+"&playerid="+playerid+"&token="+token
+            sts, data = self.get_Page(link)
+            if not sts: return valTab
+            printDBG( 'Host listsItems data3: '+data )
+            pid = self.cm.ph.getSearchGroups(data, '''pid":['"]([^"^']+?)['"]''')[0] 
+            tid = self.cm.ph.getSearchGroups(data, '''tid":['"]([^"^']+?)['"]''')[0] 
+            videoUrl = 'https://s'+pid+'infocam.infornax.hu/t'+tid+'/nv/'+camid+'/playlist.m3u8'
+            if self.cm.isValidUrl(videoUrl): 
+                tmp = getDirectM3U8Playlist(videoUrl, checkContent=True, sortWithMaxBitrate=999999999)
+                for item in tmp:
+                    printDBG( 'Host item: '+str(item) )
+                    return item['url']
+            return videoUrl
 
         if url.startswith('http://www.bociany.przygodzice.pl/'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
@@ -4503,6 +4564,20 @@ class Host:
             videoUrl = self.cm.ph.getSearchGroups(data, """hls": ['"]([^'^"]+?)['"]""")[0]
             return videoUrl
         
+        if url.startswith('https://www.looduskalender.ee'):
+            COOKIEFILE = os_path.join(GetCookieDir(), 'looduskalender.cookie')
+            mainUrl = 'https://www.looduskalender.ee'
+            self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.getPage(url, 'looduskalender.cookie', 'looduskalender.ee', self.defaultParams)
+            if not sts: return ''
+            if '/node/4090' in url: return self.getResolvedURL('https://www.youtube.com/channel/UCqCNelAJXWj7feiEBY2fsCA/live')
+            printDBG( 'Host listsItems data1: '+data )
+            videoUrl = self.cm.ph.getSearchGroups(data, '''(https://www.youtube.com/watch[^"^']+?)['"]''', 1, True)[0] 
+            if len(videoUrl)>10: return self.getResolvedURL(videoUrl)
+            videoUrl = self.cm.ph.getSearchGroups(data, '''(https://youtu.be[^"^']+?)['"]''', 1, True)[0] 
+            if len(videoUrl)>10: return self.getResolvedURL(videoUrl)
+            return ''
+
         if url.startswith('https://tv.eenet.ee'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
             COOKIEFILE = os_path.join(GetCookieDir(), 'animalestonia.cookie')
@@ -4522,22 +4597,24 @@ class Host:
                     return item['url']
             return ''
 
-        if url.startswith('http://zoo.sandiegozoo.org') or url.startswith('http://sdzsafaripark.org'):
+        if url.startswith('https://zoo.sandiegozoo.org') or url.startswith('https://sdzsafaripark.org'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
             COOKIEFILE = os_path.join(GetCookieDir(), 'sandiegozoo.cookie')
             self.defaultParams = {'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
             sts, data = self.getPage(url, 'sandiegozoo.cookie', 'sandiegozoo.org', self.defaultParams)
             if not sts: return ''
             printDBG( 'Host listsItems data1: '+str(data) )
-            Url = self.cm.ph.getSearchGroups(data, '''videoWrapper"><IFRAME\ssrc=['"]([^"^']+?)['"]''', 1, True)[0].replace('&amp;','&')
-            if Url == '': Url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"](http://[^"^']+?)['"]''', 1, True)[0].replace('&amp;','&')
-            printDBG( 'Host Url: '+str(Url) )
+            data = ph.IFRAME.findall(data)
+            for item in data:
+                Url = self.cm.getFullUrl(item[1]).replace('&amp;','&')
+                if 'google' in Url: continue
+                if 'Stream' in Url: break
             sts, data = self.getPage(Url, 'sandiegozoo.cookie', 'sandiegozoo.org', self.defaultParams)
             if not sts: return ''
             printDBG( 'Host listsItems data2: '+str(data) )
             Url = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?\.m3u8)['"]''', 1, True)[0].replace('&amp;','&')
             if self.cm.isValidUrl(Url): 
-                tmp = getDirectM3U8Playlist(Url)
+                tmp = getDirectM3U8Playlist(Url, checkContent=True, sortWithMaxBitrate=999999999)
                 for item in tmp:
                     return item['url']
             return ''
@@ -4972,6 +5049,23 @@ class Host:
                             return item['url']
             return ''
 
+        if url.startswith('http://www.sanktuarium.turza.pl'):
+            printDBG( 'Host getResolvedURL mainurl: '+url )
+            COOKIEFILE = os_path.join(GetCookieDir(), 'sbl.cookie')
+            self.HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
+            self.HTTP_HEADER['Referer'] = url
+            self.defaultParams = {'header':self.HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIEFILE}
+            sts, data = self.get_Page(url)
+            if not sts: return ''
+            printDBG( 'Host listsItems data: '+data )
+            youtube_link = self.cm.ph.getSearchGroups(data, '''(https://www.youtu[^"^']+?)[<'"]''', 1, True)[0]
+            videoUrls = self.getLinksForVideo(youtube_link)
+            if videoUrls:
+                for item in videoUrls:
+                    return item['url']
+            return ''
+
+
 #######################################################################################################################
         query_data = {'url': url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True}
         try:
@@ -5020,9 +5114,9 @@ class Host:
 
         if url.startswith('http://worldcam.live'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
-            m3u8_src = self.cm.ph.getSearchGroups(data, '''source:\s['"](http[^"^']+?)['"]''')[0] 
+            m3u8_src = self.cm.ph.getSearchGroups(data, '''data-source=['"](http[^"^']+?)['"]''')[0] 
             if self.cm.isValidUrl(m3u8_src): 
-                tmp = getDirectM3U8Playlist(m3u8_src)
+                tmp = getDirectM3U8Playlist(m3u8_src, checkContent=True, sortWithMaxBitrate=999999999)
                 for item in tmp:
                     return item['url']
 
@@ -5079,8 +5173,18 @@ class Host:
               return '%s playpath=%s swfUrl=http://kamera.parafiaskoczow.ox.pl/FlashPlayer/player-glow.swf pageUrl=http://www.parafiagornybor.ox.pl/index.php/kamera-online.html live=1' % (rtmp, playpath)
            return ''
 
-        if url.startswith('http://www.tomaszow-sanktuarium.pl'):
+        if url.startswith('https://tomaszow.lub.pl'):
            return 'rtmp://159.255.185.248:1936/streamHD/ playpath=kosciol_HD swfUrl=http://p.jwpcdn.com/6/12/jwplayer.flash.swf pageUrl=http://www.tomaszow-sanktuarium.pl/niedzielna-transmisja-wideo/ live=1'
+
+        if url.startswith('http://www.nsjtomaszowlub.pl'):
+            printDBG( 'Host getResolvedURL mainurl: '+url )
+            youtube_link = self.cm.ph.getSearchGroups(data, '''(https://www.youtu[^"^']+?)[<'"]''', 1, True)[0]
+            videoUrls = self.getLinksForVideo(youtube_link)
+            if videoUrls:
+                for item in videoUrls:
+                    return item['url']
+            else:
+                return self.cm.ph.getSearchGroups(data, '''<video\ssrc=['"]([^"^']+?)['"]''', 1, True)[0]
 
         if url.startswith('http://www.trt.pl'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
@@ -5125,17 +5229,6 @@ class Host:
                 for item in tmp:
                     return item['url']
             return ''
-        if url.startswith('http://www.sanktuarium.turza.pl'):
-            printDBG( 'Host getResolvedURL mainurl: '+url )
-            Url = self.cm.ph.getSearchGroups(data, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''')[0] 
-            try: data = self.cm.getURLRequestData({ 'url': Url, 'use_host': False, 'use_cookie': False, 'use_post': False, 'return_data': True })
-            except:
-                printDBG( 'Host listsItems query error cookie' )
-                return ''
-            printDBG( 'Host listsItems data: '+data )
-            Url = self.cm.ph.getSearchGroups(data, '''streamer=([^"^']+?)['"]''')[0] 
-            file = self.cm.ph.getSearchGroups(data, '''file=([^"^']+?)['"&]''')[0] 
-            return Url +'/' + file
 
         if url.startswith('http://www.ntv.ru'):
             printDBG( 'Host getResolvedURL mainurl: '+url )
