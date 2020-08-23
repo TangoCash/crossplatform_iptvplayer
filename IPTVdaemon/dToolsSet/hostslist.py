@@ -120,6 +120,7 @@ HostsList=[
 	("ninateka", "ninateka.pl"),
 	("nuteczki", "nuteczki.eu"),
 	("officialfilmillimite", "official-film-illimite.ws"),
+	("ogladajto", "ogladaj.to"),
 	("oipeirates", "oipeirates.tv"),
 	("okgoals", "okgoals.com"),
 	("ororotv", "ororo.tv"),
@@ -196,6 +197,5 @@ HostsList=[
 	("yifytv", "ymovies.tv"),
 	("youtube", "youtube.com"),
 	("zalukajcom", "zalukaj.com"),
-	("zalukajvip", "zalukaj.vip"),
 	("zdfmediathek", "ZDFmediathek"),
 	]
