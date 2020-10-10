@@ -539,6 +539,7 @@ class urlparser:
                        'videostreamlet.net':   self.pp.parserVIDEOSTREAMLETNET, 
                        'flix555.com':          self.pp.parserFLIX555COM     , 
                        'aparat.com':           self.pp.parserAPARATCOM      , 
+                       'aparat.cam':           self.pp.parserONLYSTREAMTV   , 
                        'streamja.com':         self.pp.parserSTREAMJACOM    , 
                        'uefa.com':             self.pp.parserUEFACOM        , 
                        'rockfile.co':          self.pp.parserROCKFILECO     , 
@@ -578,6 +579,7 @@ class urlparser:
                        'vup.to':               self.pp.parserONLYSTREAMTV   ,
                        'upvideo.cc':           self.pp.parserONLYSTREAMTV   ,
                        'playtube.ws':          self.pp.parserONLYSTREAMTV   ,
+                       'vkprime.com':          self.pp.parserONLYSTREAMTV   ,
                        'jetload.net':          self.pp.parserJETLOADNET     ,
                        'mixdrop.co':           self.pp.parserMIXDROP        ,
                        'mixdrop.club':         self.pp.parserMIXDROP        ,
@@ -597,6 +599,7 @@ class urlparser:
                        'dood.to':              self.pp.parserDOOD           ,
                        'dood.watch':           self.pp.parserDOOD           ,
                        'doodstream.com':       self.pp.parserDOOD           ,
+                       'govod.tv':             self.pp.parserWIIZTV         ,
                     }
         return
     
@@ -1886,86 +1889,93 @@ class pageParser(CaptchaHelper):
             return False
 
     def parserDAILYMOTION(self, baseUrl):
-        # https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/dailymotion.py
+        printDBG("parserDAILYMOTION %s" % baseUrl)
+
+        # source from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/dailymotion.py
         COOKIE_FILE = self.COOKIE_PATH + "dailymotion.cookie"
-        _VALID_URL = r'(?i)(?:https?://)?(?:(www|touch)\.)?dailymotion\.[a-z]{2,3}/(?:(embed|swf|#)/)?video/(?P<id>[^/?_]+)'
+        HTTP_HEADER = {"User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"}
+        httpParams = {'header': HTTP_HEADER, 'use_cookie': True, 'save_cookie': False, 'load_cookie': False, 'cookiefile': COOKIE_FILE}
+        
+        _VALID_URL = r'''(?ix)
+                    https?://
+                        (?:
+                            (?:(?:www|touch)\.)?dailymotion\.[a-z]{2,3}/(?:(?:(?:embed|swf|\#)/)?video|swf)|
+                            (?:www\.)?lequipe\.fr/video
+                        )
+                        /(?P<id>[^/?_]+)(?:.+?\bplaylist=(?P<playlist_id>x[0-9a-z]+))?
+                    '''
+        
         mobj = re.match(_VALID_URL, baseUrl)
         video_id = mobj.group('id')
+
+        if not video_id:
+            printDBG("parserDAILYMOTION -- Video id not found")
+            return []
         
-        HTTP_HEADER= {'User-Agent': "Mozilla/5.0"}
+        printDBG("parserDAILYMOTION video id: %s " % video_id)
         
-        url = 'http://www.dailymotion.com/embed/video/' + video_id
-        familyUrl = 'http://www.dailymotion.com/family_filter?enable=false&urlback=' + urllib.quote_plus('/embed/video/' + video_id)
-        sts, data = self.cm.getPage(url, {'header':HTTP_HEADER, 'use_cookie': True, 'save_cookie': False, 'load_cookie': False, 'cookiefile': COOKIE_FILE})
-        if not sts or "player" not in data: 
-            sts, data = self.cm.getPage(familyUrl, {'header':HTTP_HEADER, 'use_cookie': True, 'save_cookie': False, 'load_cookie': False, 'cookiefile': COOKIE_FILE})
-            if not sts: return []
+        urlsTab =[]
+
+        sts, data = self.cm.getPage(baseUrl, httpParams)
+
+        metadataUrl = 'https://www.dailymotion.com/player/metadata/video/' + video_id
         
-        sub_tracks = []
-        vidTab = []
-        playerConfig = None
+        sts, data = self.cm.getPage(metadataUrl, httpParams)
         
-        tmp = self.cm.ph.getSearchGroups(data, r'playerV5\s*=\s*dmp\.create\([^,]+?,\s*({.+?})\);')[0]
-        try:
-            playerConfig = json_loads(tmp)['metadata']
-        except Exception:
-            pass
-        if playerConfig == None:
-            tmp = self.cm.ph.getSearchGroups(data, r'var\s+config\s*=\s*({.+?});')[0]
+        if sts:
             try:
-                playerConfig = json_loads(tmp)['metadata']
-            except Exception:
-                pass
-            
-        if None != playerConfig and 'qualities' in playerConfig:
-            hlsTab = []
-            for quality, media_list in playerConfig['qualities'].items():
-                for media in media_list:
-                    media_url = media.get('url')
-                    if not media_url:
-                        continue
-                    type_ = media.get('type')
-                    if type_ == 'application/vnd.lumberjack.manifest':
-                        continue
-                    if type_ == 'application/x-mpegURL' or media_url.split('?')[-1].endswith('m3u8'):
-                        hlsTab.append(media_url)
-                    else:
-                        vidTab.append({'name':'dailymotion.com: %sp' % quality, 'url':media_url, 'quality':quality})
+                metadata = json_loads(data)
+                
+                printDBG("----------------------")
+                printDBG(json_dumps(data))
+                printDBG("----------------------")
+
+                error = metadata.get('error')
+                if error:
+                    title = error.get('title') or error['raw_message']
+                    
+                    # See https://developer.dailymotion.com/api#access-error
+                    #if error.get('code') == 'DM007':
+                    #    allowed_countries = try_get(media, lambda x: x['geoblockedCountries']['allowed'], list)
+                    #    self.raise_geo_restricted(msg=title, countries=allowed_countries)
+                    #raise ExtractorError(
+                    #    '%s said: %s' % (self.IE_NAME, title), expected=True)
+
+                    printDBG("Error accessing metadata: %s " % title)
+                    return []
+                     
+                #subtitles = {}
+                #subtitles_data = try_get(metadata, lambda x: x['subtitles']['data'], dict) or {}
+                #for subtitle_lang, subtitle in subtitles_data.items():
+                #    subtitles[subtitle_lang] = [{
+                #        'url': subtitle_url,
+                #    } for subtitle_url in subtitle.get('urls', [])]
+
+                
+                for quality, media_list in metadata['qualities'].items():
+                    for m in media_list:
+                        media_url = m.get('url')
+                        media_type = m.get('type')
+                        if not media_url or media_type == 'application/vnd.lumberjack.manifest':
+                            continue
                         
-            try:
-                for lang in playerConfig['subtitles']['data']:
-                    label   = clean_html(playerConfig['subtitles']['data'][lang]['label'])
-                    src     = playerConfig['subtitles']['data'][lang]['urls']
-                    if 0 == len(src) or not self.cm.isValidUrl(src[0]): continue
-                    sub_tracks.append({'title':label, 'url':src[0], 'lang':lang, 'format':'srt'})
-            except Exception: pass
-            
-            if len(hlsTab) and 0 == len(vidTab):
-                for media_url in hlsTab:
-                    tmpTab = getDirectM3U8Playlist(media_url, False, checkContent=True, cookieParams={'header':HTTP_HEADER, 'cookiefile':COOKIE_FILE, 'use_cookie': True, 'save_cookie':True})
-                    cookieHeader = self.cm.getCookieHeader(COOKIE_FILE)
-                    for tmp in tmpTab:
-                        hlsUrl = self.cm.ph.getSearchGroups(tmp['url'], """(https?://[^'^"]+?\.m3u8[^'^"]*?)#?""")[0]
-                        redirectUrl =  strwithmeta(hlsUrl, {'iptv_proto':'m3u8', 'Cookie':cookieHeader, 'User-Agent': HTTP_HEADER['User-Agent']})
-                        vidTab.append({'name':'dailymotion.com: %sp hls' % (tmp.get('heigth', '0')), 'url':redirectUrl, 'quality':tmp.get('heigth', '0')})
-                        
-        if 0 == len(vidTab):
-            data = CParsingHelper.getDataBeetwenMarkers(data, 'id="player"', '</script>', False)[1].replace('\/', '/')
-            match = re.compile('"stream_h264.+?url":"(http[^"]+?H264-)([^/]+?)(/[^"]+?)"').findall(data)
-            for i in range(len(match)):
-                url = match[i][0] + match[i][1] + match[i][2]
-                name = match[i][1]
-                try: vidTab.append({'name': 'dailymotion.com: ' + name, 'url':url})
-                except Exception: pass
-        
-        try: vidTab = sorted(vidTab, key=lambda item: int(item.get('quality', '0')))
-        except Exception: pass
-        
-        if len(sub_tracks):
-            for idx in range(len(vidTab)):
-                vidTab[idx]['url'] = urlparser.decorateUrl(vidTab[idx]['url'], {'external_sub_tracks':sub_tracks})
-            
-        return vidTab[::-1]
+                        media_url = urlparser.decorateUrl(media_url, {'Referer': baseUrl})
+                        if media_type == 'application/x-mpegURL':
+                            tmpTab = getDirectM3U8Playlist(media_url, False, checkContent=True, sortWithMaxBitrate=99999999, cookieParams={'header':HTTP_HEADER, 'cookiefile':COOKIE_FILE, 'use_cookie': True, 'save_cookie':True})
+                            cookieHeader = self.cm.getCookieHeader(COOKIE_FILE)
+                            
+                            for tmp in tmpTab:
+                                hlsUrl = self.cm.ph.getSearchGroups(tmp['url'], """(https?://[^'^"]+?\.m3u8[^'^"]*?)#?""")[0]
+                                redirectUrl =  strwithmeta(hlsUrl, {'iptv_proto':'m3u8', 'Cookie':cookieHeader, 'User-Agent': HTTP_HEADER['User-Agent']})
+                                urlsTab.append({'name':'dailymotion.com: %sp hls' % (tmp.get('heigth', '0')), 'url':redirectUrl, 'quality':tmp.get('heigth', '0')})
+
+                        else:
+                            urlsTab.append({'name': quality, 'url': media_url})
+                
+            except:
+                printExc
+                
+        return urlsTab
 
     def parserSIBNET(self, baseUrl):
         printDBG("parserSIBNET url[%s]" % baseUrl)
@@ -4646,47 +4656,63 @@ class pageParser(CaptchaHelper):
 
     def parserAPARATCOM(self, baseUrl):
         printDBG("parserAPARATCOM baseUrl[%r]" % baseUrl)
-        baseUrl = strwithmeta(baseUrl)
-        HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
-        referer = baseUrl.meta.get('Referer')
-        if referer:
-            HTTP_HEADER['Referer'] = referer
-        urlParams = {'header': HTTP_HEADER}
+        httpParams = {
+            'header' : {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Encoding': 'gzip',
+                'Referer' : baseUrl.meta.get('Referer', baseUrl)
+            } 
+        }
+
+        urlsTab = []
+
         if '/videohash/' not in baseUrl and '/showvideo/' not in baseUrl:
-            sts, data = self.cm.getPage(baseUrl, urlParams)
+            sts, data = self.cm.getPage(baseUrl, httpParams)
             if not sts:
                 return False
+            
             cUrl = self.cm.meta['url']
             baseUrl = self.cm.getFullUrl(ph.search(data, '''['"]([^'^"]+?/videohash/[^'^"]+?)['"]''')[0], cUrl)
             if not baseUrl:
                 baseUrl = self.cm.getFullUrl(ph.search(data, '''['"]([^'^"]+?/showvideo/[^'^"]+?)['"]''')[0], cUrl)
-        if '/showvideo/' not in baseUrl:
-            sts, data = self.cm.getPage(baseUrl, urlParams)
-            if not sts:
-                return False
-            cUrl = self.cm.meta['url']
-            baseUrl = self.cm.getFullUrl(ph.search(data, '''['"]([^'^"]+?/showvideo/[^'^"]+?)['"]''')[0], cUrl)
-        sts, data = self.cm.getPage(baseUrl, urlParams)
-        if not sts:
-            return False
-        cUrl = self.cm.meta['url']
-        data = ph.find(data, ('JSON.parse', ')', '('), flags=ph.I | ph.START_E)[1]
-        ret = js_execute("print(JSON.stringify(%s));" % data)
-        data = json_loads(ret['data'])
-        sources = []
-        for item in data['plugins']['sabaPlayerPlugin']['multiSRC']:
-            sources.extend(item)
 
-        urlTab = []
-        for item in sources:
-            type  = item.get('type', '')
-            url   = item.get('src', '')
-            label = item.get('label', '')
-            if 'm3u8' in url:
-                urlTab.extend(getDirectM3U8Playlist(url, checkContent=True, sortWithMaxBitrate=999999999))
-            else:
-                urlTab.append({'name': type + ' res: ' + label, 'url': url})
-        return urlTab
+        sts, data = self.cm.getPage(baseUrl, httpParams)
+        
+        if sts:
+            #printDBG("-----------------------")
+            #printDBG(data)
+            #printDBG("-----------------------")
+        
+            srcJson = re.findall("sources\s?:\s?\[(.*?)\]", data, re.S)
+            if not srcJson:
+                srcJson = re.findall("multiSRC\"?\s?:\s?\[\[(.*?)\]\]", data, re.S)
+                if srcJson:
+                    sources = re.findall("(\{\"src\":.*?\})", srcJson[0])
+                    if sources:
+                        srcJson = [",".join(sources)]  
+                
+            if srcJson:
+                srcJson = srcJson[0]
+                sources = json_loads("[" + srcJson + "]")
+                printDBG(str(sources))
+                
+                for s in sources:
+                    u = s.get('src','')
+                    if self.cm.isValidUrl(u):
+                        u = urlparser.decorateUrl(u, {'Referer': baseUrl})
+                        label = s.get('label','')
+                        srcType = s.get('type','')
+                    if 'm3u' in u or 'hls' in srcType or 'x-mpeg' in srcType :
+                        params = getDirectM3U8Playlist(u, checkExt=True, variantCheck=True, checkContent=True, sortWithMaxBitrate=99999999)
+                        printDBG(str(params))    
+                        urlsTab.extend(params)
+                    else:
+                        params = {'name': label , 'url': u}
+                        printDBG(str(params))
+                        urlsTab.append(params)
+        
+        return urlsTab 
 
     def parserSTREAMJACOM(self, baseUrl):
         printDBG("parserSTREAMJACOM baseUrl[%r]" % baseUrl)
@@ -12440,15 +12466,17 @@ class pageParser(CaptchaHelper):
                 printDBG( 'OK unpack: [%s]' % data)
             except Exception: pass
 
-        urlTab=[]
-        url = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.mp4(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
-        if url != '':
-            url = strwithmeta(url, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
-            urlTab.append({'name':'mp4', 'url':url})
-        hlsUrl = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
-        if hlsUrl != '':
-            hlsUrl = strwithmeta(hlsUrl, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
-            urlTab.extend(getDirectM3U8Playlist(hlsUrl, checkExt=False, variantCheck=True, checkContent=True, sortWithMaxBitrate=99999999))
+        urlTab = self._findLinks(data, meta={'Referer':baseUrl})
+        if 0 == len(urlTab):
+            url = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.mp4(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
+            if url != '':
+                url = strwithmeta(url, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
+                urlTab.append({'name':'mp4', 'url':url})
+            hlsUrl = self.cm.ph.getSearchGroups(data, '''["'](https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)["']''', ignoreCase=True)[0]
+            if hlsUrl != '':
+                hlsUrl = strwithmeta(hlsUrl, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
+                urlTab.extend(getDirectM3U8Playlist(hlsUrl, checkExt=False, variantCheck=True, checkContent=True, sortWithMaxBitrate=99999999))
+
         return urlTab
 
     def parserMIXDROP(self, baseUrl):
@@ -12892,42 +12920,71 @@ class pageParser(CaptchaHelper):
         return urlTabs
 
     def parserDOOD(self, baseUrl):
-        printDBG("parserDOOD baseUrl[%s]" % baseUrl)
+        printDBG("parserDOOD baseUrl [%s]" % baseUrl)
+        
+        httpParams = {
+            'header' : {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Encoding': 'gzip',
+                'Referer' : baseUrl.meta.get('Referer', baseUrl)
+            }, 
+            'use_cookie':True,
+            'load_cookie':True,
+            'save_cookie':True,
+            'cookiefile': GetCookieDir("dood.cookie")
+        }
 
-        HTTP_HEADER = self.cm.getDefaultHeader(browser='chrome')
-        referer = baseUrl.meta.get('Referer')
-        if referer: HTTP_HEADER['Referer'] = referer
-        COOKIE_FILE = GetCookieDir('abcvideo.cookie')
-        urlParams = {'header': HTTP_HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': COOKIE_FILE}
-        baseUrl = baseUrl.replace('/d/', '/e/')
-        sts, data = self.cm.getPage(baseUrl, urlParams)
-        if not sts: return False
-        cUrl = self.cm.meta['url']
+        urlsTab = []
+        
+        if '/d/' in baseUrl:
+            baseUrl = baseUrl.replace('/d/','/e/')
+        
+        sts, data = self.cm.getPage(baseUrl, httpParams)
+        
+        if sts:
+            printDBG("-----------------------")
+            printDBG(data)
+            printDBG("-----------------------")
 
-        sitekey = ph.search(data, '''grecaptcha.execute\(['"]([^"^']+?)['"]''')[0]
-        action = ph.search(data, '''grecaptcha.execute.*?action:\s['"]([^"^']+?)['"]''')[0]
-        url = ph.search(data, '''grecaptcha.execute.*?.get\(['"]([^"^']+?)['"]''')[0]
-        token = ''
-        if sitekey != '': 
-            from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v3_2captcha import UnCaptchaReCaptcha
-            recaptcha = UnCaptchaReCaptcha(lang=GetDefaultLang())
-            token = recaptcha.processCaptcha(sitekey, cUrl, action)
-            if token == '':
-                SetIPTVPlayerLastHostError('\n'.join(errorMsgTab)) 
-                return False
-            url = self.cm.getFullUrl(url+token, cUrl)
-            sts, data = self.cm.getPage(url, urlParams)
-            if not sts: return False
 
-        printDBG("parserDOOD data[%s]" % data)
+        subTracks=[]
+        #<track kind="captions" src="https://doodstream.com/srt/00705/s72n7d5hi6qc_Serbian.vtt" srclang="en" label="Serbian" default>
+        tracks = self.cm.ph.getAllItemsBeetwenMarkers(data, '<track', '>', withMarkers=True)
+        for track in tracks:
+            track_kind = self.cm.ph.getSearchGroups(track, '''kind=['"]([^'^"]+?)['"]''')[0]
+            if 'caption' in track_kind:
+                srtUrl = self.cm.ph.getSearchGroups(track, '''src=['"]([^'^"]+?)['"]''')[0]
+                srtLabel= self.cm.ph.getSearchGroups(track, '''label=['"]([^'^"]+?)['"]''')[0]
+                srtFormat = srtUrl[-3:]
+                params = {'title': srtLabel, 'url': srtUrl, 'lang': srtLabel.lower()[:3], 'format': srtFormat}
+                printDBG(str(params))
+                subTracks.append(params)
 
-        urlTab=[]
-        url = self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?\.mp4(?:\?[^"^']+?)?)''', ignoreCase=True)[0]
-        if url != '':
-            url = strwithmeta(url, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
-            urlTab.append({'name':'mp4', 'url':url})
-        hlsUrl = self.cm.ph.getSearchGroups(data, '''(https?://[^'^"]+?\.m3u8(?:\?[^"^']+?)?)''', ignoreCase=True)[0]
-        if hlsUrl != '':
-            hlsUrl = strwithmeta(hlsUrl, {'Origin':"https://" + urlparser.getDomain(baseUrl), 'Referer':baseUrl})
-            urlTab.extend(getDirectM3U8Playlist(hlsUrl, checkExt=False, variantCheck=True, checkContent=True, sortWithMaxBitrate=99999999))
-        return urlTab
+        #$.get('/pass_md5/3526522-87-9-1595176733-d1cadb0bad545cdcc61809e26c0ccf93/p3yuk59uqm525k1zc9boovu4'
+        #function makePlay(){for(var a="",t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",n=t.length,o=0;10>o;o++)a+=t.charAt(Math.floor(Math.random()*n));return a+"?token=p3yuk59uqm525k1zc9boovu4&expiry="+Date.now();};
+        pass_md5_url = self.cm.ph.getSearchGroups(data, "\$\.get\('(/pass_md5[^']+?)'")[0]
+        makePlay= self.cm.ph.getSearchGroups(data, "(function makePlay\(\)\{.*?\};)")[0]
+        if pass_md5_url and makePlay:        
+            pass_md5_url = self.cm.getFullUrl(pass_md5_url, self.cm.getBaseUrl(baseUrl))
+            sts, new_url = self.cm.getPage(pass_md5_url, httpParams)
+
+            if sts:
+                code =  "var url = '%s';\n%s\nconsole.log(url + makePlay());" % (new_url, makePlay)
+                
+                printDBG("-----------------------")
+                printDBG(code)
+                printDBG("-----------------------")
+
+                ret = js_execute(code)
+                newUrl = ret['data'].replace("\n","")
+                if newUrl:
+                    if subTracks:
+                        newUrl = urlparser.decorateUrl(newUrl, {'Referer': baseUrl,'external_sub_tracks':subTracks})
+                    else:
+                        newUrl = urlparser.decorateUrl(newUrl, {'Referer': baseUrl})
+                    params = {'name': 'link' , 'url': newUrl}
+                    printDBG(str(params))
+                    urlsTab.append(params)
+        
+        return urlsTab

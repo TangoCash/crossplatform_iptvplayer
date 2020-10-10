@@ -164,6 +164,8 @@ config.plugins.iptvplayer.ac3_mix = ConfigSelection(default = None, choices = [(
 config.plugins.iptvplayer.aac_mix = ConfigSelection(default = None, choices = options)
 config.plugins.iptvplayer.ac3_mix = ConfigSelection(default = None, choices = options)
 config.plugins.iptvplayer.SciezkaCache = ConfigText(default = "/hdd/IPTVCache")
+config.plugins.iptvplayer.ogladajto_login = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.ogladajto_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.bbc_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.bbc_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.onetvodDefaultformat = ConfigSelection(default = "9999", choices = [("0", "bitrate: najgorszy"), ("200", "bitrate: 200p"), ("450", "bitrate: 450p"),("900", "bitrate: 900"),("1800", "bitrate: 1800"), ("9999", "bitrate: najlepszy")])
@@ -291,8 +293,6 @@ config.plugins.iptvplayer.playpuls_defaultformat = ConfigSelection(default = "99
 config.plugins.iptvplayer.playpuls_usedf = ConfigYesNo(default = False)
 config.plugins.iptvplayer.playpuls_defaultproto = ConfigSelection(default = "hls", choices = [("rtmp", "dash (mpd)"), ("hls", "hls (m3u8)")])
 config.plugins.iptvplayer.playpuls_proxy = ConfigYesNo(default = False)
-config.plugins.iptvplayer.allboxtv_login    = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.allboxtv_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.itv_use_x_forwarded_for = ConfigYesNo(default = False)
 config.plugins.iptvplayer.hdsto_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.hdsto_login      = ConfigText(default = "", fixed_size = False)
@@ -326,8 +326,6 @@ config.plugins.iptvplayer.MusicBox_login = ConfigText(default="", fixed_size=Fal
 config.plugins.iptvplayer.ngolos_language = ConfigSelection(default = "en", choices = [("en", _("English")), ("es", _("Spanish")), ("pt", _("Portuguese"))])
 config.plugins.iptvplayer.efilmytv_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.efilmytv_password = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer._3filmy_login = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer._3filmy_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.zdfmediathek_iconssize = ConfigSelection(default = "medium", choices = [ ("large", _("large")), ("medium", _("medium")), ("small", _("small")) ])
 config.plugins.iptvplayer.zdfmediathek_prefformat = ConfigSelection(default = "mp4,m3u8", choices = [\
 config.plugins.iptvplayer.zdfmediathek_prefquality = ConfigSelection(default = "4", choices = [("0", _("low")), ("1", _("medium")), ("2", _("high")), ("3", _("very high")), ("4", _("hd"))])
@@ -359,15 +357,12 @@ config.plugins.iptvplayer.serienstreamto_login    = ConfigText(default = "", fix
 config.plugins.iptvplayer.serienstreamto_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.egybest_login    = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.egybest_password = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_filmssort    = ConfigSelection(default = "ostatnio-dodane", choices = [("ostatnio-dodane", "ostatnio dodane"), ("ostatnio-ogladane", "ostatnio oglądane"), ("odslon", "odsłon"), ("ulubione", "ulubione"), ("oceny", "oceny"), ("mobilne", "mobilne")]) 
-config.plugins.iptvplayer.zalukajtvPREMIUM       = ConfigYesNo(default = False)
-config.plugins.iptvplayer.zalukajtv_login        = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_password     = ConfigText(default = "", fixed_size = False)
-config.plugins.iptvplayer.zalukajtv_proxy        = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.ustvgo_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.planetstreaming_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
 config.plugins.iptvplayer.planetstreaming_alt_domain = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.drdk_myip    = ConfigText(default = "213.173.226.190", fixed_size = False)
+config.plugins.iptvplayer.filmynadzis_login    = ConfigText(default = "", fixed_size = False)
+config.plugins.iptvplayer.filmynadzis_password = ConfigText(default = "", fixed_size = False)
 config.plugins.iptvplayer.sportdeutschland_streamprotocol = ConfigSelection(default = "hls", choices = [("rtmp", "rtmp"),("hls", "HLS - m3u8")]) 
 config.plugins.iptvplayer.kisscartoon_defaultformat = ConfigSelection(default = "999999", choices = [("0", _("the worst")), ("360", "360p"), ("480", "480p"), ("720", "720p"),  ("1080", "1080p"), ("999999", "the best")])
 config.plugins.iptvplayer.yify_proxy = ConfigSelection(default = "None", choices = [("None",     _("None")),
