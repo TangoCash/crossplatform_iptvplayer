@@ -168,7 +168,7 @@ class IPTVHost(IHost):
     ###################################################
 
 class Host:
-    XXXversion = "2020.08.06.0"
+    XXXversion = "2020.10.24.0"
     XXXremote  = "0.0.0.0"
     currList = []
     MAIN_URL = ''
@@ -2629,7 +2629,7 @@ class Host:
                     phImage = ''
                     #printDBG( 'Host item: '+str(item) )
                     try:
-                       online = str(item["online"])  
+                       #online = str(item["online"])  
                        room = str(item["room"])
                        phTitle = str(item["username"]) 
                        phTitle2 = str(item["display_name"])
@@ -2651,10 +2651,10 @@ class Host:
                     except Exception:
                        printExc()
                     printDBG( 'Host phTitle: '+phTitle )
-                    printDBG( 'Host online: '+online )
+                    #printDBG( 'Host online: '+online )
                     printDBG( 'Host room: '+room )
                     phUrl = phTitle
-                    if room != 'vip' and online == 'True':
+                    if room != 'vip':
                        x += 1
                        valTab.append(CDisplayListItem(phTitle2+'   ['+bitrate.upper()+']',phTitle2+'  ('+phTitle+')   '+age+' ['+bitrate.upper()+']',CDisplayListItem.TYPE_VIDEO, [CUrlItem('', phUrl, 1)], 0, phImage, None)) 
                  printDBG( 'Host ile: '+str(x) )

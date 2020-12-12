@@ -46,7 +46,7 @@ class CYTSignAlgoExtractor:
                  r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
                  r'\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
                  r'\b(?P<sig>[a-zA-Z0-9$]{2})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',
-                 r'(?P<sig>[a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',
+                 r'(?P<sig>[a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\).*a\.join\(\s*""\s*\)',
                  # Obsolete patterns
                  r'(["\'])signature\1\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
                  r'\.sig\|\|(?P<sig>[a-zA-Z0-9$]+)\(',
@@ -733,7 +733,7 @@ class YoutubeIE(object):
             tmp = ph.find(video_webpage, ('<script', '>', 'player/base'))[1]
             playerUrl = ph.getattr(tmp, 'src')
             if not playerUrl:
-                for reObj in ['"assets"\:[^\}]+?"js"\s*:\s*"([^"]+?)"', 'src="([^"]+?)"[^>]+?name="player/base"']:
+                for reObj in ['"assets"\:[^\}]+?"js"\s*:\s*"([^"]+?)"', 'src="([^"]+?)"[^>]+?name="player.*?/base"', '"jsUrl":"([^"]+?)"']:
                     playerUrl = ph.search(video_webpage, reObj)[0]
                     if playerUrl:
                         break
