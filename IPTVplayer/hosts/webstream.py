@@ -40,6 +40,7 @@ from Plugins.Extensions.IPTVPlayer.libs.internetowa       import InternetowaApi,
 from Plugins.Extensions.IPTVPlayer.libs.firstonetvnet     import FirstOneTvApi, GetConfigList as FirstOneTv_GetConfigList
 from Plugins.Extensions.IPTVPlayer.libs.beinmatch         import BeinmatchApi
 from Plugins.Extensions.IPTVPlayer.libs.wiz1net           import Wiz1NetApi
+from Plugins.Extensions.IPTVPlayer.libs.wiziwig1          import Wiziwig1Api
 ###################################################
 
 ###################################################
@@ -108,13 +109,13 @@ def GetConfigList():
     try:    optionList.extend( GoldVodTV_GetConfigList() )
     except Exception: printExc()
 
-    optionList.append(getConfigListEntry("-----------------Wizja.TV------------------", config.plugins.iptvplayer.fake_separator))
-    try:    optionList.extend( WizjaTV_GetConfigList() )
-    except Exception: printExc()
+#    optionList.append(getConfigListEntry("-----------------Wizja.TV------------------", config.plugins.iptvplayer.fake_separator))
+#    try:    optionList.extend( WizjaTV_GetConfigList() )
+#    except Exception: printExc()
 
-    optionList.append(getConfigListEntry("--------------wagasworld.com---------------", config.plugins.iptvplayer.fake_separator))
-    try:    optionList.extend( WagasWorld_GetConfigList() )
-    except Exception: printExc()
+#    optionList.append(getConfigListEntry("--------------wagasworld.com---------------", config.plugins.iptvplayer.fake_separator))
+#    try:    optionList.extend( WagasWorld_GetConfigList() )
+#    except Exception: printExc()
 
     optionList.append(getConfigListEntry("----------------bilasport.pw-------------------", config.plugins.iptvplayer.fake_separator))
     try:    optionList.extend( BilaSportPw_GetConfigList() )
@@ -162,6 +163,7 @@ class HasBahCa(CBaseHostClass):
                         {'alias_id':'canlitvlive.io',          'name': 'canlitvlive.io',      'title': 'http://canlitvlive.io/',            'url': 'http://www.canlitvlive.io/',                                         'icon': 'http://www.canlitvlive.io/images/footer_simge.png'}, \
                         {'alias_id':'beinmatch.com',           'name': 'beinmatch.com',       'title': 'http://beinmatch.com/',             'url': '',                                                                   'icon': 'http://www.beinmatch.com/assets/images/bim/logo.png'}, \
                         {'alias_id':'wiz1.net',                'name': 'wiz1.net',            'title': 'http://wiz1.net/',                  'url': '',                                                                   'icon': 'http://i.imgur.com/yBX7fZA.jpg'}, \
+                        {'alias_id': 'wiziwig1.eu',            'name': 'wiziwig1.eu',         'title': 'http://wiziwig1.eu/',               'url': '',                                                                   'icon': 'http://i.imgur.com/yBX7fZA.jpg'},\
 #                        {'alias_id':'wagasworld',              'name': 'wagasworld.com',      'title': 'http://wagasworld.com/',            'url': 'http://www.wagasworld.com/channels.php',                             'icon': 'http://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/1000px-Flag_of_Germany.svg.png'}, \
                         {'alias_id':'djing.com',               'name': 'djing.com',           'title': 'https://djing.com/',                'url': 'https://djing.com/',                                                 'icon': 'https://www.djing.com/newimages/content/c01.jpg'}, \
                         {'alias_id':'live_stream_tv',          'name': 'live-stream.tv',      'title': 'http://live-stream.tv/',            'url': 'http://www.live-stream.tv/',                                         'icon': 'http://www.live-stream.tv/images/lstv-logo.png'}, \
@@ -169,8 +171,8 @@ class HasBahCa(CBaseHostClass):
                         {'alias_id':'goldvod.tv',              'name': 'goldvod.tv',          'title': 'http://goldvod.tv/',                'url': '',                                                                   'icon': 'http://goldvod.tv/assets/images/logo.png'}, \
                         {'alias_id':'livemass.net',            'name': 'livemass.net',        'title': 'http://livemass.net/',              'url': 'http://www.livemass.net/',                                           'icon': 'http://s3.amazonaws.com/livemass/warrington/images/warrington/iconclr.png'}, \
 #                        {'alias_id':'wizja.tv',                'name': 'wizja.tv',            'title': 'http://wizja.tv/',                  'url': 'http://wizja.tv/',                                                   'icon': 'http://wizja.tv/logo.png'}, \
-                        {'alias_id':'crackstreams.com',        'name': 'crackstreams.com',    'title': 'http://crackstreams.com/',          'url': 'http://crackstreams.com/',                                           'icon': ''}, \
-                        {'alias_id':'nhl66.ir',                'name': 'nhl66.ir',            'title': 'https://nhl66.ir',                  'url': 'https://pro.nhl66.ir/api/get_anonymous_data',                     'icon': 'https://nhl66.ir/cassets/logo.png'}, \
+                        {'alias_id':'crackstreams.net',        'name': 'crackstreams.net',    'title': 'http://crackstreams.net/',          'url': 'http://crackstreams.net/',                                           'icon': ''}, \
+                        {'alias_id':'nhl66.ir',                'name': 'nhl66.ir',            'title': 'https://nhl66.ir',                  'url': 'https://api.nhl66.ir/api/sport/schedule',                            'icon': 'https://nhl66.ir/cassets/logo.png'}, \
                        ] 
     
     def __init__(self):
@@ -211,6 +213,7 @@ class HasBahCa(CBaseHostClass):
         self.FirstOneTvApi        = None
         self.BeinmatchApi         = None
         self.Wiz1NetApi           = None
+        self.Wiziwig1Api          = None
         
         self.hasbahcaiptv = {}
         self.webcameraSubCats = {}
@@ -644,6 +647,22 @@ class HasBahCa(CBaseHostClass):
     #############################################################
 
     #############################################################
+    def getWiziwig1List(self, cItem):
+        printDBG("getWiziwig1List start")
+        if None == self.Wiziwig1Api: self.Wiziwig1Api = Wiziwig1Api()
+        tmpList = self.Wiziwig1Api.getList(cItem)
+        for item in tmpList:
+            if 'video' == item['type']: self.addVideo(item) 
+            elif 'audio' == item['type']: self.addAudio(item) 
+            else: self.addDir(item)
+
+    def getWiziwig1Link(self, cItem):
+        printDBG("getWiziwig1Link start")
+        urlsTab = self.Wiziwig1Api.getVideoLink(cItem)
+        return urlsTab
+    #############################################################
+
+    #############################################################
     def getUstvnowList(self, cItem):
         printDBG("getUstvnowList start")
         if None == self.ustvnowApi:
@@ -919,7 +938,7 @@ class HasBahCa(CBaseHostClass):
         for item in data:
             title = self.cleanHtmlStr(item)
             url   = self.cm.ph.getSearchGroups(item, 'href="([^"]+?)"')[0]
-            if len(url) and not url.startswith('http'): url = 'http://crackstreams.com/'+url
+            if len(url) and not url.startswith('http'): url = 'http://crackstreams.net/'+url
             try:
                 params = { 'name'     : 'crackstreams_streams',
                            'url'      : url,
@@ -936,12 +955,12 @@ class HasBahCa(CBaseHostClass):
         if not sts: return
         data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<a', '>', 'btn btn-default'), ('</a', '>'))
         for item in data:
-            params = {'name':"crackstreams.com"}
+            params = {'name':"crackstreams.net"}
             params['url'] = self.cm.ph.getSearchGroups(item, '''\shref=['"]([^"^']+?)['"]''')[0]
             params['icon'] = self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^"^']+?)['"]''')[0]
             params['title'] = self.cleanHtmlStr(CParsingHelper.getDataBeetwenNodes(item, ('<h4', '>'), ('</div', '>'))[1])
-            if len(params['icon']) and not params['icon'].startswith('http'): params['icon'] = 'http://crackstreams.com/'+params['icon']
-            if len(params['url']) and not params['url'].startswith('http'): params['url'] = 'http://crackstreams.com/'+params['url']
+            if len(params['icon']) and not params['icon'].startswith('http'): params['icon'] = 'http://crackstreams.net/'+params['icon']
+            if len(params['url']) and not params['url'].startswith('http'): params['url'] = 'http://crackstreams.net/'+params['url']
             self.addVideo(params)
 
     def getCrackstreamsLink(self, url):
@@ -955,6 +974,11 @@ class HasBahCa(CBaseHostClass):
         if 'youtube' in _url:
             urlsTab = self.up.getVideoLinkExt(_url)
             return urlsTab
+        sts,data = self.cm.getPage(_url)
+        if not sts: return []
+        data = CParsingHelper.getDataBeetwenNodes(data, ('<iframe', '>', 'allowfullscreen'), ('</iframe', '>'))[1]
+        _url  = self.cm.ph.getSearchGroups(data, '''src=['"]([^"^']+?)['"]''')[0]
+        if len(_url) and not _url.startswith('http'): _url = url+_url
         sts,data = self.cm.getPage(_url)
         if not sts: return []
         printDBG("crackstreamsLink data[%r]" % data)
@@ -974,19 +998,16 @@ class HasBahCa(CBaseHostClass):
         try:
             data = json_loads(data)
             for item in data['games']:
-                tmp = json_dumps(item['stream_full'])
-                tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '"name":', ']')
-                for sitem in tmp:
-                    url   = self.getFullUrl(self.cm.ph.getSearchGroups(sitem, '''urls":.*?['"]([^"^']+?)['"]''')[0])
+                for sitem in item['streams']:
+                    url = sitem['url']
                     if url == '': continue
-                    live  = self.cm.ph.getSearchGroups(sitem, '''is_live":([^"^']+?)['"]''')[0]
-                    if 'true' in live: title = '[LIVE]  '
+                    if sitem['is_live']: title = '[LIVE]  '
                     else: title = ''
-                    name  = self.cm.ph.getSearchGroups(sitem, '''name":.*?['"]([^"^']+?)['"]''')[0]
+                    name = sitem['name']
                     dtime = item['start_datetime'].replace('T', ' - ').replace('Z', ' GMT')
                     title = title + item['away_abr'] + ' vs. ' + item['home_abr'] + ' - ' + dtime + ' - ' + name
                     desc = dtime + '[/br]' + item['away_name'] + ' vs. ' + item['home_name'] + '[/br]' + name
-                    params = {'good_for_fav':True, 'name':"others", 'url':url, 'title':title, 'desc':desc, 'replacekey':'https://mf.svc.nhl.com/', 'urlkey':'https://pro.nhl66.ir/api/get_key_url/'}
+                    params = {'good_for_fav':True, 'name':"others", 'url':url, 'title':title, 'desc':desc, 'replacekey':'https://mf.svc.nhl.com/', 'urlkey':'https://api.nhl66.ir/api/get_key_url/'}
                     self.addVideo(params)
         except Exception:
             printExc()
@@ -1037,8 +1058,9 @@ class HasBahCa(CBaseHostClass):
         elif name == 'firstonetv.net':      self.getFirstOneTvList(self.currItem)
         elif name == 'beinmatch.com':       self.getBeinmatchList(self.currItem)
         elif name == 'wiz1.net':            self.getWiz1NetList(self.currItem)
+        elif name == 'wiziwig1.eu':         self.getWiziwig1List(self.currItem)
         elif name == "crackstreams_streams":self.getCrackstreamsList(url)
-        elif name == 'crackstreams.com':    self.getCrackstreamsGroups(url)
+        elif name == 'crackstreams.net':    self.getCrackstreamsGroups(url)
         elif name == 'nhl66.ir':            self.getNhl66List(url)
 
         CBaseHostClass.endHandleService(self, index, refresh)
@@ -1100,7 +1122,8 @@ class IPTVHost(CHostBase):
         elif name == "firstonetv.net":             urlList = self.host.getFirstOneTvLink(cItem)
         elif name == "beinmatch.com":              urlList = self.host.getBeinmatchLink(cItem)
         elif name == "wiz1.net":                   urlList = self.host.getWiz1NetLink(cItem)
-        elif name == "crackstreams.com":           urlList = self.host.getCrackstreamsLink(url)
+        elif name == "wiziwig1.eu":                urlList = self.host.getWiziwig1Link(cItem)
+        elif name == "crackstreams.net":           urlList = self.host.getCrackstreamsLink(url)
 
         if isinstance(urlList, list):
             for item in urlList:
