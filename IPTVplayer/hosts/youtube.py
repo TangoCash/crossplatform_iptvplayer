@@ -1,11 +1,12 @@
-﻿# -*- coding: utf-8 -*-
-
+# -*- coding: utf-8 -*-
+# Blindspot - 2022-01-12
 ###################################################
 # LOCAL import
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass, CDisplayListItem
-from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, IsExecutable, printExc, byteify
+from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, IsExecutable, printExc, byteify, GetSearchHistoryDir
+from Plugins.Extensions.IPTVPlayer.libs import ph
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.itools.iptvfilehost import IPTVFileHost
 from Plugins.Extensions.IPTVPlayer.libs.youtubeparser import YouTubeParser
@@ -21,7 +22,15 @@ except Exception:
     import simplejson as json
 import re
 import urllib
+import os
+import codecs
 from Components.config import config, ConfigDirectory, getConfigListEntry
+###################################################
+
+###################################################
+# E2 GUI COMMPONENTS 
+###################################################
+from Screens.MessageBox import MessageBox
 ###################################################
 
 ###################################################
@@ -42,8 +51,6 @@ def GetConfigList():
     # checking should be moved to setup
     if IsExecutable('ffmpeg'):
         optionList.append(getConfigListEntry(_("Allow dash format:"), config.plugins.iptvplayer.ytShowDash))
-        if config.plugins.iptvplayer.ytShowDash.value != 'false':
-            optionList.append(getConfigListEntry(_("Allow VP9 codec:"), config.plugins.iptvplayer.ytVP9))
     return optionList
 ###################################################
 ###################################################
@@ -59,12 +66,25 @@ class Youtube(CBaseHostClass):
         printDBG("Youtube.__init__")
         CBaseHostClass.__init__(self, {'history': 'ytlist', 'cookie': 'youtube.cookie'})
         self.UTLIST_FILE = 'ytlist.txt'
-        self.DEFAULT_ICON_URL = 'https://www.vippng.com/png/full/85-853653_patreon-logo-png-transparent-background-youtube-logo.png'
-        self.MAIN_GROUPED_TAB = [{'category': 'from_file', 'title': _("User links"), 'desc': _("User links stored in the ytlist.txt file.")},
-                                 {'category': 'search', 'title': _("Search"), 'desc': _("Search youtube materials "), 'search_item': True},
-                                 {'category': 'feeds', 'title': _("Trending"), 'desc': _("Browse youtube trending feeds")},
-                                 {'category': 'search_history', 'title': _("Search history"), 'desc': _("History of searched phrases.")}]
-
+        self.DEFAULT_ICON_URL = 'https://www.mm229.com/images/youtube-button-psd-450203.png'
+        self.yeah = self.lenhistory()
+        self.MAIN_GROUPED_TAB = [{'category': 'from_file',
+          'title': _('User links'),
+          'desc': _('User links stored in the ytlist.txt file.')},
+         {'category': 'search',
+          'title': _('Search'),
+          'desc': _('Search youtube materials '),
+          'search_item': True},
+         {'category': 'feeds',
+          'title': _('Explore'),
+          'desc': _('Popular trending videos')},
+         {'category': 'search_history',
+          'title': _('Search history'),
+          'desc': _('History of searched phrases.')},
+          {'category': 'delete_history',
+          'title': _('Delete search history'),
+          'desc': self.yeah}]         
+          
         self.SEARCH_TYPES = [(_("Video"), "video"),
                                (_("Channel"), "channel"),
                                (_("Playlist"), "playlist"),
@@ -73,6 +93,13 @@ class Youtube(CBaseHostClass):
                               #("Program",            "show"    ),
                               #("traylist",           "traylist"),
         self.ytp = YouTubeParser()
+        self.HTTP_HEADER = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36',
+                            'X-YouTube-Client-Name': '1',
+                            'X-YouTube-Client-Version': '2.20211019.01.00',
+                            'X-Requested-With': 'XMLHttpRequest'
+                            }
+        self.http_params = {'header': self.HTTP_HEADER, 'return_data': True}
         self.currFileHost = None
 
     def _getCategory(self, url):
@@ -83,7 +110,7 @@ class Youtube(CBaseHostClass):
             category = 'playlists'
         elif None != re.search('/watch\?v=[^\&]+?\&list=', url):
             category = 'traylist'
-        elif 'user/' in url or (('channel/' in url or '/c/' in url) and not url.endswith('/live')):
+        elif 'user/' in url or ('channel/' in url and not url.endswith('/live')):
             category = 'channel'
         else:
             category = 'video'
@@ -151,7 +178,7 @@ class Youtube(CBaseHostClass):
     def listItems(self, cItem):
         printDBG('Youtube.listItems cItem[%s]' % (cItem))
         category = cItem.get("category", '')
-        url = cItem.get("url", '')
+        url = strwithmeta(cItem.get("url", ''))
         page = cItem.get("page", '1')
 
         if "playlists" == category:
@@ -164,38 +191,38 @@ class Youtube(CBaseHostClass):
     def listFeeds(self, cItem):
         printDBG('Youtube.listFeeds cItem[%s]' % (cItem))
         if cItem['category'] == "feeds_video":
-            sts, data = self.cm.getPage(cItem['url'])
+            sts, data = self.cm.getPage(cItem['url'], self.http_params)
             data2 = self.cm.ph.getAllItemsBeetwenMarkers(data, "videoRenderer", "watchEndpoint")
             for item in data2:
-                url = "https://www.youtube.com/watch?v=" + self.cm.ph.getDataBeetwenMarkers(item, 'videoId":"', '","thumbnail":', False)[1]
-                icon = self.cm.ph.getDataBeetwenMarkers(item, '},{"url":"', '==', False)[1]
-                title = self.cm.ph.getDataBeetwenMarkers(item, '"title":{"runs":[{"text":"', '"}]', False)[1]
-                desc = _("Channel") + ': ' + self.cm.ph.getDataBeetwenMarkers(item, 'longBylineText":{"runs":[{"text":"', '","navigationEndpoint"', False)[1] + "\n" + _("Release:") + ' ' + self.cm.ph.getDataBeetwenMarkers(item, '"publishedTimeText":{"simpleText":"', '"},"lengthText":', False)[1] + "\n" + _("Duration:") + ' ' + self.cm.ph.getDataBeetwenMarkers(item, '"lengthText":{"accessibility":{"accessibilityData":{"label":"', '"}},"simpleText":', False)[1] + "\n" + self.cm.ph.getDataBeetwenMarkers(item, '"viewCountText":{"simpleText":"', '"},"navigationEndpoint":', False)[1]
-                params = {'title': title, 'url': url, 'icon': icon, 'desc': desc}
+                url = "https://www.youtube.com/watch?v=" + self.cm.ph.getDataBeetwenMarkers(item, 'videoId":"', '","thumbnail":', False) [1]
+                icon = self.cm.ph.getDataBeetwenMarkers(item, '},{"url":"', '==', False) [1]
+                title = self.cm.ph.getDataBeetwenMarkers(item, '"title":{"runs":[{"text":"', '"}]', False) [1]
+                desc = "Készítette: " + self.cm.ph.getDataBeetwenMarkers(item, 'longBylineText":{"runs":[{"text":"', '","navigationEndpoint"', False) [1] + "\n" + "Megjelent " + self.cm.ph.getDataBeetwenMarkers(item, '"publishedTimeText":{"simpleText":"', '"},"lengthText":', False) [1] + "\n" + "Videó hossza: " + self.cm.ph.getDataBeetwenMarkers(item, '"lengthText":{"accessibility":{"accessibilityData":{"label":"', '"}},"simpleText":', False) [1] + "\n" + self.cm.ph.getDataBeetwenMarkers(item, '"viewCountText":{"simpleText":"', '"},"navigationEndpoint":', False) [1]
+                params = {'title':title, 'url': url, 'icon': icon, 'desc': desc}
                 self.addVideo(params)
         else:
-           title = _("Trending")
+           title = "Trending videos"
            url = "https://www.youtube.com/feed/trending"
-           params = {'category': 'feeds_video', 'title': title, 'url': url}
+           params = {'category':'feeds_video','title':title, 'url': url}
            self.addDir(params)
-           title = _("Music")
+           title = "Music"
            url = "https://www.youtube.com/feed/trending?bp=4gINGgt5dG1hX2NoYXJ0cw%3D%3D"
-           params = {'category': 'feeds_video', 'title': title, 'url': url}
+           params = {'category':'feeds_video','title':title, 'url': url}
            self.addDir(params)
-           title = _("Games")
+           title = "Gaming"
            url = "https://www.youtube.com/feed/trending?bp=4gIcGhpnYW1pbmdfY29ycHVzX21vc3RfcG9wdWxhcg%3D%3D"
-           params = {'category': 'feeds_video', 'title': title, 'url': url}
+           params = {'category':'feeds_video','title':title, 'url': url}
            self.addDir(params)
-           title = _("Movies")
+           title = "Films"
            url = "https://www.youtube.com/feed/trending?bp=4gIKGgh0cmFpbGVycw%3D%3D"
-           params = {'category': 'feeds_video', 'title': title, 'url': url}
+           params = {'category':'feeds_video','title':title, 'url': url}
            self.addDir(params)
 
     def getVideos(self, cItem):
         printDBG('Youtube.getVideos cItem[%s]' % (cItem))
 
         category = cItem.get("category", '')
-        url = strwithmeta(cItem.get("url", ''))
+        url = cItem.get("url", '')
         page = cItem.get("page", '1')
 
         if "channel" == category:
@@ -293,11 +320,42 @@ class Youtube(CBaseHostClass):
         #HISTORIA SEARCH
         elif category == "search_history":
             self.listsHistory({'name': 'history', 'category': 'search'}, 'desc', _("Type: "))
+        elif category == "delete_history":
+            self.delhistory()
         else:
             printExc()
+        self.yeah = self.lenhistory()
 
         CBaseHostClass.endHandleService(self, index, refresh)
 
+    def delhistory(self):
+        printDBG('Youtube.delhistory')
+        msg = 'Are you sure you want to delete search history?'
+        ret = self.sessionEx.waitForFinishOpen(MessageBox, msg, type=MessageBox.TYPE_YESNO, default=True)
+        if ret[0]:
+            self.doit()
+
+    def doit(self):
+        try:
+           os.remove(GetSearchHistoryDir("ytlist.txt"))
+           msg = 'Search History successfully deleted.'
+           ret = self.sessionEx.waitForFinishOpen(MessageBox, msg, type=MessageBox.TYPE_INFO)
+        except:
+           msg = 'Unable to comply. Search History is empty.'
+           ret = self.sessionEx.waitForFinishOpen(MessageBox, msg, type=MessageBox.TYPE_INFO)
+    
+    def lenhistory(self):
+        num = 0
+        
+        try:
+            file = codecs.open(GetSearchHistoryDir("ytlist.txt"), 'r', 'utf-8', 'ignore')
+            for line in file:
+                num = num+1
+            file.close()
+        except:
+            return("Search History is empty.")
+        return("Number of items in search history: " + str(num))
+    
     def getSuggestionsProvider(self, index):
         printDBG('Youtube.getSuggestionsProvider')
         from Plugins.Extensions.IPTVPlayer.suggestions.google import SuggestionsProvider

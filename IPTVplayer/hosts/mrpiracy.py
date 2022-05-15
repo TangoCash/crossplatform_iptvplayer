@@ -4,7 +4,7 @@
 ###################################################
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT as _, SetIPTVPlayerLastHostError
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
-from Plugins.Extensions.IPTVPlayer.icomponents.captcha_helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, byteify, rm, GetCacheSubDir, ReadTextFile, WriteTextFile
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta

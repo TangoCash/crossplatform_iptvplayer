@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Blindspot - 2022.01.07.
 ###################################################
 # LOCAL import
 ###################################################
@@ -28,7 +29,7 @@ class BajeczkiOrg(CBaseHostClass):
     def __init__(self):
         CBaseHostClass.__init__(self, {'history': 'bajeczki.org', 'cookie': 'bajeczki.org.cookie'})
         self.MAIN_URL = 'http://bajeczki.org/'
-        self.DEFAULT_ICON_URL = self.getFullIconUrl('/wp-content/uploads/1397134512_5b47d5c61cb3523b0ff67e3168ded910-1-640x360.jpg')
+        self.DEFAULT_ICON_URL = "https://bajeczki.org/wp-content/uploads/logo_bajeczki_bg-aktualne.gif"
         self.HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0', 'DNT': '1', 'Accept': 'text/html'}
         self.AJAX_HEADER = dict(self.HEADER)
         self.AJAX_HEADER.update({'X-Requested-With': 'XMLHttpRequest'})
@@ -55,17 +56,13 @@ class BajeczkiOrg(CBaseHostClass):
         if not sts:
             return
 
-        data = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'category-bar'), ('</div', '>'))
+        data = self.cm.ph.getAllItemsBeetwenMarkers(data, '<div class="category-bar">', '</span></a></div>')
         for item in data:
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''\shref=['"]([^"^']+?)['"]''')[0])
-            if url == '':
-                continue
-            item = item.split('</span>', 1)
-            title = ph.clean_html(item[0])
-            desc = ph.clean_html(item[-1])
-            icon = url + '?fake=need_resolve.jpeg'
+            url = self.cm.ph.getDataBeetwenMarkers(item, '<a href="','" title=',False)[1]
+            title = self.cm.ph.getDataBeetwenMarkers(item, '<span class="category-name">','</span><span class=',False)[1]
+            desc = self.cm.ph.getDataBeetwenMarkers(item, '<span class="category-desc">','</span>',False)[1]
             params = dict(cItem)
-            params = {'good_for_fav': True, 'category': nextCategory, 'title': title, 'url': url, 'icon': icon, 'desc': desc}
+            params = {'good_for_fav': True, 'category': nextCategory, 'title': title, 'url': url, 'icon': None, 'desc': desc}
             self.addDir(params)
 
     def listItems(self, cItem):
@@ -88,7 +85,7 @@ class BajeczkiOrg(CBaseHostClass):
             if url == '':
                 continue
 #            icon = self.getFullUrl( ph.search(item, ph.IMAGE_SRC_URI_RE)[1] )
-            icon = self.getFullIconUrl(self.cm.ph.getSearchGroups(item, '''data-src=['"]([^'^"]+?)['"]''', ignoreCase=True)[0])
+            icon = self.cm.ph.getDataBeetwenMarkers(item, 'src="','" class', False) [1]
             item = item.split('</h2>', 1)
             title = ph.clean_html(item[0])
 

@@ -9,7 +9,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import CSelOneLink, print
 from Plugins.Extensions.IPTVPlayer.libs.urlparserhelper import getDirectM3U8Playlist
 from Plugins.Extensions.IPTVPlayer.libs import ph
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads, dumps as json_dumps
-from Plugins.Extensions.IPTVPlayer.icomponents.captcha_helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
 ###################################################
 
 ###################################################

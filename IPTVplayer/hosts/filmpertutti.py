@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# 2021.12.12. Blindspot
+###################################################
+HOST_VERSION = "1.1"
 ###################################################
 # LOCAL import
 ###################################################
@@ -6,6 +9,7 @@ from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvplayerinit import TranslateTXT 
 from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHostClass
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
+from Plugins.Extensions.IPTVPlayer.libs import ph
 ###################################################
 
 ###################################################
@@ -17,15 +21,15 @@ import urllib
 
 
 def gettytul():
-    return 'https://filmpertutti.club/'
+    return 'https://www.filmpertutti.rest/'
 
 
 class FilmPertutti(CBaseHostClass):
 
     def __init__(self):
         CBaseHostClass.__init__(self, {'history': 'FilmPertutti', 'cookie': 'FilmPertutti.cookie'})
-        self.MAIN_URL = 'https://www.filmpertutti.club/'
-        self.DEFAULT_ICON_URL = 'https://thumbnails.webinfcdn.net/thumbnails/280x202/f/filmpertutti.click.png'
+        self.MAIN_URL = 'https://www.filmpertutti.rest/'
+        self.DEFAULT_ICON_URL = 'https://www.filmpertutti.rest/wp-content/uploads/2021/01/favicon.ico'
         self.cacheLinks = {}
 
     def getPage(self, baseUrl, addParams={}, post_data=None):
@@ -42,6 +46,7 @@ class FilmPertutti(CBaseHostClass):
                         {'category': 'list_cats', 'title': 'Serie TV', 'url': self.getFullUrl('/category/serie-tv/')},
                         {'category': 'list_items', 'title': 'Prime visioni', 'url': self.getFullUrl('/prime-visioni/')},
                         {'category': 'list_items', 'title': 'Aggiornamenti Serie TV', 'url': self.getFullUrl('/aggiornamenti-serie-tv/')},
+                        {'category': 'list_items', 'title': 'Ripristini', 'url': self.getFullUrl('/ripristini/')},
                         {'category': 'search', 'title': _('Search'), 'search_item': True},
                         {'category': 'search_history', 'title': _('Search history'), }]
         self.listsTab(MAIN_CAT_TAB, cItem)
@@ -94,9 +99,9 @@ class FilmPertutti(CBaseHostClass):
                 url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''href=['"]([^"^']+?)["']''', 1, True)[0])
                 if url == '':
                     continue
-                icon = self.cm.ph.getSearchGroups(item, '''\ssrc=['"]([^"^']+?\.(?:jpe?g|png)(?:\?[^'^"]*?)?)['"]''')[0]
+                icon = self.cm.ph.getSearchGroups(item, '''data-src-webp=['"]([^"^']+?\.(?:jpg|webp)(?:\?[^'^"]*?)?)['"]''')[0]
                 if icon == '':
-                    icon = self.cm.ph.getSearchGroups(item, '''thumbnail=['"]([^"^']+?\.(?:jpe?g|png)(?:\?[^'^"]*?)?)['"]''')[0]
+                    icon = self.cm.ph.getSearchGroups(item, '''data-thumbnail=['"]([^"^']+?\.(?:jpg|png)(?:\?[^'^"]*?)?)['"]''')[0]
                 descTab = []
                 item = self.cm.ph.getAllItemsBeetwenNodes(item, ('<div', '>'), ('</div', '>'))
                 for t in item:
@@ -134,68 +139,81 @@ class FilmPertutti(CBaseHostClass):
         except Exception:
             printExc()
 
-        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'embed-title'), ('</iframe', '>'), False, caseSensitive=False)
-        for item in tmp:
-            url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
-            if url == '':
-                continue
-            title = self.cleanHtmlStr(item)
-            params = dict(cItem)
-            params.update({'good_for_fav': False, 'title': '%s - %s' % (cItem['title'], title), 'url': url, 'main_link': True, 'desc': desc, 'prev_url': cItem['url']})
-            self.addVideo(params)
-
         self.cacheLinks = {}
-        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '"pad"'), ('<div', '>', 'disqus_thread'), False)[1]
-        data = data.split('</p>')
-
         episodes = []
-        links = {}
-
-        linksCategory = ''
         episodeName = ''
-        reObj = re.compile('<br[^>]*?>')
 
-        idx1 = -1
-        idx2 = -1
-        for item in data:
-            idx1 = item.find('<strong')
-            if idx1 > -1:
-                idx2 = item.find('<br', idx1 + 7)
-                if idx2 < 0:
-                    idx2 = item.find('</strong', idx1 + 7)
+        # movie
+        data = self.cm.ph.getDataBeetwenNodes(data, ('<div', '"pad"'), ('<div', '>', 'disqus_thread'), False)[1]
 
-            if -1 not in [idx1, idx2]:
-                linksCategory = self.cleanHtmlStr(item[idx1:idx2])
-                printDBG("linksCategory %s" % linksCategory)
+        #printDBG("--------------- data links ------------")
+        #printDBG(data)
 
-            if 'Download:' in linksCategory:
-                continue
-            item = reObj.split(item)
-            for tmp in item:
-                episodeName = self.cleanHtmlStr(tmp[:tmp.find('<a')]).split(';', 1)[0]
-                if '×' not in episodeName:
-                    episodeName = ''
-                else:
-                    try:
-                        episodeName = episodeName.decode('utf-8').strip().encode('utf-8')
-                    except Exception:
-                        pass
+        links = {}
+        linksCategory = ''
 
-                if linksCategory == '' and episodeName == '':
+        if not 'season-no' in data:
+            # it is a movie
+            data = data.split('</p>')
+            for dd in data:
+                strongs = dd.split('</li>')
+
+                for s in strongs:
+                    printDBG("---------- strong ----------")
+                    printDBG(s)
+                    if s.find('<a') == -1:
+                        # only a description
+                        idx1 = s.find('<strong')
+                        if idx1 > -1:
+                            idx2 = s.find('<br', idx1 + 7)
+                            if idx2 < 0:
+                                idx2 = s.find('</strong', idx1 + 7)
+
+                        if -1 not in [idx1, idx2]:
+                            linksCategory = self.cleanHtmlStr(s[idx1:idx2])
+                            printDBG("linksCategory %s" % linksCategory)
+
+                    else:
+                        # it contains a link
+                        typeName = linksCategory.split(' – ', 1)[-1] if episodeName != '' else linksCategory
+                        tmp = self.cm.ph.getAllItemsBeetwenMarkers(s, '<a', '</a>')
+                        for it in tmp:
+                            name = self.cleanHtmlStr(it)
+                            url = self.getFullUrl(self.cm.ph.getSearchGroups(it, '''href=['"]([^"^']+?)['"]''')[0])
+                            if url == '' or '.addtoany.' in url or 'filmpertutti' in url:
+                                continue
+                            printDBG('>> | %s | %s | %s | > %s' % (typeName, episodeName, name, url))
+                            if episodeName not in episodes:
+                                episodes.append(episodeName)
+                                links[episodeName] = []
+
+                            links[episodeName].append({'name': '%s %s' % (typeName, name), 'url': strwithmeta(url, {'Referer': cUrl}), 'need_resolve': 1})
+
+        else:
+            # it is a series
+            data = data.split('''<div class="episode-wrap">''')
+            for dd in data:
+                printDBG("---------- episode -------------")
+                printDBG(dd)
+
+                #example <li class="season-no">1x01 Sub</li>
+                episodeName = self.cm.ph.getDataBeetwenNodes(dd, ('<li', '>', 'season-no'), ('</li', '>'), False)[1]
+                if not episodeName:
                     continue
-                typeName = linksCategory.split(' – ', 1)[-1] if episodeName != '' else linksCategory
 
-                tmp = self.cm.ph.getAllItemsBeetwenMarkers(tmp, '<a', '</a>')
+                printDBG("episode name : %s" % episodeName)
+
+                tmp = self.cm.ph.getAllItemsBeetwenMarkers(dd, '<a', '</a>')
                 for it in tmp:
                     name = self.cleanHtmlStr(it)
                     url = self.getFullUrl(self.cm.ph.getSearchGroups(it, '''href=['"]([^"^']+?)['"]''')[0])
-                    if url == '' or '.addtoany.' in url:
+                    if url == '' or '.addtoany.' in url or 'filmpertutti' in url:
                         continue
-                    printDBG('>> | %s | %s | %s | > %s' % (typeName, episodeName, name, url))
+                    printDBG('>> | %s | %s | %s | > %s' % (episodeName, episodeName, name, url))
                     if episodeName not in episodes:
                         episodes.append(episodeName)
                         links[episodeName] = []
-                    links[episodeName].append({'name': '%s %s' % (typeName, name), 'url': strwithmeta(url, {'Referer': cUrl}), 'need_resolve': 1})
+                    links[episodeName].append({'name': '%s %s' % (episodeName, name), 'url': strwithmeta(url, {'Referer': cUrl}), 'need_resolve': 1})
 
         printDBG('+++++++++++++++++++++++++++++++++++++++')
         printDBG(episodes)
@@ -221,20 +239,15 @@ class FilmPertutti(CBaseHostClass):
 
     def getLinksForVideo(self, cItem):
         printDBG("FilmPertutti.getLinksForVideo [%s]" % cItem)
-        if cItem.get('main_link', False):
-            return self.up.getVideoLinkExt(cItem['url'])
         return self.cacheLinks.get(cItem['cache_key'], [])
 
     def getVideoLinks(self, videoUrl):
         printDBG("FilmPertutti.getVideoLinks [%s]" % videoUrl)
         # mark requested link as used one
-        if len(self.cacheLinks.keys()):
-            for key in self.cacheLinks:
-                for idx in range(len(self.cacheLinks[key])):
-                    if videoUrl in self.cacheLinks[key][idx]['url']:
-                        if not self.cacheLinks[key][idx]['name'].startswith('*'):
-                            self.cacheLinks[key][idx]['name'] = '*' + self.cacheLinks[key][idx]['name']
-
+        sts, data = self.getPage(videoUrl)
+        if not sts:
+            return
+        videoUrl = self.cm.ph.getDataBeetwenMarkers(data,'<iframe src="','" frameborder',False) [1]
         if 0 == self.up.checkHostSupport(videoUrl):
             from Plugins.Extensions.IPTVPlayer.libs.unshortenit import unshorten
             uri, sts = unshorten(videoUrl)
@@ -247,7 +260,7 @@ class FilmPertutti(CBaseHostClass):
         return self.up.getVideoLinkExt(videoUrl)
 
     def getArticleContent(self, cItem, data=None):
-        printDBG("Altadefinizione.getArticleContent [%s]" % cItem)
+        printDBG("FilmPerTutti.getArticleContent [%s]" % cItem)
         retTab = []
 
         descTab = []

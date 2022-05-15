@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 ###################################################
 # LOCAL import
@@ -8,7 +8,7 @@ from Plugins.Extensions.IPTVPlayer.icomponents.ihost import CHostBase, CBaseHost
 from Plugins.Extensions.IPTVPlayer.dToolsSet.iptvtools import printDBG, printExc, GetDefaultLang, rm, byteify
 from Plugins.Extensions.IPTVPlayer.itools.iptvtypes import strwithmeta
 from Plugins.Extensions.IPTVPlayer.libs.recaptcha_v2 import UnCaptchaReCaptcha
-from Plugins.Extensions.IPTVPlayer.icomponents.captcha_helper import CaptchaHelper
+from Plugins.Extensions.IPTVPlayer.icomponents.recaptcha_v2helper import CaptchaHelper
 from Plugins.Extensions.IPTVPlayer.itools.e2ijs import js_execute
 from Plugins.Extensions.IPTVPlayer.libs.e2ijson import loads as json_loads
 from Plugins.Extensions.IPTVPlayer.libs import ph
@@ -428,7 +428,9 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
                 if sitekey == '':
                     sitekey = self.cm.ph.getSearchGroups(data, '''['"]?sitekey['"]?\s*:\s*['"]([^"^']+?)['"]''')[0]
                 if sitekey != '':
-                    token, errorMsgTab = self.processCaptcha(sitekey, self.cm.meta['url'], captchaType="h1")
+                    from Plugins.Extensions.IPTVPlayer.libs.hcaptcha_2captcha import UnCaptchahCaptcha
+                    recaptcha = UnCaptchahCaptcha(lang=GetDefaultLang())
+                    token = recaptcha.processCaptcha(sitekey, self.cm.meta['url'])
                     if token != '':
                         vUrl = self.getFullUrl('/watch/verify.php')
                         urlParams['header']['Referer'] = baseUrl
@@ -467,11 +469,11 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
                 url = data.meta.get('url', '')
 
             if meta.get('is_premium', False):
-                data = self.cm.ph.getDataBeetwenMarkers(data, 'player.setup', '</script>', False)[1]
-                vidUrl = self.cm.ph.getSearchGroups(data, 'file:\s*?"([^"]+?)"')[0]
-#                name = self.cm.ph.getSearchGroups(data, '''\stype=['"]([^'^"]+?)['"]''')[0]
+                data = self.cm.ph.getDataBeetwenMarkers(data, '<video', '</video>', False)[1]
+                vidUrl = self.cm.ph.getSearchGroups(data, '''\ssrc=['"]([^'^"]+?)['"]''')[0]
+                name = self.cm.ph.getSearchGroups(data, '''\stype=['"]([^'^"]+?)['"]''')[0]
                 if self.cm.isValidUrl(vidUrl):
-                    urlTab.append({'name': 'premium', 'url': vidUrl, 'need_resolve': 0})
+                    urlTab.append({'name': name, 'url': vidUrl, 'need_resolve': 0})
                     return urlTab
 
             printDBG("|||" + url)
@@ -517,33 +519,21 @@ class EkinoTv(CBaseHostClass, CaptchaHelper):
                 if not sts:
                     return False
 
-                cookieHeader = self.cm.getCookieHeader(self.COOKIE_FILE, ['PHPSESSID'])
-                printDBG('tryTologin cookieHeader [%s]' % cookieHeader)
-
                 sts, data = self.cm.ph.getDataBeetwenNodes(data, ('<form', '>', 'login'), ('</form', '>'))
                 if not sts:
                     return False
 
                 actionUrl = self.getFullUrl(self.cm.ph.getSearchGroups(data, '''action=['"]([^'^"]+?)['"]''')[0])
-                post_data = {'login': self.login, 'password': self.password}
-
-                inputData = self.cm.ph.getAllItemsBeetwenMarkers(data, '<input type="hidden"', '>')
-                for item in inputData:
-                    name = self.cm.ph.getSearchGroups(item, '''name=['"]([^'^"]+?)['"]''')[0]
-                    value = self.cm.ph.getSearchGroups(item, '''value=['"]([^'^"]+?)['"]''')[0]
-                    post_data[name] = value
-
+                post_data = {'login': self.login, 'password': self.password, 'csrf_token': '1'}
                 httpParams = dict(self.defaultParams)
                 httpParams['header'] = dict(httpParams['header'])
                 httpParams['header']['Referer'] = self.getMainUrl()
-                httpParams['header']['Cookie'] = cookieHeader
 
                 if 'data-sitekey' in data:
                     sitekey = self.cm.ph.getSearchGroups(data, 'data\-sitekey="([^"]+?)"')[0]
 
                 if sitekey != '':
-                    from Plugins.Extensions.IPTVPlayer.libs.recaptcha_mye2i import UnCaptchaReCaptcha
-                    token, errorMsgTab = self.processCaptcha(sitekey, self.cm.meta['url'], captchaType="INVISIBLE")
+                    token, errorMsgTab = self.processCaptcha(sitekey, self.cm.meta['url'], bypassCaptchaService='2captcha.com')
                     if token != '':
                         post_data['g-recaptcha-response'] = token
 

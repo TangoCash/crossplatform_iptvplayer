@@ -41,7 +41,7 @@ def GetConfigList():
 
 
 def gettytul():
-    return 'https://kinox.to/'
+    return 'https://www1.kinox.to/'
 
 
 class Kinox(CBaseHostClass):
@@ -64,7 +64,7 @@ class Kinox(CBaseHostClass):
         self.defaultParams = {'header': self.HEADER, 'use_cookie': True, 'load_cookie': True, 'save_cookie': True, 'cookiefile': self.COOKIE_FILE, 'cookie_items': {'ListMode': 'cover', 'CinemaMode': 'cover'}}
 
     def selectDomain(self):
-        domains = ['https://kinoz.to/', 'https://kinox.bz/', 'http://kinox.ag/', 'http://kinox.me/', 'https://kinox.am/', 'http://kinox.nu/', 'http://kinox.pe/', 'http://kinox.sg/', 'http://kinox.to/', 'http://kinox.tv/']
+        domains = ['http://kinoz.to/', 'http://kinox.tv/', 'http://kinox.ag/', 'http://kinox.me/', 'https://kinox.am/', 'http://kinox.nu/', 'http://kinox.io/', 'http://kinox.sg/']
         domain = config.plugins.iptvplayer.kinox_alt_domain.value.strip()
         if self.cm.isValidUrl(domain):
             if domain[-1] != '/':
@@ -88,7 +88,7 @@ class Kinox(CBaseHostClass):
                 break
 
         if confirmedDomain == None:
-            self.MAIN_URL = 'https://kinox.to/'
+            self.MAIN_URL = 'https://www1.kinox.to/'
 
         self.MAIN_CAT_TAB = [{'category': 'news', 'title': _('News'), 'url': self.getMainUrl()},
                              {'category': 'list_langs', 'title': _('Cinema movies'), 'url': self.getFullUrl('/Kino-filme.html'), 'get_list_mode': 'direct'},

@@ -141,11 +141,7 @@ class MeczykiPL(CBaseHostClass):
             if not self.cm.isValidUrl(url):
                 continue
             if 'playwire.com' not in url and self.up.checkHostSupport(url) != 1:
-                video_id = ph.search(url, r'''https?://.*([a-zA-Z0-9]{10})''')[0]
-                if video_id != '':
-                    url = 'https://viuclips.net/&force_parserVIUCLIPS[%s]' % url
-                else:
-                    continue
+                continue
             title = cItem['title']
             desc = ''
             if len(titles) > idx:

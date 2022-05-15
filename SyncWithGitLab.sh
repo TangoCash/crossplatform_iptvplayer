@@ -22,10 +22,10 @@ else
   git pull
 fi
 if [ ! -d $tmpGitDir/iptvplayerXXX-GitLab-master-version ];then
-  echo 'Cloning XXX host...'
-  git clone https://gitlab.com/iptv-host-xxx/iptv-host-xxx.git $tmpGitDir/iptvplayerXXX-GitLab-master-version
+  echo 'Cloning Update host...'
+  git clone https://github.com/Blindspot76/e2iPlayer.git $tmpGitDir/iptvplayerXXX-GitLab-master-version
 else
-  echo 'Syncing GitLab XXX host...'
+  echo 'Syncing GitLab Update host...'
   cd $tmpGitDir/iptvplayerXXX-GitLab-master-version
   git pull
 fi

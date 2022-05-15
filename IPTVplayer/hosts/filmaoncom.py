@@ -22,16 +22,16 @@ except Exception:
 
 
 def gettytul():
-    return 'http://filmaon.com/'
+    return 'https://www.filmaon.cc/'
 
 
 class FilmaonCom(CBaseHostClass):
 
     def __init__(self):
-        CBaseHostClass.__init__(self, {'history': 'filmaon.com', 'cookie': 'filmaon.com.cookie'})
+        CBaseHostClass.__init__(self, {'history': 'filmaon.cc', 'cookie': 'filmaon.io.cookie'})
         self.USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0'
-        self.MAIN_URL = 'http://www.filmaon.com/'
-        self.DEFAULT_ICON_URL = 'http://www.filmaon.com/wp-content/themes/Dooplay_/assets/img/Logomakr1.png'
+        self.MAIN_URL = 'https://www.filmaon.cc/'
+        self.DEFAULT_ICON_URL = 'https://www.filmaon.cc/wp-content/uploads/2021/08/logo445.png'
         self.HTTP_HEADER = {'User-Agent': self.USER_AGENT, 'DNT': '1', 'Accept': 'text/html', 'Accept-Encoding': 'gzip, deflate', 'Referer': self.getMainUrl(), 'Origin': self.getMainUrl()}
         self.AJAX_HEADER = dict(self.HTTP_HEADER)
         self.AJAX_HEADER.update({'X-Requested-With': 'XMLHttpRequest', 'Accept-Encoding': 'gzip, deflate', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json, text/javascript, */*; q=0.01'})
@@ -271,7 +271,7 @@ class FilmaonCom(CBaseHostClass):
             id = self.cm.ph.getSearchGroups(item, '''href=['"]#([^"^']+?)['"]''', 1, True)[0]
             namesData[id] = name
 
-        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div', '>', 'play-box'), ('</div', '>'))
+        tmp = self.cm.ph.getAllItemsBeetwenNodes(data, ('<div' , '>', 'play-box-iframe fixidtab'), ('</div', '>'))
         for item in tmp:
             url = self.getFullUrl(self.cm.ph.getSearchGroups(item, '''<iframe[^>]+?src=['"]([^"^']+?)['"]''', 1, True)[0])
             if 1 != self.up.checkHostSupport(url):
