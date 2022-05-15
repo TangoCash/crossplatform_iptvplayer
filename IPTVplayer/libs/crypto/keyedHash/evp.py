@@ -1,5 +1,6 @@
 # -*- coding: iso-8859-1 -*-
 
+
 def EVP_BytesToKey(md, data, salt, keyLength, ivLength, count):
     assert(data)
     assert(keyLength > 0)
@@ -19,7 +20,7 @@ def EVP_BytesToKey(md, data, salt, keyLength, ivLength, count):
             m.update(salt)
         hashed = m.digest()
 
-        for i in xrange(count-1):
+        for i in xrange(count - 1):
             m = md()
             m.update(hashed)
             hashed = m.digest()

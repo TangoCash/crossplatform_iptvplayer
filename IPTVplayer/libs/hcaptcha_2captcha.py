@@ -18,6 +18,7 @@ import urllib
 from Components.config import config
 ###################################################
 
+
 class UnCaptchahCaptcha:
     def __init__(self, lang='en'):
         self.cm = common()
@@ -28,10 +29,11 @@ class UnCaptchahCaptcha:
         return self.MAIN_URL
 
     def getFullUrl(self, url, mainUrl=None):
-        if mainUrl == None: mainUrl = self.getMainUrl()
+        if mainUrl == None:
+            mainUrl = self.getMainUrl()
         return self.cm.getFullUrl(url, mainUrl)
 
-    def processCaptcha(self, sitekey, referer=''):
+    def processCaptcha(self, sitekey, referer='', captchaType=''):
         sleepObj = None
         token = ''
         errorMsgTab = []
@@ -56,14 +58,14 @@ class UnCaptchahCaptcha:
                         elif timeout > 10:
                             timeout = 5
                         time.sleep(timeout)
-                        
+
                         apiUrl = self.getFullUrl('/res.php?key=') + apiKey + '&action=get&json=1&id=' + captchaid
                         sts, data = self.cm.getPage(apiUrl)
                         if not sts:
                             continue
                             # maybe simple continue here ?
                             errorMsgTab.append(_('Network failed %s.') % '2')
-                            break 
+                            break
                         else:
                             printDBG('API DATA:\n%s\n' % data)
                             data = json_loads(data, '', True)
@@ -83,7 +85,7 @@ class UnCaptchahCaptcha:
 
         if sleepObj != None:
             sleepObj.Reset()
-        
+
         if token == '':
-            self.sessionEx.waitForFinishOpen(MessageBox, (_('Resolving hCaptcha with %s failed!\n\n') % self.getMainUrl()) + '\n'.join(errorMsgTab), type = MessageBox.TYPE_ERROR, timeout = 10)
+            self.sessionEx.waitForFinishOpen(MessageBox, (_('Resolving hCaptcha with %s failed!\n\n') % self.getMainUrl()) + '\n'.join(errorMsgTab), type=MessageBox.TYPE_ERROR, timeout=10)
         return token
